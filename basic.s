@@ -15,9 +15,15 @@ VERSION    = 2
 
 load    = $8000         ; Code start address
 split   = 0
+foldup  = 0
 ws      = $0400-$0400   ; Offset from &400 to workspace
 membot  = 0             ; Use OSBYTE to find memory limits
 memtop  = 0             ; ...
+
+    .macro FNfold str
+        dta :1
+    .endm
+
 zp      = $00           ; Start of ZP addresses
 
     icl 'zp.s'          ; All zp aliases 00-5f relative to 'zp'
@@ -676,7 +682,7 @@ X8566:
         CMP #$2E
         BNE X857D
 X856E:
-        JSR LB50E :\ Print char or token
+        JSR LB50E           ; Print char or token
         DEX
         BNE X8576
         LDX #1
@@ -777,6 +783,340 @@ L85E6:
     BNE L85E6
     DEX
     BNE L85D5         ; Loop to fetch three characters
+
+; The current opcode has now been compressed into two bytes
+; ---------------------------------------------------------
+
+L85F1:
+    LDX #$3A                ; Point to end of opcode lookup table
+    LDA zp3D                ; Get low byte of compacted mnemonic
+L85F5:
+    CMP L8451-1,X
+    BNE L8601 ; Low half doesn't match
+    LDY L848B-1,X           ; Check high half
+    CPY zp3E
+    BEQ L8620       ; Mnemonic matches
+L8601:
+    DEX
+    BNE L85F5           ; Loop through opcode lookup table
+L8604:
+    JMP L982A               ; Mnemonic not matched, Mistake
+
+L8607:
+    LDX #$22                ; opcode number for 'AND'
+    CMP #tknAND
+    BEQ L8620   ; Tokenised 'AND'
+    INX                     ; opcode number for 'EOR'
+    CMP #tknEOR
+    BEQ L8620   ; Tokenised 'EOR'
+    INX                     ; opcode number for 'ORA'
+    CMP #tknOR
+    BNE L8604    ; Not tokenised 'OR'
+    INC zp0A
+    INY
+    LDA (zp0B),Y ; Get next character
+    CMP #'A'
+    BNE L8604   ; Ensure 'OR' followed by 'A'
+
+; Opcode found
+; ------------
+
+L8620:
+    LDA L84C5-1,X
+    STA zp29   ; Get base opcode
+    LDY #$01                ; Y=1 for one byte
+    CPX #$1A
+    BCS L8673      ; Opcode $1A+ have arguments
+L862B:
+    LDA ws+$0440
+    STA zp37    ; Get P% low byte
+    STY zp39
+    LDX zp28
+    CPX #$04        ; Offset assembly (opt>3)
+    LDX ws+$0441
+    STX zp38    ; Get P% high byte
+    BCC L8643               ; No offset assembly
+    LDA ws+$043C
+    LDX ws+$043D ; Get O%
+L8643:
+    STA zp3A
+    STX zp3B         ; Store destination pointer
+    TYA
+    BEQ L8672
+    BPL L8650
+    LDY zp36
+    BEQ L8672
+L8650:
+    DEY
+    LDA zp29,Y         ; Get opcode byte   (lda abs,y (!))
+    BIT zp39
+    BPL L865B       ; Opcode - jump to store it
+    LDA ws+$0600,Y          ; Get EQU byte
+L865B:
+    STA (zp3A),Y             ; Store byte
+    INC ws+$0440
+    BNE L8665  ; Increment P%
+    INC ws+$0441
+L8665:
+    BCC L866F
+    INC ws+$043C
+    BNE L866F  ; Increment O%
+    INC ws+$043D
+L866F:
+    TYA
+    BNE L8650
+L8672:
+    RTS
+
+L8673:
+    CPX #$22
+    BCS L86B7
+    JSR L8821
+    CLC
+    LDA zp2A
+    SBC ws+$0440
+    TAY
+    LDA zp2B
+    SBC ws+$0441
+    CPY #$01
+    DEY
+    SBC #$00
+    BEQ L86B2
+    CMP #$FF
+    BEQ L86AD
+
+L8691:
+    LDA zp28
+    .if version < 3
+        LSR
+    .elseif version >= 3
+        AND #$02
+    .endif
+    BEQ L86A5
+
+    BRK
+    dta 1, 'Out of range'
+    BRK
+
+L86A5:
+    TAY
+L86A6:
+    STY zp2A
+L86A8:
+    LDY #$02
+    JMP L862B
+
+L86AD:
+    TYA
+    BMI L86A6
+    BPL L8691
+
+L86B2:
+    TYA
+    BPL L86A6
+    BMI L8691
+
+L86B7:
+    CPX #$29
+    BCS L86D3
+    JSR L8A97               ; Skip spaces
+    CMP #'#'
+    BNE L86DA
+    JSR L882F
+L86C5:
+    JSR L8821
+L86C8:
+    LDA zp2B
+    BEQ L86A8
+L86CC:
+    BRK
+    dta $02
+    FNfold 'Byte'
+    BRK
+
+; Parse (zp),Y addressing mode
+; ----------------------------
+L86D3:
+    CPX #$36
+    BNE L873F
+    JSR L8A97               ; Skip spaces
+L86DA:
+    CMP #'('
+    BNE L8715
+    JSR L8821
+    JSR L8A97               ; Skip spaces
+    CMP #')'
+    BNE L86FB
+    JSR L8A97               ; Skip spaces
+    CMP #','
+    BNE L870D   ; No comma, jump to Index error
+    JSR L882C
+    JSR L8A97               ; Skip spaces
+    CMP #'Y'
+    BNE L870D   ; (zp),Y missing Y, jump to Index error
+    BEQ L86C8
+
+; Parse (zp,X) addressing mode
+; ----------------------------
+L86FB:
+    CMP #','
+    BNE L870D   ; No comma, jump to Index error
+    JSR L8A97               ; Skip spaces
+    CMP #'X'
+    BNE L870D   ; zp,X missing X, jump to Index error
+    JSR L8A97               ; Skip spaces
+    CMP #')'
+    BEQ L86C8   ; zp,X) - jump to process
+L870D:
+    BRK
+    dta $03
+    FNfold 'Index'
+    BRK
+
+L8715:
+    DEC zp0A
+    JSR L8821
+    JSR L8A97               ; Skip spaces
+    CMP #','
+    BNE L8735   ; No comma - jump to process as abs,X
+    JSR L882C
+    JSR L8A97               ; Skip spaces
+    CMP #'X'
+    BEQ L8735   ; abs,X - jump to process
+    CMP #'Y'
+    BNE L870D   ; Not abs,Y - jump to Index error
+L872F:
+    JSR L882F
+    JMP L879A
+
+; abs and abs,X
+; -------------
+L8735:
+    JSR L8832
+L8738:
+    LDA zp2B
+    BNE L872F
+    JMP L86A8
+
+L873F:
+    CPX #$2F
+    BCS L876E
+    CPX #$2D
+    BCS L8750
+    JSR L8A97               ; Skip spaces
+    CMP #'A'
+    BEQ L8767   ; ins A -
+    DEC zp0A
+L8750:
+    JSR L8821
+    JSR L8A97               ; Skip spaces
+    CMP #','
+    BNE L8738   ; No comma, jump to ...
+    JSR L882C
+    JSR L8A97               ; Skip spaces
+    CMP #'X'
+    BEQ L8738   ; Jump with address,X
+    JMP L870D               ; Otherwise, jump to Index error
+
+L8767:
+    JSR L8832
+    LDY #$01
+    BNE L879C
+
+L876E:
+    CPX #$32
+    BCS L8788
+    CPX #$31
+    BEQ L8782
+    JSR L8A97               ; Skip spaces
+    CMP #'#'
+    BNE L8780   ; Not #, jump with address
+    JMP L86C5               ; Jump with immediate
+
+L8780:
+    DEC zp0A
+L8782:
+    JSR L8821
+    JMP L8735
+
+L8788:
+    CPX #$33
+    BEQ L8797
+    BCS L87B2
+    JSR L8A97               ; Skip spaces
+    CMP #'('
+    BEQ L879F   ; Jump with (... addressing mode
+    DEC zp0A
+L8797:
+    JSR L8821
+L879A:
+    LDY #$03
+L879C:
+    JMP L862B
+
+L879F:
+    JSR L882C
+    JSR L882C
+    JSR L8821
+    JSR L8A97               ; Skip spaces
+    CMP #')'
+    BEQ L879A
+    JMP L870D               ; No ) - jump to Index error
+
+L87B2:
+    CPX #$39
+    BCS L8813
+    LDA zp3D
+    EOR #$01
+    AND #$1F
+    PHA
+    CPX #$37
+    BCS L87F0
+    JSR L8A97               ; Skip spaces
+    CMP #'#'
+    BNE L87CC
+    PLA
+    JMP L86C5
+
+L87CC:
+    DEC zp0A
+    JSR L8821
+    PLA
+    STA zp37
+    JSR L8A97               ; Skip spaces
+    CMP #','
+    BEQ L87DE
+    JMP L8735
+
+L87DE:
+    JSR L8A97               ; Skip spaces
+    AND #$1F
+    CMP zp37
+    BNE L87ED
+    JSR L882C
+    JMP L8735
+
+L87ED:
+    JMP L870D               ; Jump to Index error
+
+L87F0:
+    JSR L8821
+    PLA
+    STA zp37
+    JSR L8A97               ; Skip spaces
+    CMP #','
+    BNE L8810
+    JSR L8A97               ; Skip spaces
+    AND #$1F
+    CMP zp37
+    BNE L87ED
+    JSR L882C
+    LDA zp2B
+    BEQ L8810       ; High byte=0, continue
+    JMP L86CC               ; value>255, jump to Byte error
+
+L8810:
+    JMP L8738
 
 ; ----------------------------------------------------------------------------
 
@@ -909,11 +1249,13 @@ L9859=$9859
 L8AF6=$8af6
 L9890=$9890
 L9582=$9582
-L8604=$8604
 LBD94=$bd94
 LAE3A=$ae3a
 LB4B4=$b4b4
 L8827=$8827
-L862B=$862b
-L8607=$8607
-L85F1=$85f1
+L8821=$8821
+L8813=$8813
+L882C=$882c
+L882F=$882f
+L8832=$8832
+
