@@ -1,12 +1,13 @@
-; Basic2/src
+;
 ; Source for 6502 BASIC II/III
 ;
 ; BBC BASIC Copyright (C) 1982/1983 Acorn Computer and Roger Wilson
 ; Source reconstruction and commentary Copyright (C) J.G.Harston
 ;
-; Conversion to MADS by Ivo van Poorten, September 2025
+; Conversion to Mad-Assember (mads) by Ivo van Poorten, September 2025
+;
 
-    opt h-
+    opt h-              ; No Atari header
 
 TARGET_BBC = 1
 MOS_BBC    = 1
@@ -353,12 +354,79 @@ L8071:
 
 ; ----------------------------------------------------------------------------
 
+; FUNCTION/COMMAND DISPATCH TABLE, MACRO
+; ======================================
+
+func_table .macro operator
+    dta :1LBF78             ; $8E - OPENIN
+    dta :1LBF47             ; $8F - PTR
+    .if version < 3
+        dta :1LAEC0         ; $90 - PAGE
+        dta :1LAEB4         ; $91 - TIME
+        dta :1LAEFC         ; $92 - LOMEM
+        dta :1LAF03         ; $93 - HIMEM
+    .elseif version >= 3
+        dta :1XAEA7         ; $90 - PAGE
+        dta :1LAEB4         ; $91 - TIME
+        dta :1XAEFC         ; $92 - LOMEM
+        dta :1XAF03         ; $93 - HIMEM
+    .endif
+    dta :1LAD6A             ; $94 - ABS
+    dta :1LA8D4             ; $95 - ACS
+    dta :1LAB33             ; $96 - ADVAL
+    dta :1LAC9E             ; $97 - ASC
+    dta :1LA8DA             ; $98 - ASN
+    dta :1LA907             ; $99 - ATN
+    dta :1LBF6F             ; $9A - BGET
+    dta :1LA98D             ; $9B - COS
+    .if version < 3
+        dta :1LAEF7         ; $9C - COUNT
+    .elseif version >= 3
+        dta :1XAEF7         ; $9C - COUNT
+    .endif
+    dta :1LABC2             ; $9D - DEG
+    .if version < 3
+        dta :1LAF9F         ; $9E - ERL
+        dta :1LAFA6         ; $9F - ERR
+    .elseif version >= 3
+        dta :1XAF9F         ; $9E - ERL
+        dta :1XAFA6         ; $9F - ERR
+    .endif
+    dta :1LABE9             ; $A0 - EVAL
+    dta :1LAA91             ; $A1 - EXP
+    dta :1LBF46             ; $A2 - EXT
+.endm
+
 ; FUNCTION/COMMAND DISPATCH TABLE, ADDRESS LOW BYTES
 ; ==================================================
+
+L836D:
+    func_table <
 
 ; ----------------------------------------------------------------------------
 
 ; Temporary labels to make assembler happy
 
+LAF9F=$af9f
+LAFA6=$afa6
 L8ADD=$8add
+LA8D4=$a8d4
+LA8DA=$a8da
+LA907=$a907
+LA98D=$a98d
+LAB33=$ab33
+LABC2=$abc2
+LAC9E=$ac9e
+LAD6A=$ad6a
+LAEB4=$aeb4
+LAEC0=$aec0
+LAEF7=$aef7
+LAEFC=$aefc
+LAF03=$af03
 LB402=$b402
+LBF47=$bf47
+LBF6F=$bf6f
+LBF78=$bf78
+LABE9=$abe9
+LAA91=$aa91
+LBF46=$bf46
