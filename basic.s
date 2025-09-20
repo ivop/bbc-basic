@@ -14,6 +14,7 @@ MOS_BBC    = 1
 VERSION    = 2
 
 load    = $8000         ; Code start address
+split   = 0
 ws      = $0400-$0400   ; Offset from &400 to workspace
 membot  = 0             ; Use OSBYTE to find memory limits
 memtop  = 0             ; ...
@@ -441,7 +442,81 @@ func_table .macro operator
     .elseif version >= 3
         dta :1XAEA6         ; $B8 - TO
     .endif
-
+    dta :1LACC4             ; $B9 - TRUE
+    dta :1LABD2             ; $BA - USR
+    dta :1LAC2F             ; $BB - VAL
+    dta :1LAB76             ; $BC - VPOS
+    dta :1LB3BD             ; $BD - CHR$
+    dta :1LAFBF             ; $BE - GET$
+    dta :1LB026             ; $BF - INKEY$
+    dta :1LAFCC             ; $C0 - LEFT$(
+    dta :1LB039             ; $C1 - MID$(
+    dta :1LAFEE             ; $C2 - RIGHT$(
+    dta :1LB094             ; $C3 - STR$(
+    dta :1LB0C2             ; $C4 - STRING$(
+    dta :1LACB8             ; $C5 - EOF
+    dta :1L90AC             ; $C6 - AUTO
+    dta :1L8F31             ; $C7 - DELETE
+    dta :1LBF24             ; $C8 - LOAD
+    dta :1LB59C             ; $C9 - LIST
+    dta :1L8ADA             ; $CA - NEW
+    dta :1L8AB6             ; $CB - OLD
+    dta :1L8FA3             ; $CC - RENUMBER
+    dta :1LBEF3             ; $CD - SAVE
+    dta :1L982A             ; $CE - unused
+    dta :1LBF30             ; $CF - PTR
+    dta :1L9283             ; $D0 - PAGE
+    dta :1L92C9             ; $D1 - TIME
+    dta :1L926F             ; $D2 - LOMEM
+    dta :1L925D             ; $D3 - HIMEM
+    dta :1LB44C             ; $D4 - SOUND
+    dta :1LBF58             ; $D5 - BPUT
+    dta :1L8ED2             ; $D6 - CALL
+    dta :1LBF2A             ; $D7 - CHAIN
+    dta :1L928D             ; $D8 - CLEAR
+    dta :1LBF99             ; $D9 - CLOSE
+    dta :1L8EBD             ; $DA - CLG
+    dta :1L8EC4             ; $DB - CLS
+    dta :1L8B7D             ; $DC - DATA
+    dta :1L8B7D             ; $DD - DEF
+    dta :1L912F             ; $DE - DIM
+    dta :1L93E8             ; $DF - DRAW
+    dta :1L8AC8             ; $E0 - END
+    dta :1L9356             ; $E1 - ENDPROC
+    dta :1LB472             ; $E2 - ENVELOPE
+    dta :1LB7C4             ; $E3 - FOR
+    dta :1LB888             ; $E4 - GOSUB
+    dta :1LB8CC             ; $E5 - GOTO
+    dta :1L937A             ; $E6 - GCOL
+    dta :1L98C2             ; $E7 - IF
+    dta :1LBA44             ; $E8 - INPUT
+    dta :1L8BE4             ; $E9 - LET
+    dta :1L9323             ; $EA - LOCAL
+    dta :1L939A             ; $EB - MODE
+    dta :1L93E4             ; $EC - MOVE
+    dta :1LB695             ; $ED - NEXT
+    dta :1LB915             ; $EE - ON
+    dta :1L942F             ; $EF - VDU
+    dta :1L93F1             ; $F0 - PLOT
+    dta :1L8D9A             ; $F1 - PRINT
+    .if split == 0
+        dta :1L9304         ; $F2 - PROC
+    .elseif split != 0
+        dta :1X9304         ; $F2 - PROC
+    .endif 
+    dta :1LBB1F             ; $F3 - READ
+    dta :1L8B7D             ; $F4 - REM
+    dta :1LBBE4             ; $F5 - REPEAT
+    dta :1LBFE4             ; $F6 - REPORT
+    dta :1LBAE6             ; $F7 - RESTORE
+    dta :1LB8B6             ; $F8 - RETURN
+    dta :1LBD11             ; $F9 - RUN
+    dta :1L8AD0             ; $FA - STOP
+    dta :1L938E             ; $FB - COLOUR
+    dta :1L9295             ; $FC - TRACE
+    dta :1LBBB1             ; $FD - UNTIL
+    dta :1LB4A0             ; $FE - WIDTH
+    dta :1LBEC2             ; $FF - OSCLI
 .endm
 
 ; FUNCTION/COMMAND DISPATCH TABLE, ADDRESS LOW BYTES
@@ -450,11 +525,54 @@ func_table .macro operator
 L836D:
     func_table <
 
+; FUNCTION/COMMAND DISPATCH TABLE, ADDRESS HIGH BYTES
+; ===================================================
+
+L83DF:
+    func_table >
+
+; ----------------------------------------------------------------------------
+
+; ASSEMBLER
+; =========
+
 ; ----------------------------------------------------------------------------
 
 ; Temporary labels to make assembler happy
 
+L8AB6=$8ab6
+L8AC8=$8ac8
+L8AD0=$8ad0
+L8ADA=$8ada
 L8ADD=$8add
+L8B7D=$8b7d
+L8BE4=$8be4
+L8D9A=$8d9a
+L8EBD=$8ebd
+L8EC4=$8ec4
+L8ED2=$8ed2
+L8F31=$8f31
+L8FA3=$8fa3
+L90AC=$90ac
+L912F=$912f
+L925D=$925d
+L926F=$926f
+L9283=$9283
+L928D=$928d
+L9295=$9295
+L92C9=$92c9
+L9304=$9304
+L9323=$9323
+L9356=$9356
+L937A=$937a
+L938E=$938e
+L939A=$939a
+L93E4=$93e4
+L93E8=$93e8
+L93F1=$93f1
+L942F=$942f
+L982A=$982a
+L98C2=$98c2
 LA6BE=$a6be
 LA7B4=$a7b4
 LA7FE=$a7fe
@@ -467,15 +585,20 @@ LAA91=$aa91
 LAB33=$ab33
 LAB41=$ab41
 LAB6D=$ab6d
+LAB76=$ab76
 LAB88=$ab88
 LABA8=$aba8
 LABB1=$abb1
 LABC2=$abc2
 LABCB=$abcb
+LABD2=$abd2
 LABE9=$abe9
+LAC2F=$ac2f
 LAC78=$ac78
 LAC9E=$ac9e
 LACAD=$acad
+LACB8=$acb8
+LACC4=$acc4
 LACD1=$acd1
 LACE2=$ace2
 LAD6A=$ad6a
@@ -491,12 +614,43 @@ LAF49=$af49
 LAF9F=$af9f
 LAFA6=$afa6
 LAFB9=$afb9
+LAFBF=$afbf
+LAFCC=$afcc
+LAFEE=$afee
+LB026=$b026
+LB039=$b039
+LB094=$b094
+LB0C2=$b0c2
 LB195=$b195
+LB3BD=$b3bd
 LB402=$b402
+LB44C=$b44c
+LB472=$b472
+LB4A0=$b4a0
+LB59C=$b59c
+LB695=$b695
+LB7C4=$b7c4
+LB888=$b888
+LB8B6=$b8b6
+LB8CC=$b8cc
+LB915=$b915
+LBA44=$ba44
+LBAE6=$bae6
+LBB1F=$bb1f
+LBBB1=$bbb1
+LBBE4=$bbe4
+LBD11=$bd11
+LBEC2=$bec2
+LBEF3=$bef3
+LBF24=$bf24
+LBF2A=$bf2a
+LBF30=$bf30
 LBF46=$bf46
 LBF47=$bf47
+LBF58=$bf58
 LBF6F=$bf6f
 LBF78=$bf78
 LBF7C=$bf7c
 LBF80=$bf80
-
+LBF99=$bf99
+LBFE4=$bfe4
