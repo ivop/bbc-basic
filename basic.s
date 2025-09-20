@@ -536,6 +536,18 @@ L83DF:
 ; ASSEMBLER
 ; =========
 
+; Packed mnemonic table, low bytes
+; --------------------------------
+
+L8451:
+    icl 'mneml.s'
+
+; Packed mnemonic table, high bytes
+; ---------------------------------
+
+L848B:
+    icl 'mnemh.s'
+
 ; ----------------------------------------------------------------------------
 
 ; Temporary labels to make assembler happy
