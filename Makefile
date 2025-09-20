@@ -5,7 +5,7 @@ basic.rom: basic.s
 	$(MADS) -o:$@ $<
 
 compare: basic.rom
-	./compare.sh
+	@./compare.sh
 
 clean:
 	rm -f basic.rom
