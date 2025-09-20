@@ -1,0 +1,6 @@
+| Assemble 6502 BBC BASIC II/III for Commodore 64
+|
+RmEnsure B6502 0.00 RmLoad <Obey$Dir>.^.ARM.6502_BASIC
+Dir <Obey$Dir>
+B6502 -quit <Obey$Dir>.Basic2/src v64.BasicC64 c64 2.00
+hexdiff c64.BasicC64 net::Software.BBCBasic.C64.BasicC64 _diff B800

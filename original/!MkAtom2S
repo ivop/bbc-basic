@@ -1,0 +1,6 @@
+| Assemble 6502 BBC BASIC II for Atom 4K+12K ROMs with BBC API
+|
+RmEnsure B6502 0.00 RmLoad <Obey$Dir>.^.ARM.6502_BASIC
+Dir <Obey$Dir>
+B6502 -quit <Obey$Dir>.Basic2/src ATBASIC2S bbc 2.00 A000:B000
+|hexdiff ATBASIC2 net::Software.BBCBasic.Atom.ATBASIC2 _diff 4000

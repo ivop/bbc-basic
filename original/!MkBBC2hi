@@ -1,0 +1,5 @@
+| Assemble 6502 BBC HiBASIC 2 for BBC
+|
+RmEnsure B6502 0.00 RmLoad <Obey$Dir>.^.ARM.6502_BASIC
+Dir <Obey$Dir>
+B6502 -quit <Obey$Dir>.Basic2/src HiBasic200 bbc 2.00 B800

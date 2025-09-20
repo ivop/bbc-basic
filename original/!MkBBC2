@@ -1,0 +1,6 @@
+| Assemble 6502 BBC BASIC II for BBC
+|
+RmEnsure B6502 0.00 RmLoad <Obey$Dir>.^.ARM.6502_BASIC
+Dir <Obey$Dir>
+B6502 -quit <Obey$Dir>.Basic2/src Basic2 bbc 2.00
+hexdiff Basic2 net::Software.BBCBasic.BBC.Basic2 _diff 8000
