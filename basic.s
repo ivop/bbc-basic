@@ -578,6 +578,208 @@ L84C5:
 
 ; ----------------------------------------------------------------------------
 
+; Exit Assembler
+; --------------
+
+L84FD:
+    LDA #$FF                 ; Set OPT to 'BASIC'
+L84FF:
+    STA zp28
+    JMP L8BA3                ; Set OPT, return to execution loop
+
+L8504:
+    LDA #$03
+    STA zp28                 ; Set OPT 3, default on entry to '['
+L8508
+    JSR L8A97                ; Skip spaces
+    CMP #']'
+    BEQ L84FD                ; ']' - exit assembler
+    JSR L986D
+
+L8512:
+    DEC zp0A
+    JSR L85BA
+
+    DEC zp0A
+    LDA zp28
+    LSR
+    BCC L857E
+
+    LDA zp1E
+    ADC #$04
+    STA zp3F
+    LDA zp38
+    JSR LB545
+
+    LDA zp37
+    JSR LB562
+
+    LDX #$FC
+    LDY zp39
+    BPL L8536
+
+    LDY zp36
+L8536:
+    STY zp38
+    BEQ L8556
+
+    LDY #$00
+L853C:
+    INX
+    BNE L854C
+
+    JSR LBC25      ; Print newline
+
+    LDX zp3F
+
+L8544:
+    .if version < 3
+        JSR LB565       ; Print a space
+        DEX
+        BNE L8544       ; Loop to print spaces
+    .elseif version >= 3
+        JSR LB580       ; Print multiple spaces
+    .endif
+
+    LDX #$FD
+L854C:
+    LDA (zp3A),Y
+    JSR LB562
+
+    INY
+    DEC zp38
+    BNE L853C
+
+L8556:
+    .if version < 3
+        INX
+        BPL L8565
+        JSR LB565
+        JSR LB558
+        JSR LB558
+        JMP L8556
+L8565:
+        LDY #0
+    .elseif version >= 3
+        TXA
+        TAY
+X855C:
+        INY
+X855D:
+        BEQ X8566
+        LDX #3
+        JSR LB580
+        BEQ X855C
+X8566:
+        LDX #$0A
+        LDA (zp0B),Y
+        CMP #$2E
+        BNE X857D
+X856E:
+        JSR LB50E :\ Print char or token
+        DEX
+        BNE X8576
+        LDX #1
+X8576:
+        INY
+        LDA (zp0B),Y
+        CPY zp4F
+        BNE X856E
+X857D:
+        JSR LB580
+        DEY
+X8581:
+        INY
+        CMP (zp0B),Y
+        BEQ X8581
+    .endif
+
+L8567:
+    LDA (zp0B),Y
+    CMP #$3A
+    BEQ L8577
+    CMP #$0D
+    BEQ L857B
+L8571:
+    JSR LB50E  ; Print character or token
+    INY:BNE L8567
+L8577
+    CPY zp0A
+    BCC L8571
+L857B:
+    JSR LBC25  ; Print newline
+L857E
+    LDY zp0A
+    DEY
+L8581:
+    INY
+    LDA (zp0B),Y
+    CMP #$3A
+    BEQ L858C
+    CMP #$0D
+    BNE L8581
+L858C:
+    JSR L9859
+    DEY
+    LDA (zp0B),Y
+    CMP #$3A
+    BEQ L85A2
+    LDA zp0C
+    CMP #$07+(ws/256)
+    BNE L859F
+    JMP L8AF6
+
+L859F:
+    JSR L9890
+L85A2:
+    JMP L8508
+
+L85A5:
+    JSR L9582
+    BEQ L8604
+    BCS L8604
+    JSR LBD94
+    JSR LAE3A       ; Find P%
+    STA zp27
+    JSR LB4B4
+    JSR L8827
+
+L85BA:
+    LDX #$03              ; Prepare to fetch three characters
+    JSR L8A97             ; Skip spaces
+    LDY #$00
+    STY zp3D
+    CMP #':'
+    BEQ L862B           ; End of statement
+    CMP #$0D
+    BEQ L862B           ; End of line
+    CMP #'\'
+    BEQ L862B           ; Comment
+    CMP #'.'
+    BEQ L85A5 ; Label
+    DEC zp0A
+L85D5:
+    LDY zp0A
+    INC zp0A       ; Get current character, inc. index
+    LDA (zp0B),Y
+    BMI L8607 ; Token, check for tokenised AND, EOR, OR
+    CMP #$20
+    BEQ L85F1    ; Space, step past
+    LDY #$05
+    ASL
+    ASL
+    ASL     ; Compact first character
+L85E6:
+    ASL
+    ROL zp3D
+    ROL zp3E
+    DEY
+    BNE L85E6
+    DEX
+    BNE L85D5         ; Loop to fetch three characters
+
+; ----------------------------------------------------------------------------
+
 ; Temporary labels to make assembler happy
 
 L8AB6=$8ab6
@@ -694,3 +896,24 @@ LBF7C=$bf7c
 LBF80=$bf80
 LBF99=$bf99
 LBFE4=$bfe4
+L8BA3=$8ba3
+L8A97=$8a97
+L986D=$986d
+LB545=$b545
+LB562=$b562
+LBC25=$bc25
+LB565=$b565
+LB558=$b558
+LB50E=$b50e
+L9859=$9859
+L8AF6=$8af6
+L9890=$9890
+L9582=$9582
+L8604=$8604
+LBD94=$bd94
+LAE3A=$ae3a
+LB4B4=$b4b4
+L8827=$8827
+L862B=$862b
+L8607=$8607
+L85F1=$85f1
