@@ -161,3 +161,41 @@ L8023:
     .endif
     sty zp18
 
+    LDX #$00
+    STX zp1f                ; Set LISTO to 0
+    STX ws+$0402
+    STX ws+$0403            ; Set @% to $0000xxxx
+    DEX
+    STX zp23                ; Set WIDTH to $FF
+
+    LDX #$0A
+    STX ws+$0400
+    DEX
+    STX ws+$0401            ; Set @% to $0000090A
+
+    LDA #$01
+    AND zp11
+    ORA zp0d                ; Check RND seed
+    ORA zp0e
+    ORA zp0f
+    ORA zp10
+    BNE L8063               ; If nonzero, skip past
+
+    LDA #$41                ; Set RND seed to $575241
+    STA zp0d
+    LDA #$52
+    STA zp0e
+    LDA #$57
+    STA zp0f                ; "ARW" - Acorn Roger Wilson?
+
+L8063:
+    LDA #<LB402
+    STA BRKV+0              ; Set up error handler
+    LDA #>LB402
+    STA BRKV+1
+    CLI
+    JMP L8ADD               ; Enable IRQs, jump to immediate loop
+
+L8ADD=$8add
+LB402=$b402
+
