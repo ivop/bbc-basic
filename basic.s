@@ -140,7 +140,7 @@ copyright_string:
 ; ================
 
 L8023:
-    .if memtop = 0
+    .if memtop == 0
         lda #$84            ; Read top of memory
         jsr OSBYTE
     .elseif memtop > 0
@@ -151,7 +151,7 @@ L8023:
     stx zp06
     sty zp07
 
-    .if memtop = 0
+    .if memtop == 0
         lda #$83            ; Read bottom of memory
         jsr OSBYTE
     .elseif memtop > 0
@@ -196,6 +196,169 @@ L8063:
     CLI
     JMP L8ADD               ; Enable IRQs, jump to immediate loop
 
+; ----------------------------------------------------------------------------
+
+; TOKEN TABLE
+; ===========
+; string, token, flags
+;
+; Token flags:
+; Bit 0 - Conditional tokenisation (don't tokenise if followed by an
+;                                                   alphabetic character).
+; Bit 1 - Go into "middle of Statement" mode.
+; Bit 2 - Go into "Start of Statement" mode.
+; Bit 3 - FN/PROC keyword - don't tokenise the name of the subroutine.
+; Bit 4 - Start tokenising a line number now (after a GOTO, etc...).
+; Bit 5 - Don't tokenise rest of line (REM, DATA, etc...)
+; Bit 6 - Pseudo variable flag - add &40 to token if at the start of a
+;                                                       statement/hex number
+; Bit 7 - Unused - used externally for quote toggle.
+
+L8071:
+    dta 'AND'     , $80, $00  ; 00000000
+    dta 'ABS'     , $94, $00  ; 00000000
+    dta 'ACS'     , $95, $00  ; 00000000
+    dta 'ADVAL'   , $96, $00  ; 00000000
+    dta 'ASC'     , $97, $00  ; 00000000
+    dta 'ASN'     , $98, $00  ; 00000000
+    dta 'ATN'     , $99, $00  ; 00000000
+    dta 'AUTO'    , $C6, $10  ; 00010000
+    dta 'BGET'    , $9A, $01  ; 00000001
+    dta 'BPUT'    , $D5, $03  ; 00000011
+    .if version != 3
+        dta 'COLOUR', $FB, $02 ; 00000010
+    .elseif version == 3
+        dta 'COLOR', $FB, $02 ; 00000010
+    .endif
+    dta 'CALL'    , $D6, $02  ; 00000010
+    dta 'CHAIN'   , $D7, $02  ; 00000010
+    dta 'CHR$'    , $BD, $00  ; 00000000
+    dta 'CLEAR'   , $D8, $01  ; 00000001
+    dta 'CLOSE'   , $D9, $03  ; 00000011
+    dta 'CLG'     , $DA, $01  ; 00000001
+    dta 'CLS'     , $DB, $01  ; 00000001
+    dta 'COS'     , $9B, $00  ; 00000000
+    dta 'COUNT'   , $9C, $01  ; 00000001
+    .if version == 3
+        dta 'COLOUR', $FB, $02 ; 00000010
+    .elseif version > 3
+        dta 'COLOR', $FB, $02 ; 00000010
+    .endif
+    dta 'DATA'    , $DC, $20  ; 00100000
+    dta 'DEG'     , $9D, $00  ; 00000000
+    dta 'DEF'     , $DD, $00  ; 00000000
+    dta 'DELETE'  , $C7, $10  ; 00010000
+    dta 'DIV'     , $81, $00  ; 00000000
+    dta 'DIM'     , $DE, $02  ; 00000010
+    dta 'DRAW'    , $DF, $02  ; 00000010
+    dta 'ENDPROC' , $E1, $01  ; 00000001
+    dta 'END'     , $E0, $01  ; 00000001
+    dta 'ENVELOPE', $E2, $02  ; 00000010
+    dta 'ELSE'    , $8B, $14  ; 00010100
+    dta 'EVAL'    , $A0, $00  ; 00000000
+    dta 'ERL'     , $9E, $01  ; 00000001
+    dta 'ERROR'   , $85, $04  ; 00000100
+    dta 'EOF'     , $C5, $01  ; 00000001
+    dta 'EOR'     , $82, $00  ; 00000000
+    dta 'ERR'     , $9F, $01  ; 00000001
+    dta 'EXP'     , $A1, $00  ; 00000000
+    dta 'EXT'     , $A2, $01  ; 00000001
+    dta 'FOR'     , $E3, $02  ; 00000010
+    dta 'FALSE'   , $A3, $01  ; 00000001
+    dta 'FN'      , $A4, $08  ; 00001000
+    dta 'GOTO'    , $E5, $12  ; 00010010
+    dta 'GET$'    , $BE, $00  ; 00000000
+    dta 'GET'     , $A5, $00  ; 00000000
+    dta 'GOSUB'   , $E4, $12  ; 00010010
+    dta 'GCOL'    , $E6, $02  ; 00000010
+    dta 'HIMEM'   , $93, $43  ; 00100011
+    dta 'INPUT'   , $E8, $02  ; 00000010
+    dta 'IF'      , $E7, $02  ; 00000010
+    dta 'INKEY$'  , $BF, $00  ; 00000000
+    dta 'INKEY'   , $A6, $00  ; 00000000
+    dta 'INT'     , $A8, $00  ; 00000000
+    dta 'INSTR('  , $A7, $00  ; 00000000
+    dta 'LIST'    , $C9, $10  ; 00010000
+    dta 'LINE'    , $86, $00  ; 00000000
+    dta 'LOAD'    , $C8, $02  ; 00000010
+    dta 'LOMEM'   , $92, $43  ; 01000011
+    dta 'LOCAL'   , $EA, $02  ; 00000010
+    dta 'LEFT$('  , $C0, $00  ; 00000000
+    dta 'LEN'     , $A9, $00  ; 00000000
+    dta 'LET'     , $E9, $04  ; 00000100
+    dta 'LOG'     , $AB, $00  ; 00000000
+    dta 'LN'      , $AA, $00  ; 00000000
+    dta 'MID$('   , $C1, $00  ; 00000000
+    dta 'MODE'    , $EB, $02  ; 00000010
+    dta 'MOD'     , $83, $00  ; 00000000
+    dta 'MOVE'    , $EC, $02  ; 00000010
+    dta 'NEXT'    , $ED, $02  ; 00000010
+    dta 'NEW'     , $CA, $01  ; 00000001
+    dta 'NOT'     , $AC, $00  ; 00000000
+    dta 'OLD'     , $CB, $01  ; 00000001
+    dta 'ON'      , $EE, $02  ; 00000010
+    dta 'OFF'     , $87, $00  ; 00000000
+    dta 'OR'      , $84, $00  ; 00000000
+    dta 'OPENIN'  , $8E, $00  ; 00000000
+    dta 'OPENOUT' , $AE, $00  ; 00000000
+    dta 'OPENUP'  , $AD, $00  ; 00000000
+    dta 'OSCLI'   , $FF, $02  ; 00000010
+    dta 'PRINT'   , $F1, $02  ; 00000010
+    dta 'PAGE'    , $90, $43  ; 01000011
+    dta 'PTR'     , $8F, $43  ; 01000011
+    dta 'PI'      , $AF, $01  ; 00000001
+    dta 'PLOT'    , $F0, $02  ; 00000010
+    dta 'POINT('  , $B0, $00  ; 00000000
+    dta 'PROC'    , $F2, $0A  ; 00001010
+    dta 'POS'     , $B1, $01  ; 00000001
+    dta 'RETURN'  , $F8, $01  ; 00000001
+    dta 'REPEAT'  , $F5, $00  ; 00000000
+    dta 'REPORT'  , $F6, $01  ; 00000001
+    dta 'READ'    , $F3, $02  ; 00000010
+    dta 'REM'     , $F4, $20  ; 00100000
+    dta 'RUN'     , $F9, $01  ; 00000001
+    dta 'RAD'     , $B2, $00  ; 00000000
+    dta 'RESTORE' , $F7, $12  ; 00010010
+    dta 'RIGHT$(' , $C2, $00  ; 00000000
+    dta 'RND'     , $B3, $01  ; 00000001
+    dta 'RENUMBER', $CC, $10  ; 00010000
+    dta 'STEP'    , $88, $00  ; 00000000
+    dta 'SAVE'    , $CD, $02  ; 00000010
+    dta 'SGN'     , $B4, $00  ; 00000000
+    dta 'SIN'     , $B5, $00  ; 00000000
+    dta 'SQR'     , $B6, $00  ; 00000000
+    dta 'SPC'     , $89, $00  ; 00000000
+    dta 'STR$'    , $C3, $00  ; 00000000
+    dta 'STRING$(', $C4, $00  ; 00000000
+    dta 'SOUND'   , $D4, $02  ; 00000010
+    dta 'STOP'    , $FA, $01  ; 00000001
+    dta 'TAN'     , $B7, $00  ; 00000000
+    dta 'THEN'    , $8C, $14  ; 00010100
+    dta 'TO'      , $B8, $00  ; 00000000
+    dta 'TAB('    , $8A, $00  ; 00000000
+    dta 'TRACE'   , $FC, $12  ; 00010010
+    dta 'TIME'    , $91, $43  ; 01000011
+    dta 'TRUE'    , $B9, $01  ; 00000001
+    dta 'UNTIL'   , $FD, $02  ; 00000010
+    dta 'USR'     , $BA, $00  ; 00000000
+    dta 'VDU'     , $EF, $02  ; 00000010
+    dta 'VAL'     , $BB, $00  ; 00000000
+    dta 'VPOS'    , $BC, $01  ; 00000001
+    dta 'WIDTH'   , $FE, $02  ; 00000010
+    dta 'PAGE'    , $D0, $00  ; 00000000
+    dta 'PTR'     , $CF, $00  ; 00000000
+    dta 'TIME'    , $D1, $00  ; 00000000
+    dta 'LOMEM'   , $D2, $00  ; 00000000
+    dta 'HIMEM'   , $D3, $00  ; 00000000
+
+; ----------------------------------------------------------------------------
+
+; FUNCTION/COMMAND DISPATCH TABLE, ADDRESS LOW BYTES
+; ==================================================
+
+; ----------------------------------------------------------------------------
+
+; Temporary labels to make assembler happy
+
 L8ADD=$8add
 LB402=$b402
-
