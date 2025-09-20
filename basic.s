@@ -395,6 +395,53 @@ func_table .macro operator
     dta :1LABE9             ; $A0 - EVAL
     dta :1LAA91             ; $A1 - EXP
     dta :1LBF46             ; $A2 - EXT
+    .if version < 3
+        dta :1LAECA         ; $A3 - FALSE
+    .elseif version >= 3
+        dta :1LACCD         ; $A3 - FALSE
+    .endif
+    dta :1LB195             ; $A4 - FN
+    dta :1LAFB9             ; $A5 - GET
+    dta :1LACAD             ; $A6 - INKEY
+    dta :1LACE2             ; $A7 - INSTR(
+    dta :1LAC78             ; $A8 - INT
+    .if version < 3
+        dta :1LAED1         ; $A9 - LEN
+    .elseif version >= 3
+        dta :1XAECC         ; $A9 - LEN
+    .endif
+    dta :1LA7FE             ; $AA - LN
+    dta :1LABA8             ; $AB - LOG
+    .if version < 3
+        dta :1LACD1         ; $AC - NOT
+    .elseif version >= 3
+        dta :1XAB5B         ; $AC - NOT
+    .endif
+    dta :1LBF80             ; $AD - OPENUP
+    dta :1LBF7C             ; $AE - OPENOUT
+    dta :1LABCB             ; $AF - PI
+    .if version < 3
+        dta :1LAB41         ; $B0 - POINT(
+    .elseif version >= 3
+        dta :1XAB41         ; $B0 - POINT(
+    .endif
+    dta :1LAB6D             ; $B1 - POS
+    dta :1LABB1             ; $B2 - RAD
+    dta :1LAF49             ; $B3 - RND
+    .if version < 3
+        dta :1LAB88         ; $B4 - SGN
+    .elseif version >= 3
+        dta :1XACAA         ; $B4 - SGN
+    .endif
+    dta :1LA998             ; $B5 - SIN
+    dta :1LA7B4             ; $B6 - SQR
+    dta :1LA6BE             ; $B7 - TAN
+    .if version < 3
+        dta :1LAEDC         ; $B8 - TO
+    .elseif version >= 3
+        dta :1XAEA6         ; $B8 - TO
+    .endif
+
 .endm
 
 ; FUNCTION/COMMAND DISPATCH TABLE, ADDRESS LOW BYTES
@@ -407,26 +454,49 @@ L836D:
 
 ; Temporary labels to make assembler happy
 
-LAF9F=$af9f
-LAFA6=$afa6
 L8ADD=$8add
+LA6BE=$a6be
+LA7B4=$a7b4
+LA7FE=$a7fe
 LA8D4=$a8d4
 LA8DA=$a8da
 LA907=$a907
 LA98D=$a98d
+LA998=$a998
+LAA91=$aa91
 LAB33=$ab33
+LAB41=$ab41
+LAB6D=$ab6d
+LAB88=$ab88
+LABA8=$aba8
+LABB1=$abb1
 LABC2=$abc2
+LABCB=$abcb
+LABE9=$abe9
+LAC78=$ac78
 LAC9E=$ac9e
+LACAD=$acad
+LACD1=$acd1
+LACE2=$ace2
 LAD6A=$ad6a
 LAEB4=$aeb4
 LAEC0=$aec0
+LAECA=$aeca
+LAED1=$aed1
+LAEDC=$aedc
 LAEF7=$aef7
 LAEFC=$aefc
 LAF03=$af03
+LAF49=$af49
+LAF9F=$af9f
+LAFA6=$afa6
+LAFB9=$afb9
+LB195=$b195
 LB402=$b402
+LBF46=$bf46
 LBF47=$bf47
 LBF6F=$bf6f
 LBF78=$bf78
-LABE9=$abe9
-LAA91=$aa91
-LBF46=$bf46
+LBF7C=$bf7c
+LBF80=$bf80
+
