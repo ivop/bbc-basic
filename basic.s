@@ -548,6 +548,34 @@ L8451:
 L848B:
     icl 'mnemh.s'
 
+; Opcode base table
+; -----------------
+
+L84C5:
+
+; No arguments
+; ------------
+    BRK:CLC:CLD:CLI:CLV:DEX:DEY:INX
+    INY:NOP:PHA:PHP:PLA:PLP:RTI:RTS
+    SEC:SED:SEI:TAX:TAY:TSX:TXA:TXS:TYA
+
+; Branches
+; --------
+    dta $90, $B0, $F0, $30  ; BMI, BCC, BCS, BEQ
+    dta $D0, $10, $50, $70  ; BNE, BPL, BVC, BVS
+
+; Arithmetic
+; ----------
+    dta $21, $41, $01, $61  ; AND, EOR, ORA, ADC
+    dta $C1, $A1, $E1, $06  ; CMP, LDA, SBC, ASL
+    dta $46, $26, $66, $C6  ; LSR, ROL, ROR, DEC
+    dta $E6, $E0, $C0, $20  ; INC, CPX, CPY, BIT
+
+; Others
+; ------
+    dta $4C, $20, $A2, $A0  ; JMP, JSR, LDX, LDY
+    dta $81, $86, $84       ; STA, STX, STY
+
 ; ----------------------------------------------------------------------------
 
 ; Temporary labels to make assembler happy
