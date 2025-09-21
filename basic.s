@@ -1118,6 +1118,371 @@ L87F0:
 L8810:
     JMP L8738
 
+L8813:
+    BNE L883A
+    JSR L8821
+    LDA zp2A
+    STA zp28
+    LDY #$00
+    JMP L862B
+
+L8821:
+    JSR L9B1D
+    JSR L92F0
+L8827:
+    LDY zp1B
+    STY zp0A
+    RTS
+
+L882C:
+    JSR L882F
+L882F:
+    JSR L8832
+L8832:
+    LDA zp29
+    CLC
+    ADC #$04
+    STA zp29
+    RTS
+
+L883A:
+    LDX #$01              ; Prepare for one byte
+    LDY zp0A
+    INC zp0A       ; Increment index
+    LDA ($0B),Y           ; Get next character
+    CMP #'B'
+    BEQ L8858 ; EQUB
+    INX                   ; Prepare for two bytes
+    CMP #'W'
+    BEQ L8858 ; EQUW
+    LDX #$04              ; Prepare for four bytes
+    CMP #'D'
+    BEQ L8858 ; EQUD
+    CMP #'S'
+    BEQ L886A ; EQUS
+    JMP L982A             ; Syntax error
+
+L8858:
+    TXA
+    PHA
+    JSR L8821
+    LDX #$29
+    JSR LBE44
+    PLA
+    TAY
+L8864:
+    JMP L862B
+
+L8867:
+    JMP L8C0E
+
+L886A:
+    LDA zp28
+    PHA
+    JSR L9B1D
+    BNE L8867
+    PLA
+    STA zp28
+    JSR L8827
+    LDY #$FF
+    BNE L8864
+
+L887C:
+    PHA
+    CLC
+    TYA
+    ADC zp37
+    STA zp39
+    LDY #$00
+    TYA
+    ADC zp38
+    STA zp3A
+    PLA
+    STA (zp37),Y
+L888D:
+    INY
+    LDA (zp39),Y
+    STA (zp37),Y
+    CMP #$0D
+    BNE L888D
+    RTS
+
+L8897:
+    AND #$0F
+    STA zp3D
+    STY zp3E
+L889D:
+    INY
+    LDA (zp37),Y
+    .if version < 3
+        CMP #'9'+1
+        BCS L88DA
+        CMP #'0'
+    .elseif version >= 3
+        JSR L8936
+    .endif
+    BCC L88DA
+    AND #$0F
+    PHA
+    LDX zp3E
+    LDA zp3D
+    ASL
+    ROL zp3E
+    BMI L88D5
+    ASL
+    ROL zp3E
+    BMI L88D5
+    ADC zp3D
+    STA zp3D
+    TXA
+    ADC zp3E
+    ASL zp3D
+    ROL
+    BMI L88D5
+    BCS L88D5
+    STA zp3E
+    PLA
+    ADC zp3D
+    STA zp3D
+    BCC L889D
+    INC zp3E
+    BPL L889D
+    PHA
+L88D5:
+    PLA
+    LDY #$00
+    SEC
+    RTS
+
+L88DA:
+    DEY
+    LDA #$8D
+    JSR L887C
+    LDA zp37
+    ADC #$02
+    STA zp39
+    LDA zp38
+    ADC #$00
+    STA zp3A
+L88EC:
+    LDA (zp37),Y
+    STA (zp39),Y
+    DEY
+    BNE L88EC
+    LDY #$03
+L88F5:
+    LDA zp3E
+    ORA #$40
+    STA (zp37),Y
+    DEY
+    LDA zp3D
+    AND #$3F
+    ORA #$40
+    STA (zp37),Y
+    DEY
+    LDA zp3D
+    AND #$C0
+    STA zp3D
+    LDA zp3E
+    AND #$C0
+    LSR
+    LSR
+    ORA $3D
+    LSR
+    LSR
+    EOR #$54
+    STA (zp37),Y
+    JSR L8944               ; Increment $37/8
+    JSR L8944               ; Increment $37/8
+    JSR L8944               ; Increment $37/8
+    LDY #$00
+L8924:
+    CLC
+    RTS
+
+L8926:
+    CMP #$7B
+    BCS L8924
+    CMP #$5F
+    BCS L893C
+    CMP #$5B
+    BCS L8924
+    CMP #$41
+    BCS L893C
+L8936:
+    CMP #$3A
+    BCS L8924
+    CMP #$30
+L893C:
+    RTS
+
+L893D:
+    CMP #$2E
+    BNE L8936
+    RTS
+
+L8942:
+    LDA (zp37),Y
+L8944:
+    INC zp37
+    BNE L894A
+    INC zp38
+L894A:
+    RTS
+
+L894B:
+    JSR L8944                ; Increment $37/8
+    LDA (zp37),Y
+    RTS
+
+; Tokenise line at $37/8
+; ======================
+L8951:
+    LDY #$00
+    STY zp3B      ; Set tokeniser to left-hand-side
+L8955:
+    STY zp3C
+L8957:
+    LDA (zp37),Y           ; Get current character
+    CMP #$0D
+    BEQ L894A    ; Exit with <cr>
+    CMP #$20
+    BNE L8966    ; Skip <spc>
+L8961:
+    JSR L8944
+    BNE L8957   ; Increment $37/8 and check next character
+
+L8966:
+    CMP #'&'
+    BNE L897C ; Jump if not '&'
+L896A:
+    JSR L894B                ; Increment $37/8 and get next character
+    JSR L8936
+    BCS L896A      ; Jump if numeric character
+    CMP #'A'
+    BCC L8957    ; Loop back if <'A'
+    CMP #'F'+1
+    BCC L896A  ; Step to next if 'A'..'F'
+    BCS L8957                ; Loop back for next character
+L897C:
+    CMP #$22
+    BNE L898C
+L8980:
+    JSR L894B                ; Increment $37/8 and get next character
+    CMP #$22
+    BEQ L8961       ; Not quote, jump to process next character
+    CMP #$0D
+    BNE L8980
+    RTS
+
+L898C:
+    CMP #':'
+    BNE L8996
+    STY zp3B
+    STY zp3C
+    BEQ L8961
+L8996:
+    CMP #','
+    BEQ L8961
+    CMP #'*'
+    BNE L89A3
+    LDA zp3B
+    BNE L89E3
+    RTS
+
+L89A3:
+    CMP #'.'
+    BEQ L89B5
+    JSR L8936
+    BCC L89DF
+    LDX zp3C
+    BEQ L89B5
+    JSR L8897
+    BCC L89E9
+L89B5:
+    LDA (zp37),Y
+    JSR L893D
+    BCC L89C2
+    JSR L8944
+    JMP L89B5
+
+L89C2:
+    LDX #$FF
+    STX zp3B
+    STY zp3C
+    JMP L8957
+
+L89CB:
+    JSR L8926
+    BCC L89E3
+L89D0:
+    LDY #$00
+L89D2:
+    LDA (zp37),Y
+    JSR L8926
+    BCC L89C2
+    JSR L8944
+    JMP L89D2
+
+L89DF:
+    CMP #'A'
+    BCS L89EC    ; Jump if letter
+L89E3:
+    LDX #$FF
+    STX zp3B
+    STY zp3C
+L89E9:
+    JMP L8961
+
+L89EC:
+    CMP #'X'
+    BCS L89CB      ; Jump if >='X', nothing starts with X,Y,Z
+    LDX #<L8071
+    STX zp39 ; Point to token table
+    LDX #>L8071
+    STX zp3A
+L89F8:
+    CMP (zp39),Y
+    BCC L89D2
+    BNE L8A0D
+L89FE:
+    INY
+    LDA (zp39),Y
+    BMI L8A37
+    CMP (zp37),Y
+    BEQ L89FE
+    LDA (zp37),Y
+    CMP #'.'
+    BEQ L8A18
+L8A0D:
+    INY
+    LDA (zp39),Y
+    BPL L8A0D
+    CMP #$FE
+    BNE L8A25
+    BCS L89D0
+L8A18:
+    INY
+L8A19:
+    LDA (zp39),Y
+    BMI L8A37
+    INC zp39
+    BNE L8A19
+    INC zp3A
+    BNE L8A19
+L8A25:
+    SEC
+    INY
+    TYA
+    ADC zp39
+    STA zp39
+    BCC L8A30
+    INC zp3A
+L8A30:
+    LDY #$00
+    LDA (zp37),Y
+    JMP L89F8
+
 ; ----------------------------------------------------------------------------
 
 ; Temporary labels to make assembler happy
@@ -1252,10 +1617,8 @@ L9582=$9582
 LBD94=$bd94
 LAE3A=$ae3a
 LB4B4=$b4b4
-L8827=$8827
-L8821=$8821
-L8813=$8813
-L882C=$882c
-L882F=$882f
-L8832=$8832
-
+L8C0E=$8c0e
+L92F0=$92f0
+L9B1D=$9b1d
+LBE44=$be44
+L8A37=$8a37
