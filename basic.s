@@ -1629,7 +1629,6 @@ L8AD0:
 
 ; NEW - Clear program, enter immediate mode
 ; =========================================
-;xxx
 L8ADA:
     JSR L9857                 ; Check end of statement
     .if title != 0
@@ -2102,16 +2101,486 @@ L8D77:
     STY zp0A
     JMP L8B98
 
+;xxx
+; End of PRINT statement
+; ----------------------
+L8D7D:
+    JSR LBC25                 ; Output new line and set COUNT to zero
+L8D80:
+    JMP L8B96                 ; Check end of statement, return to execution loop
+
+L8D83:
+    LDA #$00
+    STA zp14
+    STA zp15  ; Set current field to zero, hex/dec flag to decimal
+    JSR L8A97                 ; Get next non-space character
+    CMP #':'
+    BEQ L8D80     ; <colon> found, finish printing
+    CMP #$0D
+    BEQ L8D80        ; <cr> found, finish printing
+    CMP #tknELSE
+    BEQ L8D80    ; 'ELSE' found, finish printing
+    BNE L8DD2                 ; Otherwise, continue into main loop
+
+; PRINT [~][print items]['][,][;]
+; ===============================
+L8D9A:
+    JSR L8A97                 ; Get next non-space char
+    CMP #'#'
+    BEQ L8D2B     ; If '#' jump to do PRINT#
+    DEC zp0A
+    JMP L8DBB         ; Jump into PRINT loop
+
+; Print a comma
+; -------------
+L8DA6:
+    LDA ws+$0400
+    BEQ L8DBB    ; If field width zero, no padding needed, jump back into main loop
+    LDA zp1E                   ; Get COUNT
+L8DAD:
+    BEQ L8DBB                 ; Zero, just started a new line, no padding, jump back into main loop
+    SBC ws+$0400              ; Get COUNT-field width
+    BCS L8DAD                 ; Loop to reduce until (COUNT MOD fieldwidth)<0
+    TAY                       ; Y=number of spaces to get back to (COUNT MOD width)=zero
+L8DB5:
+    JSR LB565
+    INY
+    BNE L8DB5   ; Loop to print required spaces
+
+L8DBB:
+    CLC                       ; Prepare to print decimal
+    LDA ws+$0400
+    STA zp14      ; Set current field width from @%
+L8DC1:
+    ROR zp15                   ; Set hex/dec flag from Carry
+L8DC3:
+    JSR L8A97                 ; Get next non-space character
+    CMP #':'
+    BEQ L8D7D     ; End of statement if <colon> found
+    CMP #$0D
+    BEQ L8D7D        ; End if statement if <cr> found
+    CMP #tknELSE
+    BEQ L8D7D    ; End of statement if 'ELSE' found
+
+L8DD2:
+    CMP #'~'
+    BEQ L8DC1     ; Jump back to set hex/dec flag from Carry
+    CMP #','
+    BEQ L8DA6     ; Jump to pad to next print field
+    CMP #';'
+    BEQ L8D83     ; Jump to check for end of print statement
+    JSR L8E70
+    BCC L8DC3       ; Check for ' TAB SPC, if print token found return to outer main loop
+
+; All print formatting have been checked, so it now must be an expression
+; -----------------------------------------------------------------------
+    LDA zp14
+    PHA
+    LDA zp15
+    PHA   ; Save field width and flags, as evaluator
+                              ;  may call PRINT (eg FN, STR$, etc.)
+    DEC zp1B
+    JSR L9B29         ; Evaluate expression
+    PLA
+    STA zp15
+    PLA
+    STA zp14   ; Restore field width and flags
+    LDA zp1B
+    STA zp0A           ; Update program pointer
+    TYA
+    BEQ L8E0E             ; If type=0, jump to print string
+    JSR L9EDF                 ; Convert numeric value to string
+    LDA zp14                   ; Get current field width
+    SEC
+    SBC zp36               ; A=width-stringlength
+    BCC L8E0E                 ; length>width - print it
+    BEQ L8E0E                 ; length=width - print it
+    TAY                       ; Otherwise, Y=number of spaces to pad with
+L8E08:
+    JSR LB565
+    DEY
+    BNE L8E08   ; Loop to print required spaces to pad the number
+
+; Print string in string buffer
+; -----------------------------
+L8E0E:
+    LDA zp36
+    BEQ L8DC3         ; Null string, jump back to main loop
+    LDY #$00                  ; Point to start of string
+L8E14:
+    LDA ws+$0600,Y
+    JSR LB558  ; Print character from string buffer
+    INY
+    CPY zp36
+    BNE L8E14     ; Increment pointer, loop for full string
+    BEQ L8DC3                 ; Jump back for next print item
+
+L8E21:
+    .if version < 3
+        JMP L8AA2
+    .elseif version >= 3
+        JMP X8AC8
+    .endif
+
+L8E24:
+    CMP #','
+    BNE L8E21     ; No comma, jump to TAB(x)
+    LDA zp2A
+    PHA               ; Save X
+    JSR LAE56
+    JSR L92F0
+
+; Atom - manually position cursor
+; -------------------------------
+    .ifdef MOS_ATOM
+        LDA #$1E
+        JSR OSWRCH   ; Home cursor
+        LDY zp2A
+        BEQ XADDC     ; Y=0, no movement needed
+        LDA #$0A
+XADD6:
+        JSR OSWRCH            ; Move cursor down
+        DEY
+        BNE XADD6         ; Loop until Y position reached
+XADDC:
+        PLA
+        BEQ XADE8         ; X=0, no movement needed
+        TAY
+        LDA #$09
+XADE2:
+        JSR OSWRCH            ; Move cursor right
+        DEY
+        BNE XADE2         ; Loop until X position reached
+XADE8:
+    .endif
+
+; BBC - send VDU 31,x,y sequence
+; ------------------------------
+    .ifdef MOS_BBC
+        LDA #$1F
+        JSR OSWRCH      ; TAB()
+        PLA
+        JSR OSWRCH           ; X coord
+        JSR L9456                ; Y coord
+    .endif
+
+    JMP L8E6A                 ; Continue to next PRINT item
+
+L8E40:
+    JSR L92DD
+    JSR L8A8C
+    CMP #')'
+    BNE L8E24
+    LDA zp2A
+    SBC zp1E
+    BEQ L8E6A
+    .if version < 3
+        TAY
+    .elseif version >= 3
+        TAX
+    .endif
+    BCS L8E5F
+    JSR LBC25
+    BEQ L8E5B
+L8E58:
+    JSR L92E3
+L8E5B:
+    .if version < 3
+        LDY zp2A
+    .elseif version >= 3
+        LDX zp2A
+    .endif
+    BEQ L8E6A
+L8E5F:
+    .if version < 3
+        JSR LB565
+        DEY
+        BNE L8E5F
+    .elseif version >= 3
+        JSR LB580
+    .endif
+    BEQ L8E6A
+L8E67:
+    JSR LBC25
+L8E6A:
+    CLC
+    LDY zp1B
+    STY zp0A
+    RTS
+
+L8E70:
+    LDX zp0B
+    STX zp19
+    LDX zp0C
+    STX zp1A
+    LDX zp0A
+    STX zp1B
+    CMP #$27
+    BEQ L8E67
+    CMP #$8A
+    BEQ L8E40
+    CMP #$89
+    BEQ L8E58
+    SEC
+L8E89:
+    RTS
+
+L8E8A:
+    JSR L8A97 ; Skip spaces
+    JSR L8E70
+    BCC L8E89
+    CMP #$22
+    BEQ L8EA7
+    SEC
+    RTS
+
+L8E98:
+    BRK
+    dta 9
+    FNfold 'Missing '
+    dta 0x22                ; "
+    BRK
+
+L8EA4:
+    JSR LB558
+L8EA7:
+    INY
+    LDA (zp19),Y
+    CMP #$0D
+    BEQ L8E98
+    CMP #$22
+    BNE L8EA4
+    INY
+    STY zp1B
+    LDA (zp19),Y
+    CMP #$22
+    BNE L8E6A
+    BEQ L8EA4
+
+; CLG
+; ===
+L8EBD:
+    JSR L9857                 ; Check end of statement
+    LDA #$10
+    BNE L8ECC        ; Jump to do VDU 16
+
+; CLS
+; ===
+L8EC4:
+    JSR L9857                 ; Check end of statement
+    JSR LBC28                 ; Set COUNT to zero
+    LDA #$0C                  ; Do VDU 12
+L8ECC:
+    JSR OSWRCH
+    JMP L8B9B      ; Send A to OSWRCH, jump to execution loop
+
+; CALL numeric [,items ... ]
+; ==========================
+L8ED2:
+    JSR L9B1D
+    JSR L92EE
+    JSR LBD94
+    LDY #$00
+    STY ws+$0600
+L8EE0:
+    STY ws+$06FF
+    JSR L8A8C
+    CMP #$2C
+    BNE L8F0C
+    LDY zp1B
+    JSR L95D5
+    BEQ L8F1B
+    LDY ws+$06FF
+    INY
+    LDA zp2A
+    STA ws+$0600,Y
+    INY
+    LDA zp2B
+    STA ws+$0600,Y
+    INY
+    LDA zp2C
+    STA ws+$0600,Y
+    INC ws+$0600
+    JMP L8EE0
+
+L8F0C:
+    DEC zp1B
+    JSR L9852 ; Check for end of statement
+    JSR LBDEA         ; Pop integer to IntA
+    JSR L8F1E         ; Set up registers and call code at IntA
+    CLD               ; Ensure Binary mode on return
+    JMP L8B9B         ; Jump back to program loop
+
+L8F1B:
+    JMP LAE43
+
+; Call code
+; ---------
+L8F1E:
+    LDA ws+$040C
+    LSR
+    LDA ws+$0404  ; Get Carry from C%, A from A%
+    LDX ws+$0460
+    LDY ws+$0464        ; Get X from X%, Y from Y%
+    JMP (zp2A)                      ; Jump to address in IntA
+
+
+L8F2E:
+    JMP L982A
+
+; DELETE linenum, linenum
+; =======================
+L8F31:
+    JSR L97DF
+    BCC L8F2E
+    JSR LBD94
+    JSR L8A97
+    CMP #$2C
+    BNE L8F2E
+    JSR L97DF
+    BCC L8F2E
+    JSR L9857
+    LDA zp2A
+    STA zp39
+    LDA zp2B
+    STA zp3A
+    JSR LBDEA
+L8F53:
+    JSR LBC2D
+    JSR L987B
+    JSR L9222
+    LDA zp39
+    CMP zp2A
+    LDA zp3A
+    SBC zp2B
+    BCS L8F53
+    JMP L8AF3
+
+; Called by RENUMBER and AUTO
+L8F69:
+    LDA #$0A
+    .if version < 3
+        JSR LAED8
+    .elseif version >= 3
+        JSR XAED3
+    .endif
+    JSR L97DF
+    JSR LBD94
+    LDA #$0A
+    .if version < 3
+        JSR LAED8
+    .elseif version >= 3
+        JSR XAED3
+    .endif
+    JSR L8A97
+    CMP #$2C
+    BNE L8F8D
+    JSR L97DF
+    LDA zp2B
+    BNE L8FDF
+    LDA zp2A
+    BEQ L8FDF
+    INC zp0A
+L8F8D:
+    DEC zp0A
+    JMP L9857
+
+; called by renumber
+L8F92:
+    LDA zp12
+    STA zp3B
+    LDA zp13
+    STA zp3C
+L8F9A:
+    LDA zp18
+    STA zp38
+    LDA #$01
+    STA zp37
+    RTS
+
+; RENUMBER [linenume [,linenum]]
+; ==============================
+L8FA3:
+    JSR L8F69
+    LDX #$39
+    JSR LBE0D
+    JSR LBE6F
+    JSR L8F92
+; Build up table of line numbers
+L8FB1:
+    LDY #$00
+    LDA (zp37),Y
+    BMI L8FE7 ; Line.hi>$7F, end of program
+    STA (zp3B),Y
+    INY
+    LDA (zp37),Y
+    STA (zp3B),Y
+    SEC
+    TYA
+    ADC zp3B
+    STA zp3B
+    TAX
+    LDA zp3C
+    ADC #$00
+    STA zp3C
+    CPX zp06
+    SBC zp07
+    BCS L8FD6
+    JSR L909F
+    BCC L8FB1
+L8FD6:
+    BRK
+    dta 0
+    dta tknRENUMBER
+    FNfold ' space'  ; Terminated by following BRK
+L8FDF:
+    BRK
+    dta 0
+    FNfold 'Silly'
+    BRK
+
+; Do 4K+12K split here
+; --------------------
+L8FE7:
+    .if split == 1
+        JMP X8FE7
+
+        ; PROCname [(parameters)]
+        ; =======================
+X9304:
+        LDA zp0B
+        STA zp19           ; PtrB=PtrA=>after 'PROC' token
+        LDA zp0C
+        STA zp1A
+        LDA zp0A
+        STA zp1B
+        LDA #$F2
+        JSR LB197        ; Call PROC/FN dispatcher
+                               ; Will return here after ENDPROC
+        JSR L9852                 ; Check for end of statement
+        JMP L8B9B                 ; Return to execution loop
+    .endif
+
 ; ----------------------------------------------------------------------------
 
 ; Temporary labels to make assembler happy
 
-L8D9A=$8d9a
-L8EBD=$8ebd
-L8EC4=$8ec4
-L8ED2=$8ed2
-L8F31=$8f31
-L8FA3=$8fa3
+L909F=$909F
+L9222=$9222
+L92DD=$92DD
+L92E3=$92E3
+L92EE=$92EE
+L9456=$9456
+L95D5=$95D5
+L9852=$9852
+L987B=$987B
+L9EDF=$9EDF
+LAE43=$AE43
+LAE56=$AE56
+LAED8=$AED8
+LBC28=$BC28
+LBC2D=$BC2D
+LBE0D=$BE0D
 L90AC=$90ac
 L912F=$912f
 L925D=$925d
