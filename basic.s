@@ -3337,7 +3337,6 @@ L9456:
         JMP OSWRCH 
     .endif
 
-;xxx fixup zp from here
 
 ; VARIABLE PROCESSING
 ; ===================
@@ -4549,6 +4548,1346 @@ L9B15:
     PLP              ; 9B1B= 28          (
     RTS              ; 9B1C= 60          `
 
+
+; EXPRESSION EVALUATOR
+; ====================
+
+; Evaluate expression at PtrA
+; ---------------------------
+L9B1D:
+    LDA zp0B
+    STA zp19          ; Copy PtrA to PtrB
+    LDA zp0C
+    STA zp1A
+    LDA zp0A
+    STA zp1B
+
+; Evaluate expression at PtrB
+; ---------------------------
+; TOP LEVEL EVALUATOR
+;
+; Evaluator Level 7 - OR, EOR
+; ---------------------------
+L9B29:
+    JSR L9B72                 ; Call Evaluator Level 6 - AND
+                              ; Returns A=type, value in IntA/FPA/StrA, X=next char
+L9B2C:
+    CPX #tknOR
+    BEQ L9B3A      ; Jump if next char is OR
+    CPX #tknEOR
+    BEQ L9B55     ; Jump if next char is EOR
+    DEC zp1B                   ; Step PtrB back to last char
+    TAY
+    STA zp27
+    RTS           ; Set flags from type, store type in $27 and return
+
+; OR numeric
+; ----------
+L9B3A:
+    JSR L9B6B
+    TAY             ; Stack as integer, call Evaluator Level 6
+    JSR L92F0
+    LDY #$03        ; If float, convert to integer
+L9B43:
+    LDA (zp04),Y
+    ORA zp2A,Y   ; OR IntA with top of stack    ; abs,y (!)
+    STA zp2A,Y                                  ; abs,y (!)
+    DEY
+    BPL L9B43 ; Store result in IntA
+L9B4E:
+    JSR LBDFF                 ; Drop integer from stack
+    LDA #$40
+    BNE L9B2C        ; Return type=Int, jump to check for more OR/EOR
+
+; EOR numeric
+; -----------
+L9B55:
+    JSR L9B6B
+    TAY
+    JSR L92F0
+    LDY #$03        ; If float, convert to integer
+L9B5E:
+    LDA (zp04),Y
+    EOR zp2A,Y   ; EOR IntA with top of stack       ; abs,y (!)
+    STA zp2A,Y                                      ; abs,y (!)
+    DEY
+    BPL L9B5E ; Store result in IntA
+    BMI L9B4E                 ; Jump to drop from stack and continue
+
+; Stack current as integer, evaluate another Level 6
+; --------------------------------------------------
+L9B6B:
+    TAY
+    JSR L92F0
+    JSR LBD94   ; If float, convert to integer, push into stack
+
+; Evaluator Level 6 - AND
+; -----------------------
+L9B72:
+    JSR L9B9C                 ; Call Evaluator Level 5, < <= = >= > <>
+L9B75:
+    CPX #tknAND
+    BEQ L9B7A
+    RTS ; Return if next char not AND
+
+; AND numeric
+; -----------
+L9B7A:
+    TAY
+    JSR L92F0
+    JSR LBD94   ; If float, convert to integer, push onto stack
+    JSR L9B9C                 ; Call Evaluator Level 5, < <= = >= > <>
+    TAY
+    JSR L92F0
+    LDY #$03    ; If float, convert to integer
+L9B8A:
+    LDA (zp04),Y
+    AND zp2A,Y   ; AND IntA with top of stack   ; abs,y (!)
+    STA zp2A,Y                                  ; abs,y (!)
+    DEY
+    BPL L9B8A ; Store result in IntA
+    JSR LBDFF                 ; Drop integer from stack
+    LDA #$40
+    BNE L9B75        ; Return type=Int, jump to check for another AND
+
+; Evaluator Level 5 - >... =... or <...
+; -------------------------------------
+L9B9C:
+    JSR L9C42                 ; Call Evaluator Level 4, + -
+    CPX #'>'+1
+    BCS L9BA7   ; Larger than '>', return
+    CPX #'<'
+    BCS L9BA8     ; Smaller than '<', return
+L9BA7:
+    RTS
+
+; >... =... or <...
+; -----------------
+L9BA8:
+    BEQ L9BC0                 ; Jump with '<'
+    CPX #'>'
+    BEQ L9BE8     ; Jump with '>'
+                              ; Must be '='
+; = numeric
+; ---------
+    TAX
+    JSR L9A9E
+    BNE L9BB5   ; Jump with result=0 for not equal
+L9BB4:
+    DEY                       ; Decrement to $FF for equal
+L9BB5:
+    STY zp2A
+    STY zp2B
+    STY zp2C   ; Store 0/-1 in IntA
+    STY zp2D
+    LDA #$40
+    RTS      ; Return type=Int
+
+; < <= <>
+; -------
+L9BC0:
+    TAX
+    LDY zp1B
+    LDA (zp19),Y   ; Get next char from PtrB
+    CMP #'='
+    BEQ L9BD4     ; Jump for <=
+    CMP #'>'
+    BEQ L9BDF     ; Jump for <>
+
+; Must be < numeric
+; -----------------
+    JSR L9A9D                 ; Evaluate next and compare
+    BCC L9BB4
+    BCS L9BB5       ; Jump to return TRUE if <, FALSE if not <
+
+; <= numeric
+; ----------
+L9BD4:
+    INC zp1B
+    JSR L9A9D         ; Step past '=', evaluate next and compare
+    BEQ L9BB4
+    BCC L9BB4       ; Jump to return TRUE if =, TRUE if <
+    BCS L9BB5                 ; Jump to return FALSE otherwise
+
+; <> numeric
+; ----------
+L9BDF:
+    INC zp1B
+    JSR L9A9D         ; Step past '>', evaluate next and compare
+    BNE L9BB4
+    BEQ L9BB5       ; Jump to return TRUE if <>, FALSE if =
+
+; > >=
+; ----
+L9BE8:
+    TAX
+    LDY zp1B
+    LDA (zp19),Y   ; Get next char from PtrB
+    CMP #'='
+    BEQ L9BFA     ; Jump for >=
+
+; > numeric
+; ---------
+    JSR L9A9D                 ; Evaluate next and compare
+    BEQ L9BB5
+    BCS L9BB4       ; Jump to return FALSE if =, TRUE if >
+    BCC L9BB5                 ; Jump to return FALSE if <
+
+; >= numeric
+; ----------
+L9BFA:
+    INC zp1B
+    JSR L9A9D         ; Step past '=', evaluate next and compare
+    BCS L9BB4
+    BCC L9BB5       ; Jump to return TRUE if >=, FALSE if <
+
+L9C03:
+    BRK
+    dta $13
+    FNfold 'String too long'
+    BRK
+
+; String addition
+; ---------------
+L9C15:
+    JSR LBDB2
+    JSR L9E20       ; Stack string, call Evaluator Level 2
+    TAY
+    BNE L9C88             ; string + number, jump to 'Type mismatch' error
+    CLC
+    STX zp37
+    LDY #$00
+    LDA (zp04),Y      ; Get stacked string length
+    ADC zp36
+    BCS L9C03         ; If added string length >255, jump to error
+    TAX
+    PHA
+    LDY zp36           ; Save new string length
+L9C2D:
+    LDA ws+$05FF,Y
+    STA ws+$05FF,X ; Move current string up in string buffer
+    DEX
+    DEY
+    BNE L9C2D
+    JSR LBDCB                 ; Unstack string to start of string buffer
+    PLA
+    STA zp36
+    LDX zp37       ; Set new string length
+    TYA
+    BEQ L9C45             ; Set type=string, jump to check for more + or -
+
+; Evaluator Level 4, + -
+; ----------------------
+L9C42:
+    JSR L9DD1                 ; Call Evaluator Level 3, * / DIV MOD
+L9C45:
+    CPX #'+'
+    BEQ L9C4E     ; Jump with addition
+    CPX #'-'
+    BEQ L9CB5     ; Jump with subtraction
+    RTS                       ; Return otherwise
+
+; + <value>
+; ---------
+L9C4E:
+    TAY
+    BEQ L9C15             ; Jump if current value is a string
+    BMI L9C8B                 ; Jump if current value is a float
+
+; Integer addition
+; ----------------
+    JSR L9DCE                 ; Stack current and call Evaluator Level 3
+    TAY
+    BEQ L9C88             ; If int + string, jump to 'Type mismatch' error
+    BMI L9CA7                 ; If int + float, jump ...
+    LDY #$00
+    CLC
+    LDA (zp04),Y
+    ADC zp2A
+    STA zp2A  ; Add top of stack to IntA
+    INY
+    LDA (zp04),Y
+    ADC zp2B
+    STA zp2B  ; Store result in IntA
+    INY
+    LDA (zp04),Y
+    ADC zp2C
+    STA zp2C
+    INY
+    LDA (zp04),Y
+    ADC zp2D
+L9C77:
+    STA zp2D
+    CLC
+    LDA zp04
+    ADC #$04
+    STA zp04  ; Drop integer from stack
+    LDA #$40
+    BCC L9C45        ; Set result=integer, jump to check for more + or -
+    INC zp05
+    BCS L9C45         ; Jump to check for more + or -
+
+L9C88:
+    JMP L8C0E                 ; Jump to 'Type mismatch' error
+
+; Real addition
+; -------------
+L9C8B:
+    JSR LBD51
+    JSR L9DD1       ; Stack float, call Evaluator Level 3
+    TAY
+    BEQ L9C88             ; float + string, jump to 'Type mismatch' error
+    STX zp27
+    BMI L9C9B         ; float + float, skip conversion
+    JSR LA2BE                 ; float + int, convert int to float
+L9C9B:
+    JSR LBD7E                 ; Pop float from stack, point FPTR to it
+    JSR LA500                 ; Unstack float to FPA2 and add to FPA1
+L9CA1:
+    LDX zp27                   ; Get nextchar back
+    LDA #$FF
+    BNE L9C45        ; Set result=float, loop to check for more + or -
+
+; int + float
+; -----------
+L9CA7:
+    STX zp27
+    JSR LBDEA         ; Unstack integer to IntA
+    JSR LBD51
+    JSR LA2BE       ; Stack float, convert integer in IntA to float in FPA1
+    JMP L9C9B                 ; Jump to do float + <stacked float>
+
+; - numeric
+; ---------
+L9CB5:
+    TAY
+    BEQ L9C88             ; If current value is a string, jump to error
+    BMI L9CE1                 ; Jump if current value is a float
+
+; Integer subtraction
+; -------------------
+    JSR L9DCE                 ; Stack current and call Evaluator Level 3
+    TAY
+    BEQ L9C88             ; int + string, jump to error
+    BMI L9CFA                 ; int + float, jump to convert and do real subtraction
+    SEC
+    LDY #$00
+    LDA (zp04),Y
+    SBC zp2A
+    STA zp2A
+    INY
+    LDA (zp04),Y
+    SBC zp2B
+    STA zp2B ; Subtract IntA from top of stack
+    INY
+    LDA (zp04),Y
+    SBC zp2C
+    STA zp2C ; Store in IntA
+    INY
+    LDA (zp04),Y
+    SBC zp2D
+    JMP L9C77                 ; Jump to pop stack and loop for more + or -
+
+; Real subtraction
+; ----------------
+L9CE1:
+    JSR LBD51
+    JSR L9DD1       ; Stack float, call Evaluator Level 3
+    TAY
+    BEQ L9C88             ; float - string, jump to 'Type mismatch' error
+    STX zp27
+    BMI L9CF1         ; float - float, skip conversion
+    JSR LA2BE                 ; float - int, convert int to float
+L9CF1:
+    JSR LBD7E                 ; Pop float from stack and point FPTR to it
+    JSR LA4FD                 ; Unstack float to FPA2 and subtract it from FPA1
+    JMP L9CA1                 ; Jump to set result and loop for more + or -
+
+; int - float
+; -----------
+L9CFA:
+    STX zp27
+    JSR LBDEA         ; Unstack integer to IntA
+    JSR LBD51
+    JSR LA2BE       ; Stack float, convert integer in IntA to float in FPA1
+    JSR LBD7E                 ; Pop float from stack, point FPTR to it
+    JSR LA4D0                 ; Subtract FPTR float from FPA1 float
+    JMP L9CA1                 ; Jump to set result and loop for more + or -
+
+L9D0E:
+    JSR LA2BE        ; 9D0E= 20 BE A2     >"
+L9D11:
+    JSR LBDEA        ; 9D11= 20 EA BD     j=
+    JSR LBD51        ; 9D14= 20 51 BD     Q=
+    JSR LA2BE        ; 9D17= 20 BE A2     >"
+    JMP L9D2C        ; 9D1A= 4C 2C 9D    L,.
+
+L9D1D:
+    JSR LA2BE        ; 9D1D= 20 BE A2     >"
+L9D20:
+    JSR LBD51        ; 9D20= 20 51 BD     Q=
+    JSR L9E20        ; 9D23= 20 20 9E      .
+    STX zp27          ; 9D26= 86 27       .'
+    TAY              ; 9D28= A8          (
+    JSR L92FD        ; 9D29= 20 FD 92     }.
+L9D2C:
+    JSR LBD7E        ; 9D2C= 20 7E BD     ~=
+    JSR LA656        ; 9D2F= 20 56 A6     V$
+    LDA #$FF         ; 9D32= A9 FF       ).
+    LDX zp27          ; 9D34= A6 27       $'
+    JMP L9DD4        ; 9D36= 4C D4 9D    LT.
+
+L9D39:
+    JMP L8C0E        ; 9D39= 4C 0E 8C    L..
+
+; * <value>
+; ---------
+L9D3C:
+    TAY
+    BEQ L9D39             ; If current value is string, jump to error
+    BMI L9D20                 ; Jump if current valus ia a float
+    LDA zp2D
+    CMP zp2C
+    BNE L9D1D
+    TAY
+    BEQ L9D4E
+    CMP #$FF
+    BNE L9D1D
+
+L9D4E:
+    EOR zp2B          ; 9D4E= 45 2B       E+
+    BMI L9D1D        ; 9D50= 30 CB       0K
+    JSR L9E1D        ; 9D52= 20 1D 9E     ..
+    STX zp27          ; 9D55= 86 27       .'
+    TAY              ; 9D57= A8          (
+    BEQ L9D39        ; 9D58= F0 DF       p_
+    BMI L9D11        ; 9D5A= 30 B5       05
+    LDA zp2D          ; 9D5C= A5 2D       %-
+    CMP zp2C          ; 9D5E= C5 2C       E,
+    BNE L9D0E        ; 9D60= D0 AC       P,
+    TAY              ; 9D62= A8          (
+    BEQ L9D69        ; 9D63= F0 04       p.
+    CMP #$FF         ; 9D65= C9 FF       I.
+    BNE L9D0E        ; 9D67= D0 A5       P%
+L9D69:
+    EOR zp2B          ; 9D69= 45 2B       E+
+    BMI L9D0E        ; 9D6B= 30 A1       0!
+    LDA zp2D          ; 9D6D= A5 2D       %-
+    PHA              ; 9D6F= 48          H
+    JSR LAD71        ; 9D70= 20 71 AD     q-
+    LDX #$39         ; 9D73= A2 39       "9
+    JSR LBE44        ; 9D75= 20 44 BE     D>
+    JSR LBDEA        ; 9D78= 20 EA BD     j=
+    PLA              ; 9D7B= 68          h
+    EOR zp2D          ; 9D7C= 45 2D       E-
+    STA zp37          ; 9D7E= 85 37       .7
+    JSR LAD71        ; 9D80= 20 71 AD     q-
+    LDY #$00         ; 9D83= A0 00        .
+    LDX #$00         ; 9D85= A2 00       ".
+    STY zp3F          ; 9D87= 84 3F       .?
+    STY zp40          ; 9D89= 84 40       .@
+L9D8B:
+    LSR zp3A          ; 9D8B= 46 3A       F
+
+    ROR zp39          ; 9D8D= 66 39       f9
+    BCC L9DA6        ; 9D8F= 90 15       ..
+    CLC              ; 9D91= 18          .
+    TYA              ; 9D92= 98          .
+    ADC zp2A          ; 9D93= 65 2A       e*
+    TAY              ; 9D95= A8          (
+    TXA              ; 9D96= 8A          .
+    ADC zp2B          ; 9D97= 65 2B       e+
+    TAX              ; 9D99= AA          *
+    LDA zp3F          ; 9D9A= A5 3F       %?
+    ADC zp2C          ; 9D9C= 65 2C       e,
+    STA zp3F          ; 9D9E= 85 3F       .?
+    LDA zp40          ; 9DA0= A5 40       %@
+    ADC zp2D          ; 9DA2= 65 2D       e-
+    STA zp40          ; 9DA4= 85 40       .@
+L9DA6:
+    ASL zp2A          ; 9DA6= 06 2A       .*
+    ROL zp2B          ; 9DA8= 26 2B       $+
+    ROL zp2C          ; 9DAA= 26 2C       $,
+    ROL zp2D          ; 9DAC= 26 2D       $-
+    LDA zp39          ; 9DAE= A5 39       %9
+    ORA zp3A          ; 9DB0= 05 3A       .
+
+    BNE L9D8B        ; 9DB2= D0 D7       PW
+    STY zp3D          ; 9DB4= 84 3D       .=
+    STX zp3E          ; 9DB6= 86 3E       .>
+    LDA zp37          ; 9DB8= A5 37       %7
+    PHP              ; 9DBA= 08          .
+
+L9DBB:
+    LDX #$3D         ; 9DBB= A2 3D       "=
+L9DBD:
+    JSR LAF56        ; 9DBD= 20 56 AF     V/
+    PLP              ; 9DC0= 28          (
+    BPL L9DC6        ; 9DC1= 10 03       ..
+    JSR LAD93        ; 9DC3= 20 93 AD     .-
+L9DC6:
+    LDX zp27          ; 9DC6= A6 27       $'
+    JMP L9DD4        ; 9DC8= 4C D4 9D    LT.
+
+; * <value>
+; ---------
+L9DCB:
+    JMP L9D3C        ; Bounce back to multiply code
+
+
+; Stack current value and continue in Evaluator Level 3
+; ------------------------------------------------------- 
+L9DCE:
+    JSR LBD94
+
+; Evaluator Level 3, * / DIV MOD
+; ------------------------------
+L9DD1:
+    JSR L9E20                 ; Call Evaluator Level 2, ^
+L9DD4:
+    CPX #'*'
+    BEQ L9DCB     ; Jump with multiply
+    CPX #'/'
+    BEQ L9DE5     ; Jump with divide
+    CPX #tknMOD
+    BEQ L9E01     ; Jump with MOD
+    CPX #tknDIV
+    BEQ L9E0A
+    RTS ; Jump with DIV
+
+; / <value>
+; ---------
+L9DE5:
+    TAY
+    JSR L92FD             ; Ensure current value is real
+    JSR LBD51
+    JSR L9E20       ; Stack float, call Evaluator Level 2
+    STX zp27
+    TAY
+    JSR L92FD     ; Ensure current value is real
+    JSR LBD7E
+    JSR LA6AD       ; Unstack to FPTR, call divide routine
+    LDX zp27
+    LDA #$FF
+    BNE L9DD4; Set result, loop for more * / MOD DIV
+
+; MOD <value>
+; -----------
+L9E01:
+    JSR L99BE                 ; Ensure current value is integer
+    LDA zp38
+    PHP
+    JMP L9DBB                 ; Jump to MOD routine
+
+; DIV <value>
+; -----------
+L9E0A:
+    JSR L99BE                 ; Ensure current value is integer
+    ROL zp39
+    ROL zp3A
+    ROL zp3B   ; Multiply IntA by 2
+    ROL zp3C
+    BIT zp37
+    PHP
+    LDX #$39
+    JMP L9DBD        ; Jump to DIV routine
+
+
+; Stack current integer and evaluate another Level 2
+; --------------------------------------------------
+L9E1D:
+    JSR LBD94                 ; Stack integer
+
+; Evaluator Level 2, ^
+; --------------------
+L9E20:
+    JSR LADEC                 ; Call Evaluator Level 1, - + NOT function ( ) ? ! $ | "
+L9E23:
+    PHA
+L9E24:
+    LDY zp1B
+    INC zp1B
+    LDA (zp19),Y ; Get character
+    CMP #$20
+    BEQ L9E24          ; Skip spaces
+    TAX
+    PLA
+    CPX #'^'
+    BEQ L9E35
+    RTS ; Return if not ^
+
+; ^ <value>
+; ---------
+L9E35:
+    TAY
+    JSR L92FD             ; Ensure current value is a float
+    JSR LBD51
+    JSR L92FA       ; Stack float, evaluate a real
+    LDA zp30
+    CMP #$87
+    BCS L9E88
+    JSR LA486
+    BNE L9E59
+    JSR LBD7E
+    JSR LA3B5
+    LDA zp4A
+    JSR LAB12
+    LDA #$FF
+    BNE L9E23        ; Set result=real, loop to check for more ^
+
+L9E59:
+    JSR LA381
+    LDA zp04
+    STA zp4B
+    LDA zp05
+    STA zp4C
+    JSR LA3B5
+    LDA zp4A
+    JSR LAB12
+L9E6C:
+    JSR LA37D
+    JSR LBD7E
+    JSR LA3B5
+    JSR LA801
+    JSR LAAD1
+    JSR LAA94
+    JSR LA7ED
+    JSR LA656
+    LDA #$FF
+    BNE L9E23        ; Set result=real, loop to check for more ^
+
+L9E88:
+    JSR LA381
+    JSR LA699
+    BNE L9E6C
+
+
+; Convert number to hex string
+; ----------------------------
+L9E90:
+    TYA
+    BPL L9E96
+    JSR LA3E4  ; Convert real to integer
+L9E96:
+    LDX #$00
+    LDY #$00
+L9E9A:
+    LDA zp2A,Y          ; abs,y (!)
+    PHA          ; Expand four bytes into eight digits
+    AND #$0F
+    STA zp3F,X
+    PLA
+    LSR
+    LSR
+    LSR
+    LSR
+    INX
+    STA zp3F,X
+    INX
+    INY
+    CPY #$04
+    BNE L9E9A       ; Loop for four bytes
+L9EB0:
+    DEX
+    BEQ L9EB7            ; No digits left, output a single zero
+    LDA zp3F,X
+    BEQ L9EB0      ; Skip leading zeros
+L9EB7:
+    LDA zp3F,X
+    CMP #$0A       ; Get byte from workspace
+    BCC L9EBF
+    ADC #$06       ; Convert byte to hex
+L9EBF:
+    ADC #'0'
+    JSR LA066    ; Convert to digit and store in buffer
+    DEX
+    BPL L9EB7
+    RTS        ; Loop for all digits
+
+; Output nonzero real number
+; --------------------------
+L9EC8:
+    BPL L9ED1                ; Jump forward if positive
+    LDA #'-'
+    STA zp2E      ; A='-', clear sign flag
+    JSR LA066                ; Add '-' to string buffer
+L9ED1:
+    LDA zp30                  ; Get exponent
+    CMP #$81
+    BCS L9F25       ; If m*2^1 or larger, number>=1, jump to output it
+    JSR LA1F4                ; FloatA=FloatA*10
+    DEC zp49
+    JMP L9ED1        ; Loop until number is >=1
+
+; Convert numeric value to string
+; ===============================
+; On entry, FloatA ($2E-$35)  = number
+;           or IntA ($2A-$2D) = number
+;                           Y = type
+;                          @% = print format
+;                     $15.b7 set if hex
+; Uses,     $37=format type 0/1/2=G/E/F
+;           $38=max digits
+;           $49
+; On exit,  StrA contains string version of number
+;           $36=string length
+;
+L9EDF:
+    LDX ws+$0402             ; Get format byte
+    CPX #$03
+    BCC L9EE8       ; If <3, ok - use it
+    LDX #$00                 ; If invalid, $00 for General format
+L9EE8:
+    STX zp37                  ; Store format type
+    LDA ws+$0401
+    BEQ L9EF5   ; If digits=0, jump to check format
+    CMP #$0A
+    BCS L9EF9       ; If 10+ digits, jump to use 10 digits
+    BCC L9EFB                ; If <10 digits, use specified number
+L9EF5:
+    CPX #$02
+    BEQ L9EFB       ; If fixed format, use zero digits
+
+; STR$ enters here to use general format
+; --------------------------------------
+L9EF9:
+    LDA #$0A                 ; Otherwise, default to ten digits
+L9EFB:
+    STA zp38
+    STA zp4E          ; Store digit length
+    LDA #$00
+    STA zp36
+    STA zp49 ; Set initial output length to 0, initial exponent to 0
+    BIT zp15
+    BMI L9E90        ; Jump for hex conversion if $15.b7 set
+    TYA
+    BMI L9F0F
+    JSR LA2BE  ; Convert integer to real
+L9F0F:
+    JSR LA1DA
+    BNE L9EC8      ; Get -1/0/+1 sign, jump if not zero to output nonzero number
+    LDA zp37
+    BNE L9F1D        ; If not General format, output fixed or exponential zero
+    LDA #'0'
+    JMP LA066    ; Store single '0' into string buffer and return
+L9F1D:
+    JMP L9F9C                ; Jump to output zero in fixed or exponential format
+
+L9F20:
+    JSR LA699
+    BNE L9F34      ; FloatA=1.0
+
+; FloatA now is >=1, check that it is <10
+; ---------------------------------------
+L9F25:
+    CMP #$84
+    BCC L9F39       ; Exponent<4, FloatA<10, jump to convert it
+    BNE L9F31                ; Exponent<>4, need to divide it
+    LDA zp31                  ; Get mantissa top byte
+    CMP #$A0
+    BCC L9F39       ; Less than $A0, less than ten, jump to convert it
+L9F31:
+    JSR LA24D                ; FloatA=FloatA / 10
+L9F34:
+    INC zp49
+    JMP L9ED1        ; Jump back to get the number >=1 again
+
+; FloatA is now between 1 and 9.999999999
+; ---------------------------------------
+L9F39:
+    LDA zp35
+    STA zp27
+    JSR LA385; Copy FloatA to FloatTemp at $27/$046C
+    LDA zp4E
+    STA zp38          ; Get number of digits
+    LDX zp37                  ; Get print format
+    CPX #$02
+    BNE L9F5C       ; Not fixed format, jump to do exponent/general
+    ADC zp49
+    BMI L9FA0
+    STA zp38
+    CMP #$0B
+    BCC L9F5C
+    LDA #$0A         ; 9F54= A9 0A       ).
+    STA zp38          ; 9F56= 85 38       .8
+    LDA #$00
+    STA zp37 ; 9F5A= 85 37       .7
+L9F5C:
+    JSR LA686; Clear FloatA
+    LDA #$A0         ; 9F5F= A9 A0       )
+    STA zp31          ; 9F61= 85 31       .1
+    LDA #$83         ; 9F63= A9 83       ).
+    STA zp30          ; 9F65= 85 30       .0
+    LDX zp38          ; 9F67= A6 38       $8
+    BEQ L9F71        ; 9F69= F0 06       p.
+L9F6B:
+    JSR LA24D; FloatA=FloatA/10
+    DEX
+    BNE L9F6B
+L9F71:
+    JSR LA7F5; Point to $46C
+    JSR LA34E; Unpack to FloatB
+    LDA zp27
+    STA zp42
+    JSR LA50B; Add
+L9F7E:
+    LDA zp30
+    CMP #$84
+    BCS L9F92
+    ROR zp31            ; 9F84= 66 31       f1
+    ROR zp32            ; 9F86= 66 32       f2
+    ROR zp33            ; 9F88= 66 33       f3
+    ROR zp34            ; 9F8A= 66 34       f4
+    ROR zp35            ; 9F8C= 66 35       f5
+    INC zp30            ; 9F8E= E6 30       f0
+    BNE L9F7E          ; 9F90= D0 EC       Pl
+L9F92:
+    LDA zp31            ; 9F92= A5 31       %1
+    CMP #$A0
+    BCS L9F20 ; 9F96= B0 88       0.
+    LDA zp38            ; 9F98= A5 38       %8
+    BNE L9FAD          ; 9F9A= D0 11       P.
+
+; Output zero in Exponent or Fixed format
+; ---------------------------------------
+L9F9C:
+    CMP #$01
+    BEQ L9FE6        ; 9F9E= F0 46       pF
+L9FA0:
+    JSR LA686; Clear FloatA
+    LDA #$00
+    STA zp49   ; 9FA5= 85 49       .I
+    LDA zp4E            ; 9FA7= A5 4E       %N
+    STA zp38            ; 9FA9= 85 38       .8
+    INC zp38            ; 9FAB= E6 38       f8
+L9FAD:
+    LDA #$01           ; 9FAD= A9 01       ).
+    CMP zp37
+    BEQ L9FE6  ; 9FB1= F0 33       p3
+    LDY zp49
+    BMI L9FC3  ; 9FB5= 30 0C       0.
+    CPY zp38
+    BCS L9FE6  ; 9FB9= B0 2B       0+
+    LDA #$00
+    STA zp49   ; 9FBD= 85 49       .I
+    INY                ; 9FBF= C8          H
+    TYA                ; 9FC0= 98          .
+    BNE L9FE6          ; 9FC1= D0 23       P#
+L9FC3:
+    LDA zp37            ; 9FC3= A5 37       %7
+    CMP #$02
+    BEQ L9FCF ; 9FC7= F0 06       p.
+    LDA #$01           ; 9FC9= A9 01       ).
+    CPY #$FF
+    BNE L9FE6 ; 9FCD= D0 17       P.
+L9FCF:
+    LDA #'0'
+    JSR LA066; Output '0'
+    LDA #'.'
+    JSR LA066; Output '.'
+    LDA #'0'          ; Prepare '0'
+L9FDB:
+    INC zp49
+    BEQ L9FE4
+    JSR LA066; Output
+    BNE L9FDB
+
+L9FE4:
+    LDA #$80         ; 9FE4= A9 80       ).
+L9FE6:
+    STA zp4E          ; 9FE6= 85 4E       .N
+L9FE8:
+    JSR LA040        ; 9FE8= 20 40 A0     @
+    DEC zp4E          ; 9FEB= C6 4E       FN
+    BNE L9FF4        ; 9FED= D0 05       P.
+    LDA #$2E         ; 9FEF= A9 2E       ).
+    JSR LA066        ; 9FF1= 20 66 A0     f
+L9FF4:
+    DEC zp38          ; 9FF4= C6 38       F8
+    BNE L9FE8        ; 9FF6= D0 F0       Pp
+    LDY zp37          ; 9FF8= A4 37       $7
+    DEY              ; 9FFA= 88          .
+    BEQ LA015        ; 9FFB= F0 18       p.
+    DEY              ; 9FFD= 88          .
+    BEQ LA011        ; 9FFE= F0 11       p.
+    LDY zp36          ; A000= A4 36       $6
+LA002:
+    DEY              ; A002= 88          .
+    LDA ws+$0600,Y   ; A003= B9 00 06    9..
+    CMP #'0'
+    BEQ LA002        ; A008= F0 F8       px
+    CMP #'.'
+    BEQ LA00F        ; A00C= F0 01       p.
+    INY              ; A00E= C8          H
+LA00F:
+    STY zp36          ; A00F= 84 36       .6
+LA011:
+    LDA zp49          ; A011= A5 49       %I
+    BEQ LA03F        ; A013= F0 2A       p*
+LA015:
+    LDA #'E'
+    JSR LA066        ; Output 'E'
+    LDA zp49
+    BPL LA028
+    LDA #'-'
+    JSR LA066        ; Output '-'
+    SEC
+    LDA #$00
+    SBC zp49         ; Negate
+LA028:
+    JSR LA052        ; A028= 20 52 A0     R
+    LDA zp37          ; A02B= A5 37       %7
+    BEQ LA03F        ; A02D= F0 10       p.
+    LDA #$20         ; A02F= A9 20       )
+    LDY zp49          ; A031= A4 49       $I
+    BMI LA038        ; A033= 30 03       0.
+    JSR LA066        ; A035= 20 66 A0     f
+LA038:
+    CPX #$00         ; A038= E0 00       `.
+    BNE LA03F        ; A03A= D0 03       P.
+    JMP LA066        ; A03C= 4C 66 A0    Lf
+
+LA03F:
+    RTS              ; A03F= 60          `
+
+LA040:
+    LDA zp31          ; A040= A5 31       %1
+    LSR            ; A042= 4A          J
+    LSR            ; A043= 4A          J
+    LSR            ; A044= 4A          J
+    LSR            ; A045= 4A          J
+    JSR LA064        ; A046= 20 64 A0     d
+    LDA zp31          ; A049= A5 31       %1
+    AND #$0F         ; A04B= 29 0F       ).
+    STA zp31          ; A04D= 85 31       .1
+    JMP LA197        ; A04F= 4C 97 A1    L.!
+
+LA052:
+    LDX #$FF         ; A052= A2 FF       ".
+    SEC              ; A054= 38          8
+LA055:
+    INX              ; A055= E8          h
+    SBC #$0A         ; A056= E9 0A       i.
+    BCS LA055        ; A058= B0 FB       0{
+    ADC #$0A         ; A05A= 69 0A       i.
+    PHA              ; A05C= 48          H
+    TXA              ; A05D= 8A          .
+    BEQ LA063        ; A05E= F0 03       p.
+    JSR LA064        ; A060= 20 64 A0     d
+LA063:
+    PLA              ; A063= 68          h
+LA064:
+    ORA #'0'      ; A064= 09 30       .0
+
+; Store character in string buffer
+; --------------------------------
+LA066:
+    STX zp3B
+    LDX zp36
+    STA ws+$0600,X ; Store character
+    LDX zp3B
+    INC zp36
+    RTS            ; Increment string length
+
+LA072:
+    CLC
+    STX zp35
+    JSR LA1DA
+    LDA #$FF
+    RTS
+
+; Scan decimal number
+; -------------------
+LA07B:
+    LDX #$00
+    STX zp31
+    STX zp32; Clear FloatA
+    STX zp33
+    STX zp34
+    STX zp35
+    STX zp48                 ; Clear 'Decimal point' flag
+    STX zp49                 ; Set exponent to zero
+    CMP #'.'
+    BEQ LA0A0   ; Leading decimal point
+    CMP #'9'+1
+    BCS LA072 ; Not a decimal digit, finish
+    SBC #'0'-1
+    BMI LA072 ; Convert to binary, if not digit finish
+    STA zp35                 ; Store digit
+LA099:
+    INY
+    LDA (zp19),Y         ; Get next character
+    CMP #'.'
+    BNE LA0A8   ; Not decimal point
+LA0A0:
+    LDA zp48
+    BNE LA0E8       ; Already got decimal point, 
+    INC zp48
+    BNE LA099       ; Set Decimal Point flag, loop for next
+LA0A8:
+    CMP #'E'
+    BEQ LA0E1   ; Jump to scan exponent
+    CMP #'9'+1
+    BCS LA0E8 ; Not a digit, jump to finish
+    SBC #'0'-1
+    BCC LA0E8 ; Not a digit, jump to finish
+    LDX zp31                 ; Get mantissa top byte
+    CPX #$18
+    BCC LA0C2      ; If <25, still small enough to add to
+    LDX zp48
+    BNE LA099       ; Decimal point found, skip digits to end of number
+    INC zp49
+    BCS LA099       ; No decumal point, increment exponent and skip digits
+
+LA0C2:
+    LDX zp48
+    BEQ LA0C8 
+    DEC zp49                 ; Decimal point found, decrement exponent
+LA0C8:
+    JSR LA197               ; Multiply FloatA by 10
+    ADC zp35
+    STA zp35         ; Add digit to mantissa low byte
+    BCC LA099               ; No overflow
+    INC zp34
+    BNE LA099       ; Add carry through mantissa
+    INC zp33
+    BNE LA099
+    INC zp32
+    BNE LA099
+    INC zp31
+    BNE LA099       ; Loop to check next digit
+
+; Deal with Exponent in scanned number
+; ------------------------------------
+LA0E1:
+    JSR LA140        ; Scan following number
+    ADC zp49
+    STA zp49  ; Add to current exponent
+
+; End of number found
+; -------------------
+LA0E8:
+    STY zp1B          ; Store PtrB offset
+    LDA zp49
+    ORA zp48  ; Check exponent and 'decimal point' flag
+    BEQ LA11F        ; No exponent, no decimal point, return integer
+    JSR LA1DA        ; A0F0= 20 DA A1     Z!
+    BEQ LA11B        ; A0F3= F0 26       p$
+LA0F5:
+    LDA #$A8         ; A0F5= A9 A8       )(
+    STA zp30          ; A0F7= 85 30       .0
+    LDA #$00         ; A0F9= A9 00       ).
+    STA zp2F          ; A0FB= 85 2F       ./
+    STA zp2E          ; A0FD= 85 2E       ..
+    JSR LA303        ; A0FF= 20 03 A3     .#
+    LDA zp49          ; A102= A5 49       %I
+    BMI LA111        ; A104= 30 0B       0.
+    BEQ LA118        ; A106= F0 10       p.
+LA108:
+    JSR LA1F4        ; A108= 20 F4 A1     t!
+    DEC zp49          ; A10B= C6 49       FI
+    BNE LA108        ; A10D= D0 F9       Py
+    BEQ LA118        ; A10F= F0 07       p.
+LA111:
+    JSR LA24D        ; A111= 20 4D A2     M"
+    INC zp49          ; A114= E6 49       fI
+    BNE LA111        ; A116= D0 F9       Py
+LA118:
+    JSR LA65C        ; A118= 20 5C A6     \$
+LA11B:
+    SEC              ; A11B= 38          8
+    LDA #$FF         ; A11C= A9 FF       ).
+    RTS              ; A11E= 60          `
+
+LA11F:
+    LDA zp32
+    STA zp2D
+    AND #$80
+    ORA zp31
+    BNE LA0F5
+    LDA zp35
+    STA zp2A
+    LDA zp34
+    STA zp2B
+    LDA zp33
+    STA zp2C
+    LDA #$40
+    SEC
+    RTS
+
+LA139:
+    JSR LA14B                ; Scan following number
+    EOR #$FF
+    SEC
+    RTS         ; Negate it, return CS=Ok
+
+; Scan exponent, allows E E+ E- followed by one or two digits
+; -----------------------------------------------------------
+LA140:
+    INY
+    LDA (zp19),Y          ; Get next character
+    CMP #'-'
+    BEQ LA139    ; If '-', jump to scan and negate
+    CMP #'+'
+    BNE LA14E    ; If '+', just step past
+LA14B:
+    INY
+    LDA (zp19),Y          ; Get next character
+LA14E:
+    CMP #'9'+1
+    BCS LA174  ; Not a digit, exit with CC and A=0
+    SBC #'0'-1
+    BCC LA174  ; Not a digit, exit with CC and A=0
+    STA zp4A                  ; Store exponent digit
+    INY
+    LDA (zp19),Y          ; Get next character
+    CMP #'9'+1
+    BCS LA170  ; Not a digit, exit with CC and A=exp
+    SBC #'0'-1
+    BCC LA170  ; Not a digit, exit with CC and A=exp
+    INY
+    STA zp43              ; Step past digit, store current digit
+    LDA zp4A                  ; Get current exponent
+    ASL
+    ASL
+    ADC zp4A      ; exp=exp*10
+    ASL
+    ADC zp43            ; exp=exp*10+digit
+    RTS
+
+LA170:
+    LDA zp4A
+    CLC
+    RTS          ; Get exp and return CC=Ok
+
+LA174:
+    LDA #$00
+    CLC
+    RTS         ; Return exp=0 and CC=Ok
+
+LA178:
+    LDA zp35
+    ADC zp42
+    STA zp35
+    LDA zp34
+    ADC zp41
+    STA zp34
+    LDA zp33
+    ADC zp40
+    STA zp33
+    LDA zp32
+    ADC zp3F
+    STA zp32
+    LDA zp31
+    ADC zp3E
+    STA zp31
+    RTS
+
+LA197:
+    PHA
+    LDX zp34
+    LDA zp31
+    PHA
+    LDA zp32
+    PHA
+    LDA zp33
+    PHA
+    LDA zp35
+    ASL
+    ROL zp34          ; A1A6= 26 34       $4
+    ROL zp33          ; A1A8= 26 33       $3
+    ROL zp32          ; A1AA= 26 32       $2
+    ROL zp31          ; A1AC= 26 31       $1
+    ASL            ; A1AE= 0A          .
+    ROL zp34          ; A1AF= 26 34       $4
+    ROL zp33          ; A1B1= 26 33       $3
+    ROL zp32          ; A1B3= 26 32       $2
+    ROL zp31          ; A1B5= 26 31       $1
+    ADC zp35          ; A1B7= 65 35       e5
+    STA zp35          ; A1B9= 85 35       .5
+    TXA              ; A1BB= 8A          .
+    ADC zp34          ; A1BC= 65 34       e4
+    STA zp34          ; A1BE= 85 34       .4
+    PLA              ; A1C0= 68          h
+    ADC zp33          ; A1C1= 65 33       e3
+    STA zp33          ; A1C3= 85 33       .3
+    PLA              ; A1C5= 68          h
+    ADC zp32          ; A1C6= 65 32       e2
+    STA zp32          ; A1C8= 85 32       .2
+    PLA              ; A1CA= 68          h
+    ADC zp31          ; A1CB= 65 31       e1
+    ASL zp35          ; A1CD= 06 35       .5
+    ROL zp34          ; A1CF= 26 34       $4
+    ROL zp33          ; A1D1= 26 33       $3
+    ROL zp32          ; A1D3= 26 32       $2
+    ROL            ; A1D5= 2A          *
+    STA zp31          ; A1D6= 85 31       .1
+    PLA              ; A1D8= 68          h
+    RTS              ; A1D9= 60          `
+
+LA1DA:
+    LDA zp31          ; A1DA= A5 31       %1
+    ORA zp32          ; A1DC= 05 32       .2
+    ORA zp33          ; A1DE= 05 33       .3
+    ORA zp34          ; A1E0= 05 34       .4
+    ORA zp35          ; A1E2= 05 35       .5
+    BEQ LA1ED        ; A1E4= F0 07       p.
+    LDA zp2E          ; A1E6= A5 2E       %.
+    BNE LA1F3        ; A1E8= D0 09       P.
+    LDA #$01         ; A1EA= A9 01       ).
+    RTS              ; A1EC= 60          `
+
+LA1ED:
+    STA zp2E          ; A1ED= 85 2E       ..
+    STA zp30          ; A1EF= 85 30       .0
+    STA zp2F          ; A1F1= 85 2F       ./
+LA1F3:
+    RTS              ; A1F3= 60          `
+
+LA1F4:
+    CLC              ; A1F4= 18          .
+    LDA zp30          ; A1F5= A5 30       %0
+    ADC #$03         ; A1F7= 69 03       i.
+    STA zp30          ; A1F9= 85 30       .0
+    BCC LA1FF        ; A1FB= 90 02       ..
+    INC zp2F          ; A1FD= E6 2F       f/
+LA1FF:
+    JSR LA21E        ; A1FF= 20 1E A2     ."
+    JSR LA242        ; A202= 20 42 A2     B"
+    JSR LA242        ; A205= 20 42 A2     B"
+LA208:
+    JSR LA178        ; A208= 20 78 A1     x!
+LA20B:
+    BCC LA21D        ; A20B= 90 10       ..
+    ROR zp31          ; A20D= 66 31       f1
+    ROR zp32          ; A20F= 66 32       f2
+    ROR zp33          ; A211= 66 33       f3
+    ROR zp34          ; A213= 66 34       f4
+    ROR zp35          ; A215= 66 35       f5
+    INC zp30          ; A217= E6 30       f0
+    BNE LA21D        ; A219= D0 02       P.
+    INC zp2F          ; A21B= E6 2F       f/
+LA21D:
+    RTS              ; A21D= 60          `
+
+LA21E:
+    LDA zp2E
+LA220:
+    STA zp3B
+    LDA zp2F
+    STA zp3C
+    LDA zp30
+    STA zp3D
+    LDA zp31
+    STA zp3E
+    LDA zp32
+    STA zp3F
+    LDA zp33
+    STA zp40
+    LDA zp34
+    STA zp41
+    LDA zp35
+    STA zp42
+    RTS
+
+LA23F:
+    JSR LA21E        ; A23F= 20 1E A2     ."
+LA242:
+    LSR zp3E          ; A242= 46 3E       F>
+    ROR zp3F          ; A244= 66 3F       f?
+    ROR zp40          ; A246= 66 40       f@
+    ROR zp41          ; A248= 66 41       fA
+    ROR zp42          ; A24A= 66 42       fB
+    RTS              ; A24C= 60          `
+
+LA24D:
+    SEC              ; A24D= 38          8
+    LDA zp30          ; A24E= A5 30       %0
+    SBC #$04         ; A250= E9 04       i.
+    STA zp30          ; A252= 85 30       .0
+    BCS LA258        ; A254= B0 02       0.
+    DEC zp2F          ; A256= C6 2F       F/
+LA258:
+    JSR LA23F        ; A258= 20 3F A2     ?"
+    JSR LA208        ; A25B= 20 08 A2     ."
+    JSR LA23F        ; A25E= 20 3F A2     ?"
+    JSR LA242        ; A261= 20 42 A2     B"
+    JSR LA242        ; A264= 20 42 A2     B"
+    JSR LA242        ; A267= 20 42 A2     B"
+    JSR LA208        ; A26A= 20 08 A2     ."
+    LDA #$00
+    STA zp3E
+    LDA zp31
+    STA zp3F
+    LDA zp32
+    STA zp40
+    LDA zp33
+    STA zp41
+    LDA zp34
+    STA zp42
+    LDA zp35
+    ROL
+    JSR LA208
+    LDA #$00
+    STA zp3E
+    STA zp3F
+    LDA zp31
+    STA zp40
+    LDA zp32
+    STA zp41
+    LDA zp33
+    STA zp42
+    LDA zp34
+    ROL
+    JSR LA208
+    LDA zp32
+    ROL
+    LDA zp31
+LA2A4:
+    ADC zp35
+    STA zp35
+    BCC LA2BD
+    INC zp34
+    BNE LA2BD
+    INC zp33
+    BNE LA2BD
+    INC zp32
+    BNE LA2BD
+    INC zp31
+    BNE LA2BD
+    JMP LA20B
+
+LA2BD:
+    RTS
+
+LA2BE:
+    LDX #$00         ; A2BE= A2 00       ".
+    STX zp35          ; A2C0= 86 35       .5
+    STX zp2F          ; A2C2= 86 2F       ./
+    LDA zp2D          ; A2C4= A5 2D       %-
+    BPL LA2CD        ; A2C6= 10 05       ..
+    JSR LAD93        ; A2C8= 20 93 AD     .-
+    LDX #$FF         ; A2CB= A2 FF       ".
+LA2CD:
+    STX zp2E          ; A2CD= 86 2E       ..
+    LDA zp2A          ; A2CF= A5 2A       %*
+    STA zp34          ; A2D1= 85 34       .4
+    LDA zp2B          ; A2D3= A5 2B       %+
+    STA zp33          ; A2D5= 85 33       .3
+    LDA zp2C          ; A2D7= A5 2C       %,
+    STA zp32          ; A2D9= 85 32       .2
+    LDA zp2D          ; A2DB= A5 2D       %-
+    STA zp31          ; A2DD= 85 31       .1
+    LDA #$A0         ; A2DF= A9 A0       )
+    STA zp30          ; A2E1= 85 30       .0
+    JMP LA303        ; A2E3= 4C 03 A3    L.#
+
+LA2E6:
+    STA zp2E          ; A2E6= 85 2E       ..
+    STA zp30          ; A2E8= 85 30       .0
+    STA zp2F          ; A2EA= 85 2F       ./
+LA2EC:
+    RTS              ; A2EC= 60          `
 
 ; ----------------------------------------------------------------------------
 
