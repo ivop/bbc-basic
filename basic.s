@@ -2101,7 +2101,6 @@ L8D77:
     STY zp0A
     JMP L8B98
 
-;xxx
 ; End of PRINT statement
 ; ----------------------
 L8D7D:
@@ -2561,161 +2560,785 @@ X9304:
         JMP L8B9B                 ; Return to execution loop
     .endif
 
+;xxx fix zp from here down
+; Look for renumber references
+X8FE7:
+    JSR L8F9A
+L8FEA:
+    LDY #$00
+    LDA (zp37),Y
+    BMI L900D
+    LDA zp3A
+    STA (zp37),Y
+    LDA zp39
+    INY
+    STA (zp37),Y
+    CLC
+    LDA zp2A
+    ADC zp39
+    STA zp39
+    LDA #$00
+    ADC zp3A
+    AND #$7F
+    STA zp3A
+    JSR L909F
+    BCC L8FEA
+L900D:
+    LDA zp18
+    STA zp0C
+    LDY #$00
+    STY zp0B
+    INY
+    LDA (zp0B),Y
+    .if version < 3
+        BMI L903A
+    .elseif version >= 3
+        BMI L9080
+    .endif
+L901A:
+    LDY #$04
+L901C:
+    LDA (zp0B),Y
+    CMP #$8D
+    BEQ L903D
+    INY
+    CMP #$0D
+    BNE L901C
+    LDA (zp0B),Y
+    .if version < 3
+        BMI L903A
+    .elseif version >= 3
+        BMI L9080
+    .endif
+    LDY #$03
+    LDA (zp0B),Y
+    CLC
+    ADC zp0B
+    STA zp0B
+    BCC L901A
+    INC zp0C
+    BCS L901A
+L903A:
+    .if version < 3
+        JMP L8AF3
+    .endif
+
+L903D:
+    JSR L97EB
+    JSR L8F92
+L9043:
+    LDY #$00
+    LDA (zp37),Y
+    BMI L9082
+    LDA (zp3B),Y
+    INY
+    CMP zp2B
+    BNE L9071
+    LDA (zp3B),Y
+    CMP zp2A
+    BNE L9071
+    LDA (zp37),Y
+    STA zp3D
+    DEY
+    LDA (zp37),Y
+    STA zp3E
+    LDY zp0A
+    DEY
+    LDA zp0B
+    STA zp37
+    LDA zp0C
+    STA zp38
+    JSR L88F5
+L906D:
+    LDY zp0A
+    BNE L901C
+L9071:
+    .if version >= 3
+        CLC
+    .endif
+    JSR L909F
+    LDA zp3B
+    ADC #$02
+    STA zp3B
+    BCC L9043
+    INC zp3C
+    BCS L9043
+L9080:
+    .if version >= 3
+        BMI L90D9
+    .endif
+L9082:
+    JSR LBFCF        ; Print inline text
+    FNfold 'Failed at '
+    INY
+    LDA (zp0B),Y
+    STA zp2B
+    INY
+    LDA (zp0B),Y
+    STA zp2A
+    JSR L991F        ; Print in decimal
+    JSR LBC25        ; Print newline
+    BEQ L906D
+L909F:
+    INY
+    LDA (zp37),Y
+    ADC zp37
+    STA zp37
+    BCC L90AB
+    INC zp38
+    CLC
+L90AB:
+    RTS
+
+; AUTO [numeric [, numeric ]]
+; ===========================
+L90AC:
+    JSR L8F69
+    LDA zp2A
+    PHA
+    JSR LBDEA
+L90B5:
+    JSR LBD94
+    JSR L9923
+    LDA #$20
+    JSR LBC02
+    JSR LBDEA
+    JSR L8951
+    JSR LBC8D
+    JSR LBD20
+    PLA
+    PHA
+    CLC
+    ADC zp2A
+    STA zp2A
+    BCC L90B5
+    INC zp2B
+    BPL L90B5
+L90D9:
+    JMP L8AF3
+
+L90DC:
+    JMP L9218
+
+L90DF:
+    DEC zp0A
+    JSR L9582
+    BEQ L9127
+    BCS L9127
+    JSR LBD94
+    JSR L92DD
+    JSR L9222
+    LDA zp2D
+    ORA zp2C
+    BNE L9127
+    CLC
+    LDA zp2A
+    ADC zp02
+    TAY
+    LDA zp2B
+    ADC zp03
+    TAX
+    CPY zp04
+    SBC zp05
+    BCS L90DC
+    LDA zp02
+    STA zp2A
+    LDA zp03
+    STA zp2B
+    STY zp02
+    STX zp03
+    LDA #$00
+    STA zp2C
+    STA zp2D
+    LDA #$40
+    STA zp27
+    JSR LB4B4
+    JSR L8827
+    JMP L920B
+
+L9127:
+    BRK
+    dta 10
+    FNfold 'Bad '
+    dta tknDIM          ; XXX
+    BRK
+
+; DIM numvar [numeric] [(arraydef)]
+; =================================
+L912F:
+    JSR L8A97
+    TYA
+    CLC
+    ADC zp0B
+    LDX zp0C
+    BCC L913C
+    INX
+    CLC
+L913C:
+    SBC #$00
+    STA zp37
+    TXA
+    SBC #$00
+    STA zp38
+    LDX #$05
+    STX zp3F
+    LDX zp0A
+    JSR L9559
+    CPY #$01
+    BEQ L9127
+    CMP #'('
+    BEQ L916B
+    CMP #$24
+    BEQ L915E
+    CMP #$25
+    BNE L9168
+L915E:
+    DEC zp3F
+    INY
+    INX
+    LDA (zp37),Y
+    CMP #'('
+    BEQ L916B
+L9168:
+    JMP L90DF
+
+L916B:
+    STY zp39
+    STX zp0A
+    JSR L9469
+    BNE L9127
+    JSR L94FC
+    LDX #$01
+    JSR L9531
+    LDA zp3F
+    PHA
+    LDA #$01
+    PHA
+    .if version < 3
+        JSR LAED8
+    .elseif version >= 3
+        JSR XAED3
+    .endif
+L9185:
+    JSR LBD94
+    JSR L8821
+    LDA zp2B
+    AND #$C0
+    ORA zp2C
+    ORA zp2D
+    BNE L9127
+    JSR L9222
+    PLA
+    TAY
+    LDA zp2A
+    STA (zp02),Y
+    INY
+    LDA zp2B
+    STA (zp02),Y
+    INY
+    TYA
+    PHA
+    JSR L9231
+    JSR L8A97
+    CMP #$2C
+    BEQ L9185
+    CMP #')'
+    BEQ L91B7
+    JMP L9127
+
+L91B7:
+    PLA
+    STA zp15
+    PLA
+    STA zp3F
+    LDA #$00
+    STA zp40
+    JSR L9236
+    LDY #$00
+    LDA zp15
+    STA (zp02),Y
+    ADC zp2A
+    STA zp2A
+    BCC L91D2
+    INC zp2B
+L91D2:
+    LDA zp03
+    STA zp38
+    LDA zp02
+    STA zp37
+    CLC
+    ADC zp2A
+    TAY
+    LDA zp2B
+    ADC zp03
+    BCS L9218
+    TAX
+    CPY zp04
+    SBC zp05
+    BCS L9218
+    STY zp02
+    STX zp03
+    LDA zp37
+    ADC zp15
+    TAY
+    LDA #$00
+    STA zp37
+    BCC L91FC
+    INC zp38
+L91FC:
+    STA (zp37),Y
+    INY
+    BNE L9203
+    INC zp38
+L9203:
+    CPY zp02
+    BNE L91FC
+    CPX zp38
+    BNE L91FC
+L920B:
+    JSR L8A97
+    CMP #$2C
+    BEQ L9215
+    JMP L8B96
+
+L9215:
+    JMP L912F
+
+L9218:
+    BRK
+    dta 11
+    dta tknDIM
+    FNfold ' space'
+    BRK
+
+L9222:
+    INC zp2A
+    BNE L9230
+    INC zp2B
+    BNE L9230
+    INC zp2C
+    BNE L9230
+    INC zp2D
+L9230:
+    RTS
+
+L9231:
+    LDX #$3F
+    JSR LBE0D
+L9236:
+    LDX #$00
+    LDY #$00
+L923A:
+    LSR zp40
+    ROR zp3F
+    BCC L924B
+    CLC
+    TYA
+    ADC zp2A
+    TAY
+    TXA
+    ADC zp2B
+    TAX
+    BCS L925A
+L924B:
+    ASL zp2A
+    ROL zp2B
+    LDA zp3F
+    ORA zp40
+    BNE L923A
+    STY zp2A
+    STX zp2B
+    RTS
+
+L925A:
+    JMP L9127
+
+; HIMEM=numeric
+; =============
+L925D:
+    JSR L92EB                 ; Set past '=', evaluate integer
+    LDA zp2A
+    STA zp06
+    STA zp04   ; Set HIMEM and STACK
+    LDA zp2B
+    STA zp07
+    STA zp05
+    JMP L8B9B                 ; Jump back to execution loop
+
+; LOMEM=numeric
+; =============
+L926F:
+    JSR L92EB                 ; Step past '=', evaluate integer
+    LDA zp2A
+    STA ZP00
+    STA zp02  ; Set LOMEM and VAREND
+    LDA zp2B
+    STA ZP01
+    STA zp03
+    JSR LBD2F
+    BEQ L928A       ; Clear dynamic variables, jump to execution loop
+
+; PAGE=numeric
+; ============
+L9283:
+    JSR L92EB                 ; Step past '=', evaluate integer
+    LDA zp2B
+    STA zp18           ; Set PAGE
+L928A:
+    JMP L8B9B                 ; Jump to execution loop
+
+; CLEAR
+; =====
+L928D:
+    JSR L9857                 ; Check end of statement
+    JSR LBD20                 ; Clear heap, stack, data, variables
+    BEQ L928A                 ; Jump to execution loop
+
+; TRACE ON | OFF | numeric
+; ========================
+L9295:
+    JSR L97DF
+    BCS L92A5       ; If line number, jump for TRACE linenum
+    CMP #$EE
+    BEQ L92B7        ; Jump for TRACE ON
+    CMP #$87
+    BEQ L92C0        ; Jump for TRACE OFF
+    JSR L8821                 ; Evaluate integer
+
+; TRACE numeric
+; -------------
+L92A5:
+    JSR L9857                 ; Check end of statement
+    LDA zp2A
+    STA zp21           ; Set trace limit low byte
+    LDA zp2B
+L92AE:
+    STA zp22
+    LDA #$FF          ; Set trace limit high byte, set TRACE ON
+L92B2:
+    STA zp20
+    JMP L8B9B         ; Set TRACE flag, return to execution loop
+
+; TRACE ON
+; --------
+L92B7:
+    INC zp0A
+    JSR L9857         ; Step past, check end of statement
+    LDA #$FF
+    BNE L92AE        ; Jump to set TRACE $FFxx
+
+; TRACE OFF
+; ---------
+L92C0:
+    INC zp0A
+    JSR L9857         ; Step past, check end of statement
+    LDA #$00
+    BEQ L92B2        ; Jump to set TRACE OFF
+
+; TIME=numeric
+; ============
+L92C9:
+    JSR L92EB                   ; Step past '=', evaluate integer
+    .ifdef MOS_BBC
+        LDX #$2A
+        LDY #$00
+        STY zp2E ; Point to integer, set 5th byte to 0
+        LDA #$02
+        JSR OSWORD       ; Call OSWORD $02 to do TIME=
+    .endif
+    JMP L8B9B                   ; Jump to execution loop
+
+; Evaluate <comma><numeric>
+; =========================
+L92DA:
+    JSR L8AAE                 ; Check for and step past comma
+L92DD:
+    JSR L9B29
+    JMP L92F0
+
+L92E3:
+    JSR LADEC
+    BEQ L92F7
+    BMI L92F4
+L92EA:
+    RTS
+
+; Evaluate <equals><integer>
+; ==========================
+L92EB:
+    JSR L9807                 ; Check for equals, evaluate numeric
+L92EE:
+    LDA zp27                   ; Get result type
+L92F0:
+    BEQ L92F7                 ; String, jump to 'Type mismatch'
+    BPL L92EA                 ; Integer, return
+L92F4:
+    JMP LA3E4                 ; Real, jump to convert to integer
+
+L92F7:
+    JMP L8C0E                 ; Jump to 'Type mismatch' error
+
+; Evaluate <real>
+; ===============
+L92FA:
+    JSR LADEC                 ; Evaluate expression
+
+; Ensure value is real
+; --------------------
+L92FD:
+    BEQ L92F7                 ; String, jump to 'Type mismatch'
+    BMI L92EA                 ; Real, return
+    JMP LA2BE                 ; Integer, jump to convert to real
+
+    .if split == 0
+; PROCname [(parameters)]
+; =======================
+L9304:
+        LDA zp0B
+        STA zp19           ; PtrB=PtrA=>after 'PROC' token
+        LDA zp0C
+        STA zp1A
+        LDA zp0A
+        STA zp1B
+        LDA #$F2
+        JSR LB197        ; Call PROC/FN dispatcher
+                               ; Will return here after ENDPROC
+        JSR L9852                 ; Check for end of statement
+        JMP L8B9B                 ; Return to execution loop
+    .endif
+
+; Make string zero length
+; -----------------------
+L931B:
+    LDY #$03
+    LDA #$00        ; Set length to zero
+    STA (zp2A),Y
+    BEQ L9341    ; Jump to look for next LOCAL item
+
+; LOCAL variable [,variable ...]
+; ==============================
+L9323:
+    TSX
+    CPX #$FC
+    BCS L936B   ; Not inside subroutine, error
+    JSR L9582
+    BEQ L9353      ; Find variable, jump if bad variable name
+    JSR LB30D                ; Push value on stack, push variable info on stack
+    LDY zp2C
+    BMI L931B        ; If a string, jump to make zero length
+    JSR LBD94                ; 
+    LDA #$00                 ; Set IntA to zero
+    .if version < 3
+        JSR LAED8
+    .elseif version >= 3
+        JSR XAED3
+    .endif
+    STA zp27
+    JSR LB4B4        ; Set current variable to IntA (zero)
+
+; Next LOCAL item
+; ---------------
+L9341:
+    TSX
+    INC $0106,X           ; Increment number of LOCAL items
+    LDY zp1B
+    STY zp0A           ; Update line pointer
+    JSR L8A97                 ; Get next character
+    CMP #$2C
+    BEQ L9323        ; Comma, loop back to do another item
+    JMP L8B96                 ; Jump to main execution loop
+
+L9353:
+    JMP L8B98
+
+; ENDPROC
+; =======
+; Stack needs to contain these items,
+;  ret_lo, ret_hi, PtrB_hi, PtrB_lo, PtrB_off, numparams, PtrA_hi, PtrA_lo, PtrA_off, tknPROC
+L9356:
+    TSX
+    CPX #$FC
+    BCS L9365       ; If stack empty, jump to give error
+    LDA $01FF
+    CMP #$F2
+    BNE L9365 ; If pushed token<>'PROC', give error
+    JMP L9857                    ; Check for end of statement and return to pop from subroutine
+L9365:
+    BRK
+    dta 13
+    FNfold 'No '
+    dta tknPROC   ; Terminated by following BRK
+L936B:
+    BRK
+    dta 12
+    FNfold 'Not '
+    dta tknLOCAL ; Terminated by following BRK
+L9372:
+    BRK
+    dta $19
+    FNfold 'Bad '
+    dta tknMODE
+    BRK
+
+; GCOL numeric, numeric
+; =====================
+L937A:
+    JSR L8821
+    LDA zp2A
+    PHA     ; Evaluate integer
+    JSR L92DA                 ; Step past comma, evaluate integer
+    JSR L9852                 ; Update program pointer, check for end of statement
+    LDA #$12
+    JSR OSWRCH       ; Send VDU 18 for GCOL
+    JMP L93DA                 ; Jump to send two bytes to OSWRCH
+
+; COLOUR numeric
+; ==============
+L938E:
+    LDA #$11
+    PHA              ; Stack VDU 17 for COLOUR
+    JSR L8821
+    JSR L9857       ; Evaluate integer, check end of statement
+    JMP L93DA                 ; Jump to send two bytes to OSWRCH
+
+; MODE numeric
+; ============
+L939A:
+    LDA #$16
+    PHA              ; Stack VDU 22 for MODE
+    JSR L8821
+    JSR L9857       ; Evaluate integer, check end of statement
+
+; BBC - Check if changing MODE will move screen into stack
+; --------------------------------------------------------
+    .ifdef MOS_BBC
+        JSR LBEE7                ; Get machine address high word
+        CPX #$FF
+        BNE L93D7       ; Not $xxFFxxxx, skip memory test
+        CPY #$FF
+        BNE L93D7       ; Not $FFFFxxxx, skip memory test
+
+        ; MODE change in I/O processor, must check memory limits
+        LDA zp04
+        CMP zp06
+        BNE L9372      ; STACK<>HIMEM, stack not empty, give 'Bad MODE' error
+        LDA zp05
+        CMP zp07
+        BNE L9372
+        LDX zp2A
+        LDA #$85
+        JSR OSBYTE    ; Get top of memory if we used this MODE
+        CPX zp02
+        TYA
+        SBC zp03
+        BCC L9372  ; Would be below VAREND, give error
+        CPX zp12
+        TYA
+        SBC zp13
+        BCC L9372  ; Would be below TOP, give error
+
+        ; BASIC stack is empty, screen would not hit heap or program
+        STX zp06
+        STX zp04           ; Set STACK and HIMEM to new address
+        STY zp07
+        STY zp05
+    .endif
+
+; Change MODE
+L93D7:
+    JSR LBC28                 ; Set COUNT to zero
+
+; Send two bytes to OSWRCH, stacked byte, then IntA
+; -------------------------------------------------
+L93DA:
+    PLA
+    JSR OSWRCH            ; Send stacked byte to OSWRCH
+    JSR L9456
+    JMP L8B9B       ; Send IntA to OSWRCH, jump to execution loop
+
+; MOVE numeric, numeric
+; =====================
+L93E4:
+    LDA #$04
+    BNE L93EA        ; Jump forward to do PLOT 4 for MOVE
+
+; DRAW numeric, numeric
+; =====================
+L93E8:
+    LDA #$05                  ; Do PLOT 5 for DRAW
+L93EA:
+    PHA
+    JSR L9B1D             ; Evaluate first expression
+    JMP L93FD                 ; Jump to evaluate second expression and send to OSWRCH
+
+; PLOT numeric, numeric, numeric
+; ==============================
+L93F1:
+    JSR L8821
+    LDA zp2A
+    PHA     ; Evaluate integer
+    JSR L8AAE
+    JSR L9B29       ; Step past comma, evaluate expression
+L93FD:
+    JSR L92EE                 ; Confirm numeric and ensure is integer
+    JSR LBD94                 ; Stack integer
+    JSR L92DA                 ; Step past command and evaluate integer
+    JSR L9852                 ; Update program pointer, check for end of statement
+    LDA #$19
+    JSR OSWRCH       ; Send VDU 25 for PLOT
+    PLA
+    JSR OSWRCH            ; Send PLOT action
+    JSR LBE0B                 ; Pop integer to temporary store at $37/8
+    LDA zp37
+    JSR OSWRCH        ; Send first coordinate to OSWRCH
+    LDA zp38
+    JSR OSWRCH
+    JSR L9456                 ; Send IntA to OSWRCH, second coordinate
+    LDA zp2B
+    JSR OSWRCH        ; Send IntA high byte to OSWRCH
+    JMP L8B9B                 ; Jump to execution loop
+
+
+L942A:
+    LDA zp2B
+    JSR OSWRCH        ; Send IntA byte 2 to OSWRCH
+
+; VDU num[,][;][...]
+; ==================
+L942F:
+    JSR L8A97                 ; Get next character
+L9432:
+    CMP #$3A
+    BEQ L9453        ; If end of statement, jump to exit
+    CMP #$0D
+    BEQ L9453
+    CMP #$8B
+    BEQ L9453
+    DEC zp0A                   ; Step back to current character
+    JSR L8821
+    JSR L9456       ; Evaluate integer and output low byte
+    JSR L8A97                 ; Get next character
+    CMP #','
+    BEQ L942F     ; Comma, loop to read another number
+    CMP #';'
+    BNE L9432     ; Not semicolon, loop to check for end of statement
+    BEQ L942A                 ; Loop to output high byte and read another
+L9453:
+    JMP L8B96                 ; Jump to execution loop
+
+
+; Send IntA to OSWRCH via WRCHV
+; =============================
+L9456:
+    LDA zp2A
+    .if WRCHV != 0
+        JMP (WRCHV)
+    .elseif WRCHV == 0
+        JMP OSWRCH 
+    .endif
+
 ; ----------------------------------------------------------------------------
 
 ; Temporary labels to make assembler happy
 
-L909F=$909F
-L9222=$9222
-L92DD=$92DD
-L92E3=$92E3
-L92EE=$92EE
-L9456=$9456
-L95D5=$95D5
-L9852=$9852
-L987B=$987B
-L9EDF=$9EDF
-LAE43=$AE43
-LAE56=$AE56
-LAED8=$AED8
-LBC28=$BC28
-LBC2D=$BC2D
-LBE0D=$BE0D
-L90AC=$90ac
-L912F=$912f
-L925D=$925d
-L926F=$926f
-L9283=$9283
-L928D=$928d
-L9295=$9295
-L92C9=$92c9
-L92F0=$92f0
-L9304=$9304
-L9323=$9323
-L9356=$9356
-L937A=$937a
-L938E=$938e
-L939A=$939a
-L93E4=$93e4
-L93E8=$93e8
-L93F1=$93f1
-L942F=$942f
-L94FC=$94FC
-L9531=$9531
-L9582=$9582
-L95DD=$95DD
-L97DF=$97DF
-L9813=$9813
-L982A=$982a
-L9841=$9841
-L984C=$984C
-L9857=$9857
-L9859=$9859
-L986D=$986d
-L9890=$9890
-L98C2=$98c2
-L9B1D=$9b1d
-L9B29=$9B29
-LA385=$A385
-LA6BE=$a6be
-LA7B4=$a7b4
-LA7FE=$a7fe
-LA8D4=$a8d4
-LA8DA=$a8da
-LA907=$a907
-LA98D=$a98d
-LA998=$a998
-LAA91=$aa91
-LAB33=$ab33
-LAB41=$ab41
-LAB6D=$ab6d
-LAB76=$ab76
-LAB88=$ab88
-LABA8=$aba8
-LABB1=$abb1
-LABC2=$abc2
-LABCB=$abcb
-LABD2=$abd2
-LABE9=$abe9
-LAC2F=$ac2f
-LAC78=$ac78
-LAC9E=$ac9e
-LACAD=$acad
-LACB8=$acb8
-LACC4=$acc4
-LACD1=$acd1
-LACE2=$ace2
-LAD6A=$ad6a
-LAE3A=$ae3a
-LAEB4=$aeb4
-LAEC0=$aec0
-LAECA=$aeca
-LAED1=$aed1
-LAEDC=$aedc
-LAEF7=$aef7
-LAEFC=$aefc
-LAF03=$af03
-LAF49=$af49
-LAF9F=$af9f
-LAFA6=$afa6
-LAFB9=$afb9
-LAFBF=$afbf
-LAFCC=$afcc
-LAFEE=$afee
-LB026=$b026
-LB039=$b039
-LB094=$b094
-LB0C2=$b0c2
-LB195=$b195
-LB3BD=$b3bd
-LB402=$b402
-LB433=$B433
-LB44C=$b44c
-LB472=$b472
-LB4A0=$b4a0
-LB4B4=$b4b4
-LB50E=$b50e
-LB545=$b545
-LB558=$b558
-LB562=$b562
-LB565=$b565
-LB59C=$b59c
-LB695=$b695
-LB7C4=$b7c4
-LB888=$b888
-LB8B6=$b8b6
-LB8CC=$b8cc
-LB915=$b915
-LBA44=$ba44
-LBAE6=$bae6
-LBB1F=$bb1f
-LBBB1=$bbb1
-LBBE4=$bbe4
-LBC02=$BC02
-LBC25=$bc25
-LBC8D=$BC8D
-LBD11=$bd11
-LBD20=$BD20
-LBD3A=$BD3A
-LBD94=$bd94
-LBDDC=$BDDC
-LBDE1=$BDE1
-LBDEA=$BDEA
-LBE44=$be44
-LBE6F=$be6f
-LBEBA=$BEBA
-LBEC2=$bec2
-LBEF3=$bef3
-LBF24=$bf24
-LBF2A=$bf2a
-LBF30=$bf30
-LBF46=$bf46
-LBF47=$bf47
-LBF58=$bf58
-LBF6F=$bf6f
-LBF78=$bf78
-LBF7C=$bf7c
-LBF80=$bf80
-LBF99=$bf99
-LBFA9=$BFA9
-LBFE4=$bfe4
+    icl 'undecl.s'
