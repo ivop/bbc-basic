@@ -9,9 +9,10 @@
 
     opt h-              ; No Atari header
 
-TARGET_BBC = 1
-MOS_BBC    = 1
-VERSION    = 2
+TARGET_BBC   = 1
+MOS_BBC      = 1
+VERSION      = 2
+MINORVERSION = 0
 
 load    = $8000         ; Code start address
 split   = 0
@@ -2560,7 +2561,6 @@ X9304:
         JMP L8B9B                 ; Return to execution loop
     .endif
 
-;xxx fix zp from here down
 ; Look for renumber references
 X8FE7:
     JSR L8F9A
@@ -3336,6 +3336,1219 @@ L9456:
     .elseif WRCHV == 0
         JMP OSWRCH 
     .endif
+
+;xxx fixup zp from here
+
+; VARIABLE PROCESSING
+; ===================
+; Look for a FN/PROC in heap
+; --------------------------
+; On entry, ($37)+1=>FN/PROC token (ie, first character of name)
+;
+L945B:
+    LDY #$01
+    LDA (zp37),Y      ; Get PROC/FN character
+    LDY #$F6                  ; Point to PROC list start
+    CMP #tknPROC
+    BEQ L946F    ; If PROC, jump to scan list
+    LDY #$F8
+    BNE L946F        ; Point to FN list start and scan list
+
+; Look for a variable in the heap
+; -------------------------------
+; On entry, ($37)+1=>first character of name
+;
+L9469:
+    LDY #$01
+    LDA (zp37),Y      ; Get first character of variable
+    ASL
+    TAY                 ; Double it to index into index list
+
+; Scan though linked lists in heap
+; --------------------------------
+L946F:
+    LDA ws+$0400,Y
+    STA zp3A    ; Get start of linked list
+    LDA ws+$0401,Y
+    STA zp3B
+L9479:
+    LDA zp3B
+    BEQ L94B2         ; End of list
+    LDY #$00
+    LDA (zp3A),Y
+    STA zp3C
+    INY
+    LDA (zp3A),Y
+    STA zp3D
+    INY
+    LDA (zp3A),Y
+    BNE L949A ; Jump if not null name
+    DEY
+    CPY zp39
+    BNE L94B3
+    INY
+    BCS L94A7
+L9495:
+    INY
+    LDA (zp3A),Y
+    BEQ L94B3
+L949A:
+    CMP (zp37),Y
+    BNE L94B3
+    CPY zp39
+    BNE L9495
+    INY
+    LDA (zp3A),Y
+    BNE L94B3
+L94A7:
+    TYA
+    ADC zp3A
+    STA zp2A
+    LDA zp3B
+    ADC #$00
+    STA zp2B
+L94B2:
+    RTS
+
+L94B3:
+    LDA zp3D
+    BEQ L94B2
+    LDY #$00
+    LDA (zp3C),Y
+    STA zp3A
+    INY
+    LDA (zp3C),Y
+    STA zp3B
+    INY
+    LDA (zp3C),Y
+    BNE L94D4
+    DEY
+    CPY zp39
+    BNE L9479
+    INY
+    BCS L94E1
+L94CF:
+    INY
+    LDA (zp3C),Y
+    BEQ L9479
+L94D4:
+    CMP (zp37),Y
+    BNE L9479
+    CPY zp39
+    BNE L94CF
+    INY
+    LDA (zp3C),Y
+    BNE L9479
+L94E1:
+    TYA
+    ADC zp3C
+    STA zp2A
+    LDA zp3D
+    ADC #$00
+    STA zp2B
+    RTS
+
+L94ED:
+    LDY #$01
+    LDA (zp37),Y
+    TAX
+    LDA #$F6
+    CPX #$F2
+    BEQ L9501
+    LDA #$F8
+    BNE L9501
+L94FC:
+    LDY #$01
+    LDA (zp37),Y
+    ASL
+L9501:
+    STA zp3A
+    LDA #$04+(ws/256)
+    STA zp3B
+L9507:
+    LDA (zp3A),Y
+    BEQ L9516
+    TAX
+    DEY
+    LDA (zp3A),Y
+    STA zp3A
+    STX zp3B
+    INY
+    BPL L9507
+L9516:
+    LDA zp03
+    STA (zp3A),Y
+    LDA zp02
+    DEY
+    STA (zp3A),Y
+    TYA
+    INY
+    STA (zp02),Y
+    CPY zp39
+    BEQ L9558
+L9527:
+    INY
+    LDA (zp37),Y
+    STA (zp02),Y
+    CPY zp39
+    BNE L9527
+    RTS
+
+L9531:
+    LDA #$00
+L9533:
+    INY
+    STA (zp02),Y
+    DEX
+    BNE L9533
+L9539:
+    SEC
+    TYA
+    ADC zp02
+    BCC L9541
+    INC zp03
+L9541:
+    LDY zp03
+    CPY zp05
+    BCC L9556
+    BNE L954D
+    CMP zp04
+    BCC L9556
+L954D:
+    LDA #$00
+    LDY #$01
+    STA (zp3A),Y
+    JMP L8CB7
+
+L9556:
+    STA zp02
+L9558:
+    RTS
+
+
+; Check if variable name is valid
+; ===============================
+L9559:
+    LDY #$01
+L955B:
+    LDA (zp37),Y
+    CMP #$30
+    BCC L9579
+    CMP #$40
+    BCS L9571
+    CMP #$3A
+    BCS L9579
+    CPY #$01
+    BEQ L9579
+L956D:
+    INX
+    INY
+    BNE L955B
+L9571:
+    CMP #$5F
+    BCS L957A
+    CMP #$5B
+    BCC L956D
+L9579:
+    RTS
+
+L957A:
+    CMP #$7B
+    BCC L956D
+    RTS
+
+L957F:
+    JSR L9531
+L9582:
+    JSR L95C9
+    BNE L95A4
+    BCS L95A4
+    JSR L94FC
+    LDX #$05
+    CPX zp2C
+    BNE L957F
+    INX
+    BNE L957F
+L9595:
+    CMP #$21
+    BEQ L95A5
+    CMP #$24
+    BEQ L95B0
+    EOR #$3F
+    BEQ L95A7
+    LDA #$00
+    SEC
+L95A4:
+    RTS
+
+L95A5:
+    LDA #$04
+L95A7:
+    PHA
+    INC zp1B
+    JSR L92E3
+    JMP L969F
+
+L95B0:
+    INC zp1B
+    JSR L92E3
+    LDA zp2B
+    BEQ L95BF
+    LDA #$80
+    STA zp2C
+    SEC
+    RTS
+
+L95BF:
+    BRK
+    dta 8
+    FNfold '$ range'
+    BRK
+L95C9:
+    LDA zp0B
+    STA zp19
+    LDA zp0C
+    STA zp1A
+    LDY zp0A
+    DEY
+L95D4:
+    INY
+L95D5:
+    STY zp1B
+    LDA (zp19),Y
+    CMP #$20
+    BEQ L95D4
+L95DD:
+    CMP #$40
+    BCC L9595
+    CMP #$5B
+    BCS L95FF
+    ASL
+    ASL
+    STA zp2A
+    LDA #$04+(ws/256)
+    STA zp2B
+    INY
+    LDA (zp19),Y
+    INY
+    CMP #$25
+    BNE L95FF
+    LDX #$04
+    STX zp2C
+    LDA (zp19),Y
+    CMP #'('
+    BNE L9665
+L95FF:
+    LDX #$05
+    STX zp2C
+    LDA zp1B
+    CLC
+    ADC zp19
+    LDX zp1A
+    BCC L960E
+    INX
+    CLC
+L960E:
+    SBC #$00
+    STA zp37
+    BCS L9615
+    DEX
+L9615:
+    STX zp38
+    LDX zp1B
+    LDY #$01
+L961B:
+    LDA (zp37),Y
+    CMP #$41
+    BCS L962D
+    CMP #$30
+    BCC L9641
+    CMP #$3A
+    BCS L9641
+    INX
+    INY
+    BNE L961B
+L962D:
+    CMP #$5B
+    BCS L9635
+    INX
+    INY
+    BNE L961B
+L9635:
+    CMP #$5F
+    BCC L9641
+    CMP #$7B
+    BCS L9641
+    INX
+    INY
+    BNE L961B
+L9641:
+    DEY
+    BEQ L9673
+    CMP #$24
+    BEQ L96AF
+    CMP #$25
+    BNE L9654
+    DEC zp2C
+    INY
+    INX
+    INY
+    LDA (zp37),Y
+    DEY
+L9654:
+    STY zp39
+    CMP #'('
+    BEQ L96A6
+    JSR L9469
+    BEQ L9677
+    STX zp1B
+L9661:
+    LDY zp1B
+    LDA (zp19),Y
+L9665:
+    CMP #$21
+    BEQ L967F
+    CMP #$3F
+    BEQ L967B
+    CLC
+    STY zp1B
+    LDA #$FF
+    RTS
+
+L9673:
+    LDA #$00
+    SEC
+    RTS
+
+L9677:
+    LDA #$00
+    CLC
+    RTS
+
+L967B:
+    LDA #$00
+    BEQ L9681
+L967F:
+    LDA #$04
+L9681:
+    PHA
+    INY
+    STY zp1B
+    JSR LB32C
+    JSR L92F0
+    LDA zp2B
+    PHA
+    LDA zp2A
+    PHA
+    JSR L92E3
+    CLC
+    PLA
+    ADC zp2A
+    STA zp2A
+    PLA
+    ADC zp2B
+    STA zp2B
+L969F:
+    PLA
+    STA zp2C
+    CLC
+    LDA #$FF
+    RTS
+
+L96A6:
+    INX
+    INC zp39
+    JSR L96DF
+    JMP L9661
+
+L96AF:
+    INX
+    INY
+    STY zp39
+    INY
+    DEC zp2C
+    LDA (zp37),Y
+    CMP #'('
+    BEQ L96C9
+    JSR L9469
+    BEQ L9677
+    STX zp1B
+    LDA #$81
+    STA zp2C
+    SEC
+    RTS
+
+L96C9:
+    INX
+    STY zp39
+    DEC zp2C
+    JSR L96DF
+    LDA #$81
+    STA zp2C
+    SEC
+    RTS
+
+L96D7:
+    BRK
+    dta 14
+    FNfold 'Array'
+    BRK
+
+L96DF:
+    JSR L9469
+    BEQ L96D7
+    STX zp1B
+    LDA zp2C
+    PHA
+    LDA zp2A
+    PHA
+    LDA zp2B
+    PHA
+    LDY #$00
+    LDA (zp2A),Y
+    CMP #$04
+    BCC L976C
+    TYA
+    .if version < 3
+        JSR LAED8
+    .elseif version >= 3
+        JSR XAED3
+    .endif
+    LDA #$01
+    STA zp2D
+L96FF:
+    JSR LBD94
+    JSR L92DD
+    INC zp1B
+    CPX #$2C
+    BNE L96D7
+    LDX #$39
+    JSR LBE0D
+    LDY zp3C
+    PLA
+    STA zp38
+    PLA
+    STA zp37
+    PHA
+    LDA zp38
+    PHA
+    JSR L97BA
+    STY zp2D
+    LDA (zp37),Y
+    STA zp3F
+    INY
+    LDA (zp37),Y
+    STA zp40
+    LDA zp2A
+    ADC zp39
+    STA zp2A
+    LDA zp2B
+    ADC zp3A
+    STA zp2B
+    JSR L9236
+    LDY #$00
+    SEC
+    LDA (zp37),Y
+    SBC zp2D
+    CMP #$03
+    BCS L96FF
+    JSR LBD94
+    JSR LAE56
+    JSR L92F0
+    PLA
+    STA zp38
+    PLA
+    STA zp37
+    LDX #$39
+    JSR LBE0D
+    LDY zp3C
+    JSR L97BA
+    CLC
+    LDA zp39
+    ADC zp2A
+    STA zp2A
+    LDA zp3A
+    ADC zp2B
+    STA zp2B
+    BCC L977D
+L976C:
+    JSR LAE56
+    JSR L92F0
+    PLA
+    STA zp38
+    PLA
+    STA zp37
+    LDY #$01
+    JSR L97BA
+L977D:
+    PLA
+    STA zp2C
+    CMP #$05
+    BNE L979B
+    LDX zp2B
+    LDA zp2A
+    ASL zp2A
+    ROL zp2B
+    ASL zp2A
+    ROL zp2B
+    ADC zp2A
+    STA zp2A
+    TXA
+    ADC zp2B
+    STA zp2B
+    BCC L97A3
+L979B:
+    ASL zp2A
+    ROL zp2B
+    ASL zp2A
+    ROL zp2B
+L97A3:
+    TYA
+    ADC zp2A
+    STA zp2A
+    BCC L97AD
+    INC zp2B
+    CLC
+L97AD:
+    LDA zp37
+    ADC zp2A
+    STA zp2A
+    LDA zp38
+    ADC zp2B
+    STA zp2B
+    RTS
+
+L97BA:
+    LDA zp2B
+    AND #$C0
+    ORA zp2C
+    ORA zp2D
+    BNE L97D1
+    LDA zp2A
+    CMP (zp37),Y
+    INY
+    LDA zp2B
+    SBC (zp37),Y
+    BCS L97D1
+    INY
+    RTS
+
+L97D1:
+    BRK
+    dta 15
+    FNfold 'Subscript'
+    BRK
+L97DD:
+    INC zp0A
+L97DF:
+    LDY zp0A
+    LDA (zp0B),Y
+    CMP #$20
+    BEQ L97DD
+    CMP #$8D
+    BNE L9805
+L97EB:
+    INY
+    LDA (zp0B),Y
+    ASL
+    ASL
+    TAX
+    AND #$C0
+    INY
+    EOR (zp0B),Y
+    STA zp2A
+    TXA
+    ASL
+    ASL
+    INY
+    EOR (zp0B),Y
+    STA zp2B
+    INY
+    STY zp0A
+    SEC
+    RTS
+
+L9805:
+    CLC
+    RTS
+
+L9807:
+    LDA zp0B
+    STA zp19
+    LDA zp0C
+    STA zp1A
+    LDA zp0A
+    STA zp1B
+L9813:
+    LDY zp1B
+    INC zp1B
+    LDA (zp19),Y
+    CMP #$20
+    BEQ L9813
+    CMP #$3D
+    BEQ L9849
+L9821:
+    BRK
+    dta 4
+    FNfold 'Mistake'
+L982A:
+    BRK
+    dta 16
+    FNfold 'Syntax error' ; Terminated by following BRK
+    .ifdef MOS_ATOM
+        BRK
+    .endif
+
+; Escape error
+; ------------
+L9838:
+    .ifdef TARGET_ATOM
+        LDA LB001
+        AND #$20
+        BEQ L9838   ; Loop until Escape not pressed
+    .endif
+
+    .ifdef TARGET_SYSTEM
+        CMP L0E21
+        BEQ L9838            ; Loop until key no longer pressed
+    .endif
+
+    BRK
+    dta 17
+    FNfold 'Escape'
+    BRK
+
+L9841:
+    JSR L8A8C
+    CMP #'='
+    BNE L9821
+    RTS
+
+L9849:
+    JSR L9B29
+L984C:
+    TXA
+    LDY zp1B
+    JMP L9861
+
+L9852:
+    LDY zp1B
+    JMP L9859
+
+; Check for end of statement, check for Escape
+; ============================================
+L9857:
+    LDY zp0A                   ; Get program pointer offset
+L9859:
+    DEY                       ; Step back to previous character
+L985A:
+    INY
+    LDA (zp0B),Y           ; Get next character
+    CMP #$20
+    BEQ L985A        ; Skip spaces
+L9861:
+    CMP #':'
+    BEQ L986D     ; Colon, jump to update program pointer
+    CMP #$0D
+    BEQ L986D        ; <cr>, jump to update program pointer
+    CMP #tknELSE
+    BNE L982A    ; Not 'ELSE', jump to 'Syntax error'
+
+; Update program pointer
+; ----------------------
+L986D:
+    CLC
+    TYA
+    ADC zp0B
+    STA zp0B   ; Update program pointer in PtrA
+    BCC L9877
+    INC zp0C
+L9877:
+    LDY #$01
+    STY zp0A
+
+; Check background Escape state
+; -----------------------------
+L987B:
+
+; Atom - check keyboard matrix
+; ----------------------------
+    .ifdef TARGET_ATOM
+        PHA                       ; Save A
+        LDA LB001
+        AND #$20        ; Check keyboard matrix
+        BEQ L9838                 ; Escape key pressed, jump to error
+        PLA                       ; Restore A
+    .endif
+
+; System - check current keypress
+; -------------------------------
+    .ifdef TARGET_SYSTEM
+        BIT L0E21
+        BMI L987F       ; Nothing pressed
+        PHA
+        LDA L0E21             ; Save A, get keypress
+        CMP #$1B
+        BEQ L9838        ; If Escape, jump to error
+        PLA                       ; Restore A
+    .endif
+
+; BBC - check background Escape state
+; -----------------------------------
+    .ifdef MOS_BBC
+        BIT ESCFLG
+        BMI L9838      ; If Escape set, jump to give error
+    .endif
+
+L987F:
+    RTS
+
+L9880:
+    JSR L9857
+    DEY
+    LDA (zp0B),Y
+    CMP #$3A
+    BEQ L987F
+    LDA zp0C
+    CMP #$07+(ws/256)
+    BEQ L98BC
+L9890:
+    INY
+    LDA (zp0B),Y
+    BMI L98BC
+    LDA zp20
+    BEQ L98AC
+    TYA
+    PHA
+    INY
+    LDA (zp0B),Y
+    PHA
+    DEY
+    LDA (zp0B),Y
+    TAY
+    PLA
+    .if version < 3
+        JSR LAEEA
+    .elseif version >= 3
+        JSR XAED5
+    .endif
+    JSR L9905
+    PLA
+    TAY
+L98AC:
+    INY
+    SEC
+    TYA
+    ADC zp0B
+    STA zp0B
+    BCC L98B7
+    INC zp0C
+L98B7:
+    LDY #$01
+    STY zp0A
+L98BB:
+    RTS
+
+L98BC:
+    JMP L8AF6
+
+L98BF:
+    JMP L8C0E
+
+; IF numeric
+; ==========
+L98C2:
+    JSR L9B1D
+    BEQ L98BF
+    BPL L98CC
+    JSR LA3E4
+L98CC:
+    LDY zp1B
+    STY zp0A
+    LDA zp2A
+    ORA zp2B
+    ORA zp2C
+    ORA zp2D
+    BEQ L98F1
+    CPX #$8C
+    BEQ L98E1
+L98DE:
+    JMP L8BA3
+
+L98E1:
+    INC zp0A
+L98E3:
+    JSR L97DF
+    BCC L98DE
+    JSR LB9AF
+    JSR L9877
+    JMP LB8D2
+
+L98F1:
+    LDY zp0A
+L98F3:
+    LDA (zp0B),Y
+    CMP #$0D
+    BEQ L9902
+    INY
+    CMP #$8B
+    BNE L98F3
+    STY zp0A
+    BEQ L98E3
+L9902:
+    JMP L8B87
+
+L9905:
+    LDA zp2A
+    CMP zp21
+    LDA zp2B
+    SBC zp22
+    BCS L98BB
+    LDA #$5B
+L9911:
+    JSR LB558
+    JSR L991F
+    LDA #$5D
+    JSR LB558
+    JMP LB565
+
+; Print 16-bit decimal number
+; ===========================
+L991F:
+    LDA #$00 ; No padding
+    BEQ L9925
+L9923:
+    LDA #$05 ; Pad to five characters
+L9925:
+    STA zp14
+    LDX #$04
+L9929:
+    LDA #$00
+    STA zp3F,X
+    SEC
+L992E:
+    LDA zp2A
+    SBC L996B,X     ; Subtract 10s low byte
+    TAY
+    LDA zp2B
+    SBC L99B9,X     ; Subtract 10s high byte
+    BCC L9943       ; Result<0, no more for this digit
+    STA zp2B
+    STY zp2A ; Update number
+    INC zp3F,X
+    BNE L992E
+
+L9943:
+    DEX
+    BPL L9929
+    LDX #$05
+L9948:
+    DEX
+    BEQ L994F
+    LDA zp3F,X
+    BEQ L9948
+L994F:
+    STX zp37
+    LDA zp14
+    BEQ L9960
+    SBC zp37
+    BEQ L9960
+    .if version < 3
+        TAY
+L995A:
+        JSR LB565
+        DEY
+        BNE L995A
+    .elseif version > 3
+        TAX
+        JSR LB580
+        LDX zp37
+    .endif
+L9960:
+    LDA zp3F,X
+    ORA #$30
+    JSR LB558
+    DEX
+    BPL L9960
+    RTS
+
+; Low bytes of powers of ten
+L996B:
+    dta 1, 10, 100, <1000, <10000
+
+; Line Search
+L9970:
+    LDY #$00
+    STY zp3D
+    LDA zp18
+    STA zp3E
+L9978:
+    LDY #$01
+    LDA (zp3D),Y
+    CMP zp2B
+    BCS L998E
+L9980:
+    LDY #$03
+    LDA (zp3D),Y
+    ADC zp3D
+    STA zp3D
+    BCC L9978
+    INC zp3E
+    BCS L9978
+L998E:
+    BNE L99A4
+    LDY #$02
+    LDA (zp3D),Y
+    CMP zp2A
+    BCC L9980
+    BNE L99A4
+    TYA
+    ADC zp3D
+    STA zp3D
+    BCC L99A4
+    INC zp3E
+    CLC
+L99A4:
+    LDY #$02
+    RTS
+
+L99A7:
+    BRK
+    dta $12
+    FNfold 'Division by zero'
+
+; High byte of powers of ten
+L99B9:
+    dta 0, 0, 0, >1000, >10000
+
+L99BE:
+    TAY              ; 99BE= A8           (
+    JSR L92F0        ; 99BF= 20 F0 92     p.
+    LDA zp2D          ; 99C2= A5 2D       %-
+    PHA              ; 99C4= 48          H
+    JSR LAD71        ; 99C5= 20 71 AD     q-
+    JSR L9E1D        ; 99C8= 20 1D 9E     ..
+    STX zp27          ; 99CB= 86 27       .'
+    TAY              ; 99CD= A8          (
+    JSR L92F0        ; 99CE= 20 F0 92     p.
+    PLA              ; 99D1= 68          h
+    STA zp38          ; 99D2= 85 38       .8
+    EOR zp2D          ; 99D4= 45 2D       E-
+    STA zp37          ; 99D6= 85 37       .7
+    JSR LAD71        ; 99D8= 20 71 AD     q-
+    LDX #$39         ; 99DB= A2 39       "9
+    JSR LBE0D        ; 99DD= 20 0D BE     .>
+    STY zp3D          ; 99E0= 84 3D       .=
+    STY zp3E          ; 99E2= 84 3E       .>
+    STY zp3F          ; 99E4= 84 3F       .?
+    STY zp40          ; 99E6= 84 40       .@
+    LDA zp2D          ; 99E8= A5 2D       %-
+    ORA zp2A          ; 99EA= 05 2A       .*
+    ORA zp2B          ; 99EC= 05 2B       .+
+    ORA zp2C          ; 99EE= 05 2C       .,
+    BEQ L99A7        ; 99F0= F0 B5       p5
+    LDY #$20         ; 99F2= A0 20
+L99F4:
+    DEY              ; 99F4= 88          .
+    BEQ L9A38        ; 99F5= F0 41       pA
+    ASL zp39          ; 99F7= 06 39       .9
+    ROL zp3A          ; 99F9= 26 3A       $
+
+    ROL zp3B          ; 99FB= 26 3B       $;
+    ROL zp3C          ; 99FD= 26 3C       $<
+    BPL L99F4        ; 99FF= 10 F3       .s
+L9A01:
+    ROL zp39          ; 9A01= 26 39       $9
+    ROL zp3A          ; 9A03= 26 3A       $
+
+    ROL zp3B          ; 9A05= 26 3B       $;
+    ROL zp3C          ; 9A07= 26 3C       $<
+    ROL zp3D          ; 9A09= 26 3D       $=
+    ROL zp3E          ; 9A0B= 26 3E       $>
+    ROL zp3F          ; 9A0D= 26 3F       $?
+    ROL zp40          ; 9A0F= 26 40       $@
+    SEC              ; 9A11= 38          8
+    LDA zp3D          ; 9A12= A5 3D       %=
+    SBC zp2A          ; 9A14= E5 2A       e*
+    PHA              ; 9A16= 48          H
+    LDA zp3E          ; 9A17= A5 3E       %>
+    SBC zp2B          ; 9A19= E5 2B       e+
+    PHA              ; 9A1B= 48          H
+    LDA zp3F          ; 9A1C= A5 3F       %?
+    SBC zp2C          ; 9A1E= E5 2C       e,
+    TAX              ; 9A20= AA          *
+    LDA zp40          ; 9A21= A5 40       %@
+    SBC zp2D          ; 9A23= E5 2D       e-
+    BCC L9A33        ; 9A25= 90 0C       ..
+    STA zp40          ; 9A27= 85 40       .@
+    STX zp3F          ; 9A29= 86 3F       .?
+    PLA              ; 9A2B= 68          h
+    STA zp3E          ; 9A2C= 85 3E       .>
+    PLA              ; 9A2E= 68          h
+    STA zp3D          ; 9A2F= 85 3D       .=
+    BCS L9A35        ; 9A31= B0 02       0.
+L9A33:
+    PLA              ; 9A33= 68          h
+    PLA              ; 9A34= 68          h
+L9A35:
+    DEY              ; 9A35= 88          .
+    BNE L9A01        ; 9A36= D0 C9       PI
+L9A38:
+    RTS              ; 9A38= 60          `
+
+L9A39:
+    STX zp27          ; 9A39= 86 27       .'
+    JSR LBDEA        ; 9A3B= 20 EA BD     j=
+    JSR LBD51        ; 9A3E= 20 51 BD     Q=
+    JSR LA2BE        ; 9A41= 20 BE A2     >"
+    JSR LA21E        ; 9A44= 20 1E A2     ."
+    JSR LBD7E        ; 9A47= 20 7E BD     ~=
+    JSR LA3B5        ; 9A4A= 20 B5 A3     5#
+    JMP L9A62        ; 9A4D= 4C 62 9A    Lb.
+
+L9A50:
+    JSR LBD51        ; 9A50= 20 51 BD     Q=
+    JSR L9C42        ; 9A53= 20 42 9C     B.
+    STX zp27          ; 9A56= 86 27       .'
+    TAY              ; 9A58= A8          (
+    JSR L92FD        ; 9A59= 20 FD 92     }.
+    JSR LBD7E        ; 9A5C= 20 7E BD     ~=
+L9A5F:
+    JSR LA34E        ; 9A5F= 20 4E A3     N#
+
+; Compare FPA = FPB
+; -----------------
+L9A62:
+    LDX zp27
+    LDY #$00
+    LDA zp3B
+    AND #$80
+    STA zp3B
+    LDA zp2E
+    AND #$80
+    CMP zp3B
+    BNE L9A92
+    LDA zp3D
+    CMP zp30
+    BNE L9A93
+    LDA zp3E
+    CMP zp31
+    BNE L9A93
+    LDA zp3F
+    CMP zp32
+    BNE L9A93
+    LDA zp40
+    CMP zp33
+    BNE L9A93
+    LDA zp41
+    CMP zp34
+    BNE L9A93
+L9A92:
+    RTS
+
+L9A93:
+    ROR
+    EOR zp3B
+    ROL
+    LDA #$01
+    RTS
+
+L9A9A:
+    JMP L8C0E        ; Jump to 'Type mismatch' error
+
+
+; Evaluate next expression and compare with previous
+; --------------------------------------------------
+L9A9D:
+    TXA
+L9A9E:
+    BEQ L9AE7                 ; Jump if current is string
+    BMI L9A50                 ; Jump if current is float
+    JSR LBD94                 ; Stack integer
+    JSR L9C42
+    TAY             ; Evaluate next expression
+    BEQ L9A9A                 ; Error if string
+    BMI L9A39                 ; Float, jump to compare floats
+
+; Compare IntA with top of stack
+; ------------------------------
+    LDA zp2D
+    EOR #$80
+    STA zp2D
+    SEC
+    LDY #$00
+    LDA (zp04),Y
+    SBC zp2A
+    STA zp2A
+    INY
+    LDA (zp04),Y
+    SBC zp2B
+    STA zp2B
+    INY
+    LDA (zp04),Y
+    SBC zp2C
+    STA zp2C
+    INY
+    LDA (zp04),Y
+    LDY #$00
+    EOR #$80
+    SBC zp2D
+    ORA zp2A
+    ORA zp2B
+    ORA zp2C
+    PHP
+    CLC
+    LDA #$04
+    ADC zp04  ; Drop integer from stack
+    STA zp04
+    BCC L9AE5
+    INC zp05
+L9AE5:
+    PLP
+    RTS
+
+; Compare string with next expression
+; -----------------------------------
+L9AE7:
+    JSR LBDB2        ; 9AE7= 20 B2 BD     2=
+    JSR L9C42        ; 9AEA= 20 42 9C     B.
+    TAY              ; 9AED= A8          (
+    BNE L9A9A        ; 9AEE= D0 AA       P*
+    STX zp37          ; 9AF0= 86 37       .7
+    LDX zp36          ; 9AF2= A6 36       $6
+    .if version < 3 || (version == 3 && minorversion < 10)
+        LDY #$00
+    .endif
+    LDA (zp04),Y      ; 9AF6= B1 04       1.
+    STA zp39          ; 9AF8= 85 39       .9
+    CMP zp36          ; 9AFA= C5 36       E6
+    BCS L9AFF        ; 9AFC= B0 01       0.
+    TAX              ; 9AFE= AA          *
+L9AFF:
+    STX zp3A          ; 9AFF= 86 3A       .
+
+    .if version < 3 || (version == 3 && minorversion < 10)
+        LDY #$00
+    .endif
+L9B03:
+    CPY zp3A          ; 9B03= C4 3A       D
+
+    BEQ L9B11        ; 9B05= F0 0A       p.
+    INY              ; 9B07= C8          H
+    LDA (zp04),Y      ; 9B08= B1 04       1.
+    CMP ws+$05FF,Y   ; 9B0A= D9 FF 05    Y..
+    BEQ L9B03        ; 9B0D= F0 F4       pt
+    BNE L9B15        ; 9B0F= D0 04       P.
+L9B11:
+    LDA zp39          ; 9B11= A5 39       %9
+    CMP zp36          ; 9B13= C5 36       E6
+L9B15:
+    PHP              ; 9B15= 08          .
+    JSR LBDDC        ; 9B16= 20 DC BD     \=
+    LDX zp37          ; 9B19= A6 37       $7
+    PLP              ; 9B1B= 28          (
+    RTS              ; 9B1C= 60          `
+
 
 ; ----------------------------------------------------------------------------
 
