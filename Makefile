@@ -11,4 +11,4 @@ clean:
 	rm -f basic.rom
 
 cleaner: clean
-	rm -f *~
+	rm -f *~ */*~
