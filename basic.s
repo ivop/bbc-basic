@@ -16,6 +16,7 @@ VERSION    = 2
 load    = $8000         ; Code start address
 split   = 0
 foldup  = 0
+title   = 0
 ws      = $0400-$0400   ; Offset from &400 to workspace
 membot  = 0             ; Use OSBYTE to find memory limits
 memtop  = 0             ; ...
@@ -1149,7 +1150,7 @@ L883A:
     LDX #$01              ; Prepare for one byte
     LDY zp0A
     INC zp0A       ; Increment index
-    LDA ($0B),Y           ; Get next character
+    LDA (zp0B),Y           ; Get next character
     CMP #'B'
     BEQ L8858 ; EQUB
     INX                   ; Prepare for two bytes
@@ -1287,7 +1288,7 @@ L88F5:
     AND #$C0
     LSR
     LSR
-    ORA $3D
+    ORA zp3D
     LSR
     LSR
     EOR #$54
@@ -1483,17 +1484,628 @@ L8A30:
     LDA (zp37),Y
     JMP L89F8
 
+L8A37:
+    TAX
+    INY
+    LDA (zp39),Y
+    STA zp3D  ; Get token flag
+    DEY
+    LSR
+    BCC L8A48
+    LDA (zp37),Y
+    JSR L8926
+    BCS L89D0
+L8A48:
+    TXA
+    BIT zp3D
+    BVC L8A54
+    LDX zp3B
+    BNE L8A54
+    .if split == 0
+        CLC        ; Superflous as all paths to here have CLC
+    .endif
+    ADC #$40
+L8A54:
+    DEY
+    JSR L887C
+    LDY #$00
+    LDX #$FF
+    LDA zp3D
+    LSR
+    LSR
+    BCC L8A66
+    STX zp3B
+    STY zp3C
+L8A66:
+    LSR
+    BCC L8A6D
+    STY zp3B
+    STY zp3C
+L8A6D:
+    LSR
+    BCC L8A81
+    PHA
+    INY
+L8A72:
+    LDA (zp37),Y
+    JSR L8926
+    BCC L8A7F
+    JSR L8944
+    JMP L8A72
+
+L8A7F:
+    DEY
+    PLA
+L8A81:
+    LSR
+    BCC L8A86
+    STX zp3C
+L8A86:
+    LSR
+    BCS L8A96
+    JMP L8961
+
+; Skip Spaces
+; ===========
+L8A8C:
+    LDY zp1B
+    INC zp1B           ; Get offset, increment it
+    LDA (zp19),Y               ; Get current character
+    CMP #' '
+    BEQ L8A8C     ; Loop until not space
+L8A96:
+    RTS
+
+; Skip spaces at PtrA
+; -------------------
+L8A97:
+    LDY zp0A
+    INC zp0A
+    LDA (zp0B),Y
+    CMP #$20
+    BEQ L8A97
+L8AA1:
+    RTS
+
+    .if version < 3
+L8AA2:
+        BRK
+        dta 5
+        FNfold 'Missing ,'
+        BRK
+    .endif
+
+L8AAE:
+    JSR L8A8C
+    CMP #','
+    .if version < 3
+        BNE L8AA2
+        RTS
+    .elseif version >= 3
+        BEQ L8AA1
+X8AC8:
+        BRK
+        dta 5
+        FNfold 'Missing ,'
+        BRK
+    .endif
+
+
+; OLD - Attempt to restore program
+; ================================
+L8AB6:
+    JSR L9857                 ; Check end of statement
+    LDA zp18
+    STA zp38           ; Point $37/8 to PAGE
+    LDA #$00
+    STA zp37
+    STA (zp37),Y               ; Remove end marker
+    JSR LBE6F                 ; Check program and set TOP
+    BNE L8AF3                 ; Jump to clear heap and go to immediate mode
+
+; END - Return to immediate mode
+; ==============================
+L8AC8:
+    JSR L9857                 ; Check end of statement
+    JSR LBE6F                 ; Check program and set TOP
+    BNE L8AF6                 ; Jump to immediate mode, keeping variables, etc
+
+; STOP - Abort program with an error
+; ==================================
+L8AD0:
+    JSR L9857                 ; Check end of statement
+    .if version < 3 && foldup == 0
+        BRK
+        dta 0
+        dta 'STOP'
+        BRK
+    .endif
+    .if version >= 3 || foldup != 0
+        BRK
+        dta 0
+        dta tknSTOP
+        BRK
+    .endif
+
+; NEW - Clear program, enter immediate mode
+; =========================================
+;xxx
+L8ADA:
+    JSR L9857                 ; Check end of statement
+    .if title != 0
+        JSR X8ADD                 ; NEW program
+    .endif
+
+; Start up with NEW program
+; -------------------------
+L8ADD:
+    .if title == 0
+        LDA #$0D
+        LDY zp18
+        STY zp13  ; TOP hi=PAGE hi
+        LDY #$00
+        STY zp12
+        STY zp20  ; TOP=PAGE, TRACE OFF
+        STA (zp12),Y               ; ?(PAGE+0)=<cr>
+        LDA #$FF
+        INY
+        STA (zp12),Y  ; ?(PAGE+1)=$FF
+        INY
+        STY zp12               ; TOP=PAGE+2
+    .endif
+
+L8AF3:
+    JSR LBD20                 ; Clear variables, heap, stack
+
+; IMMEDIATE LOOP
+; ==============
+L8AF6:
+    LDY #$07+(ws/256)
+    STY zp0C ; PtrA=$0700 - input buffer
+    LDY #$00
+    STY zp0B
+    LDA #<LB433
+    STA zp16; ON ERROR OFF
+    LDA #>LB433
+    STA zp17
+    LDA #'>'
+    JSR LBC02     ; Print '>' prompt, read input to buffer at PtrA
+
+; Execute line at program pointer in $0B/C
+; ----------------------------------------
+L8B0B:
+    LDA #<LB433
+    STA zp16; ON ERROR OFF again
+    LDA #>LB433
+    STA zp17
+    LDX #$FF
+    STX zp28          ; OPT=$FF - not within assembler
+    STX zp3C
+    TXS               ; Clear machine stack
+    JSR LBD3A
+    TAY             ; Clear DATA and stacks
+    LDA zp0B
+    STA zp37           ; Point $37/8 to program line
+    LDA zp0C
+    STA zp38
+    STY zp3B
+    STY zp0A
+    JSR L8957
+    JSR L97DF
+    BCC L8B38       ; Tokenise, jump forward if no line number
+    JSR LBC8D
+    JMP L8AF3       ; Insert into program, jump back to immediate loop
+
+; Command entered at immediate prompt
+; -----------------------------------
+L8B38:
+    JSR L8A97                 ; Skip spaces at PtrA
+    CMP #$C6
+    BCS L8BB1        ; If command token, jump to execute command
+    BCC L8BBF                 ; Not command token, try variable assignment
+
+L8B41:
+    JMP L8AF6                 ; Jump back to immediate mode
+
+; [ - enter assembler
+; ===================
+L8B44:
+    JMP L8504                 ; Jump to assembler
+
+; =<value> - return from FN
+; =========================
+; Stack needs to contain these items,
+;  ret_lo, ret_hi, PtrB_hi, PtrB_lo, PtrB_off, numparams, PtrA_hi, PtrA_lo, PtrA_off, tknFN
+L8B47:
+    TSX
+    CPX #$FC
+    BCS L8B59        ; If stack is empty, jump to give error
+    LDA $01FF
+    CMP #tknFN
+    BNE L8B59; If pushed token<>'FN', give error
+    JSR L9B1D                     ; Evaluate expression
+    JMP L984C                     ; Check for end of statement and return to pop from function
+L8B59:
+    BRK
+    dta 7
+    FNfold 'No '
+    dta tknFN       ; XXX
+    BRK
+
+; Check for =, *, [ commands
+; ==========================
+L8B60:
+    LDY zp0A
+    DEY
+    LDA (zp0B),Y   ; Step program pointer back and fetch char
+    CMP #'='
+    BEQ L8B47     ; Jump for '=', return from FN
+    CMP #'*'
+    BEQ L8B73     ; Jump for '*', embedded *command
+    CMP #'['
+    BEQ L8B44     ; Jump for '[', start assembler
+    BNE L8B96                 ; Otherwise, see if end of statement
+
+; Embedded *command
+; =================
+L8B73:
+    JSR L986D                 ; Update PtrA to current address
+    LDX zp0B
+    LDY zp0C           ; XY=>command string
+
+
+    .ifdef MOS_ATOM
+        JSR cmdStar              ; Pass command at ptrA to Atom OSCLI
+    .endif
+
+    .ifdef MOS_BBC
+        JSR OS_CLI               ; Pass command at ptrA to OSCLI
+    .endif
+
+; DATA, DEF, REM, ELSE
+; ====================
+; Skip to end of line
+; -------------------
+L8B7D:
+    LDA #$0D
+    LDY zp0A
+    DEY      ; Get program pointer
+L8B82:
+    INY
+    CMP (zp0B),Y
+    BNE L8B82 ; Loop until <cr> found
+L8B87:
+    CMP #tknELSE
+    BEQ L8B7D    ; If 'ELSE', jump to skip to end of line
+    LDA zp0C
+    CMP #(ws+$0700)/256
+    BEQ L8B41; Program in command buffer, jump back to immediate loop
+    JSR L9890
+    BNE L8BA3       ; Check for end of program, step past <cr>
+
+L8B96:
+    DEC zp0A
+L8B98:
+    JSR L9857
+
+; Main execution loop
+; -------------------
+L8B9B:
+    LDY #$00
+    LDA (zp0B),Y      ; Get current character
+    CMP #':'
+    BNE L8B87     ; Not <colon>, check for ELSE
+
+L8BA3:
+    LDY zp0A
+    INC zp0A           ; Get program pointer, increment for next time
+    LDA (zp0B),Y               ; Get current character
+    CMP #$20
+    BEQ L8BA3        ; Skip spaces
+    CMP #$CF
+    BCC L8BBF        ; Not program command, jump to try variable assignment
+
+; Dispatch function/command
+; -------------------------
+L8BB1:
+    TAX                       ; Index into dispatch table
+    LDA L836D-$8E,X
+    STA zp37   ; Get routine address from table
+    LDA L83DF-$8E,X
+    STA zp38
+    JMP (zp37)               ; Jump to routine
+
+; Not a command byte, try variable assignment, or =, *, [
+; -------------------------------------------------------
+L8BBF:
+    LDX zp0B
+    STX zp19           ; Copy PtrA to PtrB
+    LDX zp0C
+    STX zp1A
+    STY zp1B
+    JSR L95DD         ; Check if variable or indirection
+    BNE L8BE9                 ; NE - jump for existing variable or indirection assignment
+    BCS L8B60                 ; CS - not variable assignment, try =, *, [ commands
+
+; Variable not found, create a new one
+; ------------------------------------
+    STX zp1B
+    JSR L9841         ; Check for and step past '='
+    JSR L94FC                 ; Create new variable
+    LDX #$05                  ; X=$05 = float
+    CPX zp2C
+    BNE L8BDF         ; Jump if dest. not a float
+    INX                       ; X=$06
+L8BDF:
+    JSR L9531
+    DEC zp0A
+
+; LET variable = expression
+; =========================
+L8BE4:
+    JSR L9582
+    BEQ L8C0B
+L8BE9:
+    BCC L8BFB
+    JSR LBD94 ; Stack integer (address of data)
+    JSR L9813 ; Check for end of statement
+    LDA zp27   ; Get evaluation type
+    BNE L8C0E ; If not string, error
+    JSR L8C1E ; Assign the string
+    JMP L8B9B ; Return to execution loop
+
+L8BFB:
+    JSR LBD94 ; Stack integer (address of data)
+    JSR L9813 ; Check for end of statement
+    LDA zp27   ; Get evaluation type
+    BEQ L8C0E ; If not number, error
+    JSR LB4B4 ; Assign the number
+    JMP L8B9B ; Return to execution loop
+
+L8C0B:
+    JMP L982A
+
+L8C0E:
+    BRK
+    dta 6
+    FNfold 'Type mismatch'
+    BRK
+
+L8C1E:
+    JSR LBDEA ; Unstack integer (address of data)
+L8C21:
+    LDA zp2C
+    CMP #$80
+    BEQ L8CA2 ; Jump if absolute string $addr
+    LDY #$02
+    LDA (zp2A),Y
+    CMP zp36
+    BCS L8C84
+    LDA zp02
+    STA zp2C
+    LDA zp03
+    STA zp2D
+    LDA zp36
+    CMP #$08
+    BCC L8C43
+    ADC #$07
+    BCC L8C43
+    LDA #$FF
+L8C43:
+    CLC
+    PHA
+    TAX
+    LDA (zp2A),Y
+    LDY #$00
+    ADC (zp2A),Y
+    EOR zp02
+    BNE L8C5F
+    INY
+    ADC (zp2A),Y
+    EOR zp03
+    BNE L8C5F
+    STA zp2D
+    TXA
+    INY
+    SEC
+    SBC (zp2A),Y
+    TAX
+L8C5F:
+    TXA
+    CLC
+    ADC zp02
+    TAY
+    LDA zp03
+    ADC #$00
+    CPY zp04
+    TAX
+    SBC zp05
+    BCS L8CB7
+    STY zp02
+    STX zp03
+    PLA
+    LDY #$02
+    STA (zp2A),Y
+    DEY
+    LDA zp2D
+    BEQ L8C84
+    STA (zp2A),Y
+    DEY
+    LDA zp2C
+    STA (zp2A),Y
+L8C84:
+    LDY #$03
+    LDA zp36
+    STA (zp2A),Y
+    BEQ L8CA1
+    DEY
+    DEY
+    LDA (zp2A),Y
+    STA zp2D
+    DEY
+    LDA (zp2A),Y
+    STA zp2C
+L8C97:
+    LDA ws+$0600,Y
+    STA (zp2C),Y
+    INY
+    CPY zp36
+    BNE L8C97
+L8CA1:
+    RTS
+
+L8CA2:
+    JSR LBEBA
+    CPY #$00
+    BEQ L8CB4
+L8CA9:
+    LDA ws+$0600,Y
+    STA (zp2A),Y
+    DEY
+    BNE L8CA9
+    LDA ws+$0600
+L8CB4:
+    STA (zp2A),Y
+    RTS
+
+L8CB7:
+    BRK
+    dta 0
+    FNfold 'No room'
+    BRK
+
+L8CC1:
+    LDA zp39
+    CMP #$80
+    BEQ L8CEE
+    BCC L8D03
+    LDY #$00
+    LDA (zp04),Y
+    TAX
+    BEQ L8CE5
+    LDA (zp37),Y
+    SBC #$01
+    STA zp39
+    INY
+    LDA (zp37),Y
+    SBC #$00
+    STA zp3A
+L8CDD:
+    LDA (zp04),Y
+    STA (zp39),Y
+    INY
+    DEX
+    BNE L8CDD
+L8CE5:
+    LDA (zp04,X)
+    LDY #$03
+L8CE9:
+    STA (zp37),Y
+    JMP LBDDC
+
+L8CEE:
+    LDY #$00
+    LDA (zp04),Y
+    TAX
+    BEQ L8CFF
+L8CF5:
+    INY
+    LDA (zp04),Y
+    DEY
+    STA (zp37),Y
+    INY
+    DEX
+    BNE L8CF5
+L8CFF:
+    LDA #$0D
+    BNE L8CE9
+L8D03:
+    LDY #$00
+    LDA (zp04),Y
+    STA (zp37),Y
+    .if version < 3
+        INY
+        CPY zp39
+        BCS L8D26
+    .elseif version >= 3
+        LDY #4
+        LDA zp39
+        BEQ L8D26
+        LDY #$01
+    .endif
+    LDA (zp04),Y
+    STA (zp37),Y
+    INY
+    LDA (zp04),Y
+    STA (zp37),Y
+    INY
+    LDA (zp04),Y
+    STA (zp37),Y
+    INY
+    CPY zp39
+    BCS L8D26
+    LDA (zp04),Y
+    STA (zp37),Y
+    INY
+L8D26:
+    TYA
+    CLC
+    JMP LBDE1
+
+; PRINT#
+L8D2B:
+    DEC zp0A
+    JSR LBFA9
+L8D30:
+    TYA
+    PHA
+    JSR L8A8C
+    CMP #$2C
+    BNE L8D77
+    JSR L9B29
+    JSR LA385
+    PLA
+    TAY
+    LDA zp27
+    JSR OSBPUT
+    TAX
+    BEQ L8D64
+    BMI L8D57
+    LDX #$03
+L8D4D:
+    LDA zp2A,X
+    JSR OSBPUT
+    DEX
+    BPL L8D4D
+    BMI L8D30
+L8D57:
+    LDX #$04
+L8D59:
+    LDA ws+$046C,X
+    JSR OSBPUT
+    DEX
+    BPL L8D59
+    BMI L8D30
+L8D64:
+    LDA zp36
+    JSR OSBPUT
+    TAX
+    BEQ L8D30
+L8D6C:
+    LDA ws+$05FF,X
+    JSR OSBPUT
+    DEX
+    BNE L8D6C
+    BEQ L8D30
+L8D77:
+    PLA
+    STY zp0A
+    JMP L8B98
+
 ; ----------------------------------------------------------------------------
 
 ; Temporary labels to make assembler happy
 
-L8AB6=$8ab6
-L8AC8=$8ac8
-L8AD0=$8ad0
-L8ADA=$8ada
-L8ADD=$8add
-L8B7D=$8b7d
-L8BE4=$8be4
 L8D9A=$8d9a
 L8EBD=$8ebd
 L8EC4=$8ec4
@@ -1508,6 +2120,7 @@ L9283=$9283
 L928D=$928d
 L9295=$9295
 L92C9=$92c9
+L92F0=$92f0
 L9304=$9304
 L9323=$9323
 L9356=$9356
@@ -1518,8 +2131,23 @@ L93E4=$93e4
 L93E8=$93e8
 L93F1=$93f1
 L942F=$942f
+L94FC=$94FC
+L9531=$9531
+L9582=$9582
+L95DD=$95DD
+L97DF=$97DF
+L9813=$9813
 L982A=$982a
+L9841=$9841
+L984C=$984C
+L9857=$9857
+L9859=$9859
+L986D=$986d
+L9890=$9890
 L98C2=$98c2
+L9B1D=$9b1d
+L9B29=$9B29
+LA385=$A385
 LA6BE=$a6be
 LA7B4=$a7b4
 LA7FE=$a7fe
@@ -1549,6 +2177,7 @@ LACC4=$acc4
 LACD1=$acd1
 LACE2=$ace2
 LAD6A=$ad6a
+LAE3A=$ae3a
 LAEB4=$aeb4
 LAEC0=$aec0
 LAECA=$aeca
@@ -1571,9 +2200,16 @@ LB0C2=$b0c2
 LB195=$b195
 LB3BD=$b3bd
 LB402=$b402
+LB433=$B433
 LB44C=$b44c
 LB472=$b472
 LB4A0=$b4a0
+LB4B4=$b4b4
+LB50E=$b50e
+LB545=$b545
+LB558=$b558
+LB562=$b562
+LB565=$b565
 LB59C=$b59c
 LB695=$b695
 LB7C4=$b7c4
@@ -1586,7 +2222,19 @@ LBAE6=$bae6
 LBB1F=$bb1f
 LBBB1=$bbb1
 LBBE4=$bbe4
+LBC02=$BC02
+LBC25=$bc25
+LBC8D=$BC8D
 LBD11=$bd11
+LBD20=$BD20
+LBD3A=$BD3A
+LBD94=$bd94
+LBDDC=$BDDC
+LBDE1=$BDE1
+LBDEA=$BDEA
+LBE44=$be44
+LBE6F=$be6f
+LBEBA=$BEBA
 LBEC2=$bec2
 LBEF3=$bef3
 LBF24=$bf24
@@ -1600,25 +2248,5 @@ LBF78=$bf78
 LBF7C=$bf7c
 LBF80=$bf80
 LBF99=$bf99
+LBFA9=$BFA9
 LBFE4=$bfe4
-L8BA3=$8ba3
-L8A97=$8a97
-L986D=$986d
-LB545=$b545
-LB562=$b562
-LBC25=$bc25
-LB565=$b565
-LB558=$b558
-LB50E=$b50e
-L9859=$9859
-L8AF6=$8af6
-L9890=$9890
-L9582=$9582
-LBD94=$bd94
-LAE3A=$ae3a
-LB4B4=$b4b4
-L8C0E=$8c0e
-L92F0=$92f0
-L9B1D=$9b1d
-LBE44=$be44
-L8A37=$8a37
