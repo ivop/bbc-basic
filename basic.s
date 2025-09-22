@@ -7121,6 +7121,1282 @@ XAA72:
     BRK              ; AA8E= 00          .
     BRK              ; AA8F= 00          .
     BRK              ; AA90= 00          .
+;xxx
+
+; = EXP numeric
+; =============
+LAA91:
+    JSR L92FA        ; AA91= 20 FA 92     z.
+LAA94:
+    LDA $30          ; AA94= A5 30       %0
+    CMP #$87         ; AA96= C9 87       I.
+    BCC LAAB8        ; AA98= 90 1E       ..
+    BNE LAAA2        ; AA9A= D0 06       P.
+LAA9C:
+    LDY $31          ; AA9C= A4 31       $1
+    CPY #$B3         ; AA9E= C0 B3       @3
+    BCC LAAB8        ; AAA0= 90 16       ..
+LAAA2:
+    LDA $2E          ; AAA2= A5 2E       %.
+    BPL LAAAC        ; AAA4= 10 06       ..
+    JSR LA686        ; AAA6= 20 86 A6     .$
+    LDA #$FF         ; AAA9= A9 FF       ).
+    RTS              ; AAAB= 60          `
+
+LAAAC:
+    .if foldup == 0
+        BRK
+        dta $18
+        dta 'Exp range'
+        BRK
+    .elseif foldup != 0
+        BRK
+        dta $18
+        dta tknEXP
+        FNfold ' range'
+        BRK
+    .endif
+LAAB8:
+    JSR LA486        ; AAB8= 20 86 A4     .$
+    JSR LAADA        ; AABB= 20 DA AA     Z*
+    JSR LA381        ; AABE= 20 81 A3     .#
+    LDA #<LAAE4
+    STA $4B          ; AAC3= 85 4B       .K
+    LDA #>LAAE4
+    STA $4C          ; AAC7= 85 4C       .L
+    JSR LA3B5        ; AAC9= 20 B5 A3     5#
+    LDA $4A          ; AACC= A5 4A       %J
+    JSR LAB12        ; AACE= 20 12 AB     .+
+LAAD1:
+    JSR LA7F1        ; AAD1= 20 F1 A7     q'
+    JSR LA656        ; AAD4= 20 56 A6     V$
+    LDA #$FF         ; AAD7= A9 FF       ).
+    RTS              ; AAD9= 60          `
+
+LAADA:
+    LDA #<LAAE9
+    LDY #>LAAE9
+    JSR LA897        ; AADE= 20 97 A8     .(
+    LDA #$FF         ; AAE1= A9 FF       ).
+    RTS              ; AAE3= 60          `
+
+LAAE4:
+    dta $82         ; AAE4= 82          .
+    dta $2d, $f8, $54
+    dta $58
+LAAE9:
+    dta $07
+    dta $83; AAE9= 07 83       ..
+    dta $e0, $20
+    dta $86, $5b
+    dta $82         ; AAEF= 82          .
+    dta $80
+    dta $53; AAF0= 80 53       .S
+
+    dta $93         ; AAF2= 93          .
+    dta $b8
+    dta $83         ; AAF4= 83          .
+    JSR ws+$0600        ; AAF5= 20 00 06     ..
+    dta $a1, $82
+    BRK              ; AAFA= 00          .
+    BRK              ; AAFB= 00          .
+    dta $21, $63
+    dta $82         ; AAFE= 82          .
+    dta $c0, $00
+    BRK              ; AB01= 00          .
+    dta $02         ; AB02= 02          .
+    dta $82         ; AB03= 82          .
+    dta $80
+    dta $00; AB04= 80 00       ..
+
+LAB06:
+    BRK              ; AB06= 00          .
+    dta $0C
+    dta $81
+    dta $00; AB07= 0C 81 00    ...
+    BRK              ; AB0A= 00          .
+    BRK              ; AB0B= 00          .
+    BRK              ; AB0C= 00          .
+    dta $81, $00
+    BRK              ; AB0F= 00          .
+    BRK              ; AB10= 00          .
+    BRK              ; AB11= 00          .
+LAB12:
+    TAX              ; AB12= AA          *
+    BPL LAB1E        ; AB13= 10 09       ..
+    DEX              ; AB15= CA          J
+    TXA              ; AB16= 8A          .
+    EOR #$FF         ; AB17= 49 FF       I.
+    PHA              ; AB19= 48          H
+    JSR LA6A5        ; AB1A= 20 A5 A6     %$
+    PLA              ; AB1D= 68          h
+LAB1E:
+    PHA              ; AB1E= 48          H
+    JSR LA385        ; AB1F= 20 85 A3     .#
+    JSR LA699        ; AB22= 20 99 A6     .$
+LAB25:
+    PLA              ; AB25= 68          h
+    BEQ LAB32        ; AB26= F0 0A       p.
+    SEC              ; AB28= 38          8
+    SBC #$01         ; AB29= E9 01       i.
+    PHA              ; AB2B= 48          H
+    JSR LA656        ; AB2C= 20 56 A6     V$
+    JMP LAB25        ; AB2F= 4C 25 AB    L%+
+
+LAB32:
+    RTS              ; AB32= 60          `
+
+; =ADVAL numeric - Call OSBYTE to read buffer/device
+; ==================================================
+LAB33:
+    JSR L92E3        ; Evaluate integer
+    LDX $2A
+    LDA #$80 ; X=low byte, A=$80 for ADVAL
+; 
+; WRONG in original disassembly
+;    .if 0            ; FALSE
+;        JSR OSBYTE
+;    .endif
+;    .ifdef MOS_BBC
+;        JSR LAFB2
+;    .endif
+    .ifdef MOS_BBC
+        jsr OSBYTE
+    .endif
+    TXA
+    .if version < 3
+        JMP LAEEA
+    .elseif version >= 3
+        JMP XAED5
+    .endif
+
+    .if version < 3
+        ; =POINT(numeric, numeric)
+        ; ========================
+LAB41:
+        JSR L92DD
+        JSR LBD94
+        JSR L8AAE
+        JSR LAE56
+        JSR L92F0
+        LDA $2A
+        PHA
+        LDA $2B
+        PHA
+        JSR LBDEA
+        PLA
+        STA $2D
+        PLA
+        STA $2C
+        LDX #$2A
+        LDA #$09
+        JSR OSWORD
+        LDA $2E
+        BMI LAB9D
+        JMP LAED8
+    .elseif version >= 3
+        ; =NOT
+        ; ====
+XAB5B:
+        JSR L92E3
+XAB5E:
+        LDX #$03
+XAB60:
+        LDA $2A,X
+        EOR #$FF
+        STA $2A,X
+        DEX
+        BPL XAB60
+        LDA #$40
+        RTS
+    .endif
+
+; =POS
+; ====
+LAB6D:
+    .if version < 3
+        LDA #$86
+        JSR OSBYTE
+        TXA
+        JMP LAED8
+    .elseif version >= 3
+        JSR LAB76
+        STX $2A
+        RTS
+    .endif
+
+; =VPOS
+; =====
+LAB76:
+    LDA #$86
+    JSR OSBYTE
+    TYA
+    .if version < 3
+        JMP LAED8
+    .elseif version >= 3
+        JMP XAED3
+    .endif
+
+    .if version < 3
+LAB7F:
+        JSR LA1DA
+        BEQ LABA2
+        BPL LABA0
+        BMI LAB9D
+     
+        ; =SGN numeric
+        ; ============
+LAB88:
+        JSR LADEC
+        BEQ LABE6
+        BMI LAB7F
+        LDA $2D
+        ORA $2C
+        ORA $2B
+        ORA $2A
+        BEQ LABA5
+        LDA $2D
+        BPL LABA0
+LAB9D:
+        JMP LACC4
+
+LABA0:
+        LDA #$01
+LABA2:
+        JMP LAED8
+
+LABA5:
+        LDA #$40
+        RTS
+    .endif
+
+; =LOG numeric
+; ============
+LABA8:
+    JSR LA7FE
+    .if version < 3
+        LDY #<LA869
+        LDA #>LA869
+    .elseif version >= 3
+        LDY #<LAA72
+    .endif
+    BNE LABB8
+
+; =RAD numeric
+; ============
+LABB1:
+    JSR L92FA
+    LDY #<LAA68
+    .if version < 3
+        LDA #>LAA68
+    .endif
+LABB8:
+    .if version >= 3
+        LDA #>LAA68         ; identical to version , 3
+    .endif
+    STY $4B
+    STA $4C
+    JSR LA656
+    LDA #$FF
+    RTS
+
+; =DEG numeric
+; ============
+LABC2:
+    JSR L92FA
+    LDY #<LAA6D
+    .if version < 3
+        LDA #>LAA6D
+    .endif
+    BNE LABB8
+
+; =PI
+; ===
+LABCB:
+    JSR LA8FE
+    INC $30
+    TAY
+    RTS
+
+; =USR numeric
+; ============
+LABD2:
+    JSR L92E3       ; Evaluate integer
+    JSR L8F1E       ; Set up registers and call code at IntA
+    STA $2A
+    STX $2B ; Store returned A,X in IntA
+    STY $2C         ; Store returned Y
+    PHP
+    PLA
+    STA $2D ; Store returned flags in IntA
+    CLD             ; Ensure in binary mode on return
+    LDA #$40
+    RTS    ; Return INTEGER
+
+    .if version < 3
+LABE6:
+        JMP L8C0E
+    .endif
+
+; =EVAL string$ - Tokenise and evaluate expression
+; ================================================
+LABE9:
+    JSR LADEC            ; Evaluate value
+    .if version < 3
+        BNE LABE6
+    .elseif version >= 3
+        BNE LAC2C
+    .endif
+    INC $36
+    LDY $36      ; Increment string length to add a <cr>
+    LDA #$0D
+    STA ws+$05FF,Y ; Put in terminating <cr>
+    JSR LBDB2            ; Stack the string
+                         ; String has to be stacked as otherwise would
+                         ;  be overwritten by any string operations
+                         ;  called by Evaluator
+    LDA $19
+    PHA          ; Save PTRB
+    LDA $1A
+    PHA
+    LDA $1B
+    PHA
+    LDY $04
+    LDX $05      ; YX=>stackbottom (wrong way around)
+    INY                  ; Step over length byte
+    STY $19              ; PTRB=>stacked string
+    STY $37              ; GPTR=>stacked string
+    BNE LAC0F
+    INX        ; Inc high byte if next page
+LAC0F:
+    STX $1A
+    STX $38      ; PTRB and GPTR high bytes
+    LDY #$FF
+    STY $3B
+    INY
+    STY $1B          ; Point PTRB offset back to start
+    JSR L8955            ; Tokenise string on stack at GPTR
+    JSR L9B29            ; Call expression evaluator
+    JSR LBDDC            ; Drop string from stack
+LAC23:
+    PLA
+    STA $1B          ; Restore PTRB
+    PLA
+    STA $1A
+    PLA
+    STA $19
+    LDA $27              ; Get expression return value
+    RTS                  ; And return
+
+    .if version >= 3
+LAC2C:
+        JMP L8C0E
+    .endif
+
+; =VAL numeric
+; ============
+LAC2F:
+    JSR LADEC
+    .if version < 3
+        BNE LAC9B
+    .elseif version >= 3
+        BNE LAC2C
+    .endif
+LAC34:
+    LDY $36
+    LDA #$00
+    STA ws+$0600,Y
+    LDA $19
+    PHA
+    LDA $1A
+    PHA
+    LDA $1B
+    PHA
+    LDA #$00
+    STA $1B
+    .if version < 3
+        LDA #$00
+    .endif
+    STA $19
+    LDA #$06+(ws/256)
+    STA $1A
+    JSR L8A8C
+    CMP #$2D
+    BEQ LAC66
+    CMP #$2B
+    BNE LAC5E
+    JSR L8A8C
+LAC5E:
+    DEC $1B
+    JSR LA07B
+    JMP LAC73
+
+LAC66:
+    JSR L8A8C
+    DEC $1B
+    JSR LA07B
+    BCC LAC73
+    JSR LAD8F
+LAC73:
+    STA $27
+    JMP LAC23
+
+; =INT numeric
+; ============
+LAC78:
+    JSR LADEC
+    .if version < 3
+        BEQ LAC9B
+    .elseif version >= 3
+        BEQ XAC81
+    .endif
+    BPL LAC9A
+    LDA $2E
+    PHP
+    JSR LA3FE
+    PLP
+    BPL LAC95
+    LDA $3E
+    ORA $3F
+    ORA $40
+    ORA $41
+    BEQ LAC95
+    JSR LA4C7
+LAC95:
+    JSR LA3E7
+    LDA #$40
+LAC9A:
+    RTS
+
+    .if version < 3
+LAC9B:
+        JMP L8C0E
+    .endif
+
+; =ASC string$
+; ============
+LAC9E:
+    JSR LADEC
+    .if version < 3
+        BNE LAC9B
+    .elseif version >= 3
+        BNE XAC81
+    .endif
+    LDA $36
+    BEQ LACC4
+    LDA ws+$0600
+LACAA:
+    .if version < 3
+        JMP LAED8
+    .elseif version >= 3
+        JMP XAED3
+    .endif
+
+; =INKEY numeric
+; ==============
+LACAD:
+    JSR LAFAD
+    .if version < 3
+        CPY #$00
+    .elseif version >= 3
+        TYA     
+    .endif
+    BNE LACC4
+    TXA
+    .if version < 3
+        JMP LAEEA
+    .elseif version >= 3
+        JMP XAED5
+    .endif
+
+    .if version >= 3
+XAC81:
+        JMP L8C0E
+    .endif
+
+; =EOF#numeric
+; ============
+LACB8:
+    JSR LBFB5
+    TAX
+    LDA #$7F
+    .ifdef MOS_BBC
+        JSR OSBYTE
+    .endif
+    TXA
+    .if version < 3
+        BEQ LACAA
+    .elseif version >= 3
+        BEQ LACC6
+    .endif
+
+; =TRUE
+; =====
+LACC4:
+    .if version < 3
+        LDA #$FF
+    .elseif version >= 3
+        LDX #$FF
+    .endif
+LACC6:
+    .if version < 3
+        STA $2A
+        STA $2B
+        STA $2C
+        STA $2D
+    .elseif version >= 3
+        STX $2A
+        STX $2B
+        STX $2C
+        STX $2D
+    .endif
+LACC8:
+    LDA #$40
+    RTS
+
+    .if version >= 3
+    ; =FALSE
+    ; ======
+LACCD:
+        LDX #$00
+        BEQ LACC6
+
+XACA1:
+        JSR LA1DA
+        BEQ LACCD
+        BPL XACBF
+        BMI LACC4
+     
+    ; =SGN numeric
+    ; ============
+XACAA:
+        JSR LADEC
+        BEQ XAC81
+        BMI XACA1
+        LDA $2D
+        ORA $2C
+        ORA $2B
+        ORA $2A
+        BEQ LACC8
+        LDA $2D
+        BMI LACC4
+XACBF:
+        LDA #$01
+XACC1:
+        JMP XAED3
+
+    ; =POINT(numeric, numeric)
+    ; ========================
+XAB41:
+        JSR L92DD
+        JSR LBD94
+        JSR L8AAE
+        JSR LAE56
+        JSR L92F0
+        LDA $2A
+        PHA
+        LDX $2B
+        JSR LBDEA
+        STX $2D
+        PLA
+        STA $2C
+        LDX #$2A
+        LDA #$09
+        JSR OSWORD
+        LDA $2E
+        BMI LACC4
+        BPL XACC1
+    .endif
+
+    .if version < 3
+    ; =NOT numeric
+    ; ============
+LACD1:
+        JSR L92E3
+        LDX #$03
+LACD6:
+        LDA $2A,X
+        EOR #$FF
+        STA $2A,X
+        DEX
+        BPL LACD6
+        LDA #$40
+        RTS
+    .endif
+
+; =INSTR(string$, string$ [, numeric])
+; ====================================
+LACE2:
+    JSR L9B29
+    .if version < 3
+        BNE LACE2-$47           ; dest=LAC9B
+    .elseif version >= 3
+        BNE XAC81
+    .endif
+    CPX #$2C
+    BNE LAD03
+    INC $1B
+    JSR LBDB2
+    JSR L9B29
+    .if version < 3
+        BNE LACE2-$47           ; dest=LAC9B
+    .elseif version >= 3
+        BNE XAC81
+    .endif
+    LDA #$01
+    STA $2A
+    INC $1B
+    CPX #')'
+    BEQ LAD12
+    CPX #$2C
+    BEQ LAD06
+LAD03:
+    .if version < 3
+        JMP L8AA2
+    .elseif version >= 3
+        JMP X8AC8
+    .endif
+
+LAD06:
+    JSR LBDB2
+    JSR LAE56
+    JSR L92F0
+    JSR LBDCB
+LAD12:
+    LDY #$00
+    LDX $2A
+    BNE LAD1A
+    LDX #$01
+LAD1A:
+    STX $2A
+    TXA
+    DEX
+    STX $2D
+    CLC
+    ADC $04
+    STA $37
+    TYA
+    ADC $05
+    STA $38
+    LDA ($04),Y
+    SEC
+    SBC $2D
+    BCC LAD52
+    SBC $36
+    BCC LAD52
+    ADC #$00
+    STA $2B
+    JSR LBDDC
+LAD3C:
+    LDY #$00
+    LDX $36
+    BEQ LAD4D
+LAD42:
+    LDA ($37),Y
+    CMP ws+$0600,Y
+    BNE LAD59
+    INY
+    DEX
+    BNE LAD42
+LAD4D:
+    LDA $2A
+LAD4F:
+    .if version < 3
+        JMP LAED8
+    .elseif version >= 3
+        JMP XAED3
+    .endif
+
+LAD52:
+    JSR LBDDC
+LAD55:
+    LDA #$00
+    BEQ LAD4F
+
+LAD59:
+    INC $2A
+    DEC $2B
+    BEQ LAD55
+    INC $37
+    BNE LAD3C
+    INC $38
+    BNE LAD3C
+LAD67:
+    JMP L8C0E
+
+; =ABS numeric
+; ============
+LAD6A:
+    JSR LADEC
+    BEQ LAD67
+    BMI LAD77
+LAD71:
+    BIT $2D
+    BMI LAD93
+    BPL LADAA
+LAD77:
+    JSR LA1DA
+    BPL LAD89
+    BMI LAD83
+LAD7E:
+    JSR LA1DA
+    BEQ LAD89
+LAD83:
+    LDA $2E
+    EOR #$80
+    STA $2E
+LAD89:
+    LDA #$FF
+    RTS
+
+LAD8C:
+    JSR LAE02
+LAD8F:
+    BEQ LAD67
+    BMI LAD7E
+LAD93:
+    SEC
+    LDA #$00
+    TAY
+    SBC $2A
+    STA $2A
+    TYA
+    SBC $2B
+    STA $2B
+    TYA
+    SBC $2C
+    STA $2C
+    TYA
+    SBC $2D
+    STA $2D
+LADAA:
+    LDA #$40
+    RTS
+
+LADAD:
+    JSR L8A8C
+    CMP #$22
+    BEQ LADC9
+    LDX #$00
+LADB6:
+    LDA ($19),Y
+    STA ws+$0600,X
+    INY
+    INX
+    CMP #$0D
+    BEQ LADC5
+    CMP #$2C
+    BNE LADB6
+LADC5:
+    DEY
+    .if version < 3
+        JMP LADE1
+    .elseif version >= 3
+LADC8:
+        DEX
+        STX $36
+        STY $1B
+        LDA #$00
+        RTS
+    .endif
+
+LADC9:
+    LDX #$00
+LADCB:
+    INY
+LADCC:
+    LDA ($19),Y
+    CMP #$0D
+    BEQ LADE9
+    .if version < 3
+        INY
+        STA ws+$0600,X
+    .elseif version >= 3
+        STA ws+$0600,X
+        INY
+    .endif
+    INX
+    CMP #$22
+    BNE LADCC
+    LDA ($19),Y
+    CMP #$22
+    BEQ LADCB
+    .if version < 3
+LADE1:
+        DEX
+        STX $36
+        STY $1B
+        LDA #$00
+        RTS
+    .elseif version >= 3
+        BNE LADC8
+    .endif
+
+LADE9:
+    JMP L8E98
+
+; Evaluator Level 1, - + NOT function ( ) ? ! $ | "
+; -------------------------------------------------
+LADEC:
+    LDY $1B
+    INC $1B
+    LDA ($19),Y    ; Get next character
+    CMP #$20
+    BEQ LADEC             ; Loop to skip spaces
+    CMP #'-'
+    BEQ LAD8C          ; Jump with unary minus
+    CMP #'"'
+    BEQ LADC9         ; Jump with string
+    CMP #'+'
+    BNE LAE05          ; Jump with unary plus
+LAE02:
+    JSR L8A8C                      ; Get current character
+LAE05:
+    CMP #$8E
+    BCC LAE10             ; Lowest function token, test for indirections
+    CMP #$C6
+    BCS LAE43             ; Highest function token, jump to error
+    JMP L8BB1                      ; Jump via function dispatch table
+
+; Indirection, hex, brackets
+; --------------------------
+LAE10:
+    CMP #'?'
+    BCS LAE20 ; Jump with ?numeric or higher
+    CMP #'.'
+    BCS LAE2A ; Jump with .numeric or higher
+    CMP #'&'
+    BEQ LAE6D ; Jump with hex number
+    CMP #'('
+    BEQ LAE56 ; Jump with brackets
+LAE20:
+    DEC $1B
+    JSR L95DD
+    BEQ LAE30       ; Jump with undefined variable or bad name
+    JMP LB32C
+
+LAE2A:
+    JSR LA07B
+    BCC LAE43
+    RTS
+
+LAE30:
+    LDA $28         ; Check assembler option
+    AND #$02        ; Is 'ignore undefiened variables' set?
+    BNE LAE43       ; b1=1, jump to give No such variable
+    BCS LAE43       ; Jump with bad variable name
+    STX $1B
+LAE3A:
+    LDA ws+$0440    ; Use P% for undefined variable
+    LDY ws+$0441
+    .if version < 3
+        JMP LAEEA   ; Jump to return 16-bit integer
+    .elseif version >= 3
+        JMP XAED5   ; Jump to return 16-bit integer
+    .endif
+
+LAE43:
+    BRK
+    dta $1A
+    FNfold 'No such variable'
+LAE54:
+    BRK
+    .if version >= 3
+        dta $1B
+        FNfold 'Missing )'
+LAE55:
+        BRK
+        dta $1C
+        FNfold 'Bad HEX'
+        BRK
+    .endif
+
+LAE56:
+    JSR L9B29
+    INC $1B
+    CPX #')'
+    .if version < 3
+        BNE LAE61
+    .elseif version >= 3
+        BNE LAE54
+    .endif
+    TAY
+    RTS
+
+    .if version < 3
+LAE61:
+        BRK
+        dta $1B
+        FNfold 'Missing )'
+        BRK
+    .endif
+LAE6D:
+    .if version < 3
+        LDX #$00
+        STX $2A
+        STX $2B
+        STX $2C
+        STX $2D
+        LDY $1B
+    .elseif version >= 3
+        JSR LACCD
+        INY
+    .endif
+LAE79:
+    LDA ($19),Y
+    CMP #$30
+    BCC LAEA2
+    CMP #$3A
+    BCC LAE8D
+    SBC #$37
+    CMP #$0A
+    BCC LAEA2
+    CMP #$10
+    BCS LAEA2
+LAE8D:
+    ASL
+    ASL
+    ASL
+    ASL
+    LDX #$03
+LAE93:
+    ASL
+    ROL $2A
+    ROL $2B
+    ROL $2C
+    ROL $2D
+    DEX
+    BPL LAE93
+    INY
+    BNE LAE79
+LAEA2:
+    TXA
+    .if version < 3
+        BPL LAEAA
+    .elseif version >= 3
+        BPL LAE55
+    .endif
+    STY $1B
+    LDA #$40
+    RTS
+
+    .if version >= 3
+    ; =TOP - Return top of program
+    ; ============================
+XAEA6:
+        INY
+        LDA ($19),Y
+        CMP #'P'
+        BNE LAE43
+        INC $1B
+        LDA $12
+        LDY $13
+        BCS XAED5
+
+    ; =PAGE - Read PAGE
+    ; =================
+XAEA7:
+        LDY $18
+        LDA #$00
+        BEQ XAED5
+
+XAEC9:
+        JMP L8C0E
+
+    ; =LEN string$
+    ; ============
+XAECC:
+        JSR LADEC
+        BNE XAEC9
+        LDA $36
+    
+    ; Return 8-bit integer
+    ; --------------------
+XAED3:
+        LDY #$00                  ; Clear b8-b15, jump to return 16-bit int
+
+    ; Return 16-bit integer in AY
+    ; ---------------------------
+XAED5:
+        STA $2A
+        STY $2B           ; Store AY in integer accumulator
+        LDA #$00
+        STA $2C
+        STA $2D  ; Set b16-b31 to 0
+        LDA #$40
+        RTS              ; Return 'integer'
+
+    ; =COUNT - Return COUNT
+    ; =====================
+XAEF7:
+        LDA $1E
+        BCC XAED3         ; Get COUNT, jump to return 8-bit integer
+     
+    ; =LOMEM - Start of BASIC heap
+    ; ============================
+XAEFC:
+        LDA ZP00
+        LDY ZP01
+        BCC XAED5 ; Get LOMEM to AY, jump to return as integer
+     
+    ; =HIMEM - Top of BASIC memory
+    ; ============================
+XAF03:
+        LDA $06
+        LDY $07
+        BCC XAED5  ; Get HIMEM to AY, jump to return as integer
+
+    ; =ERL - Return error line number
+    ; ===============================
+XAF9F:
+        LDY $09
+        LDA $08
+        BCC XAED5  ; Get ERL to AY, jump to return 16-bit integer
+
+    ; =ERR - Return current error number
+    ; ==================================
+XAFA6:
+        LDY #$00
+        LDA (FAULT),Y
+        BCC XAED5  ; Get error number, jump to return 16-bit integer
+    .endif
+
+    .if version < 3
+LAEAA:
+        BRK
+        dta $1C
+        FNfold 'Bad HEX'
+        BRK
+    .endif
+
+; =TIME - Read system TIME
+; ========================
+LAEB4:
+    LDX #$2A
+    LDY #$00         ; Point to integer accumulator
+    LDA #$01                  ; Read TIME to IntA via OSWORD $01
+    .ifdef MOS_BBC
+        JSR OSWORD
+    .endif
+    LDA #$40
+    RTS              ; Return 'integer'
+
+    .if version < 3
+    ; =PAGE - Read PAGE
+    ; =================
+LAEC0:
+        LDA #$00
+        LDY $18
+        JMP LAEEA
+     
+LAEC7:
+        JMP LAE43
+     
+    ; =FALSE
+    ; ======
+LAECA:
+        LDA #$00
+        BEQ LAED8        ; Jump to return $00 as 16-bit integer
+
+LAECE:
+        JMP L8C0E
+     
+    ; =LEN string$
+    ; ============
+LAED1:
+        JSR LADEC
+        BNE LAECE
+        LDA $36
+
+    ; Return 8-bit integer
+    ; --------------------
+LAED8:
+        LDY #$00
+        BEQ LAEEA        ; Clear b8-b15, jump to return 16-bit int
+
+    ; =TOP - Return top of program
+    ; ============================
+LAEDC:
+        LDY $1B
+        LDA ($19),Y
+        CMP #$50
+        BNE LAEC7
+        INC $1B
+        LDA $12
+        LDY $13
+
+    ; Return 16-bit integer in AY
+    ; ---------------------------
+LAEEA:
+        STA $2A
+        STY $2B           ; Store AY in integer accumulator
+        LDA #$00
+        STA $2C
+        STA $2D  ; Set b16-b31 to 0
+        LDA #$40
+        RTS              ; Return 'integer'
+
+    ; =COUNT - Return COUNT
+    ; =====================
+LAEF7:
+        LDA $1E
+        JMP LAED8         ; Get COUNT, jump to return 8-bit integer
+     
+    ; =LOMEM - Start of BASIC heap
+    ; ============================
+LAEFC:
+        LDA ZP00
+        LDY ZP01
+        JMP LAEEA ; Get LOMEM to AY, jump to return as integer
+     
+    ; =HIMEM - Top of BASIC memory
+    ; ============================
+LAF03:
+        LDA $06
+        LDY $07
+    JMP LAEEA ; Get HIMEM to AY, jump to return as integer
+    .endif
+
+; =RND(numeric)
+; -------------
+LAF0A:
+    INC $1B
+    JSR LAE56
+    JSR L92F0
+    LDA $2D
+    BMI LAF3F
+    ORA $2C
+    ORA $2B
+    BNE LAF24
+    LDA $2A
+    BEQ LAF6C
+    CMP #$01
+    BEQ LAF69
+LAF24:
+    JSR LA2BE
+    JSR LBD51
+    JSR LAF69
+    JSR LBD7E
+    JSR LA606
+    JSR LA303
+    JSR LA3E4
+    JSR L9222
+    LDA #$40
+    RTS
+
+LAF3F:
+    LDX #$0D
+    JSR LBE44
+    LDA #$40
+    STA $11
+    RTS
+
+; RND [(numeric)]
+; ===============
+LAF49:
+    LDY $1B
+    LDA ($19),Y     ; Get current character
+    CMP #'('
+    BEQ LAF0A   ; Jump with RND(numeric)
+    JSR LAF87               ; Get random number
+    LDX #$0D
+LAF56:
+    LDA $00,X
+    STA $2A       ; Copy random number to IntA
+    LDA $01,X
+    STA $2B
+    LDA $02,X
+    STA $2C
+    LDA $03,X
+    STA $2D
+    LDA #$40
+    RTS            ; Return Integer
+
+LAF69:
+    JSR LAF87
+LAF6C:
+    LDX #$00
+    STX $2E
+    STX $2F
+    STX $35
+    LDA #$80
+    STA $30
+LAF78:
+    LDA $0D,X
+    STA $31,X
+    INX
+    CPX #$04
+    BNE LAF78
+    JSR LA659
+    LDA #$FF
+    RTS
+
+LAF87:
+    .if version >= 3
+        LDY #$04 ; Rotate through four bytes, faster but bigger
+LAF89:
+        ROR $11
+        LDA $10
+        PHA
+        ROR
+        STA $11
+        LDA $0F
+        TAX
+        ASL
+        ASL
+        ASL
+        ASL
+        STA $10
+        LDA $0E
+        STA $0F
+        LSR
+        LSR
+        LSR
+        LSR
+        ORA $10
+        EOR $11
+        STX $10
+        LDX $0D
+        STX $0E
+        STA $0D
+        PLA
+        STA $11
+LAFB1:
+        DEY
+        BNE LAF89
+        RTS
+    .elseif version < 3
+        LDY #$20 ; Rotate through 32 bits, shorter but slower
+LAF89:
+        LDA $0F
+        LSR
+        LSR
+        LSR
+        EOR $11
+        ROR
+        ROL $0D
+        ROL $0E
+        ROL $0F
+        ROL $10
+        ROL $11
+        DEY
+        BNE LAF89
+        RTS
+ 
+    ; =ERL - Return error line number
+    ; ===============================
+LAF9F:
+        LDY $09
+        LDA $08
+        JMP LAEEA ; Get ERL to AY, jump to return 16-bit integer
+
+    ; =ERR - Return current error number
+    ; ==================================
+LAFA6:
+        LDY #$00
+        LDA (FAULT),Y
+        JMP LAEEA  ; Get error number, jump to return 16-bit integer
+    .endif
 
 ; ----------------------------------------------------------------------------
 
