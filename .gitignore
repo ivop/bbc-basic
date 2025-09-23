@@ -1,3 +1,7 @@
-basic.rom
+basic2.rom
+basic3.rom
+basic310.rom
+*.lst
+*.swp
 *~
 foo.bar

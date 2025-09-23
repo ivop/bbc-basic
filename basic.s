@@ -9,70 +9,89 @@
 
     opt h-              ; No Atari header
 
-TARGET_BBC   = 1
-MOS_BBC      = 1
-VERSION      = 2
-MINORVERSION = 0
+    .ifndef BUILD_BBC_BASIC2
+        BUILD_BBC_BASIC2 = 0
+    .endif
+    .ifndef BUILD_BBC_BASIC3
+        BUILD_BBC_BASIC3 = 0
+    .endif
 
-version_string = '2'
+    .if BUILD_BBC_BASIC2 == 1 || BUILD_BBC_BASIC3 == 1
+        TARGET_BBC   = 1
+        MOS_BBC      = 1
 
-load    = $8000         ; Code start address
-split   = 0
-foldup  = 0
-title   = 0
-ws      = $0400-$0400   ; Offset from &400 to workspace
-membot  = 0             ; Use OSBYTE to find memory limits
-memtop  = 0             ; ...
+        .if BUILD_BBC_BASIC2 == 1
+            VERSION        = 2
+            MINORVERSION   = 0
+            version_string = '2'
+        .elseif BUILD_BBC_BASIC3 == 1
+            VERSION        = 3 
+            MINORVERSION   = 0
+            version_string = '3'
+        .endif
+
+        load    = $8000         ; Code start address
+        split   = 0
+        foldup  = 0
+        title   = 0
+        ws      = $0400-$0400   ; Offset from &400 to workspace
+        membot  = 0             ; Use OSBYTE to find memory limits
+        memtop  = 0             ; ...
+
+        zp      = $00           ; Start of ZP addresses
+
+        zpfd = $fd
+        zpfe = $fe
+        zpff = $ff
+
+        FAULT  = zpfd           ; Pointer to error block
+        ESCFLG = zpff           ; Escape pending flag
+
+        F_LOAD  = zp39          ; LOAD/SAVE control block
+        F_EXEC  = F_LOAD+4
+        F_START = F_LOAD+8
+        F_END   = F_LOAD+12
+
+    ; MOS Entry Points
+
+        OS_CLI = $FFF7
+        OSBYTE = $FFF4
+        OSWORD = $FFF1
+        OSWRCH = $FFEE
+        OSWRCR = $FFEC
+        OSNEWL = $FFE7
+        OSASCI = $FFE3
+        OSRDCH = $FFE0
+        OSFILE = $FFDD
+        OSARGS = $FFDA
+        OSBGET = $FFD7
+        OSBPUT = $FFD4
+        OSGBPB = $FFD1
+        OSFIND = $FFCE
+        BRKV   = $202
+        WRCHV  = $020E
+
+    ; Dummy variables for non-Atom code
+
+        OSECHO = 0
+        OSLOAD = 0
+        OSSAVE = 0
+        OSRDAR = 0
+        OSSTAR = 0
+        OSSHUT = 0
+    .else
+        .error "Please specify your build (i.e. BUILD_BBC_BASIC2)"
+    .endif
+
+; ZP definition of 00-5f, relative to 'zp'
+
+    icl 'zp.s'
+
+; Temporary macro, not working for foldup==1
 
     .macro FNfold str
         dta :1
     .endm
-
-zp      = $00           ; Start of ZP addresses
-
-    icl 'zp.s'          ; All zp aliases 00-5f relative to 'zp'
-
-; zp00 and zp11         ; LOMEM in normal location
-
-zpfd = $fd
-zpfe = $fe
-zpff = $ff
-
-FAULT  = zpfd           ; Pointer to error block
-ESCFLG = zpff           ; Escape pending flag
-
-F_LOAD  = zp39          ; LOAD/SAVE control block
-F_EXEC  = F_LOAD+4
-F_START = F_LOAD+8
-F_END   = F_LOAD+12
-
-; MOS Entry Points
-
-OS_CLI = $FFF7
-OSBYTE = $FFF4
-OSWORD = $FFF1
-OSWRCH = $FFEE
-OSWRCR = $FFEC
-OSNEWL = $FFE7
-OSASCI = $FFE3
-OSRDCH = $FFE0
-OSFILE = $FFDD
-OSARGS = $FFDA
-OSBGET = $FFD7
-OSBPUT = $FFD4
-OSGBPB = $FFD1
-OSFIND = $FFCE
-BRKV   = $202
-WRCHV  = $020E
-
-; Dummy variables for non-Atom code
-
-OSECHO = 0
-OSLOAD = 0
-OSSAVE = 0
-OSRDAR = 0
-OSSTAR = 0
-OSSHUT = 0
 
 ; BASIC Token Values
 
@@ -753,6 +772,10 @@ L85A5:
     STA zp27
     JSR LB4B4
     JSR L8827
+
+    .if version >= 3
+        STY zp4F
+    .endif
 
 L85BA:
     LDX #$03              ; Prepare to fetch three characters
@@ -4260,7 +4283,7 @@ L995A:
         JSR LB565
         DEY
         BNE L995A
-    .elseif version > 3
+    .elseif version >= 3
         TAX
         JSR LB580
         LDX zp37
@@ -6993,8 +7016,8 @@ LA9C3:
         LDA #<LAA72
         LDY #>LAA72
     .elseif version >= 3
-        LDA #>XAA72
-        LDY #<XAA72
+        LDA #<XAA72
+        LDY #>XAA72
     .endif
     JSR LA897        ; A9CD= 20 97 A8     .(
     JMP LAAD1        ; A9D0= 4C D1 AA    LQ*
@@ -8470,7 +8493,7 @@ LAFB9:
     JSR OSRDCH
     .if version < 3
         JMP LAED8
-    .elseif version > 3
+    .elseif version >= 3
         JMP XAED3
     .endif
 
@@ -10456,7 +10479,6 @@ LBBCD:
     LDY ws+$05A3,X
     LDA ws+$05B7,X
     JMP LB8DD
-;xxx
 
 LBBD6:
     BRK
