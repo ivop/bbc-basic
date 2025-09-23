@@ -9,21 +9,24 @@
 
     opt h-              ; No Atari header
 
-    .if .def BUILD_BBC_BASIC2 || .def BUILD_BBC_BASIC3
+    .if .def BUILD_BBC_BASIC2 || .def BUILD_BBC_BASIC3 || .def BUILD_BBC_BASIC310HI
         TARGET_BBC   = 1
         MOS_BBC      = 1
 
         .if .def BUILD_BBC_BASIC2
+            load    = $8000         ; Code start address
             VERSION        = 2
             MINORVERSION   = 0
-            version_string = '2'
         .elseif .def BUILD_BBC_BASIC3
+            load    = $8000         ; Code start address
             VERSION        = 3 
             MINORVERSION   = 0
-            version_string = '3'
+        .elseif .def BUILD_BBC_BASIC310HI
+            load    = $b800         ; Code start address
+            VERSION        = 3 
+            MINORVERSION   = 10
         .endif
 
-        load    = $8000         ; Code start address
         split   = 0
         foldup  = 0
         title   = 0
@@ -73,7 +76,7 @@
         OSSTAR = 0
         OSSHUT = 0
     .else
-        .error "Please specify your build (i.e. BUILD_BBC_BASIC2)"
+        .error "Please specify your build (i.e. -d:BUILD_BBC_BASIC2=1)"
     .endif
 
 ; ZP definition of 00-5f, relative to 'zp'
@@ -249,7 +252,7 @@ L8071:
     dta 'AUTO'    , $C6, $10  ; 00010000
     dta 'BGET'    , $9A, $01  ; 00000001
     dta 'BPUT'    , $D5, $03  ; 00000011
-    .if version != 3
+    .if version == 2 || (version == 3 && minorversion == 10)
         dta 'COLOUR', $FB, $02 ; 00000010
     .elseif version == 3
         dta 'COLOR', $FB, $02 ; 00000010
@@ -263,9 +266,9 @@ L8071:
     dta 'CLS'     , $DB, $01  ; 00000001
     dta 'COS'     , $9B, $00  ; 00000000
     dta 'COUNT'   , $9C, $01  ; 00000001
-    .if version == 3
+    .if version == 3 && minorversion != 10
         dta 'COLOUR', $FB, $02 ; 00000010
-    .elseif version > 3
+    .elseif version == 3 && minorversion == 10
         dta 'COLOR', $FB, $02 ; 00000010
     .endif
     dta 'DATA'    , $DC, $20  ; 00100000
@@ -11456,7 +11459,15 @@ LBFF4:
     .endif
 
     .if [[*+3]&$ff] > 3
-        dta version_string
+        .if version == 2
+            dta '2'
+        .elseif version == 3
+            .if minorversion != 10
+                dta '3'
+            .else
+                dta '3', '.', '1'
+            .endif
+        .endif
     .endif
 
     .align load + $4000, 0
