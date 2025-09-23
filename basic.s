@@ -7128,16 +7128,16 @@ XAA72:
 LAA91:
     JSR L92FA        ; AA91= 20 FA 92     z.
 LAA94:
-    LDA $30          ; AA94= A5 30       %0
+    LDA zp30          ; AA94= A5 30       %0
     CMP #$87         ; AA96= C9 87       I.
     BCC LAAB8        ; AA98= 90 1E       ..
     BNE LAAA2        ; AA9A= D0 06       P.
 LAA9C:
-    LDY $31          ; AA9C= A4 31       $1
+    LDY zp31          ; AA9C= A4 31       $1
     CPY #$B3         ; AA9E= C0 B3       @3
     BCC LAAB8        ; AAA0= 90 16       ..
 LAAA2:
-    LDA $2E          ; AAA2= A5 2E       %.
+    LDA zp2E          ; AAA2= A5 2E       %.
     BPL LAAAC        ; AAA4= 10 06       ..
     JSR LA686        ; AAA6= 20 86 A6     .$
     LDA #$FF         ; AAA9= A9 FF       ).
@@ -7161,11 +7161,11 @@ LAAB8:
     JSR LAADA        ; AABB= 20 DA AA     Z*
     JSR LA381        ; AABE= 20 81 A3     .#
     LDA #<LAAE4
-    STA $4B          ; AAC3= 85 4B       .K
+    STA zp4B          ; AAC3= 85 4B       .K
     LDA #>LAAE4
-    STA $4C          ; AAC7= 85 4C       .L
+    STA zp4C          ; AAC7= 85 4C       .L
     JSR LA3B5        ; AAC9= 20 B5 A3     5#
-    LDA $4A          ; AACC= A5 4A       %J
+    LDA zp4A          ; AACC= A5 4A       %J
     JSR LAB12        ; AACE= 20 12 AB     .+
 LAAD1:
     JSR LA7F1        ; AAD1= 20 F1 A7     q'
@@ -7250,7 +7250,7 @@ LAB32:
 ; ==================================================
 LAB33:
     JSR L92E3        ; Evaluate integer
-    LDX $2A
+    LDX zp2A
     LDA #$80 ; X=low byte, A=$80 for ADVAL
 ; 
 ; WRONG in original disassembly
@@ -7279,19 +7279,19 @@ LAB41:
         JSR L8AAE
         JSR LAE56
         JSR L92F0
-        LDA $2A
+        LDA zp2A
         PHA
-        LDA $2B
+        LDA zp2B
         PHA
         JSR LBDEA
         PLA
-        STA $2D
+        STA zp2D
         PLA
-        STA $2C
+        STA zp2C
         LDX #$2A
         LDA #$09
         JSR OSWORD
-        LDA $2E
+        LDA zp2E
         BMI LAB9D
         JMP LAED8
     .elseif version >= 3
@@ -7302,9 +7302,9 @@ XAB5B:
 XAB5E:
         LDX #$03
 XAB60:
-        LDA $2A,X
+        LDA zp2A,X
         EOR #$FF
-        STA $2A,X
+        STA zp2A,X
         DEX
         BPL XAB60
         LDA #$40
@@ -7321,7 +7321,7 @@ LAB6D:
         JMP LAED8
     .elseif version >= 3
         JSR LAB76
-        STX $2A
+        STX zp2A
         RTS
     .endif
 
@@ -7350,12 +7350,12 @@ LAB88:
         JSR LADEC
         BEQ LABE6
         BMI LAB7F
-        LDA $2D
-        ORA $2C
-        ORA $2B
-        ORA $2A
+        LDA zp2D
+        ORA zp2C
+        ORA zp2B
+        ORA zp2A
         BEQ LABA5
-        LDA $2D
+        LDA zp2D
         BPL LABA0
 LAB9D:
         JMP LACC4
@@ -7394,8 +7394,8 @@ LABB8:
     .if version >= 3
         LDA #>LAA68         ; identical to version , 3
     .endif
-    STY $4B
-    STA $4C
+    STY zp4B
+    STA zp4C
     JSR LA656
     LDA #$FF
     RTS
@@ -7414,7 +7414,7 @@ LABC2:
 ; ===
 LABCB:
     JSR LA8FE
-    INC $30
+    INC zp30
     TAY
     RTS
 
@@ -7423,12 +7423,12 @@ LABCB:
 LABD2:
     JSR L92E3       ; Evaluate integer
     JSR L8F1E       ; Set up registers and call code at IntA
-    STA $2A
-    STX $2B ; Store returned A,X in IntA
-    STY $2C         ; Store returned Y
+    STA zp2A
+    STX zp2B ; Store returned A,X in IntA
+    STY zp2C         ; Store returned Y
     PHP
     PLA
-    STA $2D ; Store returned flags in IntA
+    STA zp2D ; Store returned flags in IntA
     CLD             ; Ensure in binary mode on return
     LDA #$40
     RTS    ; Return INTEGER
@@ -7447,45 +7447,45 @@ LABE9:
     .elseif version >= 3
         BNE LAC2C
     .endif
-    INC $36
-    LDY $36      ; Increment string length to add a <cr>
+    INC zp36
+    LDY zp36      ; Increment string length to add a <cr>
     LDA #$0D
     STA ws+$05FF,Y ; Put in terminating <cr>
     JSR LBDB2            ; Stack the string
                          ; String has to be stacked as otherwise would
                          ;  be overwritten by any string operations
                          ;  called by Evaluator
-    LDA $19
+    LDA zp19
     PHA          ; Save PTRB
-    LDA $1A
+    LDA zp1A
     PHA
-    LDA $1B
+    LDA zp1B
     PHA
-    LDY $04
-    LDX $05      ; YX=>stackbottom (wrong way around)
+    LDY zp04
+    LDX zp05      ; YX=>stackbottom (wrong way around)
     INY                  ; Step over length byte
-    STY $19              ; PTRB=>stacked string
-    STY $37              ; GPTR=>stacked string
+    STY zp19              ; PTRB=>stacked string
+    STY zp37              ; GPTR=>stacked string
     BNE LAC0F
     INX        ; Inc high byte if next page
 LAC0F:
-    STX $1A
-    STX $38      ; PTRB and GPTR high bytes
+    STX zp1A
+    STX zp38      ; PTRB and GPTR high bytes
     LDY #$FF
-    STY $3B
+    STY zp3B
     INY
-    STY $1B          ; Point PTRB offset back to start
+    STY zp1B          ; Point PTRB offset back to start
     JSR L8955            ; Tokenise string on stack at GPTR
     JSR L9B29            ; Call expression evaluator
     JSR LBDDC            ; Drop string from stack
 LAC23:
     PLA
-    STA $1B          ; Restore PTRB
+    STA zp1B          ; Restore PTRB
     PLA
-    STA $1A
+    STA zp1A
     PLA
-    STA $19
-    LDA $27              ; Get expression return value
+    STA zp19
+    LDA zp27              ; Get expression return value
     RTS                  ; And return
 
     .if version >= 3
@@ -7503,23 +7503,23 @@ LAC2F:
         BNE LAC2C
     .endif
 LAC34:
-    LDY $36
+    LDY zp36
     LDA #$00
     STA ws+$0600,Y
-    LDA $19
+    LDA zp19
     PHA
-    LDA $1A
+    LDA zp1A
     PHA
-    LDA $1B
+    LDA zp1B
     PHA
     LDA #$00
-    STA $1B
+    STA zp1B
     .if version < 3
         LDA #$00
     .endif
-    STA $19
+    STA zp19
     LDA #$06+(ws/256)
-    STA $1A
+    STA zp1A
     JSR L8A8C
     CMP #$2D
     BEQ LAC66
@@ -7527,18 +7527,18 @@ LAC34:
     BNE LAC5E
     JSR L8A8C
 LAC5E:
-    DEC $1B
+    DEC zp1B
     JSR LA07B
     JMP LAC73
 
 LAC66:
     JSR L8A8C
-    DEC $1B
+    DEC zp1B
     JSR LA07B
     BCC LAC73
     JSR LAD8F
 LAC73:
-    STA $27
+    STA zp27
     JMP LAC23
 
 ; =INT numeric
@@ -7551,15 +7551,15 @@ LAC78:
         BEQ XAC81
     .endif
     BPL LAC9A
-    LDA $2E
+    LDA zp2E
     PHP
     JSR LA3FE
     PLP
     BPL LAC95
-    LDA $3E
-    ORA $3F
-    ORA $40
-    ORA $41
+    LDA zp3E
+    ORA zp3F
+    ORA zp40
+    ORA zp41
     BEQ LAC95
     JSR LA4C7
 LAC95:
@@ -7582,7 +7582,7 @@ LAC9E:
     .elseif version >= 3
         BNE XAC81
     .endif
-    LDA $36
+    LDA zp36
     BEQ LACC4
     LDA ws+$0600
 LACAA:
@@ -7640,15 +7640,15 @@ LACC4:
     .endif
 LACC6:
     .if version < 3
-        STA $2A
-        STA $2B
-        STA $2C
-        STA $2D
+        STA zp2A
+        STA zp2B
+        STA zp2C
+        STA zp2D
     .elseif version >= 3
-        STX $2A
-        STX $2B
-        STX $2C
-        STX $2D
+        STX zp2A
+        STX zp2B
+        STX zp2C
+        STX zp2D
     .endif
 LACC8:
     LDA #$40
@@ -7673,12 +7673,12 @@ XACAA:
         JSR LADEC
         BEQ XAC81
         BMI XACA1
-        LDA $2D
-        ORA $2C
-        ORA $2B
-        ORA $2A
+        LDA zp2D
+        ORA zp2C
+        ORA zp2B
+        ORA zp2A
         BEQ LACC8
-        LDA $2D
+        LDA zp2D
         BMI LACC4
 XACBF:
         LDA #$01
@@ -7693,17 +7693,17 @@ XAB41:
         JSR L8AAE
         JSR LAE56
         JSR L92F0
-        LDA $2A
+        LDA zp2A
         PHA
-        LDX $2B
+        LDX zp2B
         JSR LBDEA
-        STX $2D
+        STX zp2D
         PLA
-        STA $2C
+        STA zp2C
         LDX #$2A
         LDA #$09
         JSR OSWORD
-        LDA $2E
+        LDA zp2E
         BMI LACC4
         BPL XACC1
     .endif
@@ -7715,9 +7715,9 @@ LACD1:
         JSR L92E3
         LDX #$03
 LACD6:
-        LDA $2A,X
+        LDA zp2A,X
         EOR #$FF
-        STA $2A,X
+        STA zp2A,X
         DEX
         BPL LACD6
         LDA #$40
@@ -7735,7 +7735,7 @@ LACE2:
     .endif
     CPX #$2C
     BNE LAD03
-    INC $1B
+    INC zp1B
     JSR LBDB2
     JSR L9B29
     .if version < 3
@@ -7744,8 +7744,8 @@ LACE2:
         BNE XAC81
     .endif
     LDA #$01
-    STA $2A
-    INC $1B
+    STA zp2A
+    INC zp1B
     CPX #')'
     BEQ LAD12
     CPX #$2C
@@ -7764,42 +7764,42 @@ LAD06:
     JSR LBDCB
 LAD12:
     LDY #$00
-    LDX $2A
+    LDX zp2A
     BNE LAD1A
     LDX #$01
 LAD1A:
-    STX $2A
+    STX zp2A
     TXA
     DEX
-    STX $2D
+    STX zp2D
     CLC
-    ADC $04
-    STA $37
+    ADC zp04
+    STA zp37
     TYA
-    ADC $05
-    STA $38
-    LDA ($04),Y
+    ADC zp05
+    STA zp38
+    LDA (zp04),Y
     SEC
-    SBC $2D
+    SBC zp2D
     BCC LAD52
-    SBC $36
+    SBC zp36
     BCC LAD52
     ADC #$00
-    STA $2B
+    STA zp2B
     JSR LBDDC
 LAD3C:
     LDY #$00
-    LDX $36
+    LDX zp36
     BEQ LAD4D
 LAD42:
-    LDA ($37),Y
+    LDA (zp37),Y
     CMP ws+$0600,Y
     BNE LAD59
     INY
     DEX
     BNE LAD42
 LAD4D:
-    LDA $2A
+    LDA zp2A
 LAD4F:
     .if version < 3
         JMP LAED8
@@ -7814,12 +7814,12 @@ LAD55:
     BEQ LAD4F
 
 LAD59:
-    INC $2A
-    DEC $2B
+    INC zp2A
+    DEC zp2B
     BEQ LAD55
-    INC $37
+    INC zp37
     BNE LAD3C
-    INC $38
+    INC zp38
     BNE LAD3C
 LAD67:
     JMP L8C0E
@@ -7831,7 +7831,7 @@ LAD6A:
     BEQ LAD67
     BMI LAD77
 LAD71:
-    BIT $2D
+    BIT zp2D
     BMI LAD93
     BPL LADAA
 LAD77:
@@ -7842,9 +7842,9 @@ LAD7E:
     JSR LA1DA
     BEQ LAD89
 LAD83:
-    LDA $2E
+    LDA zp2E
     EOR #$80
-    STA $2E
+    STA zp2E
 LAD89:
     LDA #$FF
     RTS
@@ -7858,17 +7858,17 @@ LAD93:
     SEC
     LDA #$00
     TAY
-    SBC $2A
-    STA $2A
+    SBC zp2A
+    STA zp2A
     TYA
-    SBC $2B
-    STA $2B
+    SBC zp2B
+    STA zp2B
     TYA
-    SBC $2C
-    STA $2C
+    SBC zp2C
+    STA zp2C
     TYA
-    SBC $2D
-    STA $2D
+    SBC zp2D
+    STA zp2D
 LADAA:
     LDA #$40
     RTS
@@ -7879,7 +7879,7 @@ LADAD:
     BEQ LADC9
     LDX #$00
 LADB6:
-    LDA ($19),Y
+    LDA (zp19),Y
     STA ws+$0600,X
     INY
     INX
@@ -7894,8 +7894,8 @@ LADC5:
     .elseif version >= 3
 LADC8:
         DEX
-        STX $36
-        STY $1B
+        STX zp36
+        STY zp1B
         LDA #$00
         RTS
     .endif
@@ -7905,7 +7905,7 @@ LADC9:
 LADCB:
     INY
 LADCC:
-    LDA ($19),Y
+    LDA (zp19),Y
     CMP #$0D
     BEQ LADE9
     .if version < 3
@@ -7918,14 +7918,14 @@ LADCC:
     INX
     CMP #$22
     BNE LADCC
-    LDA ($19),Y
+    LDA (zp19),Y
     CMP #$22
     BEQ LADCB
     .if version < 3
 LADE1:
         DEX
-        STX $36
-        STY $1B
+        STX zp36
+        STY zp1B
         LDA #$00
         RTS
     .elseif version >= 3
@@ -7938,9 +7938,9 @@ LADE9:
 ; Evaluator Level 1, - + NOT function ( ) ? ! $ | "
 ; -------------------------------------------------
 LADEC:
-    LDY $1B
-    INC $1B
-    LDA ($19),Y    ; Get next character
+    LDY zp1B
+    INC zp1B
+    LDA (zp19),Y    ; Get next character
     CMP #$20
     BEQ LADEC             ; Loop to skip spaces
     CMP #'-'
@@ -7970,7 +7970,7 @@ LAE10:
     CMP #'('
     BEQ LAE56 ; Jump with brackets
 LAE20:
-    DEC $1B
+    DEC zp1B
     JSR L95DD
     BEQ LAE30       ; Jump with undefined variable or bad name
     JMP LB32C
@@ -7981,11 +7981,11 @@ LAE2A:
     RTS
 
 LAE30:
-    LDA $28         ; Check assembler option
+    LDA zp28         ; Check assembler option
     AND #$02        ; Is 'ignore undefiened variables' set?
     BNE LAE43       ; b1=1, jump to give No such variable
     BCS LAE43       ; Jump with bad variable name
-    STX $1B
+    STX zp1B
 LAE3A:
     LDA ws+$0440    ; Use P% for undefined variable
     LDY ws+$0441
@@ -8013,7 +8013,7 @@ LAE55:
 
 LAE56:
     JSR L9B29
-    INC $1B
+    INC zp1B
     CPX #')'
     .if version < 3
         BNE LAE61
@@ -8033,17 +8033,17 @@ LAE61:
 LAE6D:
     .if version < 3
         LDX #$00
-        STX $2A
-        STX $2B
-        STX $2C
-        STX $2D
-        LDY $1B
+        STX zp2A
+        STX zp2B
+        STX zp2C
+        STX zp2D
+        LDY zp1B
     .elseif version >= 3
         JSR LACCD
         INY
     .endif
 LAE79:
-    LDA ($19),Y
+    LDA (zp19),Y
     CMP #$30
     BCC LAEA2
     CMP #$3A
@@ -8061,10 +8061,10 @@ LAE8D:
     LDX #$03
 LAE93:
     ASL
-    ROL $2A
-    ROL $2B
-    ROL $2C
-    ROL $2D
+    ROL zp2A
+    ROL zp2B
+    ROL zp2C
+    ROL zp2D
     DEX
     BPL LAE93
     INY
@@ -8076,7 +8076,7 @@ LAEA2:
     .elseif version >= 3
         BPL LAE55
     .endif
-    STY $1B
+    STY zp1B
     LDA #$40
     RTS
 
@@ -8085,18 +8085,18 @@ LAEA2:
     ; ============================
 XAEA6:
         INY
-        LDA ($19),Y
+        LDA (zp19),Y
         CMP #'P'
         BNE LAE43
-        INC $1B
-        LDA $12
-        LDY $13
+        INC zp1B
+        LDA zp12
+        LDY zp13
         BCS XAED5
 
     ; =PAGE - Read PAGE
     ; =================
 XAEA7:
-        LDY $18
+        LDY zp18
         LDA #$00
         BEQ XAED5
 
@@ -8108,7 +8108,7 @@ XAEC9:
 XAECC:
         JSR LADEC
         BNE XAEC9
-        LDA $36
+        LDA zp36
     
     ; Return 8-bit integer
     ; --------------------
@@ -8118,18 +8118,18 @@ XAED3:
     ; Return 16-bit integer in AY
     ; ---------------------------
 XAED5:
-        STA $2A
-        STY $2B           ; Store AY in integer accumulator
+        STA zp2A
+        STY zp2B           ; Store AY in integer accumulator
         LDA #$00
-        STA $2C
-        STA $2D  ; Set b16-b31 to 0
+        STA zp2C
+        STA zp2D  ; Set b16-b31 to 0
         LDA #$40
         RTS              ; Return 'integer'
 
     ; =COUNT - Return COUNT
     ; =====================
 XAEF7:
-        LDA $1E
+        LDA zp1E
         BCC XAED3         ; Get COUNT, jump to return 8-bit integer
      
     ; =LOMEM - Start of BASIC heap
@@ -8142,15 +8142,15 @@ XAEFC:
     ; =HIMEM - Top of BASIC memory
     ; ============================
 XAF03:
-        LDA $06
-        LDY $07
+        LDA zp06
+        LDY zp07
         BCC XAED5  ; Get HIMEM to AY, jump to return as integer
 
     ; =ERL - Return error line number
     ; ===============================
 XAF9F:
-        LDY $09
-        LDA $08
+        LDY zp09
+        LDA zp08
         BCC XAED5  ; Get ERL to AY, jump to return 16-bit integer
 
     ; =ERR - Return current error number
@@ -8186,7 +8186,7 @@ LAEB4:
     ; =================
 LAEC0:
         LDA #$00
-        LDY $18
+        LDY zp18
         JMP LAEEA
      
 LAEC7:
@@ -8206,7 +8206,7 @@ LAECE:
 LAED1:
         JSR LADEC
         BNE LAECE
-        LDA $36
+        LDA zp36
 
     ; Return 8-bit integer
     ; --------------------
@@ -8217,29 +8217,29 @@ LAED8:
     ; =TOP - Return top of program
     ; ============================
 LAEDC:
-        LDY $1B
-        LDA ($19),Y
+        LDY zp1B
+        LDA (zp19),Y
         CMP #$50
         BNE LAEC7
-        INC $1B
-        LDA $12
-        LDY $13
+        INC zp1B
+        LDA zp12
+        LDY zp13
 
     ; Return 16-bit integer in AY
     ; ---------------------------
 LAEEA:
-        STA $2A
-        STY $2B           ; Store AY in integer accumulator
+        STA zp2A
+        STY zp2B           ; Store AY in integer accumulator
         LDA #$00
-        STA $2C
-        STA $2D  ; Set b16-b31 to 0
+        STA zp2C
+        STA zp2D  ; Set b16-b31 to 0
         LDA #$40
         RTS              ; Return 'integer'
 
     ; =COUNT - Return COUNT
     ; =====================
 LAEF7:
-        LDA $1E
+        LDA zp1E
         JMP LAED8         ; Get COUNT, jump to return 8-bit integer
      
     ; =LOMEM - Start of BASIC heap
@@ -8252,23 +8252,23 @@ LAEFC:
     ; =HIMEM - Top of BASIC memory
     ; ============================
 LAF03:
-        LDA $06
-        LDY $07
+        LDA zp06
+        LDY zp07
     JMP LAEEA ; Get HIMEM to AY, jump to return as integer
     .endif
 
 ; =RND(numeric)
 ; -------------
 LAF0A:
-    INC $1B
+    INC zp1B
     JSR LAE56
     JSR L92F0
-    LDA $2D
+    LDA zp2D
     BMI LAF3F
-    ORA $2C
-    ORA $2B
+    ORA zp2C
+    ORA zp2B
     BNE LAF24
-    LDA $2A
+    LDA zp2A
     BEQ LAF6C
     CMP #$01
     BEQ LAF69
@@ -8288,27 +8288,27 @@ LAF3F:
     LDX #$0D
     JSR LBE44
     LDA #$40
-    STA $11
+    STA zp11
     RTS
 
 ; RND [(numeric)]
 ; ===============
 LAF49:
-    LDY $1B
-    LDA ($19),Y     ; Get current character
+    LDY zp1B
+    LDA (zp19),Y     ; Get current character
     CMP #'('
     BEQ LAF0A   ; Jump with RND(numeric)
     JSR LAF87               ; Get random number
     LDX #$0D
 LAF56:
-    LDA $00,X
-    STA $2A       ; Copy random number to IntA
-    LDA $01,X
-    STA $2B
-    LDA $02,X
-    STA $2C
-    LDA $03,X
-    STA $2D
+    LDA zp00,X
+    STA zp2A       ; Copy random number to IntA
+    LDA zp01,X
+    STA zp2B
+    LDA zp02,X
+    STA zp2C
+    LDA zp03,X
+    STA zp2D
     LDA #$40
     RTS            ; Return Integer
 
@@ -8316,14 +8316,14 @@ LAF69:
     JSR LAF87
 LAF6C:
     LDX #$00
-    STX $2E
-    STX $2F
-    STX $35
+    STX zp2E
+    STX zp2F
+    STX zp35
     LDA #$80
-    STA $30
+    STA zp30
 LAF78:
-    LDA $0D,X
-    STA $31,X
+    LDA zp0D,X
+    STA zp31,X
     INX
     CPX #$04
     BNE LAF78
@@ -8335,32 +8335,32 @@ LAF87:
     .if version >= 3
         LDY #$04 ; Rotate through four bytes, faster but bigger
 LAF89:
-        ROR $11
-        LDA $10
+        ROR zp11
+        LDA zp10
         PHA
         ROR
-        STA $11
-        LDA $0F
+        STA zp11
+        LDA zp0F
         TAX
         ASL
         ASL
         ASL
         ASL
-        STA $10
-        LDA $0E
-        STA $0F
+        STA zp10
+        LDA zp0E
+        STA zp0F
         LSR
         LSR
         LSR
         LSR
-        ORA $10
-        EOR $11
-        STX $10
-        LDX $0D
-        STX $0E
-        STA $0D
+        ORA zp10
+        EOR zp11
+        STX zp10
+        LDX zp0D
+        STX zp0E
+        STA zp0D
         PLA
-        STA $11
+        STA zp11
 LAFB1:
         DEY
         BNE LAF89
@@ -8368,17 +8368,17 @@ LAFB1:
     .elseif version < 3
         LDY #$20 ; Rotate through 32 bits, shorter but slower
 LAF89:
-        LDA $0F
+        LDA zp0F
         LSR
         LSR
         LSR
-        EOR $11
+        EOR zp11
         ROR
-        ROL $0D
-        ROL $0E
-        ROL $0F
-        ROL $10
-        ROL $11
+        ROL zp0D
+        ROL zp0E
+        ROL zp0F
+        ROL zp10
+        ROL zp11
         DEY
         BNE LAF89
         RTS
@@ -8386,8 +8386,8 @@ LAF89:
     ; =ERL - Return error line number
     ; ===============================
 LAF9F:
-        LDY $09
-        LDA $08
+        LDY zp09
+        LDA zp08
         JMP LAEEA ; Get ERL to AY, jump to return 16-bit integer
 
     ; =ERR - Return current error number
