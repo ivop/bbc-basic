@@ -1,14 +1,16 @@
 
 MADS=mads
 
-basic.rom: basic.s
+basic2.rom: basic.s
 	$(MADS) -o:$@ $<
 
-compare: basic.rom
-	@tools/compare.sh
+compare2: basic2.rom
+	@tools/compare.sh original/Basic2 $<
+
+compare: compare2
 
 clean:
-	rm -f basic.rom
+	rm -f basic2.rom
 
 cleaner: clean
 	rm -f *~ */*~
