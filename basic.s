@@ -9,22 +9,15 @@
 
     opt h-              ; No Atari header
 
-    .ifndef BUILD_BBC_BASIC2
-        BUILD_BBC_BASIC2 = 0
-    .endif
-    .ifndef BUILD_BBC_BASIC3
-        BUILD_BBC_BASIC3 = 0
-    .endif
-
-    .if BUILD_BBC_BASIC2 == 1 || BUILD_BBC_BASIC3 == 1
+    .if .def BUILD_BBC_BASIC2 || .def BUILD_BBC_BASIC3
         TARGET_BBC   = 1
         MOS_BBC      = 1
 
-        .if BUILD_BBC_BASIC2 == 1
+        .if .def BUILD_BBC_BASIC2
             VERSION        = 2
             MINORVERSION   = 0
             version_string = '2'
-        .elseif BUILD_BBC_BASIC3 == 1
+        .elseif .def BUILD_BBC_BASIC3
             VERSION        = 3 
             MINORVERSION   = 0
             version_string = '3'
