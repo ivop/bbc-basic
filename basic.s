@@ -14,6 +14,8 @@ MOS_BBC      = 1
 VERSION      = 2
 MINORVERSION = 0
 
+version_string = '2'
+
 load    = $8000         ; Code start address
 split   = 0
 foldup  = 0
@@ -10454,10 +10456,993 @@ LBBCD:
     LDY ws+$05A3,X
     LDA ws+$05B7,X
     JMP LB8DD
+;xxx
+
+LBBD6:
+    BRK
+    dta $2C
+    FNfold 'Too many '
+    dta tknREPEAT, 's'
+    BRK
+
+; REPEAT
+; ======
+LBBE4:
+    LDX zp24
+    CPX #$14
+    BCS LBBD6
+    JSR L986D
+    LDA zp0B
+    STA ws+$05A4,X
+    LDA zp0C
+    STA ws+$05B8,X
+    INC zp24
+    JMP L8BA3
+
+; Input string to string buffer
+; -----------------------------
+LBBFC:
+    LDY #$00
+    LDA #$06+(ws/256) ; String buffer at $0600
+    BNE LBC09
+
+; Print character, read input line
+; --------------------------------
+LBC02:
+    JSR LB558                  ; Print character
+    LDY #$00
+    LDA #$07+(ws/256) ; $AAYY=input buffer at $0700
+
+LBC09:
+    STY zp37
+    STA zp38            ; $37/8=>input buffer
+
+; Manually implement RDLINE (OSWORD 0)
+; ------------------------------------
+    .ifdef MOS_ATOM
+LDBE4:
+        JSR OSRDCH          ; Wait for character
+        CMP #$1B
+        BEQ LDC21  ; Escape
+        CMP #$7F
+        BNE LDBFA  ; Not Delete
+        CPY #$00
+        BEQ LDBE4  ; Nothing to delete
+        JSR OSWRCH          ; VDU 127
+        DEY
+        JMP LDBE4       ; Dec. counter, loop back
+     
+LDBFA:
+        CMP #$15
+        BNE LDC0B  ; Not Ctrl-U
+        TYA
+        BEQ LDBE4
+        LDA #$7F
+LDC03:
+        JSR OSWRCH
+        DEY
+        BNE LDC03
+        BEQ LDBE4
+     
+LDC0B:
+        STA (zp37),Y         ; Store character
+        CMP #$0D
+        BEQ LBC25  ; Return - finish
+        CPY #$EE
+        BCS LDC1E  ; Maximum length
+        CMP #$20
+        BCS LDC1A  ; Control character
+        DEY
+LDC1A:
+        INY
+        JSR OSWRCH      ; Inc. counter, print character
+LDC1E:
+        JMP LDBE4           ; Loop for more
+LDC21:
+    .endif
+
+; BBC - Call MOS to read a line
+; -----------------------------
+    .ifdef MOS_BBC
+        LDA #$EE
+        STA zp39   ; Maximum length
+        LDA #$20
+        STA zp3A   ; Lowest acceptable character
+        LDY #$FF
+        STY zp3B   ; Highest acceptable character
+        INY
+        LDX #$37       ; XY=>control block at $0037
+        TYA
+        JSR OSWORD     ; Call OSWORD 0 to read line of text
+        BCC LBC28          ; CC, Escape not pressed, exit and set COUNT=0
+    .endif
+    JMP L9838           ; Escape
+
+LBC25:
+    JSR OSNEWL
+LBC28:
+    LDA #$00
+    STA zp1E    ; Set COUNT to zero
+    RTS
+
+LBC2D:
+    JSR L9970
+    BCS LBC80
+    LDA zp3D
+    SBC #$02
+    STA zp37
+    STA zp3D
+    STA zp12
+    LDA zp3E
+    SBC #$00
+    STA zp38
+    STA zp13
+    STA zp3E
+    LDY #$03
+    LDA (zp37),Y
+    CLC
+    ADC zp37
+    STA zp37
+    BCC LBC53
+    INC zp38
+LBC53:
+    LDY #$00
+LBC55:
+    LDA (zp37),Y
+    STA (zp12),Y
+    CMP #$0D
+    BEQ LBC66
+LBC5D:
+    INY
+    BNE LBC55
+    INC zp38
+    INC zp13
+    BNE LBC55
+LBC66:
+    INY
+    BNE LBC6D
+    INC zp38
+    INC zp13
+LBC6D:
+    LDA (zp37),Y
+    STA (zp12),Y
+    BMI LBC7C
+    JSR LBC81
+    JSR LBC81
+    JMP LBC5D
+
+LBC7C:
+    JSR LBE92
+    CLC
+LBC80:
+    RTS
+
+LBC81:
+    INY
+    BNE LBC88
+    INC zp13
+    INC zp38
+LBC88:
+    LDA (zp37),Y
+    STA (zp12),Y
+    RTS
+
+LBC8D:
+    STY zp3B
+    JSR LBC2D
+    LDY #$07+(ws/256)
+    STY zp3C
+    LDY #$00
+    LDA #$0D
+    CMP (zp3B),Y
+    BEQ LBD10
+LBC9E:
+    INY
+    CMP (zp3B),Y
+    BNE LBC9E
+    INY
+    INY
+    INY
+    STY zp3F
+    INC zp3F
+    LDA zp12
+    STA zp39
+    LDA zp13
+    STA zp3A
+    JSR LBE92
+    STA zp37
+    LDA zp13
+    STA zp38
+    DEY
+    LDA zp06
+    CMP zp12
+    LDA zp07
+    SBC zp13
+    BCS LBCD6
+    JSR LBE6F
+    JSR LBD20
+    BRK
+    dta 0
+    dta tknLINE
+    FNfold ' space'
+    BRK
+
+LBCD6:
+    LDA (zp39),Y
+    STA (zp37),Y
+    TYA
+    BNE LBCE1
+    DEC zp3A
+    DEC zp38
+LBCE1:
+    DEY
+    TYA
+    ADC zp39
+    LDX zp3A
+    BCC LBCEA
+    INX
+LBCEA:
+    CMP zp3D
+    TXA
+    SBC zp3E
+    BCS LBCD6
+    SEC
+    LDY #$01
+    LDA zp2B
+    STA (zp3D),Y
+    INY
+    LDA zp2A
+    STA (zp3D),Y
+    INY
+    LDA zp3F
+    STA (zp3D),Y
+    JSR LBE56
+    LDY #$FF
+LBD07:
+    INY
+    LDA (zp3B),Y
+    STA (zp3D),Y
+    CMP #$0D
+    BNE LBD07
+LBD10:
+    RTS
+
+; RUN
+; ===
+LBD11:
+    JSR L9857
+LBD14:
+    JSR LBD20
+    LDA zp18
+    STA zp0C           ; Point PtrA to PAGE
+    STX zp0B
+    JMP L8B0B
+
+; Clear BASIC heap, stack and DATA pointer
+; ========================================
+LBD20:
+    LDA zp12
+    STA ZP00
+    STA zp02      ; LOMEM=TOP, VAREND=TOP
+    LDA zp13
+    STA ZP01
+    STA zp03
+    JSR LBD3A                     ; Clear DATA and stack
+LBD2F:
+    LDX #$80
+    LDA #$00
+LBD33:
+    STA ws+$047F,X
+    DEX
+    BNE LBD33
+    RTS ; Clear dynamic variables list
+
+; Clear DATA pointer and BASIC stack
+; ==================================
+LBD3A:
+    LDA zp18
+    STA zp1D                 ; DATA pointer hi=PAGE hi
+    LDA zp06
+    STA zp04
+    LDA zp07
+    STA zp05 ; STACK=HIMEM
+    LDA #$00
+    STA zp24
+    STA zp26
+    STA zp25; Clear REPEAT, FOR, GOSUB stacks
+    STA zp1C
+    RTS                     ; DATA pointer=PAGE
+
+LBD51:
+    LDA zp04
+    SEC
+    SBC #$05
+    JSR LBE2E
+    LDY #$00
+    LDA zp30
+    STA (zp04),Y
+    INY
+    LDA zp2E
+    AND #$80
+    STA zp2E
+    LDA zp31
+    AND #$7F
+    ORA zp2E
+    STA (zp04),Y
+    INY
+    LDA zp32
+    STA (zp04),Y
+    INY
+    LDA zp33
+    STA (zp04),Y
+    INY
+    LDA zp34
+    STA (zp04),Y
+    RTS
+
+LBD7E:
+    LDA zp04
+    CLC
+    STA zp4B
+    ADC #$05
+    STA zp04
+    LDA zp05
+    STA zp4C
+    ADC #$00
+    STA zp05
+    RTS
+
+LBD90:
+    BEQ LBDB2
+    BMI LBD51
+LBD94:
+    LDA zp04
+    SEC
+    SBC #$04
+LBD99:
+    JSR LBE2E
+    LDY #$03
+    LDA zp2D
+    STA (zp04),Y
+    DEY
+    LDA zp2C
+    STA (zp04),Y
+    DEY
+    LDA zp2B
+    STA (zp04),Y
+    DEY
+    LDA zp2A
+    STA (zp04),Y
+    RTS
+
+; Stack the current string
+; ========================
+LBDB2:
+    CLC
+    LDA zp04
+    SBC zp36        ; stackbot=stackbot-length-1
+    JSR LBE2E                  ; Check enough space
+    LDY zp36
+    BEQ LBDC6          ; Zero length, just stack length
+LBDBE:
+    LDA ws+$05FF,Y
+    STA (zp04),Y ; Copy string to stack
+    DEY
+    BNE LBDBE              ; Loop for all characters
+LBDC6:
+    LDA zp36
+    STA (zp04),Y        ; Copy string length
+    RTS
+
+; Unstack a string
+; ================
+LBDCB:
+    LDY #$00
+    LDA (zp04),Y       ; Get stacked string length
+    STA zp36
+    BEQ LBDDC
+    TAY      ; If zero length, just unstack length
+LBDD4:
+    LDA (zp04),Y
+    STA ws+$05FF,Y ; Copy string to string buffer
+    DEY
+    BNE LBDD4              ; Loop for all characters
+LBDDC:
+    LDY #$00
+    LDA (zp04),Y       ; Get string length again
+    SEC
+LBDE1:
+    ADC zp04
+    STA zp04            ; Update stack pointer
+    BCC LBE0A
+    INC zp05
+    RTS
+
+; Unstack an integer to IntA
+; --------------------------
+LBDEA:
+    LDY #$03
+    LDA (zp04),Y
+    STA zp2D
+    DEY    ; Copy to IntA
+    LDA (zp04),Y
+    STA zp2C
+    DEY
+    LDA (zp04),Y
+    STA zp2B
+    DEY
+    LDA (zp04),Y
+    STA zp2A
+LBDFF:
+    CLC
+    LDA zp04
+    ADC #$04
+    STA zp04           ; Drop 4 bytes from stack
+    BCC LBE0A
+    INC zp05
+LBE0A:
+    RTS
+
+; Unstack an integer to zero page
+; -------------------------------
+LBE0B:
+    LDX #$37
+LBE0D:
+    LDY #$03
+    LDA (zp04),Y
+    STA zp03,X
+    DEY
+    LDA (zp04),Y
+    STA zp02,X
+    DEY
+    LDA (zp04),Y
+    STA zp01,X
+    DEY
+    LDA (zp04),Y
+    STA zp00,X
+    CLC
+    LDA zp04
+    ADC #$04
+    STA zp04   ; Drop 4 bytes from stack
+    BCC LBE0A
+    INC zp05
+    RTS
+
+LBE2E:
+    STA zp04
+    BCS LBE34
+    DEC zp05
+LBE34:
+    LDY zp05
+    CPY zp03
+    BCC LBE41
+    BNE LBE40
+    CMP zp02
+    BCC LBE41
+LBE40:
+    RTS
+
+LBE41:
+    JMP L8CB7
+
+LBE44:
+    LDA zp2A
+    STA zp00,X
+    LDA zp2B
+    STA zp01,X
+    LDA zp2C
+    STA zp02,X
+    LDA zp2D
+    STA zp03,X
+    RTS
+
+LBE55:
+    CLC
+LBE56:
+    TYA
+    ADC zp3D
+    STA zp3D
+    BCC LBE5F
+    INC zp3E
+LBE5F:
+    LDY #$01
+    RTS
+
+LBE62:
+    JSR LBEDD
+    TAY
+    LDA #$FF    ; FILE.LOAD=PAGE
+
+    .ifdef MOS_ATOM
+        STA F_EXEC+0
+        LDX #$37    ; FILE.EXEC=$FF, load to specified address
+        SEC
+        JSR OSLOAD
+    .endif
+
+    .ifdef MOS_BBC
+        STY F_EXEC+0
+        LDX #$37    ; FILE.EXEC=0, load to specified address
+        JSR OSFILE
+    .endif
+
+; Scan program to check consistancy and find TOP
+; ----------------------------------------------
+LBE6F:
+    LDA zp18
+    STA zp13
+    LDY #$00
+    STY zp12
+    INY      ; Point TOP to PAGE
+LBE78:
+    DEY
+    LDA (zp12),Y           ; Get byte preceding line
+    CMP #$0D
+    BNE LBE9E        ; Not <cr>, jump to 'Bad program'
+    INY                       ; Step to line number/terminator
+    LDA (zp12),Y
+    BMI LBE90     ; b7 set, end of program
+    LDY #$03                  ; Point to line length
+    LDA (zp12),Y
+    BEQ LBE9E     ; Zero length, jump to 'Bad program'
+    CLC
+    JSR LBE93             ; Update TOP to point to next line
+    BNE LBE78                 ; Loop to check next line
+
+; End of program found, set TOP
+; -----------------------------
+LBE90:
+    INY
+    CLC
+LBE92:
+    TYA
+LBE93:
+    ADC zp12
+    STA zp12           ; TOP=TOP+A
+    BCC LBE9B
+    INC zp13
+LBE9B:
+    LDY #$01
+    RTS              ; Return Y=1, NE
+
+; Report 'Bad program' and jump to immediate mode
+; -----------------------------------------------
+LBE9E:
+    JSR LBFCF                 ; Print inline text
+    dta 13
+    FNfold 'Bad program'
+    dta 13
+    NOP
+    JMP L8AF6                 ; Jump to immediate mode
+
+; Point $37/8 to <cr>-terminated string in string buffer
+; ------------------------------------------------------
+LBEB2:
+    LDA #$00
+    STA zp37
+    LDA #$06+(ws/256)
+    STA zp38
+LBEBA:
+    LDY zp36
+    LDA #$0D
+    STA ws+$0600,Y
+    RTS
+
+; OSCLI string$ - Pass string to OSCLI to execute
+; ===============================================
+LBEC2:
+    JSR LBED2                   ; $37/8=>cr-string
 
 
-; ----------------------------------------------------------------------------
+    .ifdef MOS_ATOM
+        JSR cmdStar1
+        JMP L8B9B     ; Call Atom OSCLI and return to execution loop
+     
 
-; Temporary labels to make assembler happy
+    ; Embedded star command
+    ; ---------------------
+cmdStar:
+        STX zp37
+        STY zp38            ; $37/8=>cr-string
+cmdStar1:
+        LDY #$FF
+cmdStarLp1:
+        INY
+        LDA (zp37),Y
+        CMP #'*'
+        BEQ cmdStarLp1 ; Skip leading stars
+        LDX #0
+cmdStarLp2:
+        LDA (zp37),Y
+        STA $0100,X         ; Copy string onto stack
+        INY
+        INX
+        CMP #$0D
+        BNE cmdStarLp2 ; Atom OSCLI passed string at $100
+        JMP OS_CLI
+    .endif
 
-    icl 'undecl.s'
+    .ifdef MOS_BBC
+        LDX #$00
+        LDY #>(ws+$0600)
+        JSR OS_CLI
+        JMP L8B9B       ; Call OSCLI and return to execution loop
+    .endif
+
+LBECF:
+    JMP L8C0E
+
+LBED2:
+    JSR L9B1D
+    BNE LBECF         ; Evaluate expression, error if not string
+    JSR LBEB2
+    JMP L984C         ; Convert to <cr>-string, check end of statement
+
+; Set FILE.LOAD to MEMHI.PAGE
+; ---------------------------
+LBEDD:
+    JSR LBED2
+    DEY
+    STY F_LOAD+0  ; LOAD.lo=$00
+    LDA zp18
+    STA F_LOAD+1        ; LOAD.hi=PAGEhi
+LBEE7:
+    .ifdef MOS_BBC
+        LDA #$82
+        JSR OSBYTE        ; Get memory base high word
+        STX F_LOAD+2
+        STY F_LOAD+3  ; Set LOAD high word
+        LDA #$00
+    .endif
+    RTS
+
+; BBC At/Sy
+; 37   37   FNAME
+; 38
+; 39   39   LOAD
+; 3A
+; 3B
+; 3C
+; 3D   3B   EXEC
+; 3E
+; 3F
+; 40
+; 41   3D   START
+; 42
+; 43
+; 44
+; 45   3F   END
+; 46
+; 47
+; 48
+
+;  SAVE string$
+; =============
+LBEF3:
+    JSR LBE6F                         ; Check program, set TOP
+
+    .if version < 3
+        LDA zp12
+        STA F_END+0              ; Set FILE.END to TOP
+        LDA zp13
+        STA F_END+1
+        LDA #<L8023
+        STA F_EXEC+0  ; Set FILE.EXEC to STARTUP
+        LDA #>L8023
+        STA F_EXEC+1
+        LDA zp18
+        STA F_START+1            ; Set FILE.START to PAGE
+        JSR LBEDD                        ; Set FILE.LOAD to PAGE
+    .endif
+    .if version < 3
+        .ifdef MOS_BBC
+            STX F_EXEC+2 
+            STY F_EXEC+3       ; Set address high words
+            STX F_START+2
+            STY F_START+3
+            STX F_END+2  
+            STY F_END+3
+        .endif
+        .ifdef MOS_ATOM
+            STY F_START+0                    ; Low byte of FILE.START
+        .endif
+        .ifdef MOS_BBC
+            STA F_START+0                    ; Low byte of FILE.START
+        .endif
+    .endif
+
+    .if version >= 3
+        JSR LBEDD                        ; Set FILE.LOAD to PAGE
+    .endif
+    .if version >= 3
+        .ifdef MOS_BBC
+            STX F_EXEC+2 
+            STY F_EXEC+3       ; Set address high words
+            STX F_START+2
+            STY F_START+3
+            STX F_END+2  
+            STY F_END+3
+        .endif
+        .ifdef MOS_ATOM
+            STY F_START+0                    ; Low byte of FILE.START
+        .endif
+        .ifdef MOS_BBC
+            STA F_START+0                    ; Low byte of FILE.START
+        .endif
+    .endif
+    .if version >= 3
+        LDX zp12
+        STX F_END+0              ; Set FILE.END to TOP
+        LDX zp13
+        STX F_END+1
+        LDX #<L8023
+        STX F_EXEC+0  ; Set FILE.EXEC to STARTUP
+        LDX #>L8023
+        STX F_EXEC+1
+        LDX zp18
+        STX F_START+1            ; High byte of FILE.START=PAGE
+    .endif
+    TAY
+    LDX #$37
+    .ifdef MOS_ATOM
+        SEC
+        JSR OSSAVE
+    .endif
+    .ifdef MOS_BBC
+        JSR OSFILE    
+    .endif
+    JMP L8B9B
+
+; LOAD string$
+; ============
+LBF24:
+    JSR LBE62
+    JMP L8AF3               ; Do LOAD, jump to immediate mode
+
+; CHAIN string$
+; =============
+LBF2A:
+    JSR LBE62
+    JMP LBD14               ; Do LOAD, jump to execution loop
+
+; PTR#numeric=numeric
+; ===================
+LBF30:
+    JSR LBFA9
+    PHA             ; Evaluate #handle
+    JSR L9813
+    JSR L92EE       ; Step past '=', evaluate integer
+    PLA
+    TAY
+    LDX #$2A          ; Get handle, point to IntA
+    .ifdef MOS_ATOM
+        JSR OSSTAR         
+    .endif
+    .ifdef MOS_BBC
+        LDA #$01
+        JSR OSARGS
+    .endif
+    JMP L8B9B                 ; Jump to execution loop
+
+; =EXT#numeric - Read file pointer via OSARGS
+; ===========================================
+LBF46:
+    SEC                       ; Flag to do =EXT
+
+; =PTR#numeric - Read file pointer via OSARGS
+; ===========================================
+LBF47:
+    LDA #$00
+    ROL            ; A=0 or 1 for =PTR or =EXT
+    .ifdef MOS_BBC
+        ROL
+    .endif
+    PHA                       ; Atom - A=0/1, BBC - A=0/2
+    JSR LBFB5
+    LDX #$2A
+    PLA    ; Evaluate #handle, point to IntA
+    .ifdef MOS_ATOM
+        JSR OSRDAR
+    .endif
+    .ifdef MOS_BBC
+        JSR OSARGS
+    .endif
+    LDA #$40
+    RTS              ; Return integer
+
+; BPUT#numeric, numeric
+; =====================
+LBF58:
+    JSR LBFA9
+    PHA             ; Evaluate #handle
+    JSR L8AAE
+    JSR L9849
+    JSR L92EE
+    PLA
+    TAY
+    LDA zp2A
+    JSR OSBPUT
+    JMP L8B9B      ; Call OSBPUT, jump to execution loop
+
+; =BGET#numeric
+; =============
+LBF6F:
+    JSR LBFB5
+    JSR OSBGET      ; Evaluate #handle
+    .if version < 3
+        JMP LAED8           ; Jump to return 8-bit integer
+    .elseif version >= 3
+        JMP XAED3           ; Jump to return 8-bit integer
+    .endif
+
+; OPENIN f$ - Call OSFIND to open file for input
+; ==============================================
+LBF78:
+    .ifdef MOS_ATOM
+        SEC             ; SEC=OPENUP
+        BCS LBF82     
+    .endif
+    .ifdef MOS_BBC
+        LDA #$40        ; $40=OPENUP
+        BNE LBF82
+    .endif
+
+; OPENOUT f$ - Call OSFIND to open file for output
+; ================================================
+LBF7C:
+    .ifdef MOS_ATOM
+        CLC             ; CLC=OPENOUT
+        BCC LBF82     
+    .endif
+    .ifdef MOS_BBC
+        LDA #$80        ; 80=OPENOUT
+        BNE LBF82
+    .endif
+
+; OPENUP f$ - Call OSFIND to open file for update
+; ===============================================
+LBF80:
+    .ifdef MOS_ATOM
+        SEC             ; SEC=OPENUP
+    .endif
+    .ifdef MOS_BBC
+        LDA #$C0        ; C0=OPENUP
+    .endif
+LBF82:
+    .ifdef MOS_ATOM
+        PHP       
+    .endif
+    .ifdef MOS_BBC
+        PHA       
+    .endif
+    JSR LADEC
+    BNE LBF96       ; Evaluate, if not string, jump to error
+
+    .ifdef MOS_ATOM
+        JSR LBEB2        ; Terminate string with <cr>, point $37/8=>string
+        LDX #$37
+        PLP             ; Point to string pointer, get action back
+    .endif
+
+    .ifdef MOS_BBC
+        JSR LBEBA                ; Terminate string with <cr>
+        LDX #$00
+        LDY #$06
+        PLA    ; Point to string buffer, get action back
+    .endif
+
+    JSR OSFIND                ; Pass to OSFIND, jump to return integer from A
+    .if version < 3
+        JMP LAED8
+    .elseif version >= 3
+        JMP XAED3
+    .endif
+
+LBF96:
+    JMP L8C0E                 ; Jump to 'Type mismatch' error
+
+; CLOSE#numeric
+; =============
+LBF99:
+    JSR LBFA9
+    JSR L9852       ; Evaluate #handle, check end of statement
+    LDY zp2A                   ; Get handle from IntA
+    .ifdef MOS_ATOM
+        JSR OSSHUT         
+    .endif
+    .ifdef MOS_BBC
+        LDA #$00
+        JSR OSFIND
+    .endif
+    JMP L8B9B                 ; Jump back to execution loop
+
+; Copy PtrA to PtrB, then get handle
+; ==================================
+LBFA9:
+    LDA zp0A
+    STA zp1B           ; Set PtrB to program pointer in PtrA
+    LDA zp0B
+    STA zp19
+    LDA zp0C
+    STA zp1A
+
+; Check for '#', evaluate channel
+; ===============================
+LBFB5:
+    JSR L8A8C                 ; Skip spaces
+    CMP #'#'               ; If not '#', jump to give error
+    .if version < 3
+        BNE LBFC3
+    .elseif version >= 3
+        BNE LBFF4
+    .endif
+    JSR L92E3                 ; Evaluate as integer
+LBFBF:
+    LDY zp2A
+    TYA               ; Get low byte and return
+NULLRET:
+    RTS
+
+    .if version < 3
+LBFC3:
+        BRK
+        dta $2D
+        FNfold 'Missing #'
+        BRK
+    .endif
+
+; Print inline text
+; =================
+LBFCF:
+    PLA
+    STA zp37
+    PLA
+    STA zp38   ; Pop return address to pointer
+    LDY #$00
+    BEQ LBFDC        ; Jump into loop
+LBFD9:
+    JSR OSASCI                ; Print character
+LBFDC:
+    JSR L894B
+    BPL LBFD9       ; Update pointer, get character, loop if b7=0
+    JMP (zp37)               ; Jump back to program
+
+; REPORT
+; ======
+LBFE4:
+    JSR L9857
+    JSR LBC25       ; Check end of statement, print newline, clear COUNT
+    LDY #$01
+LBFEC:
+    LDA (FAULT),Y
+    BEQ LBFF6   ; Get byte, exit if $00 terminator
+    JSR LB500
+    INY
+    BNE LBFEC   ; Print character or token, loop for next
+LBFF6:
+    JMP L8B9B                 ; Jump to main execution loop
+
+    .if version >= 3
+LBFF4:
+        BRK
+        dta $2D
+        FNfold 'Missing #'
+        BRK
+    .endif
+
+    .if * > [load + $4000]
+        .error "***WARNING: Code overrun"
+    .endif
+
+    .if version < 3 && [[*+6]&$ff] > 6
+        BRK
+        dta 'Roger'
+        brk
+    .endif
+
+    .if [[*+3]&$ff] > 3
+        dta version_string
+    .endif
+
+    .align load + $4000, 0
+LC000:
