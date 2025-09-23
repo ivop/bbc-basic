@@ -8396,7 +8396,6 @@ LAFA6:
         LDA (FAULT),Y
         JMP LAEEA  ; Get error number, jump to return 16-bit integer
     .endif
-;xxx
 
 ; INKEY
 ; =====
@@ -9186,6 +9185,1275 @@ LB3F9:
     BCS LB3D9
 LB401:
     RTS
+
+
+; ERROR HANDLER
+; =============
+LB402:
+
+
+; Atom/System - Process raw BRK to get FAULT pointer
+; --------------------------------------------------
+    .ifdef MOS_ATOM
+        PLA
+        CLD
+        CLI
+        PLA           ; Drop flags, pop return low byte
+        SEC
+        SBC #$01
+        STA FAULT+0  ; Point to error block
+        PLA
+        SBC #$00
+        STA FAULT+1
+        CMP #>L8000
+        BCC LD428   ; If outside BASIC, not a full error block
+        CMP #[>LC000]-1       ; syntax?
+        BCS LD428 ; So generate default error
+    .endif
+
+
+; FAULT set up, now process BRK error
+; -----------------------------------
+    JSR LB3C5
+    STY zp20
+    LDA (FAULT),Y
+    BNE LB413   ; If ERR<>0, skip past ON ERROR OFF
+    LDA #<LB433
+    STA zp16     ; ON ERROR OFF
+    LDA #>LB433
+    STA zp17
+LB413:
+    LDA zp16
+    STA zp0B           ; Point program point to ERROR program
+    LDA zp17
+    STA zp0C
+    JSR LBD3A                 ; Clear DATA and stack
+    TAX
+    STX zp0A
+    .ifdef MOS_BBC
+        LDA #$DA
+        JSR OSBYTE      ; Clear VDU queue
+        LDA #$7E
+        JSR OSBYTE      ; Acknowlege any Escape state
+    .endif
+    LDX #$FF
+    STX zp28
+    TXS      ; Clear system stack
+    JMP L8BA3                 ; Jump to execution loop
+
+LD428:
+    .ifdef MOS_ATOM
+        .if foldup == 0
+            BRK
+            dta $FF
+            dta 'External Error'
+            BRK
+        .endif
+        .if foldup != 0
+            BRK
+            dta $FF
+            dta tknEXT, 'ERNAL ', tknERROR
+            BRK
+        .endif
+    .endif
+
+; Default ERROR program
+; ---------------------
+; REPORT IF ERL PRINT " at line ";ERL END ELSE PRINT END
+LB433:
+    dta tknREPORT
+    dta ':'
+    dta tknIF
+    dta tknERL
+    dta tknPRINT
+    dta '"', ' at line ', '"', ';'      ;; was FNfold
+    dta tknERL
+    dta ':'
+    dta tknEND
+    dta tknELSE
+    dta tknPRINT
+    dta ':'
+    dta tknEND
+    dta 13
+
+; SOUND numeric, numeric, numeric, numeric
+; ========================================
+LB44C:
+    JSR L8821                ; Evaluate integer
+    LDX #$03                 ; Three more to evaluate
+LB451:
+    .ifdef MOS_BBC
+        LDA zp2A
+        PHA
+        LDA zp2B
+        PHA ; Stack current 16-bit integer
+    .endif
+    TXA
+    PHA
+    JSR L92DA        ; Step past comma, evaluate next integer
+    PLA
+    TAX
+    DEX
+    BNE LB451    ; Loop to stack this one
+    .ifdef MOS_BBC
+        JSR L9852               ; Check end of statement
+        LDA zp2A
+        STA zp3D         ; Copy current 16-bit integer to end of control block
+        LDA zp2B
+        STA zp3E
+        LDY #$07
+        LDX #$05       ; Prepare for OSWORD 7 and 6 more bytes
+        BNE LB48F               ; Jump to pop to control block and call OSWORD
+    .endif
+    .ifdef MOS_ATOM
+        BEQ LB484               ; Check end of statement and return
+    .endif
+
+; ENVELOPE a,b,c,d,e,f,g,h,i,j,k,l,m,n
+; ====================================
+LB472:
+    JSR L8821                ; Evaluate integer
+    LDX #$0D                 ; 13 more to evaluate
+LB477:
+    .ifdef MOS_BBC
+        LDA zp2A
+        PHA             ; Stack current 8-bit integer
+    .endif
+    TXA
+    PHA
+    JSR L92DA        ; Step past comma, evaluate next integer
+    PLA
+    TAX
+    DEX
+    BNE LB477    ; Loop to stack this one
+LB484:
+    JSR L9852                ; Check end of statement
+    .ifdef MOS_BBC
+        LDA zp2A
+        STA zp44         ; Copy current 8-bit integer to end of control block
+        LDX #$0C
+        LDY #$08       ; Prepare for 12 more bytes and OSWORD 8
+    .endif
+
+
+LB48F:
+    .ifdef MOS_BBC
+        PLA
+        STA zp37,X           ; Pop bytes into control block
+        DEX
+        BPL LB48F
+        TYA                     ; Y=OSWORD number
+        LDX #$37
+        LDY #$00       ; XY=>control block
+        JSR OSWORD
+    .endif
+    JMP L8B9B                ; Return to execution loop
+
+; WIDTH numeric
+; =============
+LB4A0:
+    JSR L8821
+    JSR L9852
+    LDY zp2A
+    DEY
+    STY zp23
+    JMP L8B9B
+
+LB4AE:
+    JMP L8C0E
+
+; Store byte or word integer
+; ==========================
+LB4B1:
+    JSR L9B29               ; Evaluate expression
+LB4B4:
+    JSR LBE0B               ; Unstack integer (address of data)
+LB4B7:
+    LDA zp39
+    CMP #$05
+    BEQ LB4E0      ; Size=5, jump to store float
+    LDA zp27
+    BEQ LB4AE       ; Type<>num, jump to error
+    BPL LB4C6               ; Type=int, jump to store it
+    JSR LA3E4               ; Convert float to integer
+LB4C6:
+    LDY #$00
+    LDA zp2A
+    STA (zp37),Y     ; Store byte 1
+    LDA zp39
+    BEQ LB4DF       ; Exit if size=0, byte
+    LDA zp2B
+    INY
+    STA (zp37),Y ; Store byte 2
+    LDA zp2C
+    INY
+    STA (zp37),Y ; Store byte 3
+    LDA zp2D
+    INY
+    STA (zp37),Y ; Store byte 4
+LB4DF:
+    RTS
+
+; Store float
+; ===========
+LB4E0:
+    LDA zp27
+    BEQ LB4AE       ; Type<>num, jump to error
+    BMI LB4E9               ; Type=float, jump to store it
+    JSR LA2BE               ; Convert integer to float
+LB4E9:
+    LDY #$00                 ; Store 5-byte float
+    LDA zp30
+    STA (zp37),Y
+    INY  ; exponent
+    LDA zp2E
+    AND #$80
+    STA zp2E ; Unpack sign
+    LDA zp31
+    AND #$7F         ; Unpack mantissa 1
+    ORA zp2E
+    STA (zp37),Y      ; sign + mantissa 1
+    INY
+    LDA zp32
+    STA (zp37),Y  ; mantissa 2
+    INY
+    LDA zp33
+    STA (zp37),Y  ; mantissa 3
+    INY
+    LDA zp34
+    STA (zp37),Y  ; mantissa 4
+    RTS
+
+LB500:
+LB50E:
+    STA zp37
+    CMP #$80
+    BCC LB558
+    LDA #<L8071
+    STA zp38 ; Point to token table
+    LDA #>L8071
+    STA zp39
+    STY zp3A
+LB51E:
+    LDY #$00
+LB520:
+    INY
+    LDA (zp38),Y
+    BPL LB520
+    CMP zp37
+    BEQ LB536
+    INY
+    TYA
+    SEC
+    ADC zp38
+    STA zp38
+    BCC LB51E
+    INC zp39
+    BCS LB51E
+
+LB536:
+    LDY #$00
+LB538:
+    LDA (zp38),Y
+    BMI LB542
+    JSR LB558
+    INY
+    BNE LB538
+LB542:
+    LDY zp3A
+    RTS
+
+LB545:
+    PHA
+    LSR
+    LSR
+    LSR
+    LSR
+    JSR LB550
+    PLA
+    AND #$0F
+LB550:
+    CMP #$0A
+    BCC LB556
+    ADC #$06
+LB556:
+    ADC #$30
+LB558:
+    CMP #$0D
+    BNE LB567
+    JSR OSWRCH
+    JMP LBC28 ; Set COUNT to zero
+
+LB562:
+    JSR LB545
+LB565:
+    LDA #$20
+LB567:
+    PHA
+    LDA zp23
+    CMP zp1E
+    BCS LB571
+    JSR LBC25
+LB571:
+    PLA
+    INC zp1E
+    .if WRCHV != 0
+        JMP (WRCHV)
+    .endif
+    .if WRCHV == 0
+        JMP OSWRCH 
+    .endif
+
+LB577:
+    AND zp1F
+    BEQ LB589
+    TXA
+    BEQ LB589
+    BMI LB565
+    .if version >= 3
+        ASL
+        TAX
+    .endif
+LB580:
+    JSR LB565
+    .if version < 3
+        JSR LB558
+    .endif
+    DEX
+    BNE LB580
+LB589:
+    RTS
+
+LB58A:
+    INC zp0A
+    JSR L9B1D
+    JSR L984C
+    JSR L92EE
+    LDA zp2A
+    STA zp1F
+    JMP L8AF6
+
+; LIST [linenum [,linenum]]
+; =========================
+LB59C:
+    INY
+    LDA (zp0B),Y
+    CMP #'O'
+    BEQ LB58A
+    LDA #$00
+    STA zp3B
+    STA zp3C
+    .if version < 3
+        JSR LAED8
+    .elseif version >= 3
+        JSR XAED3
+    .endif
+    JSR L97DF
+    PHP
+    JSR LBD94
+    LDA #$FF
+    STA zp2A
+    LDA #$7F
+    STA zp2B
+    PLP
+    BCC LB5CF
+    JSR L8A97
+    CMP #','
+    BEQ LB5D8
+    JSR LBDEA
+    JSR LBD94
+    DEC zp0A
+    BPL LB5DB
+LB5CF:
+    JSR L8A97
+    CMP #','
+    BEQ LB5D8
+    DEC zp0A
+LB5D8:
+    JSR L97DF
+LB5DB:
+    LDA zp2A
+    STA zp31
+    LDA zp2B
+    STA zp32
+    JSR L9857
+    JSR LBE6F
+    JSR LBDEA
+    JSR L9970
+    LDA zp3D
+    STA zp0B
+    LDA zp3E
+    STA zp0C
+    BCC LB60F
+    DEY
+    BCS LB602
+
+LB5FC:
+    JSR LBC25
+    JSR L986D
+LB602:
+    LDA (zp0B),Y
+    STA zp2B
+    INY
+    LDA (zp0B),Y
+    STA zp2A
+    INY
+    INY
+    STY zp0A
+LB60F:
+    LDA zp2A
+    CLC
+    SBC zp31
+    LDA zp2B
+    SBC zp32
+    BCC LB61D
+    JMP L8AF6
+
+LB61D:
+    JSR L9923
+    LDX #$FF
+    STX zp4D
+    LDA #$01
+    JSR LB577
+    LDX zp3B
+    LDA #$02
+    JSR LB577
+    LDX zp3C
+    LDA #$04
+    JSR LB577
+LB637:
+    LDY zp0A
+LB639:
+    LDA (zp0B),Y
+    CMP #$0D
+    BEQ LB5FC
+    CMP #$22
+    BNE LB651
+    LDA #$FF
+    EOR zp4D
+    STA zp4D
+    LDA #$22
+LB64B:
+    JSR LB558
+    INY
+    BNE LB639
+LB651:
+    BIT zp4D
+    BPL LB64B
+    CMP #$8D
+    BNE LB668
+    JSR L97EB
+    STY zp0A
+    LDA #$00
+    STA zp14
+    JSR L991F
+    JMP LB637
+
+LB668:
+    CMP #$E3
+    BNE LB66E
+    INC zp3B
+LB66E:
+    CMP #$ED
+    BNE LB678
+    LDX zp3B
+    BEQ LB678
+    DEC zp3B
+LB678:
+    CMP #$F5
+    BNE LB67E
+    INC zp3C
+LB67E:
+    CMP #$FD
+    BNE LB688
+    LDX zp3C
+    BEQ LB688
+    DEC zp3C
+LB688:
+    JSR LB50E
+    INY
+    BNE LB639
+LB68E:
+    BRK
+    dta $20
+    FNfold 'No '
+    dta tknFOR
+    BRK
+
+; NEXT [variable [,...]]
+; ======================
+LB695:
+    JSR L95C9
+    BNE LB6A3
+    LDX zp26
+    BEQ LB68E
+    BCS LB6D7
+LB6A0:
+    JMP L982A
+
+LB6A3:
+    BCS LB6A0
+    LDX zp26
+    BEQ LB68E
+LB6A9:
+    LDA zp2A
+    CMP ws+$04F1,X
+    BNE LB6BE
+    LDA zp2B
+    CMP ws+$04F2,X
+    BNE LB6BE
+    LDA zp2C
+    CMP ws+$04F3,X
+    BEQ LB6D7
+LB6BE:
+    TXA
+    SEC
+    SBC #$0F
+    TAX
+    STX zp26
+    BNE LB6A9
+    BRK
+    dta zp21
+    FNfold 'Can'
+    dta 0x27, 't Match ', tknFOR
+    BRK
+
+LB6D7:
+    LDA ws+$04F1,X
+    STA zp2A
+    LDA ws+$04F2,X
+    STA zp2B
+    LDY ws+$04F3,X
+    CPY #$05
+    BEQ LB766
+    LDY #$00
+    LDA (zp2A),Y
+    ADC ws+$04F4,X
+    STA (zp2A),Y
+    STA zp37
+    INY
+    LDA (zp2A),Y
+    ADC ws+$04F5,X
+    STA (zp2A),Y
+    STA zp38
+    INY
+    LDA (zp2A),Y
+    ADC ws+$04F6,X
+    STA (zp2A),Y
+    STA zp39
+    INY
+    LDA (zp2A),Y
+    ADC ws+$04F7,X
+    STA (zp2A),Y
+    TAY
+    LDA zp37
+    SEC
+    SBC ws+$04F9,X
+    STA zp37
+    LDA zp38
+    SBC ws+$04FA,X
+    STA zp38
+    LDA zp39
+    SBC ws+$04FB,X
+    STA zp39
+    TYA
+    SBC ws+$04FC,X
+    ORA zp37
+    ORA zp38
+    ORA zp39
+    BEQ LB741
+    TYA
+    EOR ws+$04F7,X
+    EOR ws+$04FC,X
+    BPL LB73F
+    BCS LB741
+    BCC LB751
+LB73F:
+    BCS LB751
+LB741:
+    LDY ws+$04FE,X
+    LDA ws+$04FF,X
+    STY zp0B
+    STA zp0C
+    JSR L9877
+    JMP L8BA3
+
+LB751:
+    LDA zp26
+    SEC
+    SBC #$0F
+    STA zp26
+    LDY zp1B
+    STY zp0A
+    JSR L8A97
+    CMP #','
+    BNE LB7A1
+    JMP LB695
+
+LB766:
+    JSR LB354
+    LDA zp26
+    CLC
+    ADC #$F4
+    STA zp4B
+    LDA #$05+(ws/256)
+    STA zp4C
+    JSR LA500
+    LDA zp2A
+    STA zp37
+    LDA zp2B
+    STA zp38
+    JSR LB4E9
+    LDA zp26
+    STA zp27
+    CLC
+    ADC #$F9
+    STA zp4B
+    LDA #$05+(ws/256)
+    STA zp4C
+    JSR L9A5F
+    BEQ LB741
+    LDA ws+$04F5,X
+    BMI LB79D
+    BCS LB741
+    BCC LB751
+LB79D:
+    BCC LB741
+    BCS LB751
+LB7A1:
+    JMP L8B96
+
+LB7A4:
+    BRK
+    dta $22
+    dta tknFOR
+    FNfold ' variable'
+LB7B0:
+    BRK
+    dta $23
+    FNfold 'Too many '
+    dta tknFOR, 's'
+LB7BD:
+    BRK
+    dta $24
+    FNfold 'No '
+    dta tknTO
+    BRK
+
+; FOR numvar = numeric TO numeric [STEP numeric]
+; ==============================================
+LB7C4:
+    JSR L9582
+    BEQ LB7A4
+    BCS LB7A4
+    JSR LBD94
+    JSR L9841
+    JSR LB4B1
+    LDY zp26
+    CPY #$96
+    BCS LB7B0
+    LDA zp37
+    STA ws+$0500,Y
+    LDA zp38
+    STA ws+$0501,Y
+    LDA zp39
+    STA ws+$0502,Y
+    TAX
+    JSR L8A8C
+    CMP #$B8
+    BNE LB7BD
+    CPX #$05
+    BEQ LB84F
+    JSR L92DD
+    LDY zp26
+    LDA zp2A
+    STA ws+$0508,Y
+    LDA zp2B
+    STA ws+$0509,Y
+    LDA zp2C
+    STA ws+$050A,Y
+    LDA zp2D
+    STA ws+$050B,Y
+    LDA #$01
+    .if version < 3
+        JSR LAED8
+    .elseif version >= 3
+        JSR XAED3
+    .endif
+    JSR L8A8C
+    CMP #tknSTEP
+    BNE LB81F
+    JSR L92DD
+    LDY zp1B
+LB81F:
+    STY zp0A
+    LDY zp26
+    LDA zp2A
+    STA ws+$0503,Y
+    LDA zp2B
+    STA ws+$0504,Y
+    LDA zp2C
+    STA ws+$0505,Y
+    LDA zp2D
+    STA ws+$0506,Y
+LB837:
+    JSR L9880
+    LDY zp26
+    LDA zp0B
+    STA ws+$050D,Y
+    LDA zp0C
+    STA ws+$050E,Y
+    CLC
+    TYA
+    ADC #$0F
+    STA zp26
+    JMP L8BA3
+
+LB84F:
+    JSR L9B29
+    JSR L92FD
+    LDA zp26
+    CLC
+    ADC #$08
+    STA zp4B
+    LDA #$05+(ws/256)
+    STA zp4C
+    JSR LA38D
+    JSR LA699
+    JSR L8A8C
+    CMP #$88
+    BNE LB875
+    JSR L9B29
+    JSR L92FD
+    LDY zp1B
+LB875:
+    STY zp0A
+    LDA zp26
+    CLC
+    ADC #$03
+    STA zp4B
+    LDA #$05+(ws/256)
+    STA zp4C
+    JSR LA38D
+    JMP LB837
+
+; GOSUB numeric
+; =============
+LB888:
+    JSR LB99A
+LB88B:
+    JSR L9857
+    LDY zp25
+    CPY #$1A
+    BCS LB8A2
+    LDA zp0B
+    STA ws+$05CC,Y
+    LDA zp0C
+    STA ws+$05E6,Y
+    INC zp25
+    BCC LB8D2
+
+LB8A2:
+    BRK
+    dta $25
+    FNfold 'Too many '
+    dta tknGOSUB, 's'
+LB8AF:
+    BRK
+    dta $26
+    FNfold 'No '
+    dta tknGOSUB
+    BRK
+
+; RETURN
+; ======
+LB8B6:
+    JSR L9857                  ; Check for end of statement
+    LDX zp25
+    BEQ LB8AF          ; If GOSUB stack empty, error
+    DEC zp25                    ; Decrement GOSUB stack
+    LDY ws+$05CB,X             ; Get stacked line pointer
+    LDA ws+$05E5,X
+    STY zp0B
+    STA zp0C            ; Set line pointer
+    JMP L8B9B                  ; Jump back to execution loop
+
+; GOTO numeric
+; ============
+LB8CC:
+    JSR LB99A
+    JSR L9857        ; Find destination line, check for end of statement
+LB8D2:
+    LDA zp20
+    BEQ LB8D9
+    JSR L9905; If TRACE ON, print current line number
+LB8D9:
+    LDY zp3D
+    LDA zp3E            ; Get destination line address
+LB8DD:
+    STY zp0B
+    STA zp0C            ; Set line pointer
+    JMP L8BA3                  ; Jump back to execution loop
+
+; ON ERROR OFF
+; ------------
+LB8E4:
+    JSR L9857                  ; Check end of statement
+    LDA #<LB433
+    STA zp16                    ; ON ERROR OFF
+    LDA #>LB433
+    STA zp17
+    JMP L8B9B                  ; Jump to execution loop
+
+; ON ERROR [OFF | program ]
+; -------------------------
+LB8F2:
+    JSR L8A97
+    CMP #tknOFF
+    BEQ LB8E4      ; ON ERROR OFF
+    LDY zp0A
+    DEY
+    JSR L986D
+    LDA zp0B
+    STA zp16            ; Point ON ERROR pointer to here
+    LDA zp0C
+    STA zp17
+    JMP L8B7D                  ; Skip past end of line
+
+LB90A:
+    BRK
+    dta $27
+    dta tknON
+    FNfold ' syntax'
+    BRK
+
+; ON [ERROR] [numeric]
+; ====================
+LB915:
+    JSR L8A97                  ; Skip spaces and get next character
+    CMP #tknERROR
+    BEQ LB8F2    ; Jump with ON ERROR
+    DEC zp0A
+    JSR L9B1D
+    JSR L92F0
+    LDY zp1B
+    INY
+    STY zp0A
+    CPX #tknGOTO
+    BEQ LB931
+    CPX #tknGOSUB
+    BNE LB90A
+LB931:
+    TXA
+    PHA                    ; Save GOTO/GOSUB token
+    LDA zp2B
+    ORA zp2C            ; Get IntA
+    ORA zp2D
+    BNE LB97D          ; ON >255 - out of range, look for an ELSE
+    LDX zp2A
+    BEQ LB97D          ; ON zero - out of range, look for an ELSE
+    DEX
+    BEQ LB95C              ; Dec. counter, if zero use first destination
+    LDY zp0A                    ; Get line index
+LB944:
+    LDA (zp0B),Y
+    INY
+    CMP #$0D
+    BEQ LB97D         ; End of line - error
+    CMP #':'
+    BEQ LB97D      ; End of statement - error
+    CMP #tknELSE
+    BEQ LB97D     ; ELSE - drop everything else to here
+    CMP #','
+    BNE LB944      ; No comma, keep looking
+    DEX
+    BNE LB944              ; Comma found, loop until count decremented to zero
+    STY zp0A                    ; Store line index
+LB95C:
+    JSR LB99A                  ; Read line number
+    PLA                        ; Get stacked token back
+    CMP #tknGOSUB
+    BEQ LB96A    ; Jump to do GOSUB
+    JSR L9877                  ; Update line index and check Escape
+    JMP LB8D2                  ; Jump to do GOTO
+
+; Update line pointer so RETURN comes back to next statement
+; ----------------------------------------------------------
+LB96A:
+    LDY zp0A                    ; Get line pointer
+LB96C:
+    LDA (zp0B),Y
+    INY            ; Get character from line
+    CMP #$0D
+    BEQ LB977         ; End of line, RETURN to here
+    CMP #':'
+    BNE LB96C      ; <colon>, return to here
+LB977:
+    DEY
+    STY zp0A                ; Update line index to RETURN point
+    JMP LB88B                  ; Jump to do the GOSUB
+
+; ON num out of range - check for an ELSE clause
+; ----------------------------------------------
+LB97D:
+    LDY zp0A                    ; Get line index
+    PLA                        ; Drop GOTO/GOSUB token
+LB980:
+    LDA (zp0B),Y
+    INY            ; Get character from line
+    CMP #tknELSE
+    BEQ LB995     ; Found ELSE, jump to use it
+    CMP #$0D
+    BNE LB980         ; Loop until end of line
+    BRK
+    dta $28
+    dta tknON
+    FNfold ' range'
+    BRK
+
+LB995:
+    STY zp0A
+    JMP L98E3          ; Store line index and jump to GOSUB
+
+LB99A:
+    JSR L97DF
+    BCS LB9AF        ; Embedded line number found
+    JSR L9B1D
+    JSR L92F0        ; Evaluate expression, ensure integer
+    LDA zp1B
+    STA zp0A            ; Line number low byte
+    LDA zp2B
+    AND #$7F
+    STA zp2B   ; Line number high byte
+                               ; Note - this makes goto $8000+10 the same as goto 10
+LB9AF:
+    JSR L9970
+    BCS LB9B5
+    RTS    ; Look for line, error if not found
+
+LB9B5:
+    BRK
+    dta $29
+    FNfold 'No such line'
+    BRK
+
+LB9C4:
+    JMP L8C0E
+
+LB9C7:
+    JMP L982A
+
+LB9CA:
+    STY zp0A
+    JMP L8B98
+
+; INPUT#channel, ...
+; ------------------
+LB9CF:
+    DEC zp0A
+    JSR LBFA9
+    LDA zp1B
+    STA zp0A
+    STY zp4D
+LB9DA:
+    JSR L8A97
+    CMP #','
+    BNE LB9CA
+    LDA zp4D
+    PHA
+    JSR L9582
+    BEQ LB9C7
+    LDA zp1B
+    STA zp0A
+    PLA
+    STA zp4D
+    PHP
+    JSR LBD94
+    LDY zp4D
+    JSR OSBGET
+    STA zp27
+    PLP
+    BCC LBA19
+    LDA zp27
+    BNE LB9C4
+    JSR OSBGET
+    STA zp36
+    TAX
+    BEQ LBA13
+LBA0A:
+    JSR OSBGET
+    STA ws+$05FF,X
+    DEX
+    BNE LBA0A
+LBA13:
+    JSR L8C1E
+    JMP LB9DA
+
+LBA19:
+    LDA zp27
+    BEQ LB9C4
+    BMI LBA2B
+    LDX #$03
+LBA21:
+    JSR OSBGET
+    STA zp2A,X
+    DEX
+    BPL LBA21
+    BMI LBA39
+LBA2B:
+    LDX #$04
+LBA2D:
+    JSR OSBGET
+    STA ws+$046C,X
+    DEX
+    BPL LBA2D
+    JSR LA3B2
+LBA39:
+    JSR LB4B4
+    JMP LB9DA
+
+LBA3F:
+    PLA
+    PLA
+    JMP L8B98
+
+; INPUT [LINE] [print items][variables]
+; =====================================
+LBA44:
+    JSR L8A97                 ; Get next non-space char
+    CMP #'#'
+    BEQ LB9CF     ; If '#' jump to do INPUT#
+    CMP #tknLINE
+    BEQ LBA52    ; If 'LINE', skip next with CS
+    DEC zp0A
+    CLC               ; Step back to non-LINE char, set CC
+LBA52:
+    ROR zp4D
+    LSR zp4D           ; bit7=0, bit6=notLINE/LINE
+    LDA #$FF
+    STA zp4E
+LBA5A:
+    JSR L8E8A
+    BCS LBA69       ; Process ' " TAB SPC, jump if none found
+LBA5F:
+    JSR L8E8A
+    BCC LBA5F       ; Keep processing any print items
+    LDX #$FF
+    STX zp4E
+    CLC
+LBA69:
+    PHP
+    ASL zp4D
+    PLP
+    ROR zp4D
+    CMP #','
+    BEQ LBA5A     ; ',' - jump to do next item
+    CMP #';'
+    BEQ LBA5A     ; ';' - jump to do next item
+    DEC zp0A
+    LDA zp4D
+    PHA
+    LDA zp4E
+    PHA
+    JSR L9582
+    BEQ LBA3F
+    PLA
+    STA zp4E
+    PLA
+    STA zp4D
+    LDA zp1B
+    STA zp0A
+    PHP
+    BIT zp4D
+    BVS LBA99
+    LDA zp4E
+    CMP #$FF
+    BNE LBAB0
+LBA99:
+    BIT zp4D
+    BPL LBAA2
+    LDA #'?'
+    JSR LB558
+LBAA2:
+    JSR LBBFC ; Call MOS to input line, set COUNT=0
+    STY zp36
+    ASL zp4D
+    CLC
+    ROR zp4D
+    BIT zp4D
+    BVS LBACD
+LBAB0:
+    STA zp1B
+    LDA #$00
+    STA zp19
+    LDA #$06+(ws/256)
+    STA zp1A
+    JSR LADAD
+LBABD:
+    JSR L8A8C
+    CMP #','
+    BEQ LBACA
+    CMP #$0D
+    BNE LBABD
+    LDY #$FE
+LBACA:
+    INY
+    STY zp4E
+LBACD:
+    PLP
+    BCS LBADC
+    JSR LBD94
+    JSR LAC34
+    JSR LB4B4
+    JMP LBA5A
+
+LBADC:
+    LDA #$00
+    STA zp27
+    JSR L8C21
+    JMP LBA5A
+
+; RESTORE [linenum]
+; =================
+LBAE6:
+    LDY #$00
+    STY zp3D     ; Set DATA pointer to PAGE
+    LDY zp18
+    STY zp3E
+    JSR L8A97
+    DEC zp0A
+    CMP #':'
+    BEQ LBB07
+    CMP #$0D
+    BEQ LBB07
+    CMP #tknELSE
+    BEQ LBB07
+    JSR LB99A
+    LDY #$01
+    JSR LBE55
+LBB07:
+    JSR L9857
+    LDA zp3D
+    STA zp1C
+    LDA zp3E
+    STA zp1D
+    JMP L8B9B
+
+LBB15:
+    JSR L8A97
+    CMP #','
+    BEQ LBB1F
+    JMP L8B96
+
+; READ varname [,...]
+; ===================
+LBB1F:
+    JSR L9582
+    BEQ LBB15
+    BCS LBB32
+    JSR LBB50
+    JSR LBD94
+    JSR LB4B1
+    JMP LBB40
+
+LBB32:
+    JSR LBB50
+    JSR LBD94
+    JSR LADAD
+    STA zp27
+    JSR L8C1E
+LBB40:
+    CLC
+    LDA zp1B
+    ADC zp19
+    STA zp1C
+    LDA zp1A
+    ADC #$00
+    STA zp1D
+    JMP LBB15
+
+LBB50:
+    LDA zp1B
+    STA zp0A
+    LDA zp1C
+    STA zp19
+    LDA zp1D
+    STA zp1A
+    LDY #$00
+    STY zp1B
+    JSR L8A8C
+    CMP #','
+    BEQ LBBB0
+    CMP #tknDATA
+    BEQ LBBB0
+    CMP #$0D
+    BEQ LBB7A
+LBB6F:
+    JSR L8A8C
+    CMP #','
+    BEQ LBBB0
+    CMP #$0D
+    BNE LBB6F
+LBB7A:
+    LDY zp1B
+    LDA (zp19),Y
+    BMI LBB9C
+    INY
+    INY
+    LDA (zp19),Y
+    TAX
+LBB85:
+    INY
+    LDA (zp19),Y
+    CMP #$20
+    BEQ LBB85
+    CMP #tknDATA
+    BEQ LBBAD
+    TXA
+    CLC
+    ADC zp19
+    STA zp19
+    BCC LBB7A
+    INC zp1A
+    BCS LBB7A
+LBB9C:
+    BRK
+    dta $2A
+    FNfold 'Out of '
+    dta tknDATA
+LBBA6:
+    BRK
+    dta $2B
+    FNfold 'No '
+    dta tknREPEAT
+    BRK
+
+LBBAD:
+    INY
+    STY zp1B
+LBBB0:
+    RTS
+
+; UNTIL numeric
+; =============
+LBBB1:
+    JSR L9B1D
+    JSR L984C
+    JSR L92EE
+    LDX zp24
+    BEQ LBBA6
+    LDA zp2A
+    ORA zp2B
+    ORA zp2C
+    ORA zp2D
+    BEQ LBBCD
+    DEC zp24
+    JMP L8B9B
+
+LBBCD:
+    LDY ws+$05A3,X
+    LDA ws+$05B7,X
+    JMP LB8DD
 
 
 ; ----------------------------------------------------------------------------
