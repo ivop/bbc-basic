@@ -28,7 +28,7 @@ compares2: sbasic2.rom
 	@tools/compare.sh ref/SBasic2 $<
 
 compares310: sbasic310.rom
-	@tools/compare.sh ref/SBasic3 $<
+	@tools/compare.sh ref/SBasic310 $<
 
 compare2: basic2.rom
 	@tools/compare.sh ref/Basic2 $<
