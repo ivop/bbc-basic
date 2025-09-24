@@ -31,6 +31,12 @@ basic310hi.rom: basic.s
 	$(MADS) -d:BUILD_BBC_BASIC310HI=1 -o:$@ $<
 
 # ----------------------------------------------------------------------------
+# Commodore 64
+#
+c64basic2.rom: basic.s
+	$(MADS) -d:BUILD_C64_BASIC2=1 -o:$@ $<
+
+# ----------------------------------------------------------------------------
 #  Compare with reference ROMs
 #
 compares2: sbasic2.rom
@@ -54,7 +60,10 @@ compare3: basic3.rom
 compare310hi: basic310hi.rom
 	@tools/compare.sh ref/HiBasic310 $<
 
-compare: compare2 compare3 compare310hi compares2 compares310 compareat2 compareat310
+comparec642: c64basic2.rom
+	@tools/compare.sh ref/C64Basic2 $<
+
+compare: compare2 compare3 compare310hi compares2 compares310 compareat2 compareat310 comparec642
 
 # ----------------------------------------------------------------------------
 #  Clean up

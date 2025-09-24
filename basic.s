@@ -12,8 +12,8 @@
 ; ----------------------------------------------------------------------------
 
     .if .def BUILD_BBC_BASIC2 || .def BUILD_BBC_BASIC3 || .def BUILD_BBC_BASIC310HI
-        TARGET_BBC   = 1
-        MOS_BBC      = 1
+        TARGET_BBC = 1
+        MOS_BBC    = 1
 
         .if .def BUILD_BBC_BASIC2
             load          = $8000         ; Code start address
@@ -38,12 +38,8 @@
 
         zp      = $00           ; Start of ZP addresses
 
-        zpfd = $fd
-        zpfe = $fe
-        zpff = $ff
-
-        FAULT  = zpfd           ; Pointer to error block
-        ESCFLG = zpff           ; Escape pending flag
+        FAULT  = $fd            ; Pointer to error block
+        ESCFLG = $ff            ; Escape pending flag
 
         F_LOAD  = zp39          ; LOAD/SAVE control block
         F_EXEC  = F_LOAD+4
@@ -66,7 +62,7 @@
         OSBPUT = $FFD4
         OSGBPB = $FFD1
         OSFIND = $FFCE
-        BRKV   = $202
+        BRKV   = $0202
         WRCHV  = $020E
 
     ; Dummy variables for non-Atom code
@@ -146,7 +142,7 @@
         OSBPUT=$FFD1
         OSFIND=$FFCE
         OSSHUT=$FFCB
-        BRKV=$202
+        BRKV=$0202
         WRCHV=$0208
       
     ; Dummy variables for non-BBC code
@@ -156,6 +152,62 @@
         OSFILE=00000
         OSARGS=00000
 
+    .elseif .def BUILD_C64_BASIC2
+
+        TARGET_C64 = 1
+        MOS_BBC    = 1
+
+        load          = $b800         ; Code start address
+        VERSION       = 2
+        MINORVERSION  = 0
+
+        split   = 0
+        foldup  = 0
+        title   = 0
+        ws      = $0400-$0400   ; Offset from &400 to workspace
+        membot  = 0             ; Use OSBYTE to find memory limits
+        memtop  = 0             ; ...
+
+        zp      = $00           ; Start of ZP addresses
+
+        zp00 = $50              ; Avoid 6510 registers
+        zp01 = $51
+
+        FAULT  = $fd            ; Pointer to error block
+        ESCFLG = $ff            ; Escape pending flag
+
+        F_LOAD  = zp39          ; LOAD/SAVE control block
+        F_EXEC  = F_LOAD+4
+        F_START = F_LOAD+8
+        F_END   = F_LOAD+12
+
+    ; MOS Entry Points
+
+        OS_CLI=$FFF7
+        OSBYTE=$FFF4
+        OSWORD=$FFF1
+        OSWRCH=$FFEE
+        OSWRCR=$FFEC
+        OSNEWL=$FFE7
+        OSASCI=$FFE3
+        OSRDCH=$FFE0
+        OSFILE=$FFDD
+        OSARGS=$FFDA
+        OSBGET=$FFD7
+        OSBPUT=$FFD4
+        OSGBPB=$FFD1
+        OSFIND=$FFCE
+        BRKV=$0316              ; Fixed
+        WRCHV=0                 ; Fixed
+      
+    ; Dummy variables for non-Atom code
+
+        OSECHO = 0
+        OSLOAD = 0
+        OSSAVE = 0
+        OSRDAR = 0
+        OSSTAR = 0
+        OSSHUT = 0
     .else
         .error "Please specify your build (i.e. -d:BUILD_BBC_BASIC2=1)"
     .endif
@@ -2573,7 +2625,11 @@ L8F1E:
     LDA ws+$0404  ; Get Carry from C%, A from A%
     LDX ws+$0460
     LDY ws+$0464        ; Get X from X%, Y from Y%
-    JMP (zp2A)                      ; Jump to address in IntA
+    .if .def TARGET_C64
+        jmp $ff9b
+    .else
+        JMP (zp2A)                      ; Jump to address in IntA
+    .endif
 
 
 L8F2E:
@@ -7487,7 +7543,11 @@ LAB33:
 ;        JSR LAFB2
 ;    .endif
     .ifdef MOS_BBC
-        jsr OSBYTE
+        .if .def TARGET_C64
+            jsr LAFB2
+        .else
+            jsr OSBYTE
+        .endif
     .endif
     TXA
     .if version < 3
@@ -8547,13 +8607,13 @@ LAF49:
     JSR LAF87               ; Get random number
     LDX #$0D
 LAF56:
-    LDA zp00,X
+    LDA zp+0,X
     STA zp2A       ; Copy random number to IntA
-    LDA zp01,X
+    LDA zp+1,X
     STA zp2B
-    LDA zp02,X
+    LDA zp+2,X
     STA zp2C
-    LDA zp03,X
+    LDA zp+3,X
     STA zp2D
     LDA #$40
     RTS            ; Return Integer
@@ -9985,7 +10045,7 @@ LB6BE:
     dta $21
     .if .def TARGET_BBC
         dta 'Can', 0x27, 't Match ', tknFOR
-    .elseif .def TARGET_SYSTEM
+    .elseif .def TARGET_SYSTEM || .def TARGET_C64
         dta 'Can', 0x27, 't match ', tknFOR
     .elseif .def TARGET_ATOM
         dta 'CAN', 0x27, 'T MATCH ', tknFOR
@@ -11208,16 +11268,16 @@ LBE0B:
 LBE0D:
     LDY #$03
     LDA (zp04),Y
-    STA zp03,X
+    STA zp+3,X
     DEY
     LDA (zp04),Y
-    STA zp02,X
+    STA zp+2,X
     DEY
     LDA (zp04),Y
-    STA zp01,X
+    STA zp+1,X
     DEY
     LDA (zp04),Y
-    STA zp00,X
+    STA zp+0,X
     CLC
     LDA zp04
     ADC #$04
@@ -11245,13 +11305,13 @@ LBE41:
 
 LBE44:
     LDA zp2A
-    STA zp00,X
+    STA zp+0,X
     LDA zp2B
-    STA zp01,X
+    STA zp+1,X
     LDA zp2C
-    STA zp02,X
+    STA zp+2,X
     LDA zp2D
-    STA zp03,X
+    STA zp+3,X
     RTS
 
 LBE55:
