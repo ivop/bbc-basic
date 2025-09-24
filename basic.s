@@ -78,14 +78,20 @@
         OSSTAR = 0
         OSSHUT = 0
 
-    .elseif .def BUILD_SYSTEM_BASIC2
+    .elseif .def BUILD_SYSTEM_BASIC2 || .def BUILD_SYSTEM_BASIC310
 
         TARGET_SYSTEM = 1
         MOS_ATOM      = 1
 
-        load          = $a000         ; Code start address
-        VERSION       = 2
-        MINORVERSION  = 0
+        .if .def BUILD_SYSTEM_BASIC2
+            load          = $a000         ; Code start address
+            VERSION       = 2
+            MINORVERSION  = 0
+        .elseif .def BUILD_SYSTEM_BASIC310
+            load          = $a000         ; Code start address
+            VERSION       = 3
+            MINORVERSION  = 10
+        .endif
 
         split   = 0
         foldup  = 0
