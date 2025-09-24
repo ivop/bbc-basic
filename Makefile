@@ -1,5 +1,7 @@
 MADS=mads
 
+all: sbasic2.rom sbasic310.rom atbasic2.rom atbasic310.rom basic2.rom basic3.rom basic310hi.rom c64basic2.rom
+
 # ----------------------------------------------------------------------------
 # Acorn System
 #
