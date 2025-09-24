@@ -4,7 +4,7 @@ Build with the [Mad-Assembler](https://github.com/tebe6502/Mad-Assembler).
 
 Currently, the following versions are supported:
 
-| Acorn | ROM | ref | Version | Load | MD5|
+| | ROM | ref | Version | Load | MD5|
 | --- | --- | --- | --- | --- | --- |
 | System | sbasic2.rom    | SBasic2    | 2.00 | $A000 | 91887b03fcffc3dcec8ce1df68114e0d |
 | System | sbasic310.rom  | SBasic310  | 3.10 | $A000 | cd0e14dd146325c39f6ea80e17faf299 |
