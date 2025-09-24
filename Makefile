@@ -4,31 +4,31 @@ MADS=mads
 # Acorn System
 #
 sbasic2.rom: basic.s
-	$(MADS) -l:sbasic2.lst -d:BUILD_SYSTEM_BASIC2=1 -o:$@ $<
+	$(MADS) -d:BUILD_SYSTEM_BASIC2=1 -o:$@ $<
 
 sbasic310.rom: basic.s
-	$(MADS) -l:sbasic3hi.lst -d:BUILD_SYSTEM_BASIC310=1 -o:$@ $<
+	$(MADS) -d:BUILD_SYSTEM_BASIC310=1 -o:$@ $<
 
 # ----------------------------------------------------------------------------
 # Acorn Atom
 #
 atbasic2.rom: basic.s
-	$(MADS) -l:atbasic2.lst -d:BUILD_ATOM_BASIC2=1 -o:$@ $<
+	$(MADS) -d:BUILD_ATOM_BASIC2=1 -o:$@ $<
 
 atbasic310.rom: basic.s
-	$(MADS) -l:atbasic310.lst -d:BUILD_ATOM_BASIC310=1 -o:$@ $<
+	$(MADS) -d:BUILD_ATOM_BASIC310=1 -o:$@ $<
 
 # ----------------------------------------------------------------------------
 # Acorn BBC Micro
 #
 basic2.rom: basic.s
-	$(MADS) -l:basic2.lst -d:BUILD_BBC_BASIC2=1 -o:$@ $<
+	$(MADS) -d:BUILD_BBC_BASIC2=1 -o:$@ $<
 
 basic3.rom: basic.s
-	$(MADS) -l:basic3.lst -d:BUILD_BBC_BASIC3=1 -o:$@ $<
+	$(MADS) -d:BUILD_BBC_BASIC3=1 -o:$@ $<
 
 basic310hi.rom: basic.s
-	$(MADS) -l:basic310hi.lst -d:BUILD_BBC_BASIC310HI=1 -o:$@ $<
+	$(MADS) -d:BUILD_BBC_BASIC310HI=1 -o:$@ $<
 
 # ----------------------------------------------------------------------------
 #  Compare with reference ROMs
