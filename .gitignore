@@ -1,6 +1,4 @@
-basic2.rom
-basic3.rom
-basic310.rom
+*.rom
 *.lst
 *.swp
 *~

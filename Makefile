@@ -22,16 +22,16 @@ basic310hi.rom: basic.s
 #  Compare with reference ROMs
 #
 compares2: sbasic2.rom
-	@tools/compare.sh original/SBasic2 $<
+	@tools/compare.sh ref/SBasic2 $<
 
 compare2: basic2.rom
-	@tools/compare.sh original/Basic2 $<
+	@tools/compare.sh ref/Basic2 $<
 
 compare3: basic3.rom
-	@tools/compare.sh original/Basic3 $<
+	@tools/compare.sh ref/Basic3 $<
 
 compare310hi: basic310hi.rom
-	@tools/compare.sh original/HiBasic310 $<
+	@tools/compare.sh ref/HiBasic310 $<
 
 compare: compare2 compare3 compare310hi compares2
 
