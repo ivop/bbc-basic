@@ -78,32 +78,46 @@
         OSSTAR = 0
         OSSHUT = 0
 
-    .elseif .def BUILD_SYSTEM_BASIC2 || .def BUILD_SYSTEM_BASIC310
+    .elseif .def BUILD_SYSTEM_BASIC2 || .def BUILD_SYSTEM_BASIC310 || .def BUILD_ATOM_BASIC2
 
-        TARGET_SYSTEM = 1
-        MOS_ATOM      = 1
+        MOS_ATOM = 1
 
         .if .def BUILD_SYSTEM_BASIC2
-            load          = $a000         ; Code start address
+            TARGET_SYSTEM = 1
             VERSION       = 2
             MINORVERSION  = 0
+            foldup        = 0
         .elseif .def BUILD_SYSTEM_BASIC310
-            load          = $a000         ; Code start address
+            TARGET_SYSTEM = 1
             VERSION       = 3
             MINORVERSION  = 10
+            foldup = 0
+        .elseif .def BUILD_ATOM_BASIC2
+            TARGET_ATOM   = 1
+            VERSION       = 2
+            MINORVERSION  = 0
+            foldup        = 1
         .endif
 
-        split   = 0
-        foldup  = 0
-        title   = 0
-        ws      = $2800-$0400   ; Offset from &400 to workspace
-        membot  = $3000
-        memtop  = load          ; Top of memory is start of code
+        split  = 0
+        title  = 0
 
+        .if .def TARGET_SYSTEM
+            load   = $a000         ; Code start address
+            ws     = $2800-$0400   ; Offset from &400 to workspace
+            membot = $3000
+            ESCFLG = $0e21         ; Escape pending flag
+        .elseif .def TARGET_ATOM
+            load   = $4000         ; Code start address
+            ws     = $9c00-$0400   ; Offset from &400 to workspace
+            membot = $2800
+            ESCFLG = $b001         ; Escape pending flag
+        .endif
+
+        memtop  = load          ; Top of memory is start of code
         zp      = $00           ; Start of ZP addresses
 
         FAULT  = zp4F           ; Pointer to error block
-        ESCFLG = $0e21          ; Escape pending flag
 
         F_LOAD  = zp39          ; LOAD/SAVE control block
         F_EXEC  = F_LOAD+2
@@ -146,12 +160,6 @@
 ; ZP definition of 00-5f, relative to 'zp'
 
     icl 'zp.s'
-
-; Temporary macro, not working for foldup==1
-
-    .macro FNfold str
-        dta :1
-    .endm
 
 ; ----------------------------------------------------------------------------
 
@@ -216,7 +224,11 @@ L8000:
         dta 'I'
     .endif
     dta 13, '(C)198', [$30+version]
-    FNfold ' Acorn'
+    .if foldup == 1
+        dta ' ACORN'
+    .else
+        dta ' Acorn'
+    .endif
     dta 13, 13
 .endif
 
@@ -995,7 +1007,11 @@ L8691:
     BEQ L86A5
 
     BRK
-    dta 1, 'Out of range'
+    .if foldup == 1
+        dta 1, 'OUT OF RANGE'
+    .else
+        dta 1, 'Out of range'
+    .endif
     BRK
 
 L86A5:
@@ -1031,7 +1047,11 @@ L86C8:
 L86CC:
     BRK
     dta $02
-    FNfold 'Byte'
+    .if foldup == 1
+        dta 'BYTE'
+    .else
+        dta 'Byte'
+    .endif
     BRK
 
 ; Parse (zp),Y addressing mode
@@ -1070,7 +1090,11 @@ L86FB:
 L870D:
     BRK
     dta $03
-    FNfold 'Index'
+    .if foldup == 1
+        dta 'INDEX'
+    .else
+        dta 'Index'
+    .endif
     BRK
 
 L8715:
@@ -1670,7 +1694,11 @@ L8AA1:
 L8AA2:
         BRK
         dta 5
-        FNfold 'Missing ,'
+        .if foldup == 1
+            dta 'MISSING ,'
+        .else
+            dta 'Missing ,'
+        .endif
         BRK
     .endif
 
@@ -1685,7 +1713,11 @@ L8AAE:
 X8AC8:
         BRK
         dta 5
-        FNfold 'Missing ,'
+        .if foldup == 1
+            dta 'MISSING ,'
+        .else
+            dta 'Missing ,'
+        .endif
         BRK
     .endif
 
@@ -1826,8 +1858,12 @@ L8B47:
 L8B59:
     BRK
     dta 7
-    FNfold 'No '
-    dta tknFN       ; XXX
+    .if foldup == 1
+        dta 'NO '
+    .else
+        dta 'No '
+    .endif
+    dta tknFN
     BRK
 
 ; Check for =, *, [ commands
@@ -1966,7 +2002,11 @@ L8C0B:
 L8C0E:
     BRK
     dta 6
-    FNfold 'Type mismatch'
+    .if foldup == 1
+        dta 'TYPE MISMATCH'
+    .else
+        dta 'Type mismatch'
+    .endif
     BRK
 
 L8C1E:
@@ -2069,7 +2109,11 @@ L8CB4:
 L8CB7:
     BRK
     dta 0
-    FNfold 'No room'
+    .if foldup == 1
+        dta 'NO ROOM'
+    .else
+        dta 'No room'
+    .endif
     BRK
 
 L8CC1:
@@ -2435,7 +2479,11 @@ L8E8A:
 L8E98:
     BRK
     dta 9
-    FNfold 'Missing '
+    .if foldup == 1
+        dta 'MISSING '
+    .else
+        dta 'Missing '
+    .endif
     dta 0x22                ; "
     BRK
 
@@ -2630,11 +2678,19 @@ L8FD6:
     BRK
     dta 0
     dta tknRENUMBER
-    FNfold ' space'  ; Terminated by following BRK
+    .if foldup == 1
+        dta ' SPACE'  ; Terminated by following BRK
+    .else
+        dta ' space'  ; Terminated by following BRK
+    .endif
 L8FDF:
     BRK
     dta 0
-    FNfold 'Silly'
+    .if foldup == 1
+       dta 'SILLY'
+    .else
+       dta 'Silly'
+    .endif
     BRK
 
 ; Do 4K+12K split here
@@ -2767,7 +2823,11 @@ L9080:
     .endif
 L9082:
     JSR LBFCF        ; Print inline text
-    FNfold 'Failed at '
+    .if foldup == 1
+        dta 'FAILED AT '
+    .else
+        dta 'Failed at '
+    .endif
     INY
     LDA (zp0B),Y
     STA zp2B
@@ -2857,8 +2917,12 @@ L90DF:
 L9127:
     BRK
     dta 10
-    FNfold 'Bad '
-    dta tknDIM          ; XXX
+    .if foldup == 1
+        dta 'BAD '
+    .else
+        dta 'Bad '
+    .endif
+    dta tknDIM
     BRK
 
 ; DIM numvar [numeric] [(arraydef)]
@@ -3006,7 +3070,11 @@ L9218:
     BRK
     dta 11
     dta tknDIM
-    FNfold ' space'
+    .if foldup == 1
+        dta ' SPACE'
+    .else
+        dta ' space'
+    .endif
     BRK
 
 L9222:
@@ -3264,17 +3332,29 @@ L9356:
 L9365:
     BRK
     dta 13
-    FNfold 'No '
+    .if foldup == 1
+        dta 'NO '
+    .else
+        dta 'No '
+    .endif
     dta tknPROC   ; Terminated by following BRK
 L936B:
     BRK
     dta 12
-    FNfold 'Not '
+    .if foldup == 1
+        dta 'NOT '
+    .else
+        dta 'Not '
+    .endif
     dta tknLOCAL ; Terminated by following BRK
 L9372:
     BRK
     dta $19
-    FNfold 'Bad '
+    .if foldup == 1
+        dta 'BAD '
+    .else
+        dta 'Bad '
+    .endif
     dta tknMODE
     BRK
 
@@ -3699,7 +3779,11 @@ L95B0:
 L95BF:
     BRK
     dta 8
-    FNfold '$ range'
+    .if foldup == 1
+        dta '$ RANGE'
+    .else
+        dta '$ range'
+    .endif
     BRK
 L95C9:
     LDA zp0B
@@ -3888,7 +3972,11 @@ L96C9:
 L96D7:
     BRK
     dta 14
-    FNfold 'Array'
+    .if foldup == 1
+        dta 'ARRAY'
+    .else
+        dta 'Array'
+    .endif
     BRK
 
 L96DF:
@@ -4033,7 +4121,11 @@ L97BA:
 L97D1:
     BRK
     dta 15
-    FNfold 'Subscript'
+    .if foldup == 1
+        dta 'SUBSCRIPT'
+    .else
+        dta 'Subscript'
+    .endif
     BRK
 L97DD:
     INC zp0A
@@ -4087,11 +4179,19 @@ L9813:
 L9821:
     BRK
     dta 4
-    FNfold 'Mistake'
+    .if foldup == 1
+        dta 'MISTAKE'
+    .else
+        dta 'Mistake'
+    .endif
 L982A:
     BRK
     dta 16
-    FNfold 'Syntax error' ; Terminated by following BRK
+    .if foldup == 1
+        dta 'SYNTAX ERROR' ; Terminated by following BRK
+    .else
+        dta 'Syntax error' ; Terminated by following BRK
+    .endif
     .ifdef MOS_ATOM
         BRK
     .endif
@@ -4100,19 +4200,23 @@ L982A:
 ; ------------
 L9838:
     .ifdef TARGET_ATOM
-        LDA LB001
+        LDA ESCFLG
         AND #$20
         BEQ L9838   ; Loop until Escape not pressed
     .endif
 
     .ifdef TARGET_SYSTEM
-        CMP $0E21
+        CMP ESCFLG
         BEQ L9838            ; Loop until key no longer pressed
     .endif
 
     BRK
     dta 17
-    FNfold 'Escape'
+    .if foldup == 1
+        dta 'ESCAPE'
+    .else
+        dta 'Escape'
+    .endif
     BRK
 
 L9841:
@@ -4172,7 +4276,7 @@ L987B:
 ; ----------------------------
     .ifdef TARGET_ATOM
         PHA                       ; Save A
-        LDA LB001
+        LDA ESCFLG
         AND #$20        ; Check keyboard matrix
         BEQ L9838                 ; Escape key pressed, jump to error
         PLA                       ; Restore A
@@ -4181,10 +4285,10 @@ L987B:
 ; System - check current keypress
 ; -------------------------------
     .ifdef TARGET_SYSTEM
-        BIT $0E21
+        BIT ESCFLG
         BMI L987F       ; Nothing pressed
         PHA
-        LDA $0E21             ; Save A, get keypress
+        LDA ESCFLG             ; Save A, get keypress
         CMP #$1B
         BEQ L9838        ; If Escape, jump to error
         PLA                       ; Restore A
@@ -4412,7 +4516,11 @@ L99A4:
 L99A7:
     BRK
     dta $12
-    FNfold 'Division by zero'
+    .if foldup == 1
+        dta 'DIVISION BY ZERO'
+    .else
+        dta 'Division by zero'
+    .endif
 
 ; High byte of powers of ten
 L99B9:
@@ -4842,7 +4950,11 @@ L9BFA:
 L9C03:
     BRK
     dta $13
-    FNfold 'String too long'
+    .if foldup == 1
+        dta 'STRING TOO LONG'
+    .else
+        dta 'String too long'
+    .endif
     BRK
 
 ; String addition
@@ -6551,7 +6663,11 @@ LA65C:
 LA66C:
     BRK
     dta $14
-    FNfold 'Too big'
+    .if foldup == 1
+        dta 'TOO BIG'
+    .else
+        dta 'Too big'
+    .endif
     BRK
 LA676:
     LDA zp34          ; A676= A5 34       %4
@@ -6737,7 +6853,11 @@ LA787:
 LA7A9:
     BRK
     dta $15
-    FNfold '-ve root'
+    .if foldup == 1
+        dta '-VE ROOT'
+    .else
+        dta '-ve root'
+    .endif
     BRK
 
 ; =SQR numeric
@@ -6810,7 +6930,7 @@ LA808:
         BRK
         dta $16
         dta tknLOG
-        FNfold ' range'
+        dta ' RANGE'
         BRK
     .endif
 LA814:
@@ -7143,7 +7263,11 @@ LAA35:
 LAA38:
     BRK
     dta $17
-    FNfold 'Accuracy lost'
+    .if foldup == 1
+        dta 'ACCURACY LOST'
+    .else
+        dta 'Accuracy lost'
+    .endif
     BRK
 LAA48:
     LDA #<LAA59
@@ -7250,7 +7374,7 @@ LAAAC:
         BRK
         dta $18
         dta tknEXP
-        FNfold ' range'
+        dta ' RANGE'
         BRK
     .endif
 LAAB8:
@@ -8095,16 +8219,28 @@ LAE3A:
 LAE43:
     BRK
     dta $1A
-    FNfold 'No such variable'
+    .if foldup == 1
+        dta 'NO SUCH VARIABLE'
+    .else
+        dta 'No such variable'
+    .endif
 LAE54:
     BRK
     .if version >= 3
         dta $1B
-        FNfold 'Missing )'
+        .if foldup == 1
+            dta 'MISSING )'
+        .else
+            dta 'Missing )'
+        .endif
 LAE55:
         BRK
         dta $1C
-        FNfold 'Bad HEX'
+        .if foldup == 1
+            dta 'BAD HEX'
+        .else
+            dta 'Bad HEX'
+        .endif
         BRK
     .endif
 
@@ -8124,7 +8260,11 @@ LAE56:
 LAE61:
         BRK
         dta $1B
-        FNfold 'Missing )'
+        .if foldup == 1
+            dta 'MISSING )'
+        .else
+            dta 'Missing )'
+        .endif
         BRK
     .endif
 LAE6D:
@@ -8262,7 +8402,11 @@ XAFA6:
 LAEAA:
         BRK
         dta $1C
-        FNfold 'Bad HEX'
+        .if foldup == 1
+            dta 'BAD HEX'
+        .else
+            dta 'Bad HEX'
+        .endif
         BRK
     .endif
 
@@ -8508,7 +8652,7 @@ LCF8D:
         BCC LCFAB         ; Key pressed
     .endif
     .ifdef TARGET_SYSTEM
-        LDA $0E21
+        LDA ESCFLG
         BPL LCFAB         ; Key pressed
     .endif
     .ifdef MOS_ATOM
@@ -8533,7 +8677,7 @@ LCFAB:
         JSR LCFB7                   ; Convert keypress
     .endif
     .ifdef TARGET_SYSTEM
-        LDY $0E21
+        LDY ESCFLG
         BPL LCFAB         ; Loop until key released
     .endif
     .ifdef MOS_ATOM
@@ -8792,7 +8936,11 @@ LB0FE:
     STA zp0B
     BRK
     dta $1D
-    FNfold 'No such '
+    .if foldup == 1
+        dta 'NO SUCH '
+    .else
+        dta 'No such '
+    .endif
     dta tknFN, '/', tknPROC
     BRK
 
@@ -8874,7 +9022,11 @@ LB158:
 LB18A:
     BRK
     dta $1E
-    FNfold 'Bad call'
+    .if foldup == 1
+        dta 'BAD CALL'
+    .else
+        dta 'Bad call'
+    .endif
     BRK
 
 ; =FNname [parameters]
@@ -9076,7 +9228,11 @@ LB2B5:
     STA zp0B
     BRK
     dta $1F
-    FNfold 'Arguments'
+    .if foldup == 1
+        dta 'ARGUMENTS'
+    .else
+        dta 'Arguments'
+    .endif
     BRK
 
 LB2CA:
@@ -9364,7 +9520,13 @@ LB433:
     dta tknIF
     dta tknERL
     dta tknPRINT
-    dta '"', ' at line ', '"', ';'      ;; was FNfold
+    dta '"'
+    .if foldup == 1
+        dta ' AT LINE '
+    .else
+        dta ' at line '
+    .endif
+    dta '"', ';'
     dta tknERL
     dta ':'
     dta tknEND
@@ -9774,7 +9936,11 @@ LB688:
 LB68E:
     BRK
     dta $20
-    FNfold 'No '
+    .if foldup == 1
+        dta 'NO '
+    .else
+        dta 'No '
+    .endif
     dta tknFOR
     BRK
 
@@ -9930,16 +10096,27 @@ LB7A4:
     BRK
     dta $22
     dta tknFOR
-    FNfold ' variable'
+    .if foldup == 1
+        dta ' VARIABLE'
+    .else
+        dta ' variable'
+    .endif
 LB7B0:
     BRK
     dta $23
-    FNfold 'Too many '
-    dta tknFOR, 's'
+    .if foldup == 1
+        dta 'TOO MANY ', tknFOR, 'S'
+    .else
+        dta 'Too many ', tknFOR, 's'
+    .endif
 LB7BD:
     BRK
     dta $24
-    FNfold 'No '
+    .if foldup == 1
+        dta 'NO '
+    .else
+        dta 'No '
+    .endif
     dta tknTO
     BRK
 
@@ -10059,12 +10236,19 @@ LB88B:
 LB8A2:
     BRK
     dta $25
-    FNfold 'Too many '
-    dta tknGOSUB, 's'
+    .if foldup == 1
+        dta 'TOO MANY ', tknGOSUB, 'S'
+    .else
+        dta 'Too many ', tknGOSUB, 's'
+    .endif
 LB8AF:
     BRK
     dta $26
-    FNfold 'No '
+    .if foldup == 1
+        dta 'NO '
+    .else
+        dta 'No '
+    .endif
     dta tknGOSUB
     BRK
 
@@ -10127,7 +10311,11 @@ LB90A:
     BRK
     dta $27
     dta tknON
-    FNfold ' syntax'
+    .if foldup == 1
+        dta ' SYNTAX'
+    .else
+        dta ' syntax'
+    .endif
     BRK
 
 ; ON [ERROR] [numeric]
@@ -10211,7 +10399,11 @@ LB980:
     BRK
     dta $28
     dta tknON
-    FNfold ' range'
+    .if foldup == 1
+        dta ' RANGE'
+    .else
+        dta ' range'
+    .endif
     BRK
 
 LB995:
@@ -10237,7 +10429,11 @@ LB9AF:
 LB9B5:
     BRK
     dta $29
-    FNfold 'No such line'
+    .if foldup == 1
+        dta 'NO SUCH LINE'
+    .else
+        dta 'No such line'
+    .endif
     BRK
 
 LB9C4:
@@ -10522,12 +10718,20 @@ LBB85:
 LBB9C:
     BRK
     dta $2A
-    FNfold 'Out of '
+    .if foldup == 1
+        dta 'OUT OF '
+    .else
+        dta 'Out of '
+    .endif
     dta tknDATA
 LBBA6:
     BRK
     dta $2B
-    FNfold 'No '
+    .if foldup == 1
+        dta 'NO '
+    .else
+        dta 'No '
+    .endif
     dta tknREPEAT
     BRK
 
@@ -10561,8 +10765,13 @@ LBBCD:
 LBBD6:
     BRK
     dta $2C
-    FNfold 'Too many '
-    dta tknREPEAT, 's'
+    .if foldup == 1
+        dta 'TOO MANY '
+        dta tknREPEAT, 'S'
+    .else
+        dta 'Too many '
+        dta tknREPEAT, 's'
+    .endif
     BRK
 
 ; REPEAT
@@ -10764,7 +10973,11 @@ LBC9E:
     BRK
     dta 0
     dta tknLINE
-    FNfold ' space'
+    .if foldup == 1
+        dta ' SPACE'
+    .else
+        dta ' space'
+    .endif
     BRK
 
 LBCD6:
@@ -11110,7 +11323,11 @@ LBE9B:
 LBE9E:
     JSR LBFCF                 ; Print inline text
     dta 13
-    FNfold 'Bad program'
+    .if foldup == 1
+        dta 'BAD PROGRAM'
+    .else
+        dta 'Bad program'
+    .endif
     dta 13
     NOP
     JMP L8AF6                 ; Jump to immediate mode
@@ -11487,7 +11704,11 @@ NULLRET:
 LBFC3:
         BRK
         dta $2D
-        FNfold 'Missing #'
+        .if foldup == 1
+            dta 'MISSING #'
+        .else
+            dta 'Missing #'
+        .endif
         BRK
     .endif
 
@@ -11526,7 +11747,11 @@ LBFF6:
 LBFF4:
         BRK
         dta $2D
-        FNfold 'Missing #'
+        .if foldup == 1
+            dta 'MISSING #'
+        .else
+            dta 'Missing #'
+        .endif
         BRK
     .endif
 
