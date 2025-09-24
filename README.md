@@ -13,6 +13,7 @@ Currently, the following versions are supported:
 | BBC    | basic2.rom     | Basic2     | 2.00 | $8000 | 2cc67be4624df4dc66617742571a8e3d |
 | BBC    | basic3.rom     | Basic 3    | 3.00 | $8000 | 361148f2ae1cb2c87885bcb463d9e74c |
 | BBC    | basic310hi.rom | HiBasic310 | 3.10 | $B800 | 68e79c8b6f46aa4f07a6dd687897229c |
+| C64    | c64basic2.rom  | C64Basic2  | 2.00 | $B800 | 89f5b82721cb351f22145ee0c07530c2 |
 
 ### Credits
 
