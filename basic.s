@@ -78,7 +78,7 @@
         OSSTAR = 0
         OSSHUT = 0
 
-    .elseif .def BUILD_SYSTEM_BASIC2 || .def BUILD_SYSTEM_BASIC310 || .def BUILD_ATOM_BASIC2
+    .elseif .def BUILD_SYSTEM_BASIC2 || .def BUILD_SYSTEM_BASIC310 || .def BUILD_ATOM_BASIC2 || .def BUILD_ATOM_BASIC310
 
         MOS_ATOM = 1
 
@@ -96,6 +96,11 @@
             TARGET_ATOM   = 1
             VERSION       = 2
             MINORVERSION  = 0
+            foldup        = 1
+        .elseif .def BUILD_ATOM_BASIC310
+            TARGET_ATOM   = 1
+            VERSION       = 3
+            MINORVERSION  = 10
             foldup        = 1
         .endif
 
@@ -11773,8 +11778,15 @@ LBFF4:
                 dta '3'
             .else
                 dta '3', '.', '1'
+                .if .def BUILD_ATOM_BASIC310
+                    dta '0'
+                .endif
             .endif
         .endif
+    .endif
+
+    .if * > [load + $4000]
+        .error "***WARNING: Code overrun"
     .endif
 
     .align load + $4000, 0

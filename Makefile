@@ -15,6 +15,9 @@ sbasic310.rom: basic.s
 atbasic2.rom: basic.s
 	$(MADS) -l:atbasic2.lst -d:BUILD_ATOM_BASIC2=1 -o:$@ $<
 
+atbasic310.rom: basic.s
+	$(MADS) -l:atbasic310.lst -d:BUILD_ATOM_BASIC310=1 -o:$@ $<
+
 # ----------------------------------------------------------------------------
 # Acorn BBC Micro
 #
@@ -39,6 +42,9 @@ compares310: sbasic310.rom
 compareat2: atbasic2.rom
 	@tools/compare.sh ref/AtBasic2 $<
 
+compareat310: atbasic310.rom
+	@tools/compare.sh ref/AtBasic310 $<
+
 compare2: basic2.rom
 	@tools/compare.sh ref/Basic2 $<
 
@@ -48,7 +54,7 @@ compare3: basic3.rom
 compare310hi: basic310hi.rom
 	@tools/compare.sh ref/HiBasic310 $<
 
-compare: compare2 compare3 compare310hi compares2 compares310 compareat2
+compare: compare2 compare3 compare310hi compares2 compares310 compareat2 compareat310
 
 # ----------------------------------------------------------------------------
 #  Clean up
