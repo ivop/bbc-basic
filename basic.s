@@ -9,22 +9,24 @@
 
     opt h-              ; No Atari header
 
+; ----------------------------------------------------------------------------
+
     .if .def BUILD_BBC_BASIC2 || .def BUILD_BBC_BASIC3 || .def BUILD_BBC_BASIC310HI
         TARGET_BBC   = 1
         MOS_BBC      = 1
 
         .if .def BUILD_BBC_BASIC2
-            load    = $8000         ; Code start address
-            VERSION        = 2
-            MINORVERSION   = 0
+            load          = $8000         ; Code start address
+            VERSION       = 2
+            MINORVERSION  = 0
         .elseif .def BUILD_BBC_BASIC3
-            load    = $8000         ; Code start address
-            VERSION        = 3 
-            MINORVERSION   = 0
+            load          = $8000         ; Code start address
+            VERSION       = 3 
+            MINORVERSION  = 0
         .elseif .def BUILD_BBC_BASIC310HI
-            load    = $b800         ; Code start address
-            VERSION        = 3 
-            MINORVERSION   = 10
+            load          = $b800         ; Code start address
+            VERSION       = 3 
+            MINORVERSION  = 10
         .endif
 
         split   = 0
@@ -75,9 +77,65 @@
         OSRDAR = 0
         OSSTAR = 0
         OSSHUT = 0
+
+    .elseif .def BUILD_SYSTEM_BASIC2
+
+        TARGET_SYSTEM = 1
+        MOS_ATOM      = 1
+
+        load          = $a000         ; Code start address
+        VERSION       = 2
+        MINORVERSION  = 0
+
+        split   = 0
+        foldup  = 0
+        title   = 0
+        ws      = $2800-$0400   ; Offset from &400 to workspace
+        membot  = $3000
+        memtop  = load          ; Top of memory is start of code
+
+        zp      = $00           ; Start of ZP addresses
+
+        FAULT  = zp4F           ; Pointer to error block
+        ESCFLG = $0e21          ; Escape pending flag
+
+        F_LOAD  = zp39          ; LOAD/SAVE control block
+        F_EXEC  = F_LOAD+2
+        F_START = F_LOAD+4
+        F_END   = F_LOAD+6
+
+    ; MOS Entry Points
+
+        OS_CLI=$FFF7
+        OSWRCH=$FFF4
+        OSWRCR=$FFF2
+        OSNEWL=$FFED
+        OSASCI=$FFE9
+        OSECHO=$FFE6
+        OSRDCH=$FFE3
+        OSLOAD=$FFE0
+        OSSAVE=$FFDD
+        OSRDAR=$FFDA
+        OSSTAR=$FFD7
+        OSBGET=$FFD4
+        OSBPUT=$FFD1
+        OSFIND=$FFCE
+        OSSHUT=$FFCB
+        BRKV=$202
+        WRCHV=$0208
+      
+    ; Dummy variables for non-BBC code
+
+        OSBYTE=NULLRET
+        OSWORD=NULLRET
+        OSFILE=00000
+        OSARGS=00000
+
     .else
         .error "Please specify your build (i.e. -d:BUILD_BBC_BASIC2=1)"
     .endif
+
+; ----------------------------------------------------------------------------
 
 ; ZP definition of 00-5f, relative to 'zp'
 
@@ -88,6 +146,8 @@
     .macro FNfold str
         dta :1
     .endm
+
+; ----------------------------------------------------------------------------
 
 ; BASIC Token Values
 
@@ -136,13 +196,22 @@ tknREPORT   = $F6
 
     org load
 
+L8000:
+
 ; ----------------------------------------------------------------------------
 
 ; Atom/System Code Header
 ; =======================
 
 .ifdef MOS_ATOM
-    .error
+    JSR LBFCF                     ; Print inline text
+    dta 'BBC BASIC II'
+    .if version == 3
+        dta 'I'
+    .endif
+    dta 13, '(C)198', [$30+version]
+    FNfold ' Acorn'
+    dta 13, 13
 .endif
 
 ; BBC Code Header
@@ -171,20 +240,22 @@ L8023:
         lda #$84            ; Read top of memory
         jsr OSBYTE
     .elseif memtop > 0
-        .error
+        ldx #0
+        ldy #>memtop
     .elseif memtop < 0
-        .error
+        ldx memtop+0
+        ldy memtop+1
     .endif
     stx zp06
     sty zp07
 
-    .if memtop == 0
+    .if membot == 0
         lda #$83            ; Read bottom of memory
         jsr OSBYTE
-    .elseif memtop > 0
-        .error
-    .elseif memtop < 0
-        .error
+    .elseif membot > 0
+        ldy #>membot
+    .elseif membot < 0
+        ldy membot+1
     .endif
     sty zp18
 
@@ -4029,7 +4100,7 @@ L9838:
     .endif
 
     .ifdef TARGET_SYSTEM
-        CMP L0E21
+        CMP $0E21
         BEQ L9838            ; Loop until key no longer pressed
     .endif
 
@@ -4104,10 +4175,10 @@ L987B:
 ; System - check current keypress
 ; -------------------------------
     .ifdef TARGET_SYSTEM
-        BIT L0E21
+        BIT $0E21
         BMI L987F       ; Nothing pressed
         PHA
-        LDA L0E21             ; Save A, get keypress
+        LDA $0E21             ; Save A, get keypress
         CMP #$1B
         BEQ L9838        ; If Escape, jump to error
         PLA                       ; Restore A
@@ -8434,7 +8505,7 @@ LCF8D:
         LDA $0E21
         BPL LCFAB         ; Key pressed
     .endif
-    .ifdef TARGET_ATOM
+    .ifdef MOS_ATOM
         LDA zp2A
         ORA zp2D
         BEQ LCFB4   ; Timeout=0
@@ -9734,9 +9805,14 @@ LB6BE:
     STX zp26
     BNE LB6A9
     BRK
-    dta zp21
-    FNfold 'Can'
-    dta 0x27, 't Match ', tknFOR
+    dta $21
+    .if .def TARGET_BBC
+        dta 'Can', 0x27, 't Match ', tknFOR
+    .elseif .def TARGET_SYSTEM
+        dta 'Can', 0x27, 't match ', tknFOR
+    .elseif .def TARGET_ATOM
+        dta 'CAN', 0x27, 'T MATCH ', tknFOR
+    .endif
     BRK
 
 LB6D7:
@@ -11460,7 +11536,7 @@ LBFF4:
 
     .if [[*+3]&$ff] > 3
         .if version == 2
-            dta '2'
+            dta '2', '.', '0', '0'
         .elseif version == 3
             .if minorversion != 10
                 dta '3'

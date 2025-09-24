@@ -1,6 +1,14 @@
-
 MADS=mads
 
+# ----------------------------------------------------------------------------
+# Acorn System
+#
+sbasic2.rom: basic.s
+	$(MADS) -l:sbasic2.lst -d:BUILD_SYSTEM_BASIC2=1 -o:$@ $<
+
+# ----------------------------------------------------------------------------
+# Acorn BBC Micro
+#
 basic2.rom: basic.s
 	$(MADS) -l:basic2.lst -d:BUILD_BBC_BASIC2=1 -o:$@ $<
 
@@ -9,6 +17,12 @@ basic3.rom: basic.s
 
 basic310hi.rom: basic.s
 	$(MADS) -l:basic310hi.lst -d:BUILD_BBC_BASIC310HI=1 -o:$@ $<
+
+# ----------------------------------------------------------------------------
+#  Compare with reference ROMs
+#
+compares2: sbasic2.rom
+	@tools/compare.sh original/SBasic2 $<
 
 compare2: basic2.rom
 	@tools/compare.sh original/Basic2 $<
@@ -19,8 +33,11 @@ compare3: basic3.rom
 compare310hi: basic310hi.rom
 	@tools/compare.sh original/HiBasic310 $<
 
-compare: compare2 compare3 compare310hi
+compare: compare2 compare3 compare310hi compares2
 
+# ----------------------------------------------------------------------------
+#  Clean up
+#
 clean:
 	rm -f *.rom *.lst
 
