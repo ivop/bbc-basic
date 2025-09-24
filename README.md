@@ -17,5 +17,5 @@ Currently, the following versions are supported:
 ### Credits
 
 BBC BASIC Copyright © 1982,1983 Acorn Computer and Roger Wilson  
-[ARM Basic 65 source reconstruction](https://mdfs.net/Software/BBCBasic/6502/) and commentary, Copyright © 2018 J.G.Harston
+[ARM Basic 65 source reconstruction](https://mdfs.net/Software/BBCBasic/6502/) and commentary, Copyright © 2018 J.G.Harston  
 Conversion to mads, improvements and bug fixes by Ivo van Poorten, 2025
