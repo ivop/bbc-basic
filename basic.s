@@ -6255,7 +6255,7 @@ LA385:
     LDA #$6C          ; A385= A9 6C       )l
 LA387:
     STA zp4B          ; A387= 85 4B       .K
-    LDA #$04+(ws/256); A389= A9 04       ).
+    LDA #$04+(ws/256) ; A389= A9 04       ).
     STA zp4C          ; A38B= 85 4C       .L
 LA38D:
     LDY #$00          ; A38D= A0 00        .
