@@ -1833,10 +1833,10 @@ L8ADD:
         LDY #$00
         STY zp12
         STY zp20      ; TOP=PAGE, TRACE OFF
-        STA (zp12),Y      ; ?(PAGE+0)=<cr>
+        STA (zp12),Y  ; ?(PAGE+0)=<cr>
         LDA #$FF
         INY
-        STA (zp12),Y      ; ?(PAGE+1)=$FF
+        STA (zp12),Y  ; ?(PAGE+1)=$FF
         INY
         STY zp12      ; TOP=PAGE+2
     .endif
@@ -6436,12 +6436,12 @@ LA491:
     LDA #$80
     STA zp30          ; A49D= 85 30       .0
     LDX zp31
-    BPL LA4B3; A4A1= 10 10       ..
+    BPL LA4B3         ; A4A1= 10 10       ..
     EOR zp2E
     STA zp2E          ; A4A5= 85 2E       ..
     BPL LA4AE         ; A4A7= 10 05       ..
     INC zp4A
-    JMP LA4B0; A4AB= 4C B0 A4    L0$
+    JMP LA4B0         ; A4AB= 4C B0 A4    L0$
 
 LA4AE:
     DEC zp4A          ; A4AE= C6 4A       FJ
@@ -7057,7 +7057,7 @@ LA873:
     dta $7A
     dta $12
 
-LA876:                  ; never referenced?
+LA876:                ; never referenced?
     dta $38, $A5, $0B, $88, $79, $0E, $9F
     dta $F3           ; A87D= F3          s
     dta $7C
@@ -7067,7 +7067,7 @@ LA876:                  ; never referenced?
     dta $B5
     dta $86
     dta $34
-    dta $01; A884= 34 01       4.
+    dta $01           ; A884= 34 01       4.
     dta $a2, $7a
     dta $7F
     dta $63
@@ -7195,11 +7195,11 @@ LA95A:
     dta $A3           ; A95C= A3          #
     dta $59, $e8, $67
     dta $80
-    dta $1C; A960= 80 1C       ..
+    dta $1C           ; A960= 80 1C       ..
 
     dta $9d, $07, $36
     dta $80
-    dta $57; A965= 80 57       .W
+    dta $57           ; A965= 80 57       .W
 
     dta $BB           ; A967= BB      ;
     dta $78
@@ -7215,9 +7215,9 @@ LA95A:
     dta $96, $06
     dta $de, $81, $0a
     dta $C7
-    dta $6C; A97B= C7 6C       Gl
+    dta $6C           ; A97B= C7 6C       Gl
     dta $52
-    dta $7F; A97D= 52 7F       R.
+    dta $7F           ; A97D= 52 7F       R.
     dta $7D
     dta $ad, $90
     dta $a1, $82
