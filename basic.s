@@ -3197,10 +3197,10 @@ L925D:
 L926F:
     JSR L92EB         ; Step past '=', evaluate integer
     LDA zp2A
-    STA ZP00
+    STA zp00
     STA zp02          ; Set LOMEM and VAREND
     LDA zp2B
-    STA ZP01
+    STA zp01
     STA zp03
     JSR LBD2F
     BEQ L928A         ; Clear dynamic variables, jump to execution loop
@@ -8437,8 +8437,8 @@ XAEF7:
 ; =LOMEM - Start of BASIC heap
 ; ============================
 XAEFC:
-        LDA ZP00
-        LDY ZP01
+        LDA zp00
+        LDY zp01
         BCC XAED5     ; Get LOMEM to AY, jump to return as integer
      
 ; =HIMEM - Top of BASIC memory
@@ -8551,8 +8551,8 @@ LAEF7:
 ; =LOMEM - Start of BASIC heap
 ; ============================
 LAEFC:
-        LDA ZP00
-        LDY ZP01
+        LDA zp00
+        LDY zp01
         JMP LAEEA     ; Get LOMEM to AY, jump to return as integer
      
 ; =HIMEM - Top of BASIC memory
@@ -11100,10 +11100,10 @@ LBD14:
 ; ========================================
 LBD20:
     LDA zp12
-    STA ZP00
+    STA zp00
     STA zp02          ; LOMEM=TOP, VAREND=TOP
     LDA zp13
-    STA ZP01
+    STA zp01
     STA zp03
     JSR LBD3A         ; Clear DATA and stack
 LBD2F:
