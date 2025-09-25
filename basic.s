@@ -1852,7 +1852,7 @@ L8AF6:
     LDY #$00
     STY zp0B
     LDA #<LB433
-    STA zp16; ON ERROR OFF
+    STA zp16          ; ON ERROR OFF
     LDA #>LB433
     STA zp17
     LDA #'>'
@@ -1862,7 +1862,7 @@ L8AF6:
 ; ----------------------------------------
 L8B0B:
     LDA #<LB433
-    STA zp16; ON ERROR OFF again
+    STA zp16          ; ON ERROR OFF again
     LDA #>LB433
     STA zp17
     LDX #$FF
@@ -6429,297 +6429,297 @@ LA486:
     JMP LA1DA
 
 LA491:
-    JSR LA3FE         ; A491= 20 FE A3     ~#
+    JSR LA3FE
     LDA zp34
-    STA zp4A          ; A496= 85 4A       .J
-    JSR LA4E8         ; A498= 20 E8 A4     h$
+    STA zp4A
+    JSR LA4E8
     LDA #$80
-    STA zp30          ; A49D= 85 30       .0
+    STA zp30
     LDX zp31
-    BPL LA4B3         ; A4A1= 10 10       ..
+    BPL LA4B3
     EOR zp2E
-    STA zp2E          ; A4A5= 85 2E       ..
-    BPL LA4AE         ; A4A7= 10 05       ..
+    STA zp2E
+    BPL LA4AE
     INC zp4A
-    JMP LA4B0         ; A4AB= 4C B0 A4    L0$
+    JMP LA4B0
 
 LA4AE:
-    DEC zp4A          ; A4AE= C6 4A       FJ
+    DEC zp4A
 LA4B0:
-    JSR LA46C         ; A4B0= 20 6C A4     l$
+    JSR LA46C
 LA4B3:
-    JMP LA303         ; A4B3= 4C 03 A3    L.#
+    JMP LA303
 
 LA4B6:
     INC zp34
-    BNE LA4C6         ; A4B8= D0 0C       P.
+    BNE LA4C6
     INC zp33
-    BNE LA4C6         ; A4BC= D0 08       P.
+    BNE LA4C6
     INC zp32
-    BNE LA4C6         ; A4C0= D0 04       P.
+    BNE LA4C6
     INC zp31
-    BEQ LA450         ; A4C4= F0 8A       p.
+    BEQ LA450
 LA4C6:
-    RTS               ; A4C6= 60          `
+    RTS
 
 LA4C7:
-    JSR LA46C         ; A4C7= 20 6C A4     l$
-    JSR LA4B6         ; A4CA= 20 B6 A4     6$
-    JMP LA46C         ; A4CD= 4C 6C A4    Ll$
+    JSR LA46C
+    JSR LA4B6
+    JMP LA46C
 
 LA4D0:
-    JSR LA4FD         ; A4D0= 20 FD A4     }$
-    JMP LAD7E         ; A4D3= 4C 7E AD    L~-
+    JSR LA4FD
+    JMP LAD7E
 
 LA4D6:
-    JSR LA34E         ; A4D6= 20 4E A3     N#
-    JSR LA38D         ; A4D9= 20 8D A3     .#
+    JSR LA34E
+    JSR LA38D
 LA4DC:
     LDA zp3B
-    STA zp2E          ; A4DE= 85 2E       ..
+    STA zp2E
     LDA zp3C
-    STA zp2F          ; A4E2= 85 2F       ./
+    STA zp2F
     LDA zp3D
-    STA zp30          ; A4E6= 85 30       .0
+    STA zp30
 LA4E8:
     LDA zp3E
-    STA zp31          ; A4EA= 85 31       .1
+    STA zp31
     LDA zp3F
-    STA zp32          ; A4EE= 85 32       .2
+    STA zp32
     LDA zp40
-    STA zp33          ; A4F2= 85 33       .3
+    STA zp33
     LDA zp41
-    STA zp34          ; A4F6= 85 34       .4
+    STA zp34
     LDA zp42
-    STA zp35          ; A4FA= 85 35       .5
+    STA zp35
 LA4FC:
-    RTS               ; A4FC= 60          `
+    RTS
 
 LA4FD:
-    JSR LAD7E         ; A4FD= 20 7E AD     ~-
+    JSR LAD7E
 LA500:
-    JSR LA34E         ; A500= 20 4E A3     N#
-    BEQ LA4FC         ; A503= F0 F7       pw
+    JSR LA34E
+    BEQ LA4FC
 LA505:
-    JSR LA50B         ; A505= 20 0B A5     .%
-    JMP LA65C         ; A508= 4C 5C A6    L\$
+    JSR LA50B
+    JMP LA65C
 
 LA50B:
-    JSR LA1DA         ; A50B= 20 DA A1     Z!
-    BEQ LA4DC         ; A50E= F0 CC       pL
-    LDY #$00          ; A510= A0 00        .
-    SEC               ; A512= 38          8
-    LDA zp30          ; A513= A5 30       %0
-    SBC zp3D          ; A515= E5 3D       e=
-    BEQ LA590         ; A517= F0 77       pw
-    BCC LA552         ; A519= 90 37       .7
-    CMP #$25          ; A51B= C9 25       I%
-    BCS LA4FC         ; A51D= B0 DD       0]
-    PHA               ; A51F= 48          H
-    AND #$38          ; A520= 29 38       )8
-    BEQ LA53D         ; A522= F0 19       p.
-    LSR               ; A524= 4A          J
-    LSR               ; A525= 4A          J
-    LSR               ; A526= 4A          J
-    TAX               ; A527= AA          *
+    JSR LA1DA
+    BEQ LA4DC
+    LDY #$00
+    SEC
+    LDA zp30
+    SBC zp3D
+    BEQ LA590
+    BCC LA552
+    CMP #$25
+    BCS LA4FC
+    PHA
+    AND #$38
+    BEQ LA53D
+    LSR
+    LSR
+    LSR
+    TAX
 LA528:
     LDA zp41
-    STA zp42          ; A52A= 85 42       .B
+    STA zp42
     LDA zp40
-    STA zp41          ; A52E= 85 41       .A
+    STA zp41
     LDA zp3F
-    STA zp40          ; A532= 85 40       .@
+    STA zp40
     LDA zp3E
-    STA zp3F          ; A536= 85 3F       .?
-    STY zp3E          ; A538= 84 3E       .>
+    STA zp3F
+    STY zp3E
     DEX
-    BNE LA528         ; A53B= D0 EB       Pk
+    BNE LA528
 LA53D:
-    PLA               ; A53D= 68          h
-    AND #$07          ; A53E= 29 07       ).
-    BEQ LA590         ; A540= F0 4E       pN
-    TAX               ; A542= AA          *
+    PLA
+    AND #$07
+    BEQ LA590
+    TAX
 LA543:
-    LSR zp3E          ; A543= 46 3E       F>
-    ROR zp3F          ; A545= 66 3F       f?
-    ROR zp40          ; A547= 66 40       f@
-    ROR zp41          ; A549= 66 41       fA
-    ROR zp42          ; A54B= 66 42       fB
-    DEX               ; A54D= CA          J
-    BNE LA543         ; A54E= D0 F3       Ps
-    BEQ LA590         ; A550= F0 3E       p>
+    LSR zp3E
+    ROR zp3F
+    ROR zp40
+    ROR zp41
+    ROR zp42
+    DEX
+    BNE LA543
+    BEQ LA590
 LA552:
-    SEC               ; A552= 38          8
-    LDA zp3D          ; A553= A5 3D       %=
-    SBC zp30          ; A555= E5 30       e0
-    CMP #$25          ; A557= C9 25       I%
-    BCS LA4DC         ; A559= B0 81       0.
-    PHA               ; A55B= 48          H
-    AND #$38          ; A55C= 29 38       )8
-    BEQ LA579         ; A55E= F0 19       p.
-    LSR               ; A560= 4A          J
-    LSR               ; A561= 4A          J
-    LSR               ; A562= 4A          J
-    TAX               ; A563= AA          *
+    SEC
+    LDA zp3D
+    SBC zp30
+    CMP #$25
+    BCS LA4DC
+    PHA
+    AND #$38
+    BEQ LA579
+    LSR
+    LSR
+    LSR
+    TAX
 LA564:
-    LDA zp34          ; A564= A5 34       %4
-    STA zp35          ; A566= 85 35       .5
-    LDA zp33          ; A568= A5 33       %3
-    STA zp34          ; A56A= 85 34       .4
-    LDA zp32          ; A56C= A5 32       %2
-    STA zp33          ; A56E= 85 33       .3
-    LDA zp31          ; A570= A5 31       %1
-    STA zp32          ; A572= 85 32       .2
-    STY zp31          ; A574= 84 31       .1
-    DEX               ; A576= CA          J
-    BNE LA564         ; A577= D0 EB       Pk
+    LDA zp34
+    STA zp35
+    LDA zp33
+    STA zp34
+    LDA zp32
+    STA zp33
+    LDA zp31
+    STA zp32
+    STY zp31
+    DEX
+    BNE LA564
 LA579:
-    PLA               ; A579= 68          h
-    AND #$07          ; A57A= 29 07       ).
-    BEQ LA58C         ; A57C= F0 0E       p.
-    TAX               ; A57E= AA          *
+    PLA
+    AND #$07
+    BEQ LA58C
+    TAX
 LA57F:
-    LSR zp31          ; A57F= 46 31       F1
-    ROR zp32          ; A581= 66 32       f2
-    ROR zp33          ; A583= 66 33       f3
-    ROR zp34          ; A585= 66 34       f4
-    ROR zp35          ; A587= 66 35       f5
-    DEX               ; A589= CA          J
-    BNE LA57F         ; A58A= D0 F3       Ps
+    LSR zp31
+    ROR zp32
+    ROR zp33
+    ROR zp34
+    ROR zp35
+    DEX
+    BNE LA57F
 LA58C:
-    LDA zp3D          ; A58C= A5 3D       %=
-    STA zp30          ; A58E= 85 30       .0
+    LDA zp3D
+    STA zp30
 LA590:
-    LDA zp2E          ; A590= A5 2E       %.
-    EOR zp3B          ; A592= 45 3B       E;
-    BPL LA5DF         ; A594= 10 49       .I
-    LDA zp31          ; A596= A5 31       %1
-    CMP zp3E          ; A598= C5 3E       E>
-    BNE LA5B7         ; A59A= D0 1B       P.
-    LDA zp32          ; A59C= A5 32       %2
-    CMP zp3F          ; A59E= C5 3F       E?
-    BNE LA5B7         ; A5A0= D0 15       P.
-    LDA zp33          ; A5A2= A5 33       %3
-    CMP zp40          ; A5A4= C5 40       E@
-    BNE LA5B7         ; A5A6= D0 0F       P.
-    LDA zp34          ; A5A8= A5 34       %4
-    CMP zp41          ; A5AA= C5 41       EA
-    BNE LA5B7         ; A5AC= D0 09       P.
-    LDA zp35          ; A5AE= A5 35       %5
-    CMP zp42          ; A5B0= C5 42       EB
-    BNE LA5B7         ; A5B2= D0 03       P.
-    JMP LA686         ; A5B4= 4C 86 A6    L.$
+    LDA zp2E
+    EOR zp3B
+    BPL LA5DF
+    LDA zp31
+    CMP zp3E
+    BNE LA5B7
+    LDA zp32
+    CMP zp3F
+    BNE LA5B7
+    LDA zp33
+    CMP zp40
+    BNE LA5B7
+    LDA zp34
+    CMP zp41
+    BNE LA5B7
+    LDA zp35
+    CMP zp42
+    BNE LA5B7
+    JMP LA686
 
 LA5B7:
-    BCS LA5E3         ; A5B7= B0 2A       0*
-    SEC               ; A5B9= 38          8
-    LDA zp42          ; A5BA= A5 42       %B
-    SBC zp35          ; A5BC= E5 35       e5
-    STA zp35          ; A5BE= 85 35       .5
-    LDA zp41          ; A5C0= A5 41       %A
-    SBC zp34          ; A5C2= E5 34       e4
-    STA zp34          ; A5C4= 85 34       .4
-    LDA zp40          ; A5C6= A5 40       %@
-    SBC zp33          ; A5C8= E5 33       e3
-    STA zp33          ; A5CA= 85 33       .3
-    LDA zp3F          ; A5CC= A5 3F       %?
-    SBC zp32          ; A5CE= E5 32       e2
-    STA zp32          ; A5D0= 85 32       .2
-    LDA zp3E          ; A5D2= A5 3E       %>
-    SBC zp31          ; A5D4= E5 31       e1
-    STA zp31          ; A5D6= 85 31       .1
-    LDA zp3B          ; A5D8= A5 3B       %;
-    STA zp2E          ; A5DA= 85 2E       ..
-    JMP LA303         ; A5DC= 4C 03 A3    L.#
+    BCS LA5E3
+    SEC
+    LDA zp42
+    SBC zp35
+    STA zp35
+    LDA zp41
+    SBC zp34
+    STA zp34
+    LDA zp40
+    SBC zp33
+    STA zp33
+    LDA zp3F
+    SBC zp32
+    STA zp32
+    LDA zp3E
+    SBC zp31
+    STA zp31
+    LDA zp3B
+    STA zp2E
+    JMP LA303
 
 LA5DF:
-    CLC               ; A5DF= 18          .
-    JMP LA208         ; A5E0= 4C 08 A2    L."
+    CLC
+    JMP LA208
 
 LA5E3:
-    SEC               ; A5E3= 38          8
-    LDA zp35          ; A5E4= A5 35       %5
-    SBC zp42          ; A5E6= E5 42       eB
-    STA zp35          ; A5E8= 85 35       .5
-    LDA zp34          ; A5EA= A5 34       %4
-    SBC zp41          ; A5EC= E5 41       eA
-    STA zp34          ; A5EE= 85 34       .4
-    LDA zp33          ; A5F0= A5 33       %3
-    SBC zp40          ; A5F2= E5 40       e@
-    STA zp33          ; A5F4= 85 33       .3
-    LDA zp32          ; A5F6= A5 32       %2
-    SBC zp3F          ; A5F8= E5 3F       e?
-    STA zp32          ; A5FA= 85 32       .2
-    LDA zp31          ; A5FC= A5 31       %1
-    SBC zp3E          ; A5FE= E5 3E       e>
-    STA zp31          ; A600= 85 31       .1
-    JMP LA303         ; A602= 4C 03 A3    L.#
+    SEC
+    LDA zp35
+    SBC zp42
+    STA zp35
+    LDA zp34
+    SBC zp41
+    STA zp34
+    LDA zp33
+    SBC zp40
+    STA zp33
+    LDA zp32
+    SBC zp3F
+    STA zp32
+    LDA zp31
+    SBC zp3E
+    STA zp31
+    JMP LA303
 
 LA605:
-    RTS               ; A605= 60          `
+    RTS
 
 LA606:
-    JSR LA1DA         ; A606= 20 DA A1     Z!
-    BEQ LA605         ; A609= F0 FA       pz
-    JSR LA34E         ; A60B= 20 4E A3     N#
-    BNE LA613         ; A60E= D0 03       P.
-    JMP LA686         ; A610= 4C 86 A6    L.$
+    JSR LA1DA
+    BEQ LA605
+    JSR LA34E
+    BNE LA613
+    JMP LA686
 
 LA613:
-    CLC               ; A613= 18          .
-    LDA zp30          ; A614= A5 30       %0
-    ADC zp3D          ; A616= 65 3D       e=
-    BCC LA61D         ; A618= 90 03       ..
-    INC zp2F          ; A61A= E6 2F       f/
-    CLC               ; A61C= 18          .
+    CLC
+    LDA zp30
+    ADC zp3D
+    BCC LA61D
+    INC zp2F
+    CLC
 LA61D:
-    SBC #$7F          ; A61D= E9 7F       i.
-    STA zp30          ; A61F= 85 30       .0
-    BCS LA625         ; A621= B0 02       0.
-    DEC zp2F          ; A623= C6 2F       F/
+    SBC #$7F
+    STA zp30
+    BCS LA625
+    DEC zp2F
 LA625:
-    LDX #$05          ; A625= A2 05       ".
-    LDY #$00          ; A627= A0 00        .
+    LDX #$05
+    LDY #$00
 LA629:
-    LDA zp30,X        ; A629= B5 30       50
-    STA zp42,X        ; A62B= 95 42       .B
-    STY zp30,X        ; A62D= 94 30       .0
-    DEX               ; A62F= CA          J
-    BNE LA629         ; A630= D0 F7       Pw
-    LDA zp2E          ; A632= A5 2E       %.
-    EOR zp3B          ; A634= 45 3B       E;
-    STA zp2E          ; A636= 85 2E       ..
-    LDY #$20          ; A638= A0 20
+    LDA zp30,X
+    STA zp42,X
+    STY zp30,X
+    DEX
+    BNE LA629
+    LDA zp2E
+    EOR zp3B
+    STA zp2E
+    LDY #$20
 LA63A:
-    LSR zp3E          ; A63A= 46 3E       F>
-    ROR zp3F          ; A63C= 66 3F       f?
-    ROR zp40          ; A63E= 66 40       f@
-    ROR zp41          ; A640= 66 41       fA
-    ROR zp42          ; A642= 66 42       fB
-    ASL zp46          ; A644= 06 46       .F
-    ROL zp45          ; A646= 26 45       $E
-    ROL zp44          ; A648= 26 44       $D
-    ROL zp43          ; A64A= 26 43       $C
-    BCC LA652         ; A64C= 90 04       ..
-    CLC               ; A64E= 18          .
-    JSR LA178         ; A64F= 20 78 A1     x!
+    LSR zp3E
+    ROR zp3F
+    ROR zp40
+    ROR zp41
+    ROR zp42
+    ASL zp46
+    ROL zp45
+    ROL zp44
+    ROL zp43
+    BCC LA652
+    CLC
+    JSR LA178
 LA652:
-    DEY               ; A652= 88          .
-    BNE LA63A         ; A653= D0 E5       Pe
-    RTS               ; A655= 60          `
+    DEY
+    BNE LA63A
+    RTS
 
 LA656:
-    JSR LA606         ; A656= 20 06 A6     .$
+    JSR LA606
 LA659:
-    JSR LA303         ; A659= 20 03 A3     .#
+    JSR LA303
 LA65C:
-    LDA zp35          ; A65C= A5 35       %5
-    CMP #$80          ; A65E= C9 80       I.
-    BCC LA67C         ; A660= 90 1A       ..
-    BEQ LA676         ; A662= F0 12       p.
-    LDA #$FF          ; A664= A9 FF       ).
-    JSR LA2A4         ; A666= 20 A4 A2     $"
-    JMP LA67C         ; A669= 4C 7C A6    L|$
+    LDA zp35
+    CMP #$80
+    BCC LA67C
+    BEQ LA676
+    LDA #$FF
+    JSR LA2A4
+    JMP LA67C
 
 LA66C:
     BRK
@@ -6731,97 +6731,97 @@ LA66C:
     .endif
     BRK
 LA676:
-    LDA zp34          ; A676= A5 34       %4
-    ORA #$01          ; A678= 09 01       ..
-    STA zp34          ; A67A= 85 34       .4
+    LDA zp34
+    ORA #$01
+    STA zp34
 LA67C:
-    LDA #$00          ; A67C= A9 00       ).
-    STA zp35          ; A67E= 85 35       .5
-    LDA zp2F          ; A680= A5 2F       %/
-    BEQ LA698         ; A682= F0 14       p.
-    BPL LA66C         ; A684= 10 E6       .f
+    LDA #$00
+    STA zp35
+    LDA zp2F
+    BEQ LA698
+    BPL LA66C
 LA686:
-    LDA #$00          ; A686= A9 00       ).
-    STA zp2E          ; A688= 85 2E       ..
-    STA zp2F          ; A68A= 85 2F       ./
-    STA zp30          ; A68C= 85 30       .0
-    STA zp31          ; A68E= 85 31       .1
-    STA zp32          ; A690= 85 32       .2
-    STA zp33          ; A692= 85 33       .3
-    STA zp34          ; A694= 85 34       .4
-    STA zp35          ; A696= 85 35       .5
+    LDA #$00
+    STA zp2E
+    STA zp2F
+    STA zp30
+    STA zp31
+    STA zp32
+    STA zp33
+    STA zp34
+    STA zp35
 LA698:
-    RTS               ; A698= 60          `
+    RTS
 
 LA699:
-    JSR LA686         ; A699= 20 86 A6     .$
-    LDY #$80          ; A69C= A0 80        .
-    STY zp31          ; A69E= 84 31       .1
-    INY               ; A6A0= C8          H
-    STY zp30          ; A6A1= 84 30       .0
-    TYA               ; A6A3= 98          .
-    RTS               ; A6A4= 60          `
+    JSR LA686
+    LDY #$80
+    STY zp31
+    INY
+    STY zp30
+    TYA
+    RTS
 
 LA6A5:
-    JSR LA385         ; A6A5= 20 85 A3     .#
-    JSR LA699         ; A6A8= 20 99 A6     .$
-    BNE LA6E7         ; A6AB= D0 3A       P
+    JSR LA385
+    JSR LA699
+    BNE LA6E7
 
 LA6AD:
-    JSR LA1DA         ; A6AD= 20 DA A1     Z!
-    BEQ LA6BB         ; A6B0= F0 09       p.
-    JSR LA21E         ; A6B2= 20 1E A2     ."
-    JSR LA3B5         ; A6B5= 20 B5 A3     5#
-    BNE LA6F1         ; A6B8= D0 37       P7
-    RTS               ; A6BA= 60          `
+    JSR LA1DA
+    BEQ LA6BB
+    JSR LA21E
+    JSR LA3B5
+    BNE LA6F1
+    RTS
 
 LA6BB:
-    JMP L99A7         ; A6BB= 4C A7 99    L'.
+    JMP L99A7
 
 ; =TAN numeric
 ; ============
 LA6BE:
-    JSR L92FA         ; A6BE= 20 FA 92     z.
-    JSR LA9D3         ; A6C1= 20 D3 A9     S)
-    LDA zp4A          ; A6C4= A5 4A       %J
-    PHA               ; A6C6= 48          H
-    JSR LA7E9         ; A6C7= 20 E9 A7     i'
-    JSR LA38D         ; A6CA= 20 8D A3     .#
-    INC zp4A          ; A6CD= E6 4A       fJ
-    JSR LA99E         ; A6CF= 20 9E A9     .)
-    JSR LA7E9         ; A6D2= 20 E9 A7     i'
-    JSR LA4D6         ; A6D5= 20 D6 A4     V$
-    PLA               ; A6D8= 68          h
-    STA zp4A          ; A6D9= 85 4A       .J
-    JSR LA99E         ; A6DB= 20 9E A9     .)
-    JSR LA7E9         ; A6DE= 20 E9 A7     i'
-    JSR LA6E7         ; A6E1= 20 E7 A6     g$
-    LDA #$FF          ; A6E4= A9 FF       ).
-    RTS               ; A6E6= 60          `
+    JSR L92FA
+    JSR LA9D3
+    LDA zp4A
+    PHA
+    JSR LA7E9
+    JSR LA38D
+    INC zp4A
+    JSR LA99E
+    JSR LA7E9
+    JSR LA4D6
+    PLA
+    STA zp4A
+    JSR LA99E
+    JSR LA7E9
+    JSR LA6E7
+    LDA #$FF
+    RTS
 
 LA6E7:
-    JSR LA1DA         ; A6E7= 20 DA A1     Z!
-    BEQ LA698         ; A6EA= F0 AC       p,
-    JSR LA34E         ; A6EC= 20 4E A3     N#
-    BEQ LA6BB         ; A6EF= F0 CA       pJ
+    JSR LA1DA
+    BEQ LA698
+    JSR LA34E
+    BEQ LA6BB
 LA6F1:
-    LDA zp2E          ; A6F1= A5 2E       %.
-    EOR zp3B          ; A6F3= 45 3B       E;
-    STA zp2E          ; A6F5= 85 2E       ..
-    SEC               ; A6F7= 38          8
-    LDA zp30          ; A6F8= A5 30       %0
-    SBC zp3D          ; A6FA= E5 3D       e=
-    BCS LA701         ; A6FC= B0 03       0.
-    DEC zp2F          ; A6FE= C6 2F       F/
-    SEC               ; A700= 38          8
+    LDA zp2E
+    EOR zp3B
+    STA zp2E
+    SEC
+    LDA zp30
+    SBC zp3D
+    BCS LA701
+    DEC zp2F
+    SEC
 LA701:
-    ADC #$80          ; A701= 69 80       i.
-    STA zp30          ; A703= 85 30       .0
-    BCC LA70A         ; A705= 90 03       ..
-    INC zp2F          ; A707= E6 2F       f/
-    CLC               ; A709= 18          .
+    ADC #$80
+    STA zp30
+    BCC LA70A
+    INC zp2F
+    CLC
 LA70A:
-    LDX #$20          ; A70A= A2 20       "
+    LDX #$20
 LA70C:
     BCS LA726
     LDA zp31
@@ -6893,14 +6893,14 @@ LA76E:
     STA zp31
     SEC
 LA787:
-    ROL zp35          ; A787= 26 35       $5
-    ASL zp34          ; A789= 06 34       .4
-    ROL zp33          ; A78B= 26 33       $3
-    ROL zp32          ; A78D= 26 32       $2
-    ROL zp31          ; A78F= 26 31       $1
-    DEX               ; A791= CA          J
-    BNE LA754         ; A792= D0 C0       P@
-    ASL zp35          ; A794= 06 35       .5
+    ROL zp35
+    ASL zp34
+    ROL zp33
+    ROL zp32
+    ROL zp31
+    DEX
+    BNE LA754
+    ASL zp35
     LDA zp46
     STA zp34
     LDA zp45
@@ -6924,33 +6924,33 @@ LA7A9:
 ; =SQR numeric
 ; ============
 LA7B4:
-    JSR L92FA         ; A7B4= 20 FA 92     z.
+    JSR L92FA
 LA7B7:
-    JSR LA1DA         ; A7B7= 20 DA A1     Z!
-    BEQ LA7E6         ; A7BA= F0 2A       p*
-    BMI LA7A9         ; A7BC= 30 EB       0k
-    JSR LA385         ; A7BE= 20 85 A3     .#
-    LDA zp30          ; A7C1= A5 30       %0
-    LSR               ; A7C3= 4A          J
-    ADC #$40          ; A7C4= 69 40       i@
-    STA zp30          ; A7C6= 85 30       .0
-    LDA #$05          ; A7C8= A9 05       ).
-    STA zp4A          ; A7CA= 85 4A       .J
-    JSR LA7ED         ; A7CC= 20 ED A7     m'
+    JSR LA1DA
+    BEQ LA7E6
+    BMI LA7A9
+    JSR LA385
+    LDA zp30
+    LSR
+    ADC #$40
+    STA zp30
+    LDA #$05
+    STA zp4A
+    JSR LA7ED
 LA7CF:
-    JSR LA38D         ; A7CF= 20 8D A3     .#
-    LDA #$6C          ; A7D2= A9 6C       )l
-    STA zp4B          ; A7D4= 85 4B       .K
-    JSR LA6AD         ; A7D6= 20 AD A6     -$
-    LDA #$71          ; A7D9= A9 71       )q
-    STA zp4B          ; A7DB= 85 4B       .K
-    JSR LA500         ; A7DD= 20 00 A5     .%
-    DEC zp30          ; A7E0= C6 30       F0
-    DEC zp4A          ; A7E2= C6 4A       FJ
-    BNE LA7CF         ; A7E4= D0 E9       Pi
+    JSR LA38D
+    LDA #$6C
+    STA zp4B
+    JSR LA6AD
+    LDA #$71
+    STA zp4B
+    JSR LA500
+    DEC zp30
+    DEC zp4A
+    BNE LA7CF
 LA7E6:
-    LDA #$FF          ; A7E6= A9 FF       ).
-    RTS               ; A7E8= 60          `
+    LDA #$FF
+    RTS
 
 ; Point $4B/C to a floating point temp
 ; ------------------------------------
@@ -6976,11 +6976,11 @@ LA7F7:
 ; =LN numeric
 ; ===========
 LA7FE:
-    JSR L92FA         ; A7FE= 20 FA 92     z.
+    JSR L92FA
 LA801:
-    JSR LA1DA         ; A801= 20 DA A1     Z!
-    BEQ LA808         ; A804= F0 02       p.
-    BPL LA814         ; A806= 10 0C       ..
+    JSR LA1DA
+    BEQ LA808
+    BPL LA814
 LA808:
     .if foldup == 0
         BRK
@@ -6995,241 +6995,192 @@ LA808:
         BRK
     .endif
 LA814:
-    JSR LA453         ; A814= 20 53 A4     S$
-    LDY #$80          ; A817= A0 80        .
-    STY zp3B          ; A819= 84 3B       .;
-    STY zp3E          ; A81B= 84 3E       .>
-    INY               ; A81D= C8          H
-    STY zp3D          ; A81E= 84 3D       .=
-    LDX zp30          ; A820= A6 30       $0
-    BEQ LA82A         ; A822= F0 06       p.
-    LDA zp31          ; A824= A5 31       %1
-    CMP #$B5          ; A826= C9 B5       I5
-    BCC LA82C         ; A828= 90 02       ..
+    JSR LA453
+    LDY #$80
+    STY zp3B
+    STY zp3E
+    INY
+    STY zp3D
+    LDX zp30
+    BEQ LA82A
+    LDA zp31
+    CMP #$B5
+    BCC LA82C
 LA82A:
-    INX               ; A82A= E8          h
-    DEY               ; A82B= 88          .
+    INX
+    DEY
 LA82C:
-    TXA               ; A82C= 8A          .
-    PHA               ; A82D= 48          H
-    STY zp30          ; A82E= 84 30       .0
-    JSR LA505         ; A830= 20 05 A5     .%
-    LDA #$7B          ; A833= A9 7B       ){
-    JSR LA387         ; A835= 20 87 A3     .#
-    LDA #<LA873
-    LDY #>LA873
-    JSR LA897         ; A83C= 20 97 A8     .(
-    JSR LA7E9         ; A83F= 20 E9 A7     i'
-    JSR LA656         ; A842= 20 56 A6     V$
-    JSR LA656         ; A845= 20 56 A6     V$
-    JSR LA500         ; A848= 20 00 A5     .%
-    JSR LA385         ; A84B= 20 85 A3     .#
-    PLA               ; A84E= 68          h
-    SEC               ; A84F= 38          8
-    SBC #$81          ; A850= E9 81       i.
-    JSR LA2ED         ; A852= 20 ED A2     m"
-    LDA #<LA86E
-    STA zp4B          ; A857= 85 4B       .K
-    LDA #>LA86E
-    STA zp4C          ; A85B= 85 4C       .L
-    JSR LA656         ; A85D= 20 56 A6     V$
-    JSR LA7F5         ; A860= 20 F5 A7     u'
-    JSR LA500         ; A863= 20 00 A5     .%
-    LDA #$FF          ; A866= A9 FF       ).
-    RTS               ; A868= 60          `
+    TXA
+    PHA
+    STY zp30
+    JSR LA505
+    LDA #$7B
+    JSR LA387
+    LDA #<FLOGTC
+    LDY #>FLOGTC
+    JSR LA897
+    JSR LA7E9
+    JSR LA656
+    JSR LA656
+    JSR LA500
+    JSR LA385
+    PLA
+    SEC
+    SBC #$81
+    JSR LA2ED
+    LDA #<LOGTWO
+    STA zp4B
+    LDA #>LOGTWO
+    STA zp4C
+    JSR LA656
+    JSR LA7F5
+    JSR LA500
+    LDA #$FF
+    RTS
 
 LA869:
     .if version < 3
-        dta $7F
-        dta $5E
-        dta $5B
-        dta $D8
-        dta $AA
+        dta $7F, $5E, $5B, $D8, $AA
     .endif
-LA86E:
-    dta $80
-    dta $31
-    dta $72
-    dta $17
-    dta $F8
-LA873:
-    dta $06
-    dta $7A
-    dta $12
 
-LA876:                ; never referenced?
-    dta $38, $A5, $0B, $88, $79, $0E, $9F
-    dta $F3           ; A87D= F3          s
-    dta $7C
-    dta $2A
-    dta $AC
-    dta $3F
-    dta $B5
-    dta $86
-    dta $34
-    dta $01           ; A884= 34 01       4.
-    dta $a2, $7a
-    dta $7F
-    dta $63
-    dta $8E
-    dta $37
-    dta $EC; A88B= 37 EC       7l
-    dta $82           ; A88D= 82          .
-    dta $3F
-    dta $ff, $ff
-    dta $c1, $7f
-    dta $ff, $ff, $ff, $ff
+LOGTWO:
+    dta $80, $31, $72, $17, $F8         ; LN(2.0)
+
+FLOGTC:
+    dta $06                             ; Length - 1
+    dta $7A, $12, $38, $A5, $0B         ; 0.00892464
+    dta $88, $79, $0E, $9F, $F3         ; 249.05712813
+    dta $7C, $2A, $AC, $3F, $B5         ; 0.04166818
+    dta $86, $34, $01, $a2, $7a         ; 45.00159636
+    dta $7F, $63, $8E, $37, $EC         ; 0.44444442
+    dta $82, $3F, $ff, $ff, $c1         ; 2.99999994
+    dta $7f ,$ff, $ff, $ff, $ff         ; -0.50000000
+
 LA897:
-    sta zp4D          ; ERROR: EQUW $4D85
-    STY zp4E          ; A899= 84 4E       .N
-    JSR LA385         ; A89B= 20 85 A3     .#
-    LDY #$00          ; A89E= A0 00        .
-    LDA (zp4D),Y      ; A8A0= B1 4D       1M
-    STA zp48          ; A8A2= 85 48       .H
-    INC zp4D          ; A8A4= E6 4D       fM
-    BNE LA8AA         ; A8A6= D0 02       P.
-    INC zp4E          ; A8A8= E6 4E       fN
+    sta zp4D
+    STY zp4E
+    JSR LA385
+    LDY #$00
+    LDA (zp4D),Y
+    STA zp48
+    INC zp4D
+    BNE LA8AA
+    INC zp4E
 LA8AA:
-    LDA zp4D          ; A8AA= A5 4D       %M
-    STA zp4B          ; A8AC= 85 4B       .K
-    LDA zp4E          ; A8AE= A5 4E       %N
-    STA zp4C          ; A8B0= 85 4C       .L
-    JSR LA3B5         ; A8B2= 20 B5 A3     5#
+    LDA zp4D
+    STA zp4B
+    LDA zp4E
+    STA zp4C
+    JSR LA3B5
 LA8B5:
-    JSR LA7F5         ; A8B5= 20 F5 A7     u'
-    JSR LA6AD         ; A8B8= 20 AD A6     -$
-    CLC               ; A8BB= 18          .
-    LDA zp4D          ; A8BC= A5 4D       %M
-    ADC #$05          ; A8BE= 69 05       i.
-    STA zp4D          ; A8C0= 85 4D       .M
-    STA zp4B          ; A8C2= 85 4B       .K
-    LDA zp4E          ; A8C4= A5 4E       %N
-    ADC #$00          ; A8C6= 69 00       i.
-    STA zp4E          ; A8C8= 85 4E       .N
-    STA zp4C          ; A8CA= 85 4C       .L
-    JSR LA500         ; A8CC= 20 00 A5     .%
-    DEC zp48          ; A8CF= C6 48       FH
-    BNE LA8B5         ; A8D1= D0 E2       Pb
-    RTS               ; A8D3= 60          `
+    JSR LA7F5
+    JSR LA6AD
+    CLC
+    LDA zp4D
+    ADC #$05
+    STA zp4D
+    STA zp4B
+    LDA zp4E
+    ADC #$00
+    STA zp4E
+    STA zp4C
+    JSR LA500
+    DEC zp48
+    BNE LA8B5
+    RTS
 
 ; =ACS numeric
 ; ============
 LA8D4:
-    JSR LA8DA         ; A8D4= 20 DA A8     Z(
-    JMP LA927         ; A8D7= 4C 27 A9    L')
+    JSR LA8DA
+    JMP LA927
 
 ; =ASN numeric
 ; ============
 LA8DA:
-    JSR L92FA         ; A8DA= 20 FA 92     z.
-    JSR LA1DA         ; A8DD= 20 DA A1     Z!
-    BPL LA8EA         ; A8E0= 10 08       ..
-    LSR zp2E          ; A8E2= 46 2E       F.
-    JSR LA8EA         ; A8E4= 20 EA A8     j(
-    JMP LA916         ; A8E7= 4C 16 A9    L.)
+    JSR L92FA
+    JSR LA1DA
+    BPL LA8EA
+    LSR zp2E
+    JSR LA8EA
+    JMP LA916
 
 LA8EA:
-    JSR LA381         ; A8EA= 20 81 A3     .#
-    JSR LA9B1         ; A8ED= 20 B1 A9     1)
-    JSR LA1DA         ; A8F0= 20 DA A1     Z!
-    BEQ LA8FE         ; A8F3= F0 09       p.
-    JSR LA7F1         ; A8F5= 20 F1 A7     q'
-    JSR LA6AD         ; A8F8= 20 AD A6     -$
-    JMP LA90A         ; A8FB= 4C 0A A9    L.)
+    JSR LA381
+    JSR LA9B1
+    JSR LA1DA
+    BEQ LA8FE
+    JSR LA7F1
+    JSR LA6AD
+    JMP LA90A
 
 LA8FE:
-    JSR LAA55         ; A8FE= 20 55 AA     U*
-    JSR LA3B5         ; A901= 20 B5 A3     5#
+    JSR LAA55
+    JSR LA3B5
 LA904:
-    LDA #$FF          ; A904= A9 FF       ).
-    RTS               ; A906= 60          `
+    LDA #$FF
+    RTS
 
 ; =ATN numeric
 ; ============
 LA907:
-    JSR L92FA         ; A907= 20 FA 92     z.
+    JSR L92FA
 LA90A:
-    JSR LA1DA         ; A90A= 20 DA A1     Z!
-    BEQ LA904         ; A90D= F0 F5       pu
-    BPL LA91B         ; A90F= 10 0A       ..
-    LSR zp2E          ; A911= 46 2E       F.
-    JSR LA91B         ; A913= 20 1B A9     .)
+    JSR LA1DA
+    BEQ LA904
+    BPL LA91B
+    LSR zp2E
+    JSR LA91B
 LA916:
-    LDA #$80          ; A916= A9 80       ).
-    STA zp2E          ; A918= 85 2E       ..
-    RTS               ; A91A= 60          `
+    LDA #$80
+    STA zp2E
+    RTS
 
 LA91B:
-    LDA zp30          ; A91B= A5 30       %0
-    CMP #$81          ; A91D= C9 81       I.
-    BCC LA936         ; A91F= 90 15       ..
-    JSR LA6A5         ; A921= 20 A5 A6     %$
-    JSR LA936         ; A924= 20 36 A9     6)
+    LDA zp30
+    CMP #$81
+    BCC LA936
+    JSR LA6A5
+    JSR LA936
 LA927:
-    JSR LAA48         ; A927= 20 48 AA     H*
-    JSR LA500         ; A92A= 20 00 A5     .%
-    JSR LAA4C         ; A92D= 20 4C AA     L*
-    JSR LA500         ; A930= 20 00 A5     .%
-    JMP LAD7E         ; A933= 4C 7E AD    L~-
+    JSR LAA48
+    JSR LA500
+    JSR LAA4C
+    JSR LA500
+    JMP LAD7E
 
 LA936:
-    LDA zp30          ; A936= A5 30       %0
-    CMP #$73          ; A938= C9 73       Is
-    BCC LA904         ; A93A= 90 C8       .H
-    JSR LA381         ; A93C= 20 81 A3     .#
-    JSR LA453         ; A93F= 20 53 A4     S$
-    LDA #$80          ; A942= A9 80       ).
-    STA zp3D          ; A944= 85 3D       .=
-    STA zp3E          ; A946= 85 3E       .>
-    STA zp3B          ; A948= 85 3B       .;
-    JSR LA505         ; A94A= 20 05 A5     .%
-    LDA #<LA95A
-    LDY #>LA95A
-    JSR LA897         ; A951= 20 97 A8     .(
-    JSR LAAD1         ; A954= 20 D1 AA     Q*
-    LDA #$FF          ; A957= A9 FF       ).
-    RTS               ; A959= 60          `
+    LDA zp30
+    CMP #$73
+    BCC LA904
+    JSR LA381
+    JSR LA453
+    LDA #$80
+    STA zp3D
+    STA zp3E
+    STA zp3B
+    JSR LA505
+    LDA #<FATANC
+    LDY #>FATANC
+    JSR LA897
+    JSR LAAD1
+    LDA #$FF
+    RTS
 
-LA95A:
-    dta $09, $85
-    dta $A3           ; A95C= A3          #
-    dta $59, $e8, $67
-    dta $80
-    dta $1C           ; A960= 80 1C       ..
+FATANC:
+    dta $09                         ; Length - 1
+    dta $85, $A3, $59, $e8, $67
+    dta $80, $1C, $9d, $07, $36
+    dta $80, $57, $BB, $78, $DF
+    dta $80, $CA, $9a, $0E, $83
+    dta $84, $8c, $bb, $ca, $6E
+    dta $81, $95, $96, $06, $de
+    dta $81, $0a, $C7, $6C, $52
+    dta $7F, $7D, $ad, $90, $a1
+    dta $82, $FB, $62, $57, $2F
+    dta $80, $6D, $63, $38, $2C
 
-    dta $9d, $07, $36
-    dta $80
-    dta $57           ; A965= 80 57       .W
-
-    dta $BB           ; A967= BB      ;
-    dta $78
-    dta $DF
-    dta $80
-    dta $CA
-    dta $9a
-    dta $0E
-    dta $83, $84
-    dta $8c, $bb, $ca
-    dta $6E
-    dta $81, $95
-    dta $96, $06
-    dta $de, $81, $0a
-    dta $C7
-    dta $6C           ; A97B= C7 6C       Gl
-    dta $52
-    dta $7F           ; A97D= 52 7F       R.
-    dta $7D
-    dta $ad, $90
-    dta $a1, $82
-    dta $FB           ; A984= FB          {
-    dta $62           ; A985= 62          b
-    dta $57           ; A986= 57          W
-    dta $2F
-    dta $80
-    dta $6D
-    dta $63           ; A98A= 63          c
-    dta $38
-    dta $2C           ; A98C= 2C 20 FA    , z
+; ----------------------------------------------------------------------------
 
 ; =COS numeric
 ; ============
@@ -7242,84 +7193,79 @@ LA98D:
 ; =SIN numeric
 ; ============
 LA998:
-    JSR L92FA         ; Evaluate float
-    JSR LA9D3         ; A99B= 20 D3 A9     S)
+    JSR L92FA
+    JSR LA9D3
 LA99E:
-    LDA zp4A          ; A99E= A5 4A       %J
-    AND #$02          ; A9A0= 29 02       ).
-    BEQ LA9AA         ; A9A2= F0 06       p.
-    JSR LA9AA         ; A9A4= 20 AA A9     *)
-    JMP LAD7E         ; A9A7= 4C 7E AD    L~-
+    LDA zp4A
+    AND #$02
+    BEQ LA9AA
+    JSR LA9AA
+    JMP LAD7E
 
 LA9AA:
-    LSR zp4A          ; A9AA= 46 4A       FJ
-    BCC LA9C3         ; A9AC= 90 15       ..
-    JSR LA9C3         ; A9AE= 20 C3 A9     C)
+    LSR zp4A
+    BCC LA9C3
+    JSR LA9C3
 LA9B1:
-    JSR LA385         ; A9B1= 20 85 A3     .#
-    JSR LA656         ; A9B4= 20 56 A6     V$
-    JSR LA38D         ; A9B7= 20 8D A3     .#
-    JSR LA699         ; A9BA= 20 99 A6     .$
-    JSR LA4D0         ; A9BD= 20 D0 A4     P$
-    JMP LA7B7         ; A9C0= 4C B7 A7    L7'
+    JSR LA385
+    JSR LA656
+    JSR LA38D
+    JSR LA699
+    JSR LA4D0
+    JMP LA7B7
 
 LA9C3:
-    JSR LA381         ; A9C3= 20 81 A3     .#
-    JSR LA656         ; A9C6= 20 56 A6     V$
-    .if version < 3
-        LDA #<LAA72
-        LDY #>LAA72
-    .elseif version >= 3
-        LDA #<XAA72
-        LDY #>XAA72
-    .endif
-    JSR LA897         ; A9CD= 20 97 A8     .(
-    JMP LAAD1         ; A9D0= 4C D1 AA    LQ*
+    JSR LA381
+    JSR LA656
+    LDA #<FSINC
+    LDY #>FSINC
+    JSR LA897
+    JMP LAAD1
 
 LA9D3:
-    LDA zp30          ; A9D3= A5 30       %0
-    CMP #$98          ; A9D5= C9 98       I.
-    BCS LAA38         ; A9D7= B0 5F       0_
-    JSR LA385         ; A9D9= 20 85 A3     .#
-    JSR LAA55         ; A9DC= 20 55 AA     U*
-    JSR LA34E         ; A9DF= 20 4E A3     N#
-    LDA zp2E          ; A9E2= A5 2E       %.
-    STA zp3B          ; A9E4= 85 3B       .;
-    DEC zp3D          ; A9E6= C6 3D       F=
-    JSR LA505         ; A9E8= 20 05 A5     .%
-    JSR LA6E7         ; A9EB= 20 E7 A6     g$
-    JSR LA3FE         ; A9EE= 20 FE A3     ~#
-    LDA zp34          ; A9F1= A5 34       %4
-    STA zp4A          ; A9F3= 85 4A       .J
-    ORA zp33          ; A9F5= 05 33       .3
-    ORA zp32          ; A9F7= 05 32       .2
-    ORA zp31          ; A9F9= 05 31       .1
-    BEQ LAA35         ; A9FB= F0 38       p8
-    LDA #$A0          ; A9FD= A9 A0       )
-    STA zp30          ; A9FF= 85 30       .0
-    LDY #$00          ; AA01= A0 00        .
-    STY zp35          ; AA03= 84 35       .5
-    LDA zp31          ; AA05= A5 31       %1
-    STA zp2E          ; AA07= 85 2E       ..
-    BPL LAA0E         ; AA09= 10 03       ..
-    JSR LA46C         ; AA0B= 20 6C A4     l$
+    LDA zp30
+    CMP #$98
+    BCS LAA38
+    JSR LA385
+    JSR LAA55
+    JSR LA34E
+    LDA zp2E
+    STA zp3B
+    DEC zp3D
+    JSR LA505
+    JSR LA6E7
+    JSR LA3FE
+    LDA zp34
+    STA zp4A
+    ORA zp33
+    ORA zp32
+    ORA zp31
+    BEQ LAA35
+    LDA #$A0
+    STA zp30
+    LDY #$00
+    STY zp35
+    LDA zp31
+    STA zp2E
+    BPL LAA0E
+    JSR LA46C
 LAA0E:
-    JSR LA303         ; AA0E= 20 03 A3     .#
-    JSR LA37D         ; AA11= 20 7D A3     }#
-    JSR LAA48         ; AA14= 20 48 AA     H*
-    JSR LA656         ; AA17= 20 56 A6     V$
-    JSR LA7F5         ; AA1A= 20 F5 A7     u'
-    JSR LA500         ; AA1D= 20 00 A5     .%
-    JSR LA38D         ; AA20= 20 8D A3     .#
-    JSR LA7ED         ; AA23= 20 ED A7     m'
-    JSR LA3B5         ; AA26= 20 B5 A3     5#
-    JSR LAA4C         ; AA29= 20 4C AA     L*
-    JSR LA656         ; AA2C= 20 56 A6     V$
-    JSR LA7F5         ; AA2F= 20 F5 A7     u'
-    JMP LA500         ; AA32= 4C 00 A5    L.%
+    JSR LA303
+    JSR LA37D
+    JSR LAA48
+    JSR LA656
+    JSR LA7F5
+    JSR LA500
+    JSR LA38D
+    JSR LA7ED
+    JSR LA3B5
+    JSR LAA4C
+    JSR LA656
+    JSR LA7F5
+    JMP LA500
 
 LAA35:
-    JMP LA3B2         ; AA35= 4C B2 A3    L2#
+    JMP LA3B2
 
 LAA38:
     BRK
@@ -7331,99 +7277,73 @@ LAA38:
     .endif
     BRK
 LAA48:
-    LDA #<LAA59
-    .if (LAA59 & 0xff) == 0
+    LDA #<HPIHI
+    .if (HPIHI & 0xff) == 0
         .error "BNE as BRA will not be taken!"
     .endif
-    BNE LAA4E         ; AA4A= D0 02       P.
+    BNE LAA4E
 LAA4C:
-    LDA #<LAA5E
+    LDA #<HPILO
 LAA4E:
-    STA zp4B          ; AA4E= 85 4B       .K
-    LDA #>LAA59
-    STA zp4C          ; AA52= 85 4C       .L
-    RTS               ; AA54= 60          `
+    STA zp4B
+    LDA #>HPIHI
+    STA zp4C
+    RTS
 
 LAA55:
-    LDA #<LAA63
-    .if (LAA63 & 0xff) == 0
+    LDA #<HALFPI
+    .if (HALFPI & 0xff) == 0
         .error "BNE as BRA will not be taken!"
     .endif
     BNE LAA4E         ; AA57= D0 F5       Pu
 
-LAA59:
-    dta $81, $c9
-    dta $10, $00
-LAA5D:
-    BRK               ; AA5D= 00          .
-LAA5E:
-    dta $6F
-    dta $15
-    dta $77
-    dta $7A           ; AA61= 7A          z
-    dta $61           ; AA62= 61 81       a.
-LAA63:
-    dta $81
-    dta $49, $0f
-    dta $DA           ; AA66= DA          Z
-    dta $A2
-LAA68:
-    dta $7B
-    dta $0e, $fa, $35
-    dta $12
-LAA6D:
-    dta $86
-    dta $65, $2e, $e0, $d3
-LAA72:
-    .if version >= 3
-        dta $7F
-        dta $5E
-        dta $5B
-        dta $D8
-        dta $AA
-    .endif
-XAA72:
-    dta $05, $84, $8a, $ea
-    dta $0C
-    dta $1B
-    dta $84; AA76= 0C 1B 84    ...
-    dta $1A           ; AA79= 1A          .
-    dta $be, $bb, $2b, $84, $37, $45, $55
-    dta $AB           ; AA81= AB          +
-    dta $82           ; AA82= 82          .
-    dta $d5, $55
-    dta $57           ; AA85= 57          W
-    dta $7C
-    dta $83
-    dta $C0; AA86= 7C 83 C0    |.@
+; HPIHI + HPILO = -PI/2
 
-    BRK               ; AA89= 00          .
-    BRK               ; AA8A= 00          .
-    dta $05, $81
-    BRK               ; AA8D= 00          .
-    BRK               ; AA8E= 00          .
-    BRK               ; AA8F= 00          .
-    BRK               ; AA90= 00          .
+HPIHI:
+    dta $81, $c9, $10, $00, $00         ; -1.57080078
+HPILO:
+    dta $6F, $15, $77, $7A, $61         ; 0.00000445
+HALFPI:
+    dta $81, $49, $0f, $DA, $A2         ; 1.57079633 = PI/2
+FPIs18:
+    dta $7B, $0e, $fa, $35, $12         ; 0.01745329 = PI/180 (1 deg in rads)
+F180sP:
+    dta $86, $65, $2e, $e0, $d3         ; 57.29577951 = 180/PI (1 rad in degs)
+    .if version >= 3
+RPLN10:
+        dta $7F, $5E, $5B, $D8, $AA     ; 0.43429448 = LOG10(e)
+    .endif
+
+FSINC:
+    dta $05                         ; Length -1
+    dta $84, $8a, $ea, $0C, $1B     ; -8.68214045
+    dta $84, $1A, $be, $bb, $2b     ; 9.67156522
+    dta $84, $37, $45, $55, $AB     ; 11.45442740
+    dta $82, $d5, $55, $57, $7C     ; -3.33333385
+    dta $83, $C0, $00, $00, $05     ; -6.00000001
+    dta $81, $00, $00, $00, $00     ; 1.00000000
+
+; ----------------------------------------------------------------------------
 
 ; = EXP numeric
 ; =============
 LAA91:
-    JSR L92FA         ; AA91= 20 FA 92     z.
+    JSR L92FA
 LAA94:
-    LDA zp30          ; AA94= A5 30       %0
-    CMP #$87          ; AA96= C9 87       I.
-    BCC LAAB8         ; AA98= 90 1E       ..
-    BNE LAAA2         ; AA9A= D0 06       P.
+    LDA zp30
+    CMP #$87
+    BCC LAAB8
+    BNE LAAA2
 LAA9C:
-    LDY zp31          ; AA9C= A4 31       $1
-    CPY #$B3          ; AA9E= C0 B3       @3
-    BCC LAAB8         ; AAA0= 90 16       ..
+    LDY zp31
+    CPY #$B3
+    BCC LAAB8
 LAAA2:
-    LDA zp2E          ; AAA2= A5 2E       %.
-    BPL LAAAC         ; AAA4= 10 06       ..
-    JSR LA686         ; AAA6= 20 86 A6     .$
-    LDA #$FF          ; AAA9= A9 FF       ).
-    RTS               ; AAAB= 60          `
+    LDA zp2E
+    BPL LAAAC
+    JSR LA686
+    LDA #$FF
+    RTS
 
 LAAAC:
     .if foldup == 0
@@ -7439,94 +7359,69 @@ LAAAC:
         BRK
     .endif
 LAAB8:
-    JSR LA486         ; AAB8= 20 86 A4     .$
-    JSR LAADA         ; AABB= 20 DA AA     Z*
-    JSR LA381         ; AABE= 20 81 A3     .#
-    LDA #<LAAE4
-    STA zp4B          ; AAC3= 85 4B       .K
-    LDA #>LAAE4
-    STA zp4C          ; AAC7= 85 4C       .L
-    JSR LA3B5         ; AAC9= 20 B5 A3     5#
-    LDA zp4A          ; AACC= A5 4A       %J
-    JSR LAB12         ; AACE= 20 12 AB     .+
+    JSR LA486
+    JSR LAADA
+    JSR LA381
+    LDA #<FNUME
+    STA zp4B
+    LDA #>FNUME
+    STA zp4C
+    JSR LA3B5
+    LDA zp4A
+    JSR LAB12
 LAAD1:
-    JSR LA7F1         ; AAD1= 20 F1 A7     q'
-    JSR LA656         ; AAD4= 20 56 A6     V$
-    LDA #$FF          ; AAD7= A9 FF       ).
-    RTS               ; AAD9= 60          `
+    JSR LA7F1
+    JSR LA656
+    LDA #$FF
+    RTS
 
 LAADA:
-    LDA #<LAAE9
-    LDY #>LAAE9
-    JSR LA897         ; AADE= 20 97 A8     .(
-    LDA #$FF          ; AAE1= A9 FF       ).
-    RTS               ; AAE3= 60          `
+    LDA #<FEXPCO
+    LDY #>FEXPCO
+    JSR LA897
+    LDA #$FF
+    RTS
 
-LAAE4:
-    dta $82           ; AAE4= 82          .
-    dta $2d, $f8, $54
-    dta $58
-LAAE9:
-    dta $07
-    dta $83; AAE9= 07 83       ..
-    dta $e0, $20
-    dta $86, $5b
-    dta $82           ; AAEF= 82          .
-    dta $80
-    dta $53; AAF0= 80 53       .S
+FNUME:
+    dta $82, $2d, $f8, $54, $58     ; 2.71828183 = e
 
-    dta $93           ; AAF2= 93          .
-    dta $b8
-    dta $83           ; AAF4= 83          .
-    JSR ws+$0600      ; AAF5= 20 00 06     ..
-    dta $a1, $82
-    BRK               ; AAFA= 00          .
-    BRK               ; AAFB= 00          .
-    dta $21, $63
-    dta $82           ; AAFE= 82          .
-    dta $c0, $00
-    BRK               ; AB01= 00          .
-    dta $02           ; AB02= 02          .
-    dta $82           ; AB03= 82          .
-    dta $80
-    dta $00; AB04= 80 00       ..
+FEXPCO:
+    dta $07                         ; Length - 1
+    dta $83, $e0, $20, $86, $5b     ; -7.00397032
+    dta $82, $80, $53, $93, $b8     ; -2.00510114
+    dta $83, $20, $00, $06, $a1     ; 5.00000316
+    dta $82, $00, $00, $21, $63     ; 2.00000796
+    dta $82, $c0, $00, $00, $02     ; -3.00000000
+    dta $82, $80, $00, $00, $0C     ; -2.00000001
+    dta $81, $00, $00, $00, $00     ; 1.00000000
+    dta $81, $00, $00, $00, $00     ; 1.00000000
 
-LAB06:
-    BRK               ; AB06= 00          .
-    dta $0C
-    dta $81
-    dta $00; AB07= 0C 81 00    ...
-    BRK               ; AB0A= 00          .
-    BRK               ; AB0B= 00          .
-    BRK               ; AB0C= 00          .
-    dta $81, $00
-    BRK               ; AB0F= 00          .
-    BRK               ; AB10= 00          .
-    BRK               ; AB11= 00          .
+; ----------------------------------------------------------------------------
+
 LAB12:
-    TAX               ; AB12= AA          *
-    BPL LAB1E         ; AB13= 10 09       ..
-    DEX               ; AB15= CA          J
-    TXA               ; AB16= 8A          .
-    EOR #$FF          ; AB17= 49 FF       I.
-    PHA               ; AB19= 48          H
-    JSR LA6A5         ; AB1A= 20 A5 A6     %$
-    PLA               ; AB1D= 68          h
+    TAX
+    BPL LAB1E
+    DEX
+    TXA
+    EOR #$FF
+    PHA
+    JSR LA6A5
+    PLA
 LAB1E:
-    PHA               ; AB1E= 48          H
-    JSR LA385         ; AB1F= 20 85 A3     .#
-    JSR LA699         ; AB22= 20 99 A6     .$
+    PHA
+    JSR LA385
+    JSR LA699
 LAB25:
-    PLA               ; AB25= 68          h
-    BEQ LAB32         ; AB26= F0 0A       p.
-    SEC               ; AB28= 38          8
-    SBC #$01          ; AB29= E9 01       i.
-    PHA               ; AB2B= 48          H
-    JSR LA656         ; AB2C= 20 56 A6     V$
-    JMP LAB25         ; AB2F= 4C 25 AB    L%+
+    PLA
+    BEQ LAB32
+    SEC
+    SBC #$01
+    PHA
+    JSR LA656
+    JMP LAB25
 
 LAB32:
-    RTS               ; AB32= 60          `
+    RTS
 
 ; =ADVAL numeric - Call OSBYTE to read buffer/device
 ; ==================================================
@@ -7664,7 +7559,7 @@ LABA8:
         LDY #<LA869
         LDA #>LA869
     .elseif version >= 3
-        LDY #<LAA72
+        LDY #<RPLN10
     .endif
     BNE LABB8
 
@@ -7672,13 +7567,13 @@ LABA8:
 ; ============
 LABB1:
     JSR L92FA
-    LDY #<LAA68
+    LDY #<FPIs18
     .if version < 3
-        LDA #>LAA68
+        LDA #>FPIs18
     .endif
 LABB8:
     .if version >= 3
-        LDA #>LAA68       ; identical to version , 3
+        LDA #>FPIs18       ; identical to version < 3
     .endif
     STY zp4B
     STA zp4C
@@ -7690,9 +7585,9 @@ LABB8:
 ; ============
 LABC2:
     JSR L92FA
-    LDY #<LAA6D
+    LDY #<F180sP
     .if version < 3
-        LDA #>LAA6D
+        LDA #>F180sP
     .endif
     BNE LABB8
 
