@@ -19,8 +19,8 @@ $12     TOP * SEED+5        TOP, end of BASIC program, excl. variables [ptr]
 
 $14     PRINTS * TOP+2      PRINT BYTES, # of bytes in a print output field
 $15     PRINTF * PRINTS+1   PRINT FLAG
-$16     ERRORH * PRINTF+1   ERROR ROUTINE VECTOR [ptr]
-
+$16     ERRORL * PRINTF+1   ERROR ROUTINE VECTOR [ptr]
+        ERRORH * ERRORL+1
 $18     TXTP * ERRORH+2     _PAGE_ number where BASIC program starts
 $19     AELINE * TXTP+1     SECONDARY BASIC TEXT POINTER, secondary $b/$c
 
@@ -89,10 +89,10 @@ FRDDW * FRDDDX+1
 FQUAD * FRDDW
 
 ARGP * FQUAD+1          ; def. zp4B/zp4C
-FPRTWY * ARGP+2
-FPRTWN * FPRTWY+1
-FDIGS * FPRTWN
-COEFP * ARGP+2
+COEFP * ARGP+2          ; def. zp4D/zp4E
+        FPRTWY * ARGP+2         ; zp4D, alias, never used
+        FPRTWN * FPRTWY+1       ; zp4E, alias, used twice
+        FDIGS * FPRTWN          ; zp4E, alias, used three times
 NEWVAR * COEFP+2
 --------
 
