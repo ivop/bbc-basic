@@ -170,8 +170,7 @@
 
         zp      = $00     ; Start of ZP addresses
 
-        zp00 = $50    ; Avoid 6510 registers
-        zp01 = $51
+        zpLOMEM = $50    ; Avoid 6510 registers
 
         FAULT  = $fd      ; Pointer to error block
         ESCFLG = $ff      ; Escape pending flag
@@ -3197,10 +3196,10 @@ L925D:
 L926F:
     jsr L92EB         ; Step past '=', evaluate integer
     lda zp2A
-    sta zp00
+    sta zpLOMEM
     sta zp02          ; Set LOMEM and VAREND
     lda zp2B
-    sta zp01
+    sta zpLOMEM+1
     sta zp03
     jsr LBD2F
     beq L928A         ; Clear dynamic variables, jump to execution loop
@@ -8354,8 +8353,8 @@ XAEF7:
 ; =LOMEM - Start of BASIC heap
 ; ============================
 XAEFC:
-        lda zp00
-        ldy zp01
+        lda zpLOMEM
+        ldy zpLOMEM+1
         bcc XAED5     ; Get LOMEM to AY, jump to return as integer
      
 ; =HIMEM - Top of BASIC memory
@@ -8468,8 +8467,8 @@ LAEF7:
 ; =LOMEM - Start of BASIC heap
 ; ============================
 LAEFC:
-        lda zp00
-        ldy zp01
+        lda zpLOMEM
+        ldy zpLOMEM+1
         jmp LAEEA     ; Get LOMEM to AY, jump to return as integer
      
 ; =HIMEM - Top of BASIC memory
@@ -11017,10 +11016,10 @@ LBD14:
 ; ========================================
 LBD20:
     lda zp12
-    sta zp00
+    sta zpLOMEM
     sta zp02          ; LOMEM=TOP, VAREND=TOP
     lda zp13
-    sta zp01
+    sta zpLOMEM+1
     sta zp03
     jsr LBD3A         ; Clear DATA and stack
 LBD2F:

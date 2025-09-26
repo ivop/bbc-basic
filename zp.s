@@ -1,8 +1,5 @@
-.ifndef zp00
-    zp00 = zp + $00
-.endif
-.ifndef zp01
-    zp01 = zp + $01
+.ifndef zpLOMEM
+    zpLOMEM = zp + $00      ; ptr
 .endif
 zp02 = zp + $02
 zp03 = zp + $03
