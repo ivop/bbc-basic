@@ -320,8 +320,8 @@ ENTRY:
         ldx memtop+0
         ldy memtop+1
     .endif
-    stx zp06
-    sty zp07
+    stx zpHIMEM
+    sty zpHIMEM+1
 
     .if membot == 0
         lda #$83      ; Read bottom of memory
@@ -2729,8 +2729,8 @@ L8FB1:
     lda zp3C
     adc #$00
     sta zp3C
-    cpx zp06
-    sbc zp07
+    cpx zpHIMEM
+    sbc zpHIMEM+1
     bcs L8FD6
     jsr L909F
     bcc L8FB1
@@ -3184,10 +3184,10 @@ L925A:
 L925D:
     jsr L92EB         ; Set past '=', evaluate integer
     lda zp2A
-    sta zp06
+    sta zpHIMEM
     sta zp04          ; Set HIMEM and STACK
     lda zp2B
-    sta zp07
+    sta zpHIMEM+1
     sta zp05
     jmp L8B9B         ; Jump back to execution loop
 
@@ -3458,10 +3458,10 @@ L939A:
 
                       ; MODE change in I/O processor, must check memory limits
         lda zp04
-        cmp zp06
+        cmp zpHIMEM
         bne L9372     ; STACK<>HIMEM, stack not empty, give 'Bad MODE' error
         lda zp05
-        cmp zp07
+        cmp zpHIMEM+1
         bne L9372
         ldx zp2A
         lda #$85
@@ -3476,9 +3476,9 @@ L939A:
         bcc L9372     ; Would be below TOP, give error
 
                       ; BASIC stack is empty, screen would not hit heap or program
-        stx zp06
+        stx zpHIMEM
         stx zp04      ; Set STACK and HIMEM to new address
-        sty zp07
+        sty zpHIMEM+1
         sty zp05
     .endif
 
@@ -8360,8 +8360,8 @@ XAEFC:
 ; =HIMEM - Top of BASIC memory
 ; ============================
 XAF03:
-        lda zp06
-        ldy zp07
+        lda zpHIMEM
+        ldy zpHIMEM+1
         bcc XAED5     ; Get HIMEM to AY, jump to return as integer
 
 ; =ERL - Return error line number
@@ -8474,8 +8474,8 @@ LAEFC:
 ; =HIMEM - Top of BASIC memory
 ; ============================
 LAF03:
-        lda zp06
-        ldy zp07
+        lda zpHIMEM
+        ldy zpHIMEM+1
     jmp LAEEA         ; Get HIMEM to AY, jump to return as integer
     .endif
 
@@ -10944,9 +10944,9 @@ LBC9E:
     lda zp13
     sta zp38
     dey
-    lda zp06
+    lda zpHIMEM
     cmp zp12
-    lda zp07
+    lda zpHIMEM+1
     sbc zp13
     bcs LBCD6
     jsr LBE6F
@@ -11036,9 +11036,9 @@ LBD33:
 LBD3A:
     lda zp18
     sta zp1D          ; DATA pointer hi=PAGE hi
-    lda zp06
+    lda zpHIMEM
     sta zp04
-    lda zp07
+    lda zpHIMEM+1
     sta zp05          ; STACK=HIMEM
     lda #$00
     sta zp24
