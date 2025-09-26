@@ -1311,7 +1311,7 @@ L8821:
     jsr L9B1D
     jsr L92F0
 L8827:
-    ldy zp1B
+    ldy zpAECUR
     sty zpCURSOR
     rts
 
@@ -1728,8 +1728,8 @@ L8A86:
 ; Skip Spaces
 ; ===========
 L8A8C:
-    ldy zp1B
-    inc zp1B          ; Get offset, increment it
+    ldy zpAECUR
+    inc zpAECUR          ; Get offset, increment it
     lda (zpAELINE),Y      ; Get current character
     cmp #' '
     beq L8A8C         ; Loop until not space
@@ -2013,14 +2013,14 @@ L8BBF:
     stx zpAELINE          ; Copy PtrA to PtrB
     ldx zpLINE+1
     stx zpAELINE+1
-    sty zp1B
+    sty zpAECUR
     jsr L95DD         ; Check if variable or indirection
     bne L8BE9         ; NE - jump for existing variable or indirection assignment
     bcs L8B60         ; CS - not variable assignment, try =, *, [ commands
 
 ; Variable not found, create a new one
 ; ------------------------------------
-    stx zp1B
+    stx zpAECUR
     jsr L9841         ; Check for and step past '='
     jsr L94FC         ; Create new variable
     ldx #$05          ; X=$05 = float
@@ -2378,13 +2378,13 @@ L8DD2:
     lda zpPRINTF
     pha               ; Save field width and flags, as evaluator
                       ;  may call PRINT (eg FN, STR$, etc.)
-    dec zp1B
+    dec zpAECUR
     jsr L9B29         ; Evaluate expression
     pla
     sta zpPRINTF
     pla
     sta zpPRINTS          ; Restore field width and flags
-    lda zp1B
+    lda zpAECUR
     sta zpCURSOR          ; Update program pointer
     tya
     beq L8E0E         ; If type=0, jump to print string
@@ -2503,7 +2503,7 @@ L8E67:
     jsr LBC25
 L8E6A:
     clc
-    ldy zp1B
+    ldy zpAECUR
     sty zpCURSOR
     rts
 
@@ -2513,7 +2513,7 @@ L8E70:
     ldx zpLINE+1
     stx zpAELINE+1
     ldx zpCURSOR
-    stx zp1B
+    stx zpAECUR
     cmp #$27
     beq L8E67
     cmp #$8A
@@ -2554,7 +2554,7 @@ L8EA7:
     cmp #$22
     bne L8EA4
     iny
-    sty zp1B
+    sty zpAECUR
     lda (zpAELINE),Y
     cmp #$22
     bne L8E6A
@@ -2590,7 +2590,7 @@ L8EE0:
     jsr L8A8C
     cmp #$2C
     bne L8F0C
-    ldy zp1B
+    ldy zpAECUR
     jsr L95D5
     beq L8F1B
     ldy ws+$06FF
@@ -2607,7 +2607,7 @@ L8EE0:
     jmp L8EE0
 
 L8F0C:
-    dec zp1B
+    dec zpAECUR
     jsr L9852         ; Check for end of statement
     jsr LBDEA         ; Pop integer to IntA
     jsr L8F1E         ; Set up registers and call code at IntA
@@ -2768,7 +2768,7 @@ X9304:
         lda zpLINE+1
         sta zpAELINE+1
         lda zpCURSOR
-        sta zp1B
+        sta zpAECUR
         lda #$F2
         jsr LB197     ; Call PROC/FN dispatcher
                       ; Will return here after ENDPROC
@@ -3326,7 +3326,7 @@ L9304:
         lda zpLINE+1
         sta zpAELINE+1
         lda zpCURSOR
-        sta zp1B
+        sta zpAECUR
         lda #$F2
         jsr LB197     ; Call PROC/FN dispatcher
                       ; Will return here after ENDPROC
@@ -3368,7 +3368,7 @@ L9323:
 L9341:
     tsx
     inc $0106,X       ; Increment number of LOCAL items
-    ldy zp1B
+    ldy zpAECUR
     sty zpCURSOR          ; Update line pointer
     jsr L8A97         ; Get next character
     cmp #$2C
@@ -3823,12 +3823,12 @@ L95A5:
     lda #$04
 L95A7:
     pha
-    inc zp1B
+    inc zpAECUR
     jsr L92E3
     jmp L969F
 
 L95B0:
-    inc zp1B
+    inc zpAECUR
     jsr L92E3
     lda zp2B
     beq L95BF
@@ -3856,7 +3856,7 @@ L95C9:
 L95D4:
     iny
 L95D5:
-    sty zp1B
+    sty zpAECUR
     lda (zpAELINE),Y
     cmp #$20
     beq L95D4
@@ -3883,7 +3883,7 @@ L95DD:
 L95FF:
     ldx #$05
     stx zp2C
-    lda zp1B
+    lda zpAECUR
     clc
     adc zpAELINE
     ldx zpAELINE+1
@@ -3897,7 +3897,7 @@ L960E:
     dex
 L9615:
     stx zp38
-    ldx zp1B
+    ldx zpAECUR
     ldy #$01
 L961B:
     lda (zp37),Y
@@ -3943,9 +3943,9 @@ L9654:
     beq L96A6
     jsr L9469
     beq L9677
-    stx zp1B
+    stx zpAECUR
 L9661:
-    ldy zp1B
+    ldy zpAECUR
     lda (zpAELINE),Y
 L9665:
     cmp #$21
@@ -3953,7 +3953,7 @@ L9665:
     cmp #$3F
     beq L967B
     clc
-    sty zp1B
+    sty zpAECUR
     lda #$FF
     rts
 
@@ -3975,7 +3975,7 @@ L967F:
 L9681:
     pha
     iny
-    sty zp1B
+    sty zpAECUR
     jsr LB32C
     jsr L92F0
     lda zp2B
@@ -4014,7 +4014,7 @@ L96AF:
     beq L96C9
     jsr L9469
     beq L9677
-    stx zp1B
+    stx zpAECUR
     lda #$81
     sta zp2C
     sec
@@ -4043,7 +4043,7 @@ L96D7:
 L96DF:
     jsr L9469
     beq L96D7
-    stx zp1B
+    stx zpAECUR
     lda zp2C
     pha
     lda zp2A
@@ -4065,7 +4065,7 @@ L96DF:
 L96FF:
     jsr LBD94
     jsr L92DD
-    inc zp1B
+    inc zpAECUR
     cpx #$2C
     bne L96D7
     ldx #$39
@@ -4228,10 +4228,10 @@ L9807:
     lda zpLINE+1
     sta zpAELINE+1
     lda zpCURSOR
-    sta zp1B
+    sta zpAECUR
 L9813:
-    ldy zp1B
-    inc zp1B
+    ldy zpAECUR
+    inc zpAECUR
     lda (zpAELINE),Y
     cmp #$20
     beq L9813
@@ -4290,11 +4290,11 @@ L9849:
     jsr L9B29
 L984C:
     txa
-    ldy zp1B
+    ldy zpAECUR
     jmp DONET
 
 L9852:
-    ldy zp1B
+    ldy zpAECUR
     jmp DONE_WITH_Y
 
 ; Check for end of statement, check for Escape
@@ -4427,7 +4427,7 @@ L98C2:
     bpl L98CC
     jsr LA3E4
 L98CC:
-    ldy zp1B
+    ldy zpAECUR
     sty zpCURSOR
     lda zp2A
     ora zp2B
@@ -4829,7 +4829,7 @@ L9B1D:
     lda zpLINE+1
     sta zpAELINE+1
     lda zpCURSOR
-    sta zp1B
+    sta zpAECUR
 
 ; Evaluate expression at PtrB
 ; ---------------------------
@@ -4845,7 +4845,7 @@ L9B2C:
     beq L9B3A         ; Jump if next char is OR
     cpx #tknEOR
     beq L9B55         ; Jump if next char is EOR
-    dec zp1B          ; Step PtrB back to last char
+    dec zpAECUR          ; Step PtrB back to last char
     tay
     sta zp27
     rts               ; Set flags from type, store type in $27 and return
@@ -4956,7 +4956,7 @@ L9BB5:
 ; -------
 L9BC0:
     tax
-    ldy zp1B
+    ldy zpAECUR
     lda (zpAELINE),Y      ; Get next char from PtrB
     cmp #'='
     beq L9BD4         ; Jump for <=
@@ -4972,7 +4972,7 @@ L9BC0:
 ; <= numeric
 ; ----------
 L9BD4:
-    inc zp1B
+    inc zpAECUR
     jsr L9A9D         ; Step past '=', evaluate next and compare
     beq L9BB4
     bcc L9BB4         ; Jump to return TRUE if =, TRUE if <
@@ -4981,7 +4981,7 @@ L9BD4:
 ; <> numeric
 ; ----------
 L9BDF:
-    inc zp1B
+    inc zpAECUR
     jsr L9A9D         ; Step past '>', evaluate next and compare
     bne L9BB4
     beq L9BB5         ; Jump to return TRUE if <>, FALSE if =
@@ -4990,7 +4990,7 @@ L9BDF:
 ; ----
 L9BE8:
     tax
-    ldy zp1B
+    ldy zpAECUR
     lda (zpAELINE),Y      ; Get next char from PtrB
     cmp #'='
     beq L9BFA         ; Jump for >=
@@ -5005,7 +5005,7 @@ L9BE8:
 ; >= numeric
 ; ----------
 L9BFA:
-    inc zp1B
+    inc zpAECUR
     jsr L9A9D         ; Step past '=', evaluate next and compare
     bcs L9BB4
     bcc L9BB5         ; Jump to return TRUE if >=, FALSE if <
@@ -5378,8 +5378,8 @@ L9E20:
 L9E23:
     pha
 L9E24:
-    ldy zp1B
-    inc zp1B
+    ldy zpAECUR
+    inc zpAECUR
     lda (zpAELINE),Y      ; Get character
     cmp #$20
     beq L9E24         ; Skip spaces
@@ -5840,7 +5840,7 @@ LA0E1:
 ; End of number found
 ; -------------------
 LA0E8:
-    sty zp1B          ; Store PtrB offset
+    sty zpAECUR          ; Store PtrB offset
     lda zp49
     ora zp48          ; Check exponent and 'decimal point' flag
     beq LA11F         ; No exponent, no decimal point, return integer
@@ -7693,7 +7693,7 @@ LABE9:
     pha               ; Save PTRB
     lda zpAELINE+1
     pha
-    lda zp1B
+    lda zpAECUR
     pha
     ldy zpAESTKP
     ldx zpAESTKP+1          ; YX=>stackbottom (wrong way around)
@@ -7708,13 +7708,13 @@ LAC0F:
     ldy #$FF
     sty zp3B
     iny
-    sty zp1B          ; Point PTRB offset back to start
+    sty zpAECUR          ; Point PTRB offset back to start
     jsr L8955         ; Tokenise string on stack at GPTR
     jsr L9B29         ; Call expression evaluator
     jsr LBDDC         ; Drop string from stack
 LAC23:
     pla
-    sta zp1B          ; Restore PTRB
+    sta zpAECUR          ; Restore PTRB
     pla
     sta zpAELINE+1
     pla
@@ -7744,10 +7744,10 @@ LAC34:
     pha
     lda zpAELINE+1
     pha
-    lda zp1B
+    lda zpAECUR
     pha
     lda #$00
-    sta zp1B
+    sta zpAECUR
     .if version < 3
         lda #$00
     .endif
@@ -7761,13 +7761,13 @@ LAC34:
     bne LAC5E
     jsr L8A8C
 LAC5E:
-    dec zp1B
+    dec zpAECUR
     jsr LA07B
     jmp LAC73
 
 LAC66:
     jsr L8A8C
-    dec zp1B
+    dec zpAECUR
     jsr LA07B
     bcc LAC73
     jsr LAD8F
@@ -7969,7 +7969,7 @@ LACE2:
     .endif
     cpx #$2C
     bne LAD03
-    inc zp1B
+    inc zpAECUR
     jsr LBDB2
     jsr L9B29
     .if version < 3
@@ -7979,7 +7979,7 @@ LACE2:
     .endif
     lda #$01
     sta zp2A
-    inc zp1B
+    inc zpAECUR
     cpx #')'
     beq LAD12
     cpx #$2C
@@ -8129,7 +8129,7 @@ LADC5:
 LADC8:
         dex
         stx zp36
-        sty zp1B
+        sty zpAECUR
         lda #$00
         rts
     .endif
@@ -8159,7 +8159,7 @@ LADCC:
 LADE1:
         dex
         stx zp36
-        sty zp1B
+        sty zpAECUR
         lda #$00
         rts
     .elseif version >= 3
@@ -8172,8 +8172,8 @@ LADE9:
 ; Evaluator Level 1, - + NOT function ( ) ? ! $ | "
 ; -------------------------------------------------
 LADEC:
-    ldy zp1B
-    inc zp1B
+    ldy zpAECUR
+    inc zpAECUR
     lda (zpAELINE),Y      ; Get next character
     cmp #$20
     beq LADEC         ; Loop to skip spaces
@@ -8204,7 +8204,7 @@ LAE10:
     cmp #'('
     beq LAE56         ; Jump with brackets
 LAE20:
-    dec zp1B
+    dec zpAECUR
     jsr L95DD
     beq LAE30         ; Jump with undefined variable or bad name
     jmp LB32C
@@ -8219,7 +8219,7 @@ LAE30:
     and #$02          ; Is 'ignore undefiened variables' set?
     bne LAE43         ; b1=1, jump to give No such variable
     bcs LAE43         ; Jump with bad variable name
-    stx zp1B
+    stx zpAECUR
 LAE3A:
     lda ws+$0440      ; Use P% for undefined variable
     ldy ws+$0441
@@ -8259,7 +8259,7 @@ LAE55:
 
 LAE56:
     jsr L9B29
-    inc zp1B
+    inc zpAECUR
     cpx #')'
     .if version < 3
         bne LAE61
@@ -8287,7 +8287,7 @@ LAE6D:
         stx zp2B
         stx zp2C
         stx zp2D
-        ldy zp1B
+        ldy zpAECUR
     .elseif version >= 3
         jsr LACCD
         iny
@@ -8326,7 +8326,7 @@ LAEA2:
     .elseif version >= 3
         bpl LAE55
     .endif
-    sty zp1B
+    sty zpAECUR
     lda #$40
     rts
 
@@ -8338,7 +8338,7 @@ XAEA6:
         lda (zpAELINE),Y
         cmp #'P'
         bne LAE43
-        inc zp1B
+        inc zpAECUR
         lda zpTOP
         ldy zpTOP+1
         bcs XAED5
@@ -8471,11 +8471,11 @@ LAED8:
 ; =TOP - Return top of program
 ; ============================
 LAEDC:
-        ldy zp1B
+        ldy zpAECUR
         lda (zpAELINE),Y
         cmp #$50
         bne LAEC7
-        inc zp1B
+        inc zpAECUR
         lda zpTOP
         ldy zpTOP+1
 
@@ -8514,7 +8514,7 @@ LAF03:
 ; =RND(numeric)
 ; -------------
 LAF0A:
-    inc zp1B
+    inc zpAECUR
     jsr LAE56
     jsr L92F0
     lda zp2D
@@ -8548,7 +8548,7 @@ LAF3F:
 ; RND [(numeric)]
 ; ===============
 LAF49:
-    ldy zp1B
+    ldy zpAECUR
     lda (zpAELINE),Y      ; Get current character
     cmp #'('
     beq LAF0A         ; Jump with RND(numeric)
@@ -8746,7 +8746,7 @@ LAFCC:
     bne LB033
     cpx #$2C
     bne LB036
-    inc zp1B
+    inc zpAECUR
     jsr LBDB2
     jsr LAE56
     jsr L92F0
@@ -8766,7 +8766,7 @@ LAFEE:
     bne LB033
     cpx #$2C
     bne LB036
-    inc zp1B
+    inc zpAECUR
     jsr LBDB2
     jsr LAE56
     jsr L92F0
@@ -8824,13 +8824,13 @@ LB039:
     cpx #$2C
     bne LB036
     jsr LBDB2
-    inc zp1B
+    inc zpAECUR
     jsr L92DD
     lda zp2A
     pha
     lda #$FF
     sta zp2A
-    inc zp1B
+    inc zpAECUR
     cpx #')'
     beq LB061
     cpx #$2C
@@ -8879,7 +8879,7 @@ LB094:
     cmp #'~'
     beq LB0A1
     ldy #$00
-    dec zp1B          ; Y=$00 for hex, step past ~
+    dec zpAECUR          ; Y=$00 for hex, step past ~
 LB0A1:
     tya
     pha               ; Save format
@@ -9078,7 +9078,7 @@ LB1A6:
     pha               ; Push PtrA line pointer
     lda zpLINE+1
     pha               ; Push PtrA line pointer offset
-    lda zp1B
+    lda zpAECUR
     tax
     clc
     adc zpAELINE
@@ -9097,7 +9097,7 @@ LB1CA:
     jsr L955B         ; Check name is valid
     cpy #$02
     beq LB18A         ; No valid characters, jump to 'Bad call' error
-    stx zp1B          ; Line pointer offset => after valid FN/PROC name
+    stx zpAECUR          ; Line pointer offset => after valid FN/PROC name
     dey
     sty zp39
     jsr L945B
@@ -9122,7 +9122,7 @@ LB1F4:
     beq LB24D
     dec zpCURSOR
 LB202:
-    lda zp1B
+    lda zpAECUR
     pha
     lda zpAELINE
     pha
@@ -9134,7 +9134,7 @@ LB202:
     pla
     sta zpAELINE
     pla
-    sta zp1B
+    sta zpAECUR
     pla
     beq LB226
     sta zp3F
@@ -9172,7 +9172,7 @@ LB24A:
     rts
 
 LB24D:
-    lda zp1B
+    lda zpAECUR
     pha
     lda zpAELINE
     pha
@@ -9180,14 +9180,14 @@ LB24D:
     pha
     jsr L9582
     beq LB2B5
-    lda zp1B
+    lda zpAECUR
     sta zpCURSOR
     pla
     sta zpAELINE+1
     pla
     sta zpAELINE
     pla
-    sta zp1B
+    sta zpAECUR
     pla
     tax
     lda zp2C
@@ -10065,7 +10065,7 @@ LB751:
     sec
     sbc #$0F
     sta zp26
-    ldy zp1B
+    ldy zpAECUR
     sty zpCURSOR
     jsr L8A97
     cmp #','
@@ -10177,7 +10177,7 @@ LB7C4:
     cmp #tknSTEP
     bne LB81F
     jsr L92DD
-    ldy zp1B
+    ldy zpAECUR
 LB81F:
     sty zpCURSOR
     ldy zp26
@@ -10218,7 +10218,7 @@ LB84F:
     bne LB875
     jsr L9B29
     jsr L92FD
-    ldy zp1B
+    ldy zpAECUR
 LB875:
     sty zpCURSOR
     lda zp26
@@ -10340,7 +10340,7 @@ LB915:
     dec zpCURSOR
     jsr L9B1D
     jsr L92F0
-    ldy zp1B
+    ldy zpAECUR
     iny
     sty zpCURSOR
     cpx #tknGOTO
@@ -10428,7 +10428,7 @@ LB99A:
     bcs LB9AF         ; Embedded line number found
     jsr L9B1D
     jsr L92F0         ; Evaluate expression, ensure integer
-    lda zp1B
+    lda zpAECUR
     sta zpCURSOR          ; Line number low byte
     lda zp2B
     and #$7F
@@ -10464,7 +10464,7 @@ LB9CA:
 LB9CF:
     dec zpCURSOR
     jsr LBFA9
-    lda zp1B
+    lda zpAECUR
     sta zpCURSOR
     sty zpCOEFP
 LB9DA:
@@ -10475,7 +10475,7 @@ LB9DA:
     pha
     jsr L9582
     beq LB9C7
-    lda zp1B
+    lda zpAECUR
     sta zpCURSOR
     pla
     sta zpCOEFP
@@ -10573,7 +10573,7 @@ LBA69:
     sta zpCOEFP+1
     pla
     sta zpCOEFP
-    lda zp1B
+    lda zpAECUR
     sta zpCURSOR
     php
     bit zpCOEFP
@@ -10595,7 +10595,7 @@ LBAA2:
     bit zpCOEFP
     bvs LBACD
 LBAB0:
-    sta zp1B
+    sta zpAECUR
     lda #$00
     sta zpAELINE
     lda #$06+(ws/256)
@@ -10676,7 +10676,7 @@ LBB32:
     jsr L8C1E
 LBB40:
     clc
-    lda zp1B
+    lda zpAECUR
     adc zpAELINE
     sta zp1C
     lda zpAELINE+1
@@ -10685,14 +10685,14 @@ LBB40:
     jmp LBB15
 
 LBB50:
-    lda zp1B
+    lda zpAECUR
     sta zpCURSOR
     lda zp1C
     sta zpAELINE
     lda zp1D
     sta zpAELINE+1
     ldy #$00
-    sty zp1B
+    sty zpAECUR
     jsr L8A8C
     cmp #','
     beq LBBB0
@@ -10707,7 +10707,7 @@ LBB6F:
     cmp #$0D
     bne LBB6F
 LBB7A:
-    ldy zp1B
+    ldy zpAECUR
     lda (zpAELINE),Y
     bmi LBB9C
     iny
@@ -10750,7 +10750,7 @@ LBBA6:
 
 LBBAD:
     iny
-    sty zp1B
+    sty zpAECUR
 LBBB0:
     rts
 
@@ -11690,7 +11690,7 @@ LBF99:
 ; ==================================
 LBFA9:
     lda zpCURSOR
-    sta zp1B          ; Set PtrB to program pointer in PtrA
+    sta zpAECUR          ; Set PtrB to program pointer in PtrA
     lda zpLINE
     sta zpAELINE
     lda zpLINE+1
