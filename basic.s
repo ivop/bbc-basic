@@ -331,14 +331,14 @@ ENTRY:
     .elseif membot < 0
         ldy membot+1
     .endif
-    sty zp18
+    sty zpTXTP
 
     ldx #$00
-    stx zp1F          ; Set LISTO to 0
+    stx zpLISTPO          ; Set LISTO to 0
     stx ws+$0402
     stx ws+$0403      ; Set @% to $0000xxxx
     dex
-    stx zp23          ; Set WIDTH to $FF
+    stx zpWIDTHV          ; Set WIDTH to $FF
 
     ldx #$0A
     stx ws+$0400
@@ -1782,7 +1782,7 @@ X8AC8:
 ; ================================
 L8AB6:
     jsr L9857         ; Check end of statement
-    lda zp18
+    lda zpTXTP
     sta zp38          ; Point $37/8 to PAGE
     lda #$00
     sta zp37
@@ -1827,7 +1827,7 @@ L8ADA:
 L8ADD:
     .if title == 0
         lda #$0D
-        ldy zp18
+        ldy zpTXTP
         sty zp13      ; TOP hi=PAGE hi
         ldy #$00
         sty zp12
@@ -2698,7 +2698,7 @@ L8F92:
     lda zp13
     sta zp3C
 L8F9A:
-    lda zp18
+    lda zpTXTP
     sta zp38
     lda #$01
     sta zp37
@@ -2798,7 +2798,7 @@ L8FEA:
     jsr L909F
     bcc L8FEA
 L900D:
-    lda zp18
+    lda zpTXTP
     sta zp0C
     ldy #$00
     sty zp0B
@@ -3209,7 +3209,7 @@ L926F:
 L9283:
     jsr L92EB         ; Step past '=', evaluate integer
     lda zp2B
-    sta zp18          ; Set PAGE
+    sta zpTXTP          ; Set PAGE
 L928A:
     jmp L8B9B         ; Jump to execution loop
 
@@ -4541,7 +4541,7 @@ L996B:
 L9970:
     ldy #$00
     sty zp3D
-    lda zp18
+    lda zpTXTP
     sta zp3E
 L9978:
     ldy #$01
@@ -8314,7 +8314,7 @@ XAEA6:
 ; =PAGE - Read PAGE
 ; =================
 XAEA7:
-        ldy zp18
+        ldy zpTXTP
         lda #$00
         beq XAED5
 
@@ -8408,7 +8408,7 @@ LAEB4:
 ; =================
 LAEC0:
         lda #$00
-        ldy zp18
+        ldy zpTXTP
         jmp LAEEA
      
 LAEC7:
@@ -8928,7 +8928,7 @@ LB0FE:
 ; Look through program for FN/PROC
 ; --------------------------------
 LB112:
-    lda zp18
+    lda zpTXTP
     sta zp0C          ; Start at PAGE
     lda #$00
     sta zp0B
@@ -9391,7 +9391,7 @@ LB3C5:
     ldy #$00
     sty zp08
     sty zp09
-    ldx zp18
+    ldx zpTXTP
     stx zp38
     sty zp37
     ldx zp0C
@@ -9597,7 +9597,7 @@ LB4A0:
     jsr L9852
     ldy zp2A
     dey
-    sty zp23
+    sty zpWIDTHV
     jmp L8B9B
 
 LB4AE:
@@ -9731,7 +9731,7 @@ LB565:
     lda #$20
 LB567:
     pha
-    lda zp23
+    lda zpWIDTHV
     cmp zp1E
     bcs LB571
     jsr LBC25
@@ -9746,7 +9746,7 @@ LB571:
     .endif
 
 LB577:
-    and zp1F
+    and zpLISTPO
     beq LB589
     txa
     beq LB589
@@ -9771,7 +9771,7 @@ LB58A:
     jsr L984C
     jsr L92EE
     lda zp2A
-    sta zp1F
+    sta zpLISTPO
     jmp L8AF6
 
 ; LIST [linenum [,linenum]]
@@ -10598,7 +10598,7 @@ LBADC:
 LBAE6:
     ldy #$00
     sty zp3D          ; Set DATA pointer to PAGE
-    ldy zp18
+    ldy zpTXTP
     sty zp3E
     jsr L8A97
     dec zp0A
@@ -11007,7 +11007,7 @@ LBD11:
     jsr L9857
 LBD14:
     jsr LBD20
-    lda zp18
+    lda zpTXTP
     sta zp0C          ; Point PtrA to PAGE
     stx zp0B
     jmp L8B0B
@@ -11034,7 +11034,7 @@ LBD33:
 ; Clear DATA pointer and BASIC stack
 ; ==================================
 LBD3A:
-    lda zp18
+    lda zpTXTP
     sta zp1D          ; DATA pointer hi=PAGE hi
     lda zpHIMEM
     sta zp04
@@ -11263,7 +11263,7 @@ LBE62:
 ; Scan program to check consistancy and find TOP
 ; ----------------------------------------------
 LBE6F:
-    lda zp18
+    lda zpTXTP
     sta zp13
     ldy #$00
     sty zp12
@@ -11382,7 +11382,7 @@ LBEDD:
     jsr LBED2
     dey
     sty F_LOAD+0      ; LOAD.lo=$00
-    lda zp18
+    lda zpTXTP
     sta F_LOAD+1      ; LOAD.hi=PAGEhi
 LBEE7:
     .ifdef MOS_BBC
@@ -11428,7 +11428,7 @@ LBEF3:
         sta F_EXEC+0      ; Set FILE.EXEC to STARTUP
         lda #>ENTRY
         sta F_EXEC+1
-        lda zp18
+        lda zpTXTP
         sta F_START+1     ; Set FILE.START to PAGE
         jsr LBEDD     ; Set FILE.LOAD to PAGE
     .endif
@@ -11477,7 +11477,7 @@ LBEF3:
         stx F_EXEC+0      ; Set FILE.EXEC to STARTUP
         ldx #>ENTRY
         stx F_EXEC+1
-        ldx zp18
+        ldx zpTXTP
         stx F_START+1     ; High byte of FILE.START=PAGE
     .endif
     tay
