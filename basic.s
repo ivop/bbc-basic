@@ -7350,6 +7350,10 @@ RPLN10:
         dta $7f, $5e, $5b, $d8, $aa     ; 0.43429448 = LOG10(e)
     .endif
 
+    .if .hi(*) != .hi(HPIHI)
+        .error "PI table crosses page!"
+    .endif
+
 FSINC:
     dta $05                         ; Length -1
     dta $84, $8a, $ea, $0c, $1b     ; -8.68214045
@@ -7358,6 +7362,10 @@ FSINC:
     dta $82, $d5, $55, $57, $7c     ; -3.33333385
     dta $83, $c0, $00, $00, $05     ; -6.00000001
     dta $81, $00, $00, $00, $00     ; 1.00000000
+
+    .if .hi(*) != .hi(FSINC)
+        .error "Table FSINC crosses page!"
+    .endif
 
 ; ----------------------------------------------------------------------------
 
@@ -7431,6 +7439,11 @@ FEXPCO:
     dta $82, $80, $00, $00, $0c     ; -2.00000001
     dta $81, $00, $00, $00, $00     ; 1.00000000
     dta $81, $00, $00, $00, $00     ; 1.00000000
+
+; Later versions of BBC BASIC enforce this, but it fails for BASIC II/III
+;    .if .hi(*) != .hi(FEXPCO)
+;        .error "Table FEXPCO crosses page!"
+;    .endif
 
 ; ----------------------------------------------------------------------------
 
