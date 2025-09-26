@@ -7089,32 +7089,32 @@ FLOGTC:
 ;       Sam demands that no table cross a page!
 
 FCF:
-    sta zp4D
-    sty zp4E
+    sta zpCOEFP
+    sty zpCOEFP+1
     jsr LA385
     ldy #$00
-    lda (zp4D),Y
+    lda (zpCOEFP),Y
     sta zp48
-    inc zp4D
+    inc zpCOEFP
     bne LA8AA
-    inc zp4E
+    inc zpCOEFP+1
 LA8AA:
-    lda zp4D
+    lda zpCOEFP
     sta zp4B
-    lda zp4E
+    lda zpCOEFP+1
     sta zp4C
     jsr LA3B5
 LA8B5:
     jsr LA7F5
     jsr FXDIV
     clc
-    lda zp4D
+    lda zpCOEFP
     adc #$05
-    sta zp4D
+    sta zpCOEFP
     sta zp4B
-    lda zp4E
+    lda zpCOEFP+1
     adc #$00
-    sta zp4E
+    sta zpCOEFP+1
     sta zp4C
     jsr LA500
     dec zp48
@@ -9228,9 +9228,9 @@ LB28E:
     bne LB2B5
     pla
     pla
-    sta zp4D
-    sta zp4E
-    cpx zp4D
+    sta zpCOEFP
+    sta zpCOEFP+1
+    cpx zpCOEFP
     beq LB2CA
 LB2B5:
     ldx #$FB
@@ -9280,9 +9280,9 @@ LB2F9:
     jsr LBDCB
     jsr L8C21
 LB303:
-    dec zp4D
+    dec zpCOEFP
     bne LB2CA
-    lda zp4E
+    lda zpCOEFP+1
     pha
     jmp LB202
 
@@ -9885,7 +9885,7 @@ LB60F:
 LB61D:
     jsr L9923
     ldx #$FF
-    stx zp4D
+    stx zpCOEFP
     lda #$01
     jsr LB577
     ldx zp3B
@@ -9903,15 +9903,15 @@ LB639:
     cmp #$22
     bne LB651
     lda #$FF
-    eor zp4D
-    sta zp4D
+    eor zpCOEFP
+    sta zpCOEFP
     lda #$22
 LB64B:
     jsr LB558
     iny
     bne LB639
 LB651:
-    bit zp4D
+    bit zpCOEFP
     bpl LB64B
     cmp #$8D
     bne LB668
@@ -10466,22 +10466,22 @@ LB9CF:
     jsr LBFA9
     lda zp1B
     sta zpCURSOR
-    sty zp4D
+    sty zpCOEFP
 LB9DA:
     jsr L8A97
     cmp #','
     bne LB9CA
-    lda zp4D
+    lda zpCOEFP
     pha
     jsr L9582
     beq LB9C7
     lda zp1B
     sta zpCURSOR
     pla
-    sta zp4D
+    sta zpCOEFP
     php
     jsr LBD94
-    ldy zp4D
+    ldy zpCOEFP
     jsr OSBGET
     sta zp27
     plp
@@ -10540,10 +10540,10 @@ LBA44:
     dec zpCURSOR
     clc               ; Step back to non-LINE char, set CC
 LBA52:
-    ror zp4D
-    lsr zp4D          ; bit7=0, bit6=notLINE/LINE
+    ror zpCOEFP
+    lsr zpCOEFP          ; bit7=0, bit6=notLINE/LINE
     lda #$FF
-    sta zp4E
+    sta zpCOEFP+1
 LBA5A:
     jsr L8E8A
     bcs LBA69         ; Process ' " TAB SPC, jump if none found
@@ -10551,48 +10551,48 @@ LBA5F:
     jsr L8E8A
     bcc LBA5F         ; Keep processing any print items
     ldx #$FF
-    stx zp4E
+    stx zpCOEFP+1
     clc
 LBA69:
     php
-    asl zp4D
+    asl zpCOEFP
     plp
-    ror zp4D
+    ror zpCOEFP
     cmp #','
     beq LBA5A         ; ',' - jump to do next item
     cmp #';'
     beq LBA5A         ; ';' - jump to do next item
     dec zpCURSOR
-    lda zp4D
+    lda zpCOEFP
     pha
-    lda zp4E
+    lda zpCOEFP+1
     pha
     jsr L9582
     beq LBA3F
     pla
-    sta zp4E
+    sta zpCOEFP+1
     pla
-    sta zp4D
+    sta zpCOEFP
     lda zp1B
     sta zpCURSOR
     php
-    bit zp4D
+    bit zpCOEFP
     bvs LBA99
-    lda zp4E
+    lda zpCOEFP+1
     cmp #$FF
     bne LBAB0
 LBA99:
-    bit zp4D
+    bit zpCOEFP
     bpl LBAA2
     lda #'?'
     jsr LB558
 LBAA2:
     jsr LBBFC         ; Call MOS to input line, set COUNT=0
     sty zp36
-    asl zp4D
+    asl zpCOEFP
     clc
-    ror zp4D
-    bit zp4D
+    ror zpCOEFP
+    bit zpCOEFP
     bvs LBACD
 LBAB0:
     sta zp1B
@@ -10610,7 +10610,7 @@ LBABD:
     ldy #$FE
 LBACA:
     iny
-    sty zp4E
+    sty zpCOEFP+1
 LBACD:
     plp
     bcs LBADC
