@@ -776,7 +776,7 @@ L8512:
     lsr
     bcc L857E
 
-    lda zp1E
+    lda zpTALLY
     adc #$04
     sta zp3F
     lda zp38
@@ -2335,7 +2335,7 @@ L8D9A:
 L8DA6:
     lda ws+$0400
     beq L8DBB         ; If field width zero, no padding needed, jump back into main loop
-    lda zp1E          ; Get COUNT
+    lda zpTALLY          ; Get COUNT
 L8DAD:
     beq L8DBB         ; Zero, just started a new line, no padding, jump back into main loop
     sbc ws+$0400      ; Get COUNT-field width
@@ -2471,7 +2471,7 @@ L8E40:
     cmp #')'
     bne L8E24
     lda zp2A
-    sbc zp1E
+    sbc zpTALLY
     beq L8E6A
     .if version < 3
         tay
@@ -8379,7 +8379,7 @@ XAED5:
 ; =COUNT - Return COUNT
 ; =====================
 XAEF7:
-        lda zp1E
+        lda zpTALLY
         bcc XAED3     ; Get COUNT, jump to return 8-bit integer
      
 ; =LOMEM - Start of BASIC heap
@@ -8493,7 +8493,7 @@ LAEEA:
 ; =COUNT - Return COUNT
 ; =====================
 LAEF7:
-        lda zp1E
+        lda zpTALLY
         jmp LAED8     ; Get COUNT, jump to return 8-bit integer
      
 ; =LOMEM - Start of BASIC heap
@@ -9764,12 +9764,12 @@ LB565:
 LB567:
     pha
     lda zpWIDTHV
-    cmp zp1E
+    cmp zpTALLY
     bcs LB571
     jsr LBC25
 LB571:
     pla
-    inc zp1E
+    inc zpTALLY
     .if WRCHV != 0
         jmp (WRCHV)
     .endif
@@ -10884,7 +10884,7 @@ LBC25:
     jsr OSNEWL
 LBC28:
     lda #$00
-    sta zp1E          ; Set COUNT to zero
+    sta zpTALLY          ; Set COUNT to zero
     rts
 
 LBC2D:
