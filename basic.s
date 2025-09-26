@@ -7038,7 +7038,7 @@ LA82C:
     jsr LA387
     lda #<FLOGTC
     ldy #>FLOGTC
-    jsr LA897
+    jsr FCF
     jsr LA7E9
     jsr FMUL
     jsr FMUL
@@ -7076,7 +7076,19 @@ FLOGTC:
     dta $82, $3f, $ff, $ff, $c1         ; 2.99999994
     dta $7f ,$ff, $ff, $ff, $ff         ; -0.50000000
 
-LA897:
+    .if .hi(*) != .hi(FLOGTC)
+        .error "Table FLOGTC crosses page!"
+    .endif
+
+; FCF - Evaluates a rational function of the form
+;       A0 + X/(A1+X/(A2+X/ ...
+;       i.e. a continued fraction.
+;       It takes a table of the form:
+;       <BYTE N> <AN> ... <A0>
+;       where AN through A0 are floating point values.
+;       Sam demands that no table cross a page!
+
+FCF:
     sta zp4D
     sty zp4E
     jsr LA385
@@ -7182,7 +7194,7 @@ LA936:
     jsr LA505
     lda #<FATANC
     ldy #>FATANC
-    jsr LA897
+    jsr FCF
     jsr LAAD1
     lda #$FF
     rts
@@ -7239,7 +7251,7 @@ LA9C3:
     jsr FMUL
     lda #<FSINC
     ldy #>FSINC
-    jsr LA897
+    jsr FCF
     jmp LAAD1
 
 LA9D3:
@@ -7398,7 +7410,7 @@ LAAD1:
 LAADA:
     lda #<FEXPCO
     ldy #>FEXPCO
-    jsr LA897
+    jsr FCF
     lda #$FF
     rts
 
