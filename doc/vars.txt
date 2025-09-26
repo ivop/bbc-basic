@@ -44,26 +44,29 @@ $2a     IACCL * OPCODE+1    INTEGER WORK AREA, 4 bytes
 ($2c)   IACCN * IACCL+2
 ($2d)   IACCH * IACCL+3
 
-$2e     FACCS * IACCL+4     FLOATING POINT WORK AREA A, 8 bytes
-($2f)   FACCXH * FACCS+1
-($30)   FACCX * FACCXH+1
-($31)   FACCMA * FACCX+1
-($32)   FACCMB * FACCMA+1
-($33)   FACCMC * FACCMB+1
-($34)   FACCMD * FACCMC+1
-($35)   FACCMG * FACCMD+1
+$2e     FACCS * IACCL+4     FLOATING POINT WORK AREA A, 8 bytes [sign]
+($2f)   FACCXH * FACCS+1    [overflow/underflow]
+($30)   FACCX * FACCXH+1    [exponent]
+($31)   FACCMA * FACCX+1    [mantissa]
+($32)   FACCMB * FACCMA+1   [mantissa]
+($33)   FACCMC * FACCMB+1   [mantissa]
+($34)   FACCMD * FACCMC+1   [mantissa]
+($35)   FACCMG * FACCMD+1   [rounding byte]
 
 $36     CLEN * FACCMG+1     LENGTH OF STRING BUFFER
 $37     WORK * CLEN+1       GENERAL AREAS, 4 bytes
 
 --------
-$3b
+$3b-$42 Second Float area (8 bytes, same as above)
+but possibly repurposed for other (temporary) things, too
 
 from here Cmos/Dmos/Basic128 are different, sources show multiple
 usages up to WORK+9, and (clear?) up WORK+17 ($48)
 
 MODE * WORK+4       
 CONSTA * MODE+1
+
+;[7 bytes]
 FWRKS * WORK+4
 FWRKX * FWRKS+1
 FWRKMA * FWRKX+1
@@ -71,16 +74,20 @@ FWRKMB * FWRKMA+1
 FWRKMC * FWRKMB+1
 FWRKMD * FWRKMC+1
 FWRKMG * FWRKMD+1
+
+;[5 bytes]
 FTMPMA * FWRKMG+1
 FTMPMB * FTMPMA+1
 FTMPMC * FTMPMB+1
 FTMPMD * FTMPMC+1
 FTMPMG * FTMPMD+1
+
 FRDDDP * FTMPMG+1
 FRDDDX * FRDDDP+1
 FPRTDX * FRDDDX
 FRDDW * FRDDDX+1
 FQUAD * FRDDW
+
 ARGP * FQUAD+1          ; def. zp4B/zp4C
 FPRTWY * ARGP+2
 FPRTWN * FPRTWY+1

@@ -294,7 +294,7 @@ L8000:
 
 .ifdef MOS_BBC
     cmp #$01          ; Language Entry
-    beq L8023
+    beq ENTRY
     rts
     nop
     dta $60           ; ROM type = Lang+Tube+6502 BASIC
@@ -310,7 +310,7 @@ copyright_string:
 ; LANGUAGE STARTUP
 ; ================
 
-L8023:
+ENTRY:
     .if memtop == 0
         lda #$84      ; Read top of memory
         jsr OSBYTE
@@ -335,7 +335,7 @@ L8023:
     sty zp18
 
     ldx #$00
-    stx zp1f          ; Set LISTO to 0
+    stx zp1F          ; Set LISTO to 0
     stx ws+$0402
     stx ws+$0403      ; Set @% to $0000xxxx
     dex
@@ -348,18 +348,18 @@ L8023:
 
     lda #$01
     and zp11
-    ora zp0d          ; Check RND seed
-    ora zp0e
-    ora zp0f
+    ora zp0D          ; Check RND seed
+    ora zp0E
+    ora zp0F
     ora zp10
     bne L8063         ; If nonzero, skip past
 
     lda #$41          ; Set RND seed to $575241
-    sta zp0d
+    sta zp0D
     lda #$52
-    sta zp0e
+    sta zp0E
     lda #$57
-    sta zp0f          ; "ARW" - Acorn Roger Wilson?
+    sta zp0F          ; "ARW" - Acorn Roger Wilson?
 
 L8063:
     lda #<LB402
@@ -11425,9 +11425,9 @@ LBEF3:
         sta F_END+0       ; Set FILE.END to TOP
         lda zp13
         sta F_END+1
-        lda #<L8023
+        lda #<ENTRY
         sta F_EXEC+0      ; Set FILE.EXEC to STARTUP
-        lda #>L8023
+        lda #>ENTRY
         sta F_EXEC+1
         lda zp18
         sta F_START+1     ; Set FILE.START to PAGE
@@ -11474,9 +11474,9 @@ LBEF3:
         stx F_END+0       ; Set FILE.END to TOP
         ldx zp13
         stx F_END+1
-        ldx #<L8023
+        ldx #<ENTRY
         stx F_EXEC+0      ; Set FILE.EXEC to STARTUP
-        ldx #>L8023
+        ldx #>ENTRY
         stx F_EXEC+1
         ldx zp18
         stx F_START+1     ; High byte of FILE.START=PAGE
