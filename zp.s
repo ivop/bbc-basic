@@ -1,8 +1,7 @@
 .ifndef zpLOMEM
     zpLOMEM = zp + $00      ; ptr
 .endif
-zp02 = zp + $02
-zp03 = zp + $03
+zpFSA = zp + $02        ; ptr, VARTOP
 zpAESTKP = zp + $04     ; ptr
 zpHIMEM = zp + $06      ; ptr
 zpERL = zp + $08        ; ptr

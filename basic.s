@@ -2076,9 +2076,9 @@ L8C21:
     lda (zp2A),Y
     cmp zp36
     bcs L8C84
-    lda zp02
+    lda zpFSA
     sta zp2C
-    lda zp03
+    lda zpFSA+1
     sta zp2D
     lda zp36
     cmp #$08
@@ -2093,11 +2093,11 @@ L8C43:
     lda (zp2A),Y
     ldy #$00
     adc (zp2A),Y
-    eor zp02
+    eor zpFSA
     bne L8C5F
     iny
     adc (zp2A),Y
-    eor zp03
+    eor zpFSA+1
     bne L8C5F
     sta zp2D
     txa
@@ -2108,16 +2108,16 @@ L8C43:
 L8C5F:
     txa
     clc
-    adc zp02
+    adc zpFSA
     tay
-    lda zp03
+    lda zpFSA+1
     adc #$00
     cpy zpAESTKP
     tax
     sbc zpAESTKP+1
     bcs L8CB7
-    sty zp02
-    stx zp03
+    sty zpFSA
+    stx zpFSA+1
     pla
     ldy #$02
     sta (zp2A),Y
@@ -2952,20 +2952,20 @@ L90DF:
     bne L9127
     clc
     lda zp2A
-    adc zp02
+    adc zpFSA
     tay
     lda zp2B
-    adc zp03
+    adc zpFSA+1
     tax
     cpy zpAESTKP
     sbc zpAESTKP+1
     bcs L90DC
-    lda zp02
+    lda zpFSA
     sta zp2A
-    lda zp03
+    lda zpFSA+1
     sta zp2B
-    sty zp02
-    stx zp03
+    sty zpFSA
+    stx zpFSA+1
     lda #$00
     sta zp2C
     sta zp2D
@@ -3054,10 +3054,10 @@ L9185:
     pla
     tay
     lda zp2A
-    sta (zp02),Y
+    sta (zpFSA),Y
     iny
     lda zp2B
-    sta (zp02),Y
+    sta (zpFSA),Y
     iny
     tya
     pha
@@ -3079,28 +3079,28 @@ L91B7:
     jsr L9236
     ldy #$00
     lda zp15
-    sta (zp02),Y
+    sta (zpFSA),Y
     adc zp2A
     sta zp2A
     bcc L91D2
     inc zp2B
 L91D2:
-    lda zp03
+    lda zpFSA+1
     sta zp38
-    lda zp02
+    lda zpFSA
     sta zp37
     clc
     adc zp2A
     tay
     lda zp2B
-    adc zp03
+    adc zpFSA+1
     bcs L9218
     tax
     cpy zpAESTKP
     sbc zpAESTKP+1
     bcs L9218
-    sty zp02
-    stx zp03
+    sty zpFSA
+    stx zpFSA+1
     lda zp37
     adc zp15
     tay
@@ -3114,7 +3114,7 @@ L91FC:
     bne L9203
     inc zp38
 L9203:
-    cpy zp02
+    cpy zpFSA
     bne L91FC
     cpx zp38
     bne L91FC
@@ -3198,10 +3198,10 @@ L926F:
     jsr L92EB         ; Step past '=', evaluate integer
     lda zp2A
     sta zpLOMEM
-    sta zp02          ; Set LOMEM and VAREND
+    sta zpFSA          ; Set LOMEM and VAREND
     lda zp2B
     sta zpLOMEM+1
-    sta zp03
+    sta zpFSA+1
     jsr LBD2F
     beq L928A         ; Clear dynamic variables, jump to execution loop
 
@@ -3467,9 +3467,9 @@ L939A:
         ldx zp2A
         lda #$85
         jsr OSBYTE    ; Get top of memory if we used this MODE
-        cpx zp02
+        cpx zpFSA
         tya
-        sbc zp03
+        sbc zpFSA+1
         bcc L9372     ; Would be below VAREND, give error
         cpx zpTOP
         tya
@@ -3714,20 +3714,20 @@ L9507:
     iny
     bpl L9507
 L9516:
-    lda zp03
+    lda zpFSA+1
     sta (zp3A),Y
-    lda zp02
+    lda zpFSA
     dey
     sta (zp3A),Y
     tya
     iny
-    sta (zp02),Y
+    sta (zpFSA),Y
     cpy zp39
     beq L9558
 L9527:
     iny
     lda (zp37),Y
-    sta (zp02),Y
+    sta (zpFSA),Y
     cpy zp39
     bne L9527
     rts
@@ -3736,17 +3736,17 @@ L9531:
     lda #$00
 L9533:
     iny
-    sta (zp02),Y
+    sta (zpFSA),Y
     dex
     bne L9533
 L9539:
     sec
     tya
-    adc zp02
+    adc zpFSA
     bcc L9541
-    inc zp03
+    inc zpFSA+1
 L9541:
-    ldy zp03
+    ldy zpFSA+1
     cpy zpAESTKP+1
     bcc L9556
     bne L954D
@@ -3759,7 +3759,7 @@ L954D:
     jmp L8CB7
 
 L9556:
-    sta zp02
+    sta zpFSA
 L9558:
     rts
 
@@ -8996,10 +8996,10 @@ LB158:
     jsr L9531
     ldy #$00
     lda zpLINE
-    sta (zp02),Y
+    sta (zpFSA),Y
     iny
     lda zpLINE+1
-    sta (zp02),Y
+    sta (zpFSA),Y
     jsr L9539
     jmp LB1F4
 
@@ -11020,10 +11020,10 @@ LBD14:
 LBD20:
     lda zpTOP
     sta zpLOMEM
-    sta zp02          ; LOMEM=TOP, VAREND=TOP
+    sta zpFSA          ; LOMEM=TOP, VAREND=TOP
     lda zpTOP+1
     sta zpLOMEM+1
-    sta zp03
+    sta zpFSA+1
     jsr LBD3A         ; Clear DATA and stack
 LBD2F:
     ldx #$80
@@ -11211,10 +11211,10 @@ LBE2E:
     dec zpAESTKP+1
 LBE34:
     ldy zpAESTKP+1
-    cpy zp03
+    cpy zpFSA+1
     bcc LBE41
     bne LBE40
-    cmp zp02
+    cmp zpFSA
     bcc LBE41
 LBE40:
     rts
