@@ -309,7 +309,7 @@ copyright_string:
 ; LANGUAGE STARTUP
 ; ================
 
-ENTRY:
+.proc ENTRY
     .if memtop == 0
         lda #$84      ; Read top of memory
         jsr OSBYTE
@@ -351,7 +351,7 @@ ENTRY:
     ora zpSEED+1
     ora zpSEED+2
     ora zpSEED+3
-    bne L8063         ; If nonzero, skip past
+    bne RNDOK         ; If nonzero, skip past
 
     lda #'A'          ; Set RND seed to $575241
     sta zpSEED
@@ -360,13 +360,14 @@ ENTRY:
     lda #'W'
     sta zpSEED+2          ; "ARW" - Acorn Roger Wilson?
 
-L8063:
+RNDOK:
     lda #<LB402
     sta BRKV+0        ; Set up error handler
     lda #>LB402
     sta BRKV+1
     cli
     jmp L8ADD         ; Enable IRQs, jump to immediate loop
+.endp
 
 ; ----------------------------------------------------------------------------
 
@@ -767,10 +768,10 @@ L8508
     jsr L986D
 
 L8512:
-    dec zp0A
+    dec zpCURSOR
     jsr L85BA
 
-    dec zp0A
+    dec zpCURSOR
     lda zp28
     lsr
     bcc L857E
@@ -842,7 +843,7 @@ X855D:
         beq X855C
 X8566:
         ldx #$0A
-        lda (zp0B),Y
+        lda (zpLINE),Y
         cmp #$2E
         bne X857D
 X856E:
@@ -852,7 +853,7 @@ X856E:
         ldx #1
 X8576:
         iny
-        lda (zp0B),Y
+        lda (zpLINE),Y
         cpy zp4F
         bne X856E
 X857D:
@@ -860,12 +861,12 @@ X857D:
         dey
 X8581:
         iny
-        cmp (zp0B),Y
+        cmp (zpLINE),Y
         beq X8581
     .endif
 
 L8567:
-    lda (zp0B),Y
+    lda (zpLINE),Y
     cmp #$3A
     beq L8577
     cmp #$0D
@@ -874,16 +875,16 @@ L8571:
     jsr LB50E         ; Print character or token
     iny:BNE L8567
 L8577
-    cpy zp0A
+    cpy zpCURSOR
     bcc L8571
 L857B:
     jsr LBC25         ; Print newline
 L857E
-    ldy zp0A
+    ldy zpCURSOR
     dey
 L8581:
     iny
-    lda (zp0B),Y
+    lda (zpLINE),Y
     cmp #$3A
     beq L858C
     cmp #$0D
@@ -891,10 +892,10 @@ L8581:
 L858C:
     jsr L9859
     dey
-    lda (zp0B),Y
+    lda (zpLINE),Y
     cmp #$3A
     beq L85A2
-    lda zp0C
+    lda zpLINE+1
     cmp #$07+(ws/256)
     bne L859F
     jmp L8AF6
@@ -931,11 +932,11 @@ L85BA:
     beq L862B         ; Comment
     cmp #'.'
     beq L85A5         ; Label
-    dec zp0A
+    dec zpCURSOR
 L85D5:
-    ldy zp0A
-    inc zp0A          ; Get current character, inc. index
-    lda (zp0B),Y
+    ldy zpCURSOR
+    inc zpCURSOR          ; Get current character, inc. index
+    lda (zpLINE),Y
     bmi L8607         ; Token, check for tokenised AND, EOR, OR
     cmp #$20
     beq L85F1         ; Space, step past
@@ -980,9 +981,9 @@ L8607:
     inx               ; opcode number for 'ORA'
     cmp #tknOR
     bne L8604         ; Not tokenised 'OR'
-    inc zp0A
+    inc zpCURSOR
     iny
-    lda (zp0B),Y      ; Get next character
+    lda (zpLINE),Y      ; Get next character
     cmp #'A'
     bne L8604         ; Ensure 'OR' followed by 'A'
 
@@ -1154,7 +1155,7 @@ L870D:
     brk
 
 L8715:
-    dec zp0A
+    dec zpCURSOR
     jsr L8821
     jsr L8A97         ; Skip spaces
     cmp #','
@@ -1186,7 +1187,7 @@ L873F:
     jsr L8A97         ; Skip spaces
     cmp #'A'
     beq L8767         ; ins A -
-    dec zp0A
+    dec zpCURSOR
 L8750:
     jsr L8821
     jsr L8A97         ; Skip spaces
@@ -1214,7 +1215,7 @@ L876E:
     jmp L86C5         ; Jump with immediate
 
 L8780:
-    dec zp0A
+    dec zpCURSOR
 L8782:
     jsr L8821
     jmp L8735
@@ -1226,7 +1227,7 @@ L8788:
     jsr L8A97         ; Skip spaces
     cmp #'('
     beq L879F         ; Jump with (... addressing mode
-    dec zp0A
+    dec zpCURSOR
 L8797:
     jsr L8821
 L879A:
@@ -1259,7 +1260,7 @@ L87B2:
     jmp L86C5
 
 L87CC:
-    dec zp0A
+    dec zpCURSOR
     jsr L8821
     pla
     sta zp37
@@ -1311,7 +1312,7 @@ L8821:
     jsr L92F0
 L8827:
     ldy zp1B
-    sty zp0A
+    sty zpCURSOR
     rts
 
 L882C:
@@ -1327,9 +1328,9 @@ L8832:
 
 L883A:
     ldx #$01          ; Prepare for one byte
-    ldy zp0A
-    inc zp0A          ; Increment index
-    lda (zp0B),Y      ; Get next character
+    ldy zpCURSOR
+    inc zpCURSOR          ; Increment index
+    lda (zpLINE),Y      ; Get next character
     cmp #'B'
     beq L8858         ; EQUB
     inx               ; Prepare for two bytes
@@ -1738,9 +1739,9 @@ L8A96:
 ; Skip spaces at PtrA
 ; -------------------
 L8A97:
-    ldy zp0A
-    inc zp0A
-    lda (zp0B),Y
+    ldy zpCURSOR
+    inc zpCURSOR
+    lda (zpLINE),Y
     cmp #$20
     beq L8A97
 L8AA1:
@@ -1781,7 +1782,7 @@ X8AC8:
 ; OLD - Attempt to restore program
 ; ================================
 L8AB6:
-    jsr L9857         ; Check end of statement
+    jsr DONE         ; Check end of statement
     lda zpTXTP
     sta zp38          ; Point $37/8 to PAGE
     lda #$00
@@ -1793,14 +1794,14 @@ L8AB6:
 ; END - Return to immediate mode
 ; ==============================
 L8AC8:
-    jsr L9857         ; Check end of statement
+    jsr DONE         ; Check end of statement
     jsr LBE6F         ; Check program and set TOP
     bne L8AF6         ; Jump to immediate mode, keeping variables, etc
 
 ; STOP - Abort program with an error
 ; ==================================
 L8AD0:
-    jsr L9857         ; Check end of statement
+    jsr DONE         ; Check end of statement
     .if version < 3 && foldup == 0
         brk
         dta 0
@@ -1817,14 +1818,14 @@ L8AD0:
 ; NEW - Clear program, enter immediate mode
 ; =========================================
 L8ADA:
-    jsr L9857         ; Check end of statement
+    jsr DONE         ; Check end of statement
     .if title != 0
         jsr X8ADD     ; NEW program
     .endif
 
 ; Start up with NEW program
 ; -------------------------
-L8ADD:
+L8ADD:  ; FORMAT?
     .if title == 0
         lda #$0D
         ldy zpTXTP
@@ -1847,9 +1848,9 @@ L8AF3:
 ; ==============
 L8AF6:
     ldy #$07+(ws/256)
-    sty zp0C          ; PtrA=$0700 - input buffer
+    sty zpLINE+1          ; PtrA=$0700 - input buffer
     ldy #$00
-    sty zp0B
+    sty zpLINE
     lda #<LB433
     sta zp16          ; ON ERROR OFF
     lda #>LB433
@@ -1870,12 +1871,12 @@ L8B0B:
     txs               ; Clear machine stack
     jsr LBD3A
     tay               ; Clear DATA and stacks
-    lda zp0B
+    lda zpLINE
     sta zp37          ; Point $37/8 to program line
-    lda zp0C
+    lda zpLINE+1
     sta zp38
     sty zp3B
-    sty zp0A
+    sty zpCURSOR
     jsr L8957
     jsr L97DF
     bcc L8B38         ; Tokenise, jump forward if no line number
@@ -1925,9 +1926,9 @@ L8B59:
 ; Check for =, *, [ commands
 ; ==========================
 L8B60:
-    ldy zp0A
+    ldy zpCURSOR
     dey
-    lda (zp0B),Y      ; Step program pointer back and fetch char
+    lda (zpLINE),Y      ; Step program pointer back and fetch char
     cmp #'='
     beq L8B47         ; Jump for '=', return from FN
     cmp #'*'
@@ -1940,8 +1941,8 @@ L8B60:
 ; =================
 L8B73:
     jsr L986D         ; Update PtrA to current address
-    ldx zp0B
-    ldy zp0C          ; XY=>command string
+    ldx zpLINE
+    ldy zpLINE+1          ; XY=>command string
 
 
     .ifdef MOS_ATOM
@@ -1958,38 +1959,38 @@ L8B73:
 ; -------------------
 L8B7D:
     lda #$0D
-    ldy zp0A
+    ldy zpCURSOR
     dey               ; Get program pointer
 L8B82:
     iny
-    cmp (zp0B),Y
+    cmp (zpLINE),Y
     bne L8B82         ; Loop until <cr> found
 L8B87:
     cmp #tknELSE
     beq L8B7D         ; If 'ELSE', jump to skip to end of line
-    lda zp0C
+    lda zpLINE+1
     cmp #(ws+$0700)/256
     beq L8B41; Program in command buffer, jump back to immediate loop
     jsr L9890
     bne L8BA3         ; Check for end of program, step past <cr>
 
 L8B96:
-    dec zp0A
+    dec zpCURSOR
 L8B98:
-    jsr L9857
+    jsr DONE
 
 ; Main execution loop
 ; -------------------
 L8B9B:
     ldy #$00
-    lda (zp0B),Y      ; Get current character
+    lda (zpLINE),Y      ; Get current character
     cmp #':'
     bne L8B87         ; Not <colon>, check for ELSE
 
 L8BA3:
-    ldy zp0A
-    inc zp0A          ; Get program pointer, increment for next time
-    lda (zp0B),Y      ; Get current character
+    ldy zpCURSOR
+    inc zpCURSOR          ; Get program pointer, increment for next time
+    lda (zpLINE),Y      ; Get current character
     cmp #$20
     beq L8BA3         ; Skip spaces
     cmp #$CF
@@ -2008,9 +2009,9 @@ L8BB1:
 ; Not a command byte, try variable assignment, or =, *, [
 ; -------------------------------------------------------
 L8BBF:
-    ldx zp0B
+    ldx zpLINE
     stx zp19          ; Copy PtrA to PtrB
-    ldx zp0C
+    ldx zpLINE+1
     stx zp1A
     sty zp1B
     jsr L95DD         ; Check if variable or indirection
@@ -2028,7 +2029,7 @@ L8BBF:
     inx               ; X=$06
 L8BDF:
     jsr L9531
-    dec zp0A
+    dec zpCURSOR
 
 ; LET variable = expression
 ; =========================
@@ -2252,7 +2253,7 @@ L8D26:
 
 ; PRINT#
 L8D2B:
-    dec zp0A
+    dec zpCURSOR
     jsr LBFA9
 L8D30:
     tya
@@ -2297,7 +2298,7 @@ L8D6C:
     beq L8D30
 L8D77:
     pla
-    sty zp0A
+    sty zpCURSOR
     jmp L8B98
 
 ; End of PRINT statement
@@ -2326,7 +2327,7 @@ L8D9A:
     jsr L8A97         ; Get next non-space char
     cmp #'#'
     beq L8D2B         ; If '#' jump to do PRINT#
-    dec zp0A
+    dec zpCURSOR
     jmp L8DBB         ; Jump into PRINT loop
 
 ; Print a comma
@@ -2384,7 +2385,7 @@ L8DD2:
     pla
     sta zp14          ; Restore field width and flags
     lda zp1B
-    sta zp0A          ; Update program pointer
+    sta zpCURSOR          ; Update program pointer
     tya
     beq L8E0E         ; If type=0, jump to print string
     jsr L9EDF         ; Convert numeric value to string
@@ -2503,15 +2504,15 @@ L8E67:
 L8E6A:
     clc
     ldy zp1B
-    sty zp0A
+    sty zpCURSOR
     rts
 
 L8E70:
-    ldx zp0B
+    ldx zpLINE
     stx zp19
-    ldx zp0C
+    ldx zpLINE+1
     stx zp1A
-    ldx zp0A
+    ldx zpCURSOR
     stx zp1B
     cmp #$27
     beq L8E67
@@ -2562,14 +2563,14 @@ L8EA7:
 ; CLG
 ; ===
 L8EBD:
-    jsr L9857         ; Check end of statement
+    jsr DONE         ; Check end of statement
     lda #$10
     bne L8ECC         ; Jump to do VDU 16
 
 ; CLS
 ; ===
 L8EC4:
-    jsr L9857         ; Check end of statement
+    jsr DONE         ; Check end of statement
     jsr LBC28         ; Set COUNT to zero
     lda #$0C          ; Do VDU 12
 L8ECC:
@@ -2645,7 +2646,7 @@ L8F31:
     bne L8F2E
     jsr L97DF
     bcc L8F2E
-    jsr L9857
+    jsr DONE
     lda zp2A
     sta zp39
     lda zp2B
@@ -2686,10 +2687,10 @@ L8F69:
     bne L8FDF
     lda zp2A
     beq L8FDF
-    inc zp0A
+    inc zpCURSOR
 L8F8D:
-    dec zp0A
-    jmp L9857
+    dec zpCURSOR
+    jmp DONE
 
 ; called by renumber
 L8F92:
@@ -2762,11 +2763,11 @@ L8FE7:
 ; PROCname [(parameters)]
 ; =======================
 X9304:
-        lda zp0B
+        lda zpLINE
         sta zp19      ; PtrB=PtrA=>after 'PROC' token
-        lda zp0C
+        lda zpLINE+1
         sta zp1A
-        lda zp0A
+        lda zpCURSOR
         sta zp1B
         lda #$F2
         jsr LB197     ; Call PROC/FN dispatcher
@@ -2799,11 +2800,11 @@ L8FEA:
     bcc L8FEA
 L900D:
     lda zpTXTP
-    sta zp0C
+    sta zpLINE+1
     ldy #$00
-    sty zp0B
+    sty zpLINE
     iny
-    lda (zp0B),Y
+    lda (zpLINE),Y
     .if version < 3
         bmi L903A
     .elseif version >= 3
@@ -2812,25 +2813,25 @@ L900D:
 L901A:
     ldy #$04
 L901C:
-    lda (zp0B),Y
+    lda (zpLINE),Y
     cmp #$8D
     beq L903D
     iny
     cmp #$0D
     bne L901C
-    lda (zp0B),Y
+    lda (zpLINE),Y
     .if version < 3
         bmi L903A
     .elseif version >= 3
         bmi L9080
     .endif
     ldy #$03
-    lda (zp0B),Y
+    lda (zpLINE),Y
     clc
-    adc zp0B
-    sta zp0B
+    adc zpLINE
+    sta zpLINE
     bcc L901A
-    inc zp0C
+    inc zpLINE+1
     bcs L901A
 L903A:
     .if version < 3
@@ -2856,15 +2857,15 @@ L9043:
     dey
     lda (zp37),Y
     sta zp3E
-    ldy zp0A
+    ldy zpCURSOR
     dey
-    lda zp0B
+    lda zpLINE
     sta zp37
-    lda zp0C
+    lda zpLINE+1
     sta zp38
     jsr L88F5
 L906D:
-    ldy zp0A
+    ldy zpCURSOR
     bne L901C
 L9071:
     .if version >= 3
@@ -2889,10 +2890,10 @@ L9082:
         dta 'Failed at '
     .endif
     iny
-    lda (zp0B),Y
+    lda (zpLINE),Y
     sta zp2B
     iny
-    lda (zp0B),Y
+    lda (zpLINE),Y
     sta zp2A
     jsr L991F         ; Print in decimal
     jsr LBC25         ; Print newline
@@ -2939,7 +2940,7 @@ L90DC:
     jmp L9218
 
 L90DF:
-    dec zp0A
+    dec zpCURSOR
     jsr L9582
     beq L9127
     bcs L9127
@@ -2991,8 +2992,8 @@ L912F:
     jsr L8A97
     tya
     clc
-    adc zp0B
-    ldx zp0C
+    adc zpLINE
+    ldx zpLINE+1
     bcc L913C
     inx
     clc
@@ -3004,7 +3005,7 @@ L913C:
     sta zp38
     ldx #$05
     stx zp3F
-    ldx zp0A
+    ldx zpCURSOR
     jsr L9559
     cpy #$01
     beq L9127
@@ -3026,7 +3027,7 @@ L9168:
 
 L916B:
     sty zp39
-    stx zp0A
+    stx zpCURSOR
     jsr L9469
     bne L9127
     jsr L94FC
@@ -3216,7 +3217,7 @@ L928A:
 ; CLEAR
 ; =====
 L928D:
-    jsr L9857         ; Check end of statement
+    jsr DONE         ; Check end of statement
     jsr LBD20         ; Clear heap, stack, data, variables
     beq L928A         ; Jump to execution loop
 
@@ -3234,7 +3235,7 @@ L9295:
 ; TRACE numeric
 ; -------------
 L92A5:
-    jsr L9857         ; Check end of statement
+    jsr DONE         ; Check end of statement
     lda zp2A
     sta zp21          ; Set trace limit low byte
     lda zp2B
@@ -3248,16 +3249,16 @@ L92B2:
 ; TRACE ON
 ; --------
 L92B7:
-    inc zp0A
-    jsr L9857         ; Step past, check end of statement
+    inc zpCURSOR
+    jsr DONE         ; Step past, check end of statement
     lda #$FF
     bne L92AE         ; Jump to set TRACE $FFxx
 
 ; TRACE OFF
 ; ---------
 L92C0:
-    inc zp0A
-    jsr L9857         ; Step past, check end of statement
+    inc zpCURSOR
+    jsr DONE         ; Step past, check end of statement
     lda #$00
     beq L92B2         ; Jump to set TRACE OFF
 
@@ -3320,11 +3321,11 @@ L92FD:
 ; PROCname [(parameters)]
 ; =======================
 L9304:
-        lda zp0B
+        lda zpLINE
         sta zp19      ; PtrB=PtrA=>after 'PROC' token
-        lda zp0C
+        lda zpLINE+1
         sta zp1A
-        lda zp0A
+        lda zpCURSOR
         sta zp1B
         lda #$F2
         jsr LB197     ; Call PROC/FN dispatcher
@@ -3368,7 +3369,7 @@ L9341:
     tsx
     inc $0106,X       ; Increment number of LOCAL items
     ldy zp1B
-    sty zp0A          ; Update line pointer
+    sty zpCURSOR          ; Update line pointer
     jsr L8A97         ; Get next character
     cmp #$2C
     beq L9323         ; Comma, loop back to do another item
@@ -3388,7 +3389,7 @@ L9356:
     lda $01FF
     cmp #$F2
     bne L9365         ; If pushed token<>'PROC', give error
-    jmp L9857         ; Check for end of statement and return to pop from subroutine
+    jmp DONE         ; Check for end of statement and return to pop from subroutine
 L9365:
     brk
     dta 13
@@ -3436,7 +3437,7 @@ L938E:
     lda #$11
     pha               ; Stack VDU 17 for COLOUR
     jsr L8821
-    jsr L9857         ; Evaluate integer, check end of statement
+    jsr DONE         ; Evaluate integer, check end of statement
     jmp L93DA         ; Jump to send two bytes to OSWRCH
 
 ; MODE numeric
@@ -3445,7 +3446,7 @@ L939A:
     lda #$16
     pha               ; Stack VDU 22 for MODE
     jsr L8821
-    jsr L9857         ; Evaluate integer, check end of statement
+    jsr DONE         ; Evaluate integer, check end of statement
 
 ; BBC - Check if changing MODE will move screen into stack
 ; --------------------------------------------------------
@@ -3552,7 +3553,7 @@ L9432:
     beq L9453
     cmp #$8B
     beq L9453
-    dec zp0A          ; Step back to current character
+    dec zpCURSOR          ; Step back to current character
     jsr L8821
     jsr L9456         ; Evaluate integer and output low byte
     jsr L8A97         ; Get next character
@@ -3846,11 +3847,11 @@ L95BF:
     .endif
     brk
 L95C9:
-    lda zp0B
+    lda zpLINE
     sta zp19
-    lda zp0C
+    lda zpLINE+1
     sta zp1A
-    ldy zp0A
+    ldy zpCURSOR
     dey
 L95D4:
     iny
@@ -4188,32 +4189,32 @@ L97D1:
     .endif
     brk
 L97DD:
-    inc zp0A
+    inc zpCURSOR
 L97DF:
-    ldy zp0A
-    lda (zp0B),Y
+    ldy zpCURSOR
+    lda (zpLINE),Y
     cmp #$20
     beq L97DD
     cmp #$8D
     bne L9805
 L97EB:
     iny
-    lda (zp0B),Y
+    lda (zpLINE),Y
     asl
     asl
     tax
     and #$C0
     iny
-    eor (zp0B),Y
+    eor (zpLINE),Y
     sta zp2A
     txa
     asl
     asl
     iny
-    eor (zp0B),Y
+    eor (zpLINE),Y
     sta zp2B
     iny
-    sty zp0A
+    sty zpCURSOR
     sec
     rts
 
@@ -4222,11 +4223,11 @@ L9805:
     rts
 
 L9807:
-    lda zp0B
+    lda zpLINE
     sta zp19
-    lda zp0C
+    lda zpLINE+1
     sta zp1A
-    lda zp0A
+    lda zpCURSOR
     sta zp1B
 L9813:
     ldy zp1B
@@ -4298,13 +4299,13 @@ L9852:
 
 ; Check for end of statement, check for Escape
 ; ============================================
-L9857:
-    ldy zp0A          ; Get program pointer offset
+DONE:
+    ldy zpCURSOR          ; Get program pointer offset
 L9859:
     dey               ; Step back to previous character
 L985A:
     iny
-    lda (zp0B),Y      ; Get next character
+    lda (zpLINE),Y      ; Get next character
     cmp #$20
     beq L985A         ; Skip spaces
 L9861:
@@ -4320,13 +4321,13 @@ L9861:
 L986D:
     clc
     tya
-    adc zp0B
-    sta zp0B          ; Update program pointer in PtrA
+    adc zpLINE
+    sta zpLINE          ; Update program pointer in PtrA
     bcc L9877
-    inc zp0C
+    inc zpLINE+1
 L9877:
     ldy #$01
-    sty zp0A
+    sty zpCURSOR
 
 ; Check background Escape state
 ; -----------------------------
@@ -4365,27 +4366,27 @@ L987F:
     rts
 
 L9880:
-    jsr L9857
+    jsr DONE
     dey
-    lda (zp0B),Y
+    lda (zpLINE),Y
     cmp #$3A
     beq L987F
-    lda zp0C
+    lda zpLINE+1
     cmp #$07+(ws/256)
     beq L98BC
 L9890:
     iny
-    lda (zp0B),Y
+    lda (zpLINE),Y
     bmi L98BC
     lda zp20
     beq L98AC
     tya
     pha
     iny
-    lda (zp0B),Y
+    lda (zpLINE),Y
     pha
     dey
-    lda (zp0B),Y
+    lda (zpLINE),Y
     tay
     pla
     .if version < 3
@@ -4400,13 +4401,13 @@ L98AC:
     iny
     sec
     tya
-    adc zp0B
-    sta zp0B
+    adc zpLINE
+    sta zpLINE
     bcc L98B7
-    inc zp0C
+    inc zpLINE+1
 L98B7:
     ldy #$01
-    sty zp0A
+    sty zpCURSOR
 L98BB:
     rts
 
@@ -4425,7 +4426,7 @@ L98C2:
     jsr LA3E4
 L98CC:
     ldy zp1B
-    sty zp0A
+    sty zpCURSOR
     lda zp2A
     ora zp2B
     ora zp2C
@@ -4437,7 +4438,7 @@ L98DE:
     jmp L8BA3
 
 L98E1:
-    inc zp0A
+    inc zpCURSOR
 L98E3:
     jsr L97DF
     bcc L98DE
@@ -4446,15 +4447,15 @@ L98E3:
     jmp LB8D2
 
 L98F1:
-    ldy zp0A
+    ldy zpCURSOR
 L98F3:
-    lda (zp0B),Y
+    lda (zpLINE),Y
     cmp #$0D
     beq L9902
     iny
     cmp #$8B
     bne L98F3
-    sty zp0A
+    sty zpCURSOR
     beq L98E3
 L9902:
     jmp L8B87
@@ -4821,11 +4822,11 @@ L9B15:
 ; Evaluate expression at PtrA
 ; ---------------------------
 L9B1D:
-    lda zp0B
+    lda zpLINE
     sta zp19          ; Copy PtrA to PtrB
-    lda zp0C
+    lda zpLINE+1
     sta zp1A
-    lda zp0A
+    lda zpCURSOR
     sta zp1B
 
 ; Evaluate expression at PtrB
@@ -8912,9 +8913,9 @@ LB0FB:
 
 LB0FE:
     pla
-    sta zp0C
+    sta zpLINE+1
     pla
-    sta zp0B
+    sta zpLINE
     brk
     dta $1D
     .if foldup == 1
@@ -8929,40 +8930,40 @@ LB0FE:
 ; --------------------------------
 LB112:
     lda zpTXTP
-    sta zp0C          ; Start at PAGE
+    sta zpLINE+1          ; Start at PAGE
     lda #$00
-    sta zp0B
+    sta zpLINE
 LB11A:
     ldy #$01
-    lda (zp0B),Y      ; Get line number high byte
+    lda (zpLINE),Y      ; Get line number high byte
     bmi LB0FE         ; End of program, jump to 'No such FN/PROC' error
     ldy #$03
 LB122:
     iny
-    lda (zp0B),Y
+    lda (zpLINE),Y
     cmp #$20
     beq LB122         ; Skip past spaces
     cmp #tknDEF
     beq LB13C         ; Found DEF at start of line
 LB12D:
     ldy #$03
-    lda (zp0B),Y      ; Get line length
+    lda (zpLINE),Y      ; Get line length
     clc
-    adc zp0B
-    sta zp0B          ; Point to next line
+    adc zpLINE
+    sta zpLINE          ; Point to next line
     bcc LB11A
-    inc zp0C
+    inc zpLINE+1
     bcs LB11A         ; Loop back to check next line
 
 LB13C:
     iny
-    sty zp0A
+    sty zpCURSOR
     jsr L8A97
     tya
     tax
     clc
-    adc zp0B
-    ldy zp0C
+    adc zpLINE
+    ldy zpLINE+1
     bcc LB14D
     iny
     clc
@@ -8992,10 +8993,10 @@ LB158:
     ldx #$01
     jsr L9531
     ldy #$00
-    lda zp0B
+    lda zpLINE
     sta (zp02),Y
     iny
-    lda zp0C
+    lda zpLINE+1
     sta (zp02),Y
     jsr L9539
     jmp LB1F4
@@ -9040,11 +9041,11 @@ LB1A6:
     txs               ; Clear 6502 stack
     lda zp27
     pha               ; Push PROC/FN token
-    lda zp0A
+    lda zpCURSOR
     pha
-    lda zp0B
+    lda zpLINE
     pha               ; Push PtrA line pointer
-    lda zp0C
+    lda zpLINE+1
     pha               ; Push PtrA line pointer offset
     lda zp1B
     tax
@@ -9077,18 +9078,18 @@ LB1CA:
 LB1E9:
     ldy #$00
     lda (zp2A),Y
-    sta zp0B          ; Set PtrA to address from FN/PROC infoblock
+    sta zpLINE          ; Set PtrA to address from FN/PROC infoblock
     iny
     lda (zp2A),Y
-    sta zp0C
+    sta zpLINE+1
 LB1F4:
     lda #$00
     pha
-    sta zp0A          ; Push 'no parameters' (?)
+    sta zpCURSOR          ; Push 'no parameters' (?)
     jsr L8A97
     cmp #'('
     beq LB24D
-    dec zp0A
+    dec zpCURSOR
 LB202:
     lda zp1B
     pha
@@ -9113,11 +9114,11 @@ LB21C:
     bne LB21C
 LB226:
     pla
-    sta zp0C
+    sta zpLINE+1
     pla
-    sta zp0B
+    sta zpLINE
     pla
-    sta zp0A
+    sta zpCURSOR
     pla
     ldy #$00
     lda (zp04),Y
@@ -9149,7 +9150,7 @@ LB24D:
     jsr L9582
     beq LB2B5
     lda zp1B
-    sta zp0A
+    sta zpCURSOR
     pla
     sta zp1A
     pla
@@ -9204,9 +9205,9 @@ LB2B5:
     ldx #$FB
     txs
     pla
-    sta zp0C
+    sta zpLINE+1
     pla
-    sta zp0B
+    sta zpLINE
     brk
     dta $1F
     .if foldup == 1
@@ -9394,16 +9395,16 @@ LB3C5:
     ldx zpTXTP
     stx zp38
     sty zp37
-    ldx zp0C
+    ldx zpLINE+1
     cpx #$07+(ws/256)
     beq LB401
-    ldx zp0B
+    ldx zpLINE
 LB3D9:
     jsr L8942
     cmp #$0D
     bne LB3F9
     cpx zp37
-    lda zp0C
+    lda zpLINE+1
     sbc zp38
     bcc LB401
     jsr L8942
@@ -9415,7 +9416,7 @@ LB3D9:
     jsr L8942
 LB3F9:
     cpx zp37
-    lda zp0C
+    lda zpLINE+1
     sbc zp38
     bcs LB3D9
 LB401:
@@ -9459,12 +9460,12 @@ LB402:
     sta zp17
 LB413:
     lda zp16
-    sta zp0B          ; Point program point to ERROR program
+    sta zpLINE          ; Point program point to ERROR program
     lda zp17
-    sta zp0C
+    sta zpLINE+1
     jsr LBD3A         ; Clear DATA and stack
     tax
-    stx zp0A
+    stx zpCURSOR
     .ifdef MOS_BBC
         lda #$DA
         jsr OSBYTE    ; Clear VDU queue
@@ -9766,7 +9767,7 @@ LB589:
     rts
 
 LB58A:
-    inc zp0A
+    inc zpCURSOR
     jsr L9B1D
     jsr L984C
     jsr L92EE
@@ -9778,7 +9779,7 @@ LB58A:
 ; =========================
 LB59C:
     iny
-    lda (zp0B),Y
+    lda (zpLINE),Y
     cmp #'O'
     beq LB58A
     lda #$00
@@ -9803,13 +9804,13 @@ LB59C:
     beq LB5D8
     jsr LBDEA
     jsr LBD94
-    dec zp0A
+    dec zpCURSOR
     bpl LB5DB
 LB5CF:
     jsr L8A97
     cmp #','
     beq LB5D8
-    dec zp0A
+    dec zpCURSOR
 LB5D8:
     jsr L97DF
 LB5DB:
@@ -9817,14 +9818,14 @@ LB5DB:
     sta zp31
     lda zp2B
     sta zp32
-    jsr L9857
+    jsr DONE
     jsr LBE6F
     jsr LBDEA
     jsr L9970
     lda zp3D
-    sta zp0B
+    sta zpLINE
     lda zp3E
-    sta zp0C
+    sta zpLINE+1
     bcc LB60F
     dey
     bcs LB602
@@ -9833,14 +9834,14 @@ LB5FC:
     jsr LBC25
     jsr L986D
 LB602:
-    lda (zp0B),Y
+    lda (zpLINE),Y
     sta zp2B
     iny
-    lda (zp0B),Y
+    lda (zpLINE),Y
     sta zp2A
     iny
     iny
-    sty zp0A
+    sty zpCURSOR
 LB60F:
     lda zp2A
     clc
@@ -9863,9 +9864,9 @@ LB61D:
     lda #$04
     jsr LB577
 LB637:
-    ldy zp0A
+    ldy zpCURSOR
 LB639:
-    lda (zp0B),Y
+    lda (zpLINE),Y
     cmp #$0D
     beq LB5FC
     cmp #$22
@@ -9884,7 +9885,7 @@ LB651:
     cmp #$8D
     bne LB668
     jsr L97EB
-    sty zp0A
+    sty zpCURSOR
     lda #$00
     sta zp14
     jsr L991F
@@ -10023,8 +10024,8 @@ LB73F:
 LB741:
     ldy ws+$04FE,X
     lda ws+$04FF,X
-    sty zp0B
-    sta zp0C
+    sty zpLINE
+    sta zpLINE+1
     jsr L9877
     jmp L8BA3
 
@@ -10034,7 +10035,7 @@ LB751:
     sbc #$0F
     sta zp26
     ldy zp1B
-    sty zp0A
+    sty zpCURSOR
     jsr L8A97
     cmp #','
     bne LB7A1
@@ -10147,7 +10148,7 @@ LB7C4:
     jsr L92DD
     ldy zp1B
 LB81F:
-    sty zp0A
+    sty zpCURSOR
     ldy zp26
     lda zp2A
     sta ws+$0503,Y
@@ -10160,9 +10161,9 @@ LB81F:
 LB837:
     jsr L9880
     ldy zp26
-    lda zp0B
+    lda zpLINE
     sta ws+$050D,Y
-    lda zp0C
+    lda zpLINE+1
     sta ws+$050E,Y
     clc
     tya
@@ -10188,7 +10189,7 @@ LB84F:
     jsr L92FD
     ldy zp1B
 LB875:
-    sty zp0A
+    sty zpCURSOR
     lda zp26
     clc
     adc #$03
@@ -10203,13 +10204,13 @@ LB875:
 LB888:
     jsr LB99A
 LB88B:
-    jsr L9857
+    jsr DONE
     ldy zp25
     cpy #$1A
     bcs LB8A2
-    lda zp0B
+    lda zpLINE
     sta ws+$05CC,Y
-    lda zp0C
+    lda zpLINE+1
     sta ws+$05E6,Y
     inc zp25
     bcc LB8D2
@@ -10236,21 +10237,21 @@ LB8AF:
 ; RETURN
 ; ======
 LB8B6:
-    jsr L9857         ; Check for end of statement
+    jsr DONE         ; Check for end of statement
     ldx zp25
     beq LB8AF         ; If GOSUB stack empty, error
     dec zp25          ; Decrement GOSUB stack
     ldy ws+$05CB,X    ; Get stacked line pointer
     lda ws+$05E5,X
-    sty zp0B
-    sta zp0C          ; Set line pointer
+    sty zpLINE
+    sta zpLINE+1          ; Set line pointer
     jmp L8B9B         ; Jump back to execution loop
 
 ; GOTO numeric
 ; ============
 LB8CC:
     jsr LB99A
-    jsr L9857         ; Find destination line, check for end of statement
+    jsr DONE         ; Find destination line, check for end of statement
 LB8D2:
     lda zp20
     beq LB8D9
@@ -10259,14 +10260,14 @@ LB8D9:
     ldy zp3D
     lda zp3E          ; Get destination line address
 LB8DD:
-    sty zp0B
-    sta zp0C          ; Set line pointer
+    sty zpLINE
+    sta zpLINE+1          ; Set line pointer
     jmp L8BA3         ; Jump back to execution loop
 
 ; ON ERROR OFF
 ; ------------
 LB8E4:
-    jsr L9857         ; Check end of statement
+    jsr DONE         ; Check end of statement
     lda #<LB433
     sta zp16          ; ON ERROR OFF
     lda #>LB433
@@ -10279,12 +10280,12 @@ LB8F2:
     jsr L8A97
     cmp #tknOFF
     beq LB8E4         ; ON ERROR OFF
-    ldy zp0A
+    ldy zpCURSOR
     dey
     jsr L986D
-    lda zp0B
+    lda zpLINE
     sta zp16          ; Point ON ERROR pointer to here
-    lda zp0C
+    lda zpLINE+1
     sta zp17
     jmp L8B7D         ; Skip past end of line
 
@@ -10305,12 +10306,12 @@ LB915:
     jsr L8A97         ; Skip spaces and get next character
     cmp #tknERROR
     beq LB8F2         ; Jump with ON ERROR
-    dec zp0A
+    dec zpCURSOR
     jsr L9B1D
     jsr L92F0
     ldy zp1B
     iny
-    sty zp0A
+    sty zpCURSOR
     cpx #tknGOTO
     beq LB931
     cpx #tknGOSUB
@@ -10326,9 +10327,9 @@ LB931:
     beq LB97D         ; ON zero - out of range, look for an ELSE
     dex
     beq LB95C         ; Dec. counter, if zero use first destination
-    ldy zp0A          ; Get line index
+    ldy zpCURSOR          ; Get line index
 LB944:
-    lda (zp0B),Y
+    lda (zpLINE),Y
     iny
     cmp #$0D
     beq LB97D         ; End of line - error
@@ -10340,7 +10341,7 @@ LB944:
     bne LB944         ; No comma, keep looking
     dex
     bne LB944         ; Comma found, loop until count decremented to zero
-    sty zp0A          ; Store line index
+    sty zpCURSOR          ; Store line index
 LB95C:
     jsr LB99A         ; Read line number
     pla               ; Get stacked token back
@@ -10352,9 +10353,9 @@ LB95C:
 ; Update line pointer so RETURN comes back to next statement
 ; ----------------------------------------------------------
 LB96A:
-    ldy zp0A          ; Get line pointer
+    ldy zpCURSOR          ; Get line pointer
 LB96C:
-    lda (zp0B),Y
+    lda (zpLINE),Y
     iny               ; Get character from line
     cmp #$0D
     beq LB977         ; End of line, RETURN to here
@@ -10362,16 +10363,16 @@ LB96C:
     bne LB96C         ; <colon>, return to here
 LB977:
     dey
-    sty zp0A          ; Update line index to RETURN point
+    sty zpCURSOR          ; Update line index to RETURN point
     jmp LB88B         ; Jump to do the GOSUB
 
 ; ON num out of range - check for an ELSE clause
 ; ----------------------------------------------
 LB97D:
-    ldy zp0A          ; Get line index
+    ldy zpCURSOR          ; Get line index
     pla               ; Drop GOTO/GOSUB token
 LB980:
-    lda (zp0B),Y
+    lda (zpLINE),Y
     iny               ; Get character from line
     cmp #tknELSE
     beq LB995         ; Found ELSE, jump to use it
@@ -10388,7 +10389,7 @@ LB980:
     brk
 
 LB995:
-    sty zp0A
+    sty zpCURSOR
     jmp L98E3         ; Store line index and jump to GOSUB
 
 LB99A:
@@ -10397,7 +10398,7 @@ LB99A:
     jsr L9B1D
     jsr L92F0         ; Evaluate expression, ensure integer
     lda zp1B
-    sta zp0A          ; Line number low byte
+    sta zpCURSOR          ; Line number low byte
     lda zp2B
     and #$7F
     sta zp2B          ; Line number high byte
@@ -10424,16 +10425,16 @@ LB9C7:
     jmp L982A
 
 LB9CA:
-    sty zp0A
+    sty zpCURSOR
     jmp L8B98
 
 ; INPUT#channel, ...
 ; ------------------
 LB9CF:
-    dec zp0A
+    dec zpCURSOR
     jsr LBFA9
     lda zp1B
-    sta zp0A
+    sta zpCURSOR
     sty zp4D
 LB9DA:
     jsr L8A97
@@ -10444,7 +10445,7 @@ LB9DA:
     jsr L9582
     beq LB9C7
     lda zp1B
-    sta zp0A
+    sta zpCURSOR
     pla
     sta zp4D
     php
@@ -10505,7 +10506,7 @@ LBA44:
     beq LB9CF         ; If '#' jump to do INPUT#
     cmp #tknLINE
     beq LBA52         ; If 'LINE', skip next with CS
-    dec zp0A
+    dec zpCURSOR
     clc               ; Step back to non-LINE char, set CC
 LBA52:
     ror zp4D
@@ -10530,7 +10531,7 @@ LBA69:
     beq LBA5A         ; ',' - jump to do next item
     cmp #';'
     beq LBA5A         ; ';' - jump to do next item
-    dec zp0A
+    dec zpCURSOR
     lda zp4D
     pha
     lda zp4E
@@ -10542,7 +10543,7 @@ LBA69:
     pla
     sta zp4D
     lda zp1B
-    sta zp0A
+    sta zpCURSOR
     php
     bit zp4D
     bvs LBA99
@@ -10601,7 +10602,7 @@ LBAE6:
     ldy zpTXTP
     sty zp3E
     jsr L8A97
-    dec zp0A
+    dec zpCURSOR
     cmp #':'
     beq LBB07
     cmp #$0D
@@ -10612,7 +10613,7 @@ LBAE6:
     ldy #$01
     jsr LBE55
 LBB07:
-    jsr L9857
+    jsr DONE
     lda zp3D
     sta zp1C
     lda zp3E
@@ -10654,7 +10655,7 @@ LBB40:
 
 LBB50:
     lda zp1B
-    sta zp0A
+    sta zpCURSOR
     lda zp1C
     sta zp19
     lda zp1D
@@ -10762,9 +10763,9 @@ LBBE4:
     cpx #$14
     bcs LBBD6
     jsr L986D
-    lda zp0B
+    lda zpLINE
     sta ws+$05A4,X
-    lda zp0C
+    lda zpLINE+1
     sta ws+$05B8,X
     inc zp24
     jmp L8BA3
@@ -11004,12 +11005,12 @@ LBD10:
 ; RUN
 ; ===
 LBD11:
-    jsr L9857
+    jsr DONE
 LBD14:
     jsr LBD20
     lda zpTXTP
-    sta zp0C          ; Point PtrA to PAGE
-    stx zp0B
+    sta zpLINE+1          ; Point PtrA to PAGE
+    stx zpLINE
     jmp L8B0B
 
 ; Clear BASIC heap, stack and DATA pointer
@@ -11657,11 +11658,11 @@ LBF99:
 ; Copy PtrA to PtrB, then get handle
 ; ==================================
 LBFA9:
-    lda zp0A
+    lda zpCURSOR
     sta zp1B          ; Set PtrB to program pointer in PtrA
-    lda zp0B
+    lda zpLINE
     sta zp19
-    lda zp0C
+    lda zpLINE+1
     sta zp1A
 
 ; Check for '#', evaluate channel
@@ -11712,7 +11713,7 @@ LBFDC:
 ; REPORT
 ; ======
 LBFE4:
-    jsr L9857
+    jsr DONE
     jsr LBC25         ; Check end of statement, print newline, clear COUNT
     ldy #$01
 LBFEC:
