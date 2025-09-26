@@ -726,9 +726,9 @@ L84C5:
 
 ; No arguments
 ; ------------
-    brk:CLC:CLD:CLI:CLV:DEX:DEY:INX
-    iny:NOP:PHA:PHP:PLA:PLP:RTI:RTS
-    sec:SED:SEI:TAX:TAY:TSX:TXA:TXS:TYA
+    brk:clc:cld:cli:clv:dex:dey:inx
+    iny:nop:pha:php:pla:plp:rti:rts
+    sec:sed:sei:tax:tay:tsx:txa:txs:tya
 
 ; Branches
 ; --------
