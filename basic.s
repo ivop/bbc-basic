@@ -765,7 +765,7 @@ L8508
     jsr L8A97         ; Skip spaces
     cmp #']'
     beq L84FD         ; ']' - exit assembler
-    jsr L986D
+    jsr CLYADP
 
 L8512:
     dec zpCURSOR
@@ -890,7 +890,7 @@ L8581:
     cmp #$0D
     bne L8581
 L858C:
-    jsr L9859
+    jsr DONE_WITH_Y
     dey
     lda (zpLINE),Y
     cmp #$3A
@@ -901,7 +901,7 @@ L858C:
     jmp L8AF6
 
 L859F:
-    jsr L9890
+    jsr LINO
 L85A2:
     jmp L8508
 
@@ -1829,16 +1829,16 @@ L8ADD:  ; FORMAT?
     .if title == 0
         lda #$0D
         ldy zpTXTP
-        sty zp13      ; TOP hi=PAGE hi
+        sty zpTOP+1      ; TOP hi=PAGE hi
         ldy #$00
-        sty zp12
-        sty zp20      ; TOP=PAGE, TRACE OFF
-        sta (zp12),Y  ; ?(PAGE+0)=<cr>
+        sty zpTOP
+        sty zpTRFLAG      ; TOP=PAGE, TRACE OFF
+        sta (zpTOP),Y  ; ?(PAGE+0)=<cr>
         lda #$FF
         iny
-        sta (zp12),Y  ; ?(PAGE+1)=$FF
+        sta (zpTOP),Y  ; ?(PAGE+1)=$FF
         iny
-        sty zp12      ; TOP=PAGE+2
+        sty zpTOP      ; TOP=PAGE+2
     .endif
 
 L8AF3:
@@ -1940,7 +1940,7 @@ L8B60:
 ; Embedded *command
 ; =================
 L8B73:
-    jsr L986D         ; Update PtrA to current address
+    jsr CLYADP         ; Update PtrA to current address
     ldx zpLINE
     ldy zpLINE+1          ; XY=>command string
 
@@ -1971,7 +1971,7 @@ L8B87:
     lda zpLINE+1
     cmp #(ws+$0700)/256
     beq L8B41; Program in command buffer, jump back to immediate loop
-    jsr L9890
+    jsr LINO
     bne L8BA3         ; Check for end of program, step past <cr>
 
 L8B96:
@@ -2654,7 +2654,7 @@ L8F31:
     jsr LBDEA
 L8F53:
     jsr LBC2D
-    jsr L987B
+    jsr TSTBRK
     jsr L9222
     lda zp39
     cmp zp2A
@@ -2694,9 +2694,9 @@ L8F8D:
 
 ; called by renumber
 L8F92:
-    lda zp12
+    lda zpTOP
     sta zp3B
-    lda zp13
+    lda zpTOP+1
     sta zp3C
 L8F9A:
     lda zpTXTP
@@ -3243,7 +3243,7 @@ L92AE:
     sta zp22
     lda #$FF          ; Set trace limit high byte, set TRACE ON
 L92B2:
-    sta zp20
+    sta zpTRFLAG
     jmp L8B9B         ; Set TRACE flag, return to execution loop
 
 ; TRACE ON
@@ -3471,9 +3471,9 @@ L939A:
         tya
         sbc zp03
         bcc L9372     ; Would be below VAREND, give error
-        cpx zp12
+        cpx zpTOP
         tya
-        sbc zp13
+        sbc zpTOP+1
         bcc L9372     ; Would be below TOP, give error
 
                       ; BASIC stack is empty, screen would not hit heap or program
@@ -4291,47 +4291,47 @@ L9849:
 L984C:
     txa
     ldy zp1B
-    jmp L9861
+    jmp DONET
 
 L9852:
     ldy zp1B
-    jmp L9859
+    jmp DONE_WITH_Y
 
 ; Check for end of statement, check for Escape
 ; ============================================
 DONE:
     ldy zpCURSOR          ; Get program pointer offset
-L9859:
+DONE_WITH_Y:
     dey               ; Step back to previous character
-L985A:
+BLINK:
     iny
     lda (zpLINE),Y      ; Get next character
-    cmp #$20
-    beq L985A         ; Skip spaces
-L9861:
+    cmp #' '
+    beq BLINK         ; Skip spaces
+DONET:
     cmp #':'
-    beq L986D         ; Colon, jump to update program pointer
+    beq CLYADP         ; Colon, jump to update program pointer
     cmp #$0D
-    beq L986D         ; <cr>, jump to update program pointer
+    beq CLYADP         ; <cr>, jump to update program pointer
     cmp #tknELSE
     bne L982A         ; Not 'ELSE', jump to 'Syntax error'
 
 ; Update program pointer
 ; ----------------------
-L986D:
+CLYADP:
     clc
     tya
     adc zpLINE
     sta zpLINE          ; Update program pointer in PtrA
-    bcc L9877
+    bcc SECUR
     inc zpLINE+1
-L9877:
+SECUR:
     ldy #$01
     sty zpCURSOR
 
 ; Check background Escape state
 ; -----------------------------
-L987B:
+TSTBRK:
 
 ; Atom - check keyboard matrix
 ; ----------------------------
@@ -4347,7 +4347,7 @@ L987B:
 ; -------------------------------
     .ifdef TARGET_SYSTEM
         bit ESCFLG
-        bmi L987F     ; Nothing pressed
+        bmi SECEND     ; Nothing pressed
         pha
         lda ESCFLG    ; Save A, get keypress
         cmp #$1B
@@ -4362,24 +4362,26 @@ L987B:
         bmi L9838     ; If Escape set, jump to give error
     .endif
 
-L987F:
+SECEND:
     rts
 
-L9880:
+FORR:
     jsr DONE
     dey
     lda (zpLINE),Y
     cmp #$3A
-    beq L987F
+    beq SECEND
+
     lda zpLINE+1
     cmp #$07+(ws/256)
-    beq L98BC
-L9890:
+    beq LEAVER
+
+LINO:
     iny
     lda (zpLINE),Y
-    bmi L98BC
-    lda zp20
-    beq L98AC
+    bmi LEAVER
+    lda zpTRFLAG
+    beq NOTR
     tya
     pha
     iny
@@ -4397,28 +4399,28 @@ L9890:
     jsr L9905
     pla
     tay
-L98AC:
+NOTR:
     iny
     sec
     tya
     adc zpLINE
     sta zpLINE
-    bcc L98B7
+    bcc LINOIN
     inc zpLINE+1
-L98B7:
+LINOIN:
     ldy #$01
     sty zpCURSOR
-L98BB:
+NOTRDE:
     rts
 
-L98BC:
+LEAVER:
     jmp L8AF6
-
-L98BF:
-    jmp L8C0E
 
 ; IF numeric
 ; ==========
+L98BF:
+    jmp L8C0E
+
 L98C2:
     jsr L9B1D
     beq L98BF
@@ -4443,7 +4445,7 @@ L98E3:
     jsr L97DF
     bcc L98DE
     jsr LB9AF
-    jsr L9877
+    jsr SECUR
     jmp LB8D2
 
 L98F1:
@@ -4465,7 +4467,7 @@ L9905:
     cmp zp21
     lda zp2B
     sbc zp22
-    bcs L98BB
+    bcs NOTRDE
     lda #$5B
 L9911:
     jsr LB558
@@ -8308,8 +8310,8 @@ XAEA6:
         cmp #'P'
         bne LAE43
         inc zp1B
-        lda zp12
-        ldy zp13
+        lda zpTOP
+        ldy zpTOP+1
         bcs XAED5
 
 ; =PAGE - Read PAGE
@@ -8445,8 +8447,8 @@ LAEDC:
         cmp #$50
         bne LAEC7
         inc zp1B
-        lda zp12
-        ldy zp13
+        lda zpTOP
+        ldy zpTOP+1
 
 ; Return 16-bit integer in AY
 ; ---------------------------
@@ -8988,7 +8990,7 @@ LB158:
     bcs LB12D
     txa
     tay
-    jsr L986D
+    jsr CLYADP
     jsr L94ED
     ldx #$01
     jsr L9531
@@ -9451,7 +9453,7 @@ LB402:
 ; FAULT set up, now process BRK error
 ; -----------------------------------
     jsr LB3C5
-    sty zp20
+    sty zpTRFLAG
     lda (FAULT),Y
     bne LB413         ; If ERR<>0, skip past ON ERROR OFF
     lda #<LB433
@@ -9832,7 +9834,7 @@ LB5DB:
 
 LB5FC:
     jsr LBC25
-    jsr L986D
+    jsr CLYADP
 LB602:
     lda (zpLINE),Y
     sta zp2B
@@ -10026,7 +10028,7 @@ LB741:
     lda ws+$04FF,X
     sty zpLINE
     sta zpLINE+1
-    jsr L9877
+    jsr SECUR
     jmp L8BA3
 
 LB751:
@@ -10159,7 +10161,7 @@ LB81F:
     lda zp2D
     sta ws+$0506,Y
 LB837:
-    jsr L9880
+    jsr FORR
     ldy zp26
     lda zpLINE
     sta ws+$050D,Y
@@ -10253,7 +10255,7 @@ LB8CC:
     jsr LB99A
     jsr DONE         ; Find destination line, check for end of statement
 LB8D2:
-    lda zp20
+    lda zpTRFLAG
     beq LB8D9
     jsr L9905; If TRACE ON, print current line number
 LB8D9:
@@ -10282,7 +10284,7 @@ LB8F2:
     beq LB8E4         ; ON ERROR OFF
     ldy zpCURSOR
     dey
-    jsr L986D
+    jsr CLYADP
     lda zpLINE
     sta zp16          ; Point ON ERROR pointer to here
     lda zpLINE+1
@@ -10347,7 +10349,7 @@ LB95C:
     pla               ; Get stacked token back
     cmp #tknGOSUB
     beq LB96A         ; Jump to do GOSUB
-    jsr L9877         ; Update line index and check Escape
+    jsr SECUR         ; Update line index and check Escape
     jmp LB8D2         ; Jump to do GOTO
 
 ; Update line pointer so RETURN comes back to next statement
@@ -10762,7 +10764,7 @@ LBBE4:
     ldx zp24
     cpx #$14
     bcs LBBD6
-    jsr L986D
+    jsr CLYADP
     lda zpLINE
     sta ws+$05A4,X
     lda zpLINE+1
@@ -10863,11 +10865,11 @@ LBC2D:
     sbc #$02
     sta zp37
     sta zp3D
-    sta zp12
+    sta zpTOP
     lda zp3E
     sbc #$00
     sta zp38
-    sta zp13
+    sta zpTOP+1
     sta zp3E
     ldy #$03
     lda (zp37),Y
@@ -10880,23 +10882,23 @@ LBC53:
     ldy #$00
 LBC55:
     lda (zp37),Y
-    sta (zp12),Y
+    sta (zpTOP),Y
     cmp #$0D
     beq LBC66
 LBC5D:
     iny
     bne LBC55
     inc zp38
-    inc zp13
+    inc zpTOP+1
     bne LBC55
 LBC66:
     iny
     bne LBC6D
     inc zp38
-    inc zp13
+    inc zpTOP+1
 LBC6D:
     lda (zp37),Y
-    sta (zp12),Y
+    sta (zpTOP),Y
     bmi LBC7C
     jsr LBC81
     jsr LBC81
@@ -10911,11 +10913,11 @@ LBC80:
 LBC81:
     iny
     bne LBC88
-    inc zp13
+    inc zpTOP+1
     inc zp38
 LBC88:
     lda (zp37),Y
-    sta (zp12),Y
+    sta (zpTOP),Y
     rts
 
 LBC8D:
@@ -10936,19 +10938,19 @@ LBC9E:
     iny
     sty zp3F
     inc zp3F
-    lda zp12
+    lda zpTOP
     sta zp39
-    lda zp13
+    lda zpTOP+1
     sta zp3A
     jsr LBE92
     sta zp37
-    lda zp13
+    lda zpTOP+1
     sta zp38
     dey
     lda zpHIMEM
-    cmp zp12
+    cmp zpTOP
     lda zpHIMEM+1
-    sbc zp13
+    sbc zpTOP+1
     bcs LBCD6
     jsr LBE6F
     jsr LBD20
@@ -11016,10 +11018,10 @@ LBD14:
 ; Clear BASIC heap, stack and DATA pointer
 ; ========================================
 LBD20:
-    lda zp12
+    lda zpTOP
     sta zpLOMEM
     sta zp02          ; LOMEM=TOP, VAREND=TOP
-    lda zp13
+    lda zpTOP+1
     sta zpLOMEM+1
     sta zp03
     jsr LBD3A         ; Clear DATA and stack
@@ -11265,20 +11267,20 @@ LBE62:
 ; ----------------------------------------------
 LBE6F:
     lda zpTXTP
-    sta zp13
+    sta zpTOP+1
     ldy #$00
-    sty zp12
+    sty zpTOP
     iny               ; Point TOP to PAGE
 LBE78:
     dey
-    lda (zp12),Y      ; Get byte preceding line
+    lda (zpTOP),Y      ; Get byte preceding line
     cmp #$0D
     bne LBE9E         ; Not <cr>, jump to 'Bad program'
     iny               ; Step to line number/terminator
-    lda (zp12),Y
+    lda (zpTOP),Y
     bmi LBE90         ; b7 set, end of program
     ldy #$03          ; Point to line length
-    lda (zp12),Y
+    lda (zpTOP),Y
     beq LBE9E         ; Zero length, jump to 'Bad program'
     clc
     jsr LBE93         ; Update TOP to point to next line
@@ -11292,10 +11294,10 @@ LBE90:
 LBE92:
     tya
 LBE93:
-    adc zp12
-    sta zp12          ; TOP=TOP+A
+    adc zpTOP
+    sta zpTOP          ; TOP=TOP+A
     bcc LBE9B
-    inc zp13
+    inc zpTOP+1
 LBE9B:
     ldy #$01
     rts               ; Return Y=1, NE
@@ -11421,9 +11423,9 @@ LBEF3:
     jsr LBE6F         ; Check program, set TOP
 
     .if version < 3
-        lda zp12
+        lda zpTOP
         sta F_END+0       ; Set FILE.END to TOP
-        lda zp13
+        lda zpTOP+1
         sta F_END+1
         lda #<ENTRY
         sta F_EXEC+0      ; Set FILE.EXEC to STARTUP
@@ -11470,9 +11472,9 @@ LBEF3:
         .endif
     .endif
     .if version >= 3
-        ldx zp12
+        ldx zpTOP
         stx F_END+0       ; Set FILE.END to TOP
-        ldx zp13
+        ldx zpTOP+1
         stx F_END+1
         ldx #<ENTRY
         stx F_EXEC+0      ; Set FILE.EXEC to STARTUP
