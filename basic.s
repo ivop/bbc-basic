@@ -275,7 +275,7 @@ L8000:
 ; =======================
 
 .ifdef MOS_ATOM
-    JSR LBFCF         ; Print inline text
+    jsr LBFCF         ; Print inline text
     dta 'BBC BASIC II'
     .if version == 3
         dta 'I'
@@ -334,40 +334,40 @@ L8023:
     .endif
     sty zp18
 
-    LDX #$00
-    STX zp1f          ; Set LISTO to 0
-    STX ws+$0402
-    STX ws+$0403      ; Set @% to $0000xxxx
-    DEX
-    STX zp23          ; Set WIDTH to $FF
+    ldx #$00
+    stx zp1f          ; Set LISTO to 0
+    stx ws+$0402
+    stx ws+$0403      ; Set @% to $0000xxxx
+    dex
+    stx zp23          ; Set WIDTH to $FF
 
-    LDX #$0A
-    STX ws+$0400
-    DEX
-    STX ws+$0401      ; Set @% to $0000090A
+    ldx #$0A
+    stx ws+$0400
+    dex
+    stx ws+$0401      ; Set @% to $0000090A
 
-    LDA #$01
-    AND zp11
-    ORA zp0d          ; Check RND seed
-    ORA zp0e
-    ORA zp0f
-    ORA zp10
-    BNE L8063         ; If nonzero, skip past
+    lda #$01
+    and zp11
+    ora zp0d          ; Check RND seed
+    ora zp0e
+    ora zp0f
+    ora zp10
+    bne L8063         ; If nonzero, skip past
 
-    LDA #$41          ; Set RND seed to $575241
-    STA zp0d
-    LDA #$52
-    STA zp0e
-    LDA #$57
-    STA zp0f          ; "ARW" - Acorn Roger Wilson?
+    lda #$41          ; Set RND seed to $575241
+    sta zp0d
+    lda #$52
+    sta zp0e
+    lda #$57
+    sta zp0f          ; "ARW" - Acorn Roger Wilson?
 
 L8063:
-    LDA #<LB402
-    STA BRKV+0        ; Set up error handler
-    LDA #>LB402
-    STA BRKV+1
-    CLI
-    JMP L8ADD         ; Enable IRQs, jump to immediate loop
+    lda #<LB402
+    sta BRKV+0        ; Set up error handler
+    lda #>LB402
+    sta BRKV+1
+    cli
+    jmp L8ADD         ; Enable IRQs, jump to immediate loop
 
 ; ----------------------------------------------------------------------------
 
@@ -726,9 +726,9 @@ L84C5:
 
 ; No arguments
 ; ------------
-    BRK:CLC:CLD:CLI:CLV:DEX:DEY:INX
-    INY:NOP:PHA:PHP:PLA:PLP:RTI:RTS
-    SEC:SED:SEI:TAX:TAY:TSX:TXA:TXS:TYA
+    brk:CLC:CLD:CLI:CLV:DEX:DEY:INX
+    iny:NOP:PHA:PHP:PLA:PLP:RTI:RTS
+    sec:SED:SEI:TAX:TAY:TSX:TXA:TXS:TYA
 
 ; Branches
 ; --------
@@ -753,1167 +753,1167 @@ L84C5:
 ; --------------
 
 L84FD:
-    LDA #$FF          ; Set OPT to 'BASIC'
+    lda #$FF          ; Set OPT to 'BASIC'
 L84FF:
-    STA zp28
-    JMP L8BA3         ; Set OPT, return to execution loop
+    sta zp28
+    jmp L8BA3         ; Set OPT, return to execution loop
 
 L8504:
-    LDA #$03
-    STA zp28          ; Set OPT 3, default on entry to '['
+    lda #$03
+    sta zp28          ; Set OPT 3, default on entry to '['
 L8508
-    JSR L8A97         ; Skip spaces
-    CMP #']'
-    BEQ L84FD         ; ']' - exit assembler
-    JSR L986D
+    jsr L8A97         ; Skip spaces
+    cmp #']'
+    beq L84FD         ; ']' - exit assembler
+    jsr L986D
 
 L8512:
-    DEC zp0A
-    JSR L85BA
+    dec zp0A
+    jsr L85BA
 
-    DEC zp0A
-    LDA zp28
-    LSR
-    BCC L857E
+    dec zp0A
+    lda zp28
+    lsr
+    bcc L857E
 
-    LDA zp1E
-    ADC #$04
-    STA zp3F
-    LDA zp38
-    JSR LB545
+    lda zp1E
+    adc #$04
+    sta zp3F
+    lda zp38
+    jsr LB545
 
-    LDA zp37
-    JSR LB562
+    lda zp37
+    jsr LB562
 
-    LDX #$FC
-    LDY zp39
-    BPL L8536
+    ldx #$FC
+    ldy zp39
+    bpl L8536
 
-    LDY zp36
+    ldy zp36
 L8536:
-    STY zp38
-    BEQ L8556
+    sty zp38
+    beq L8556
 
-    LDY #$00
+    ldy #$00
 L853C:
-    INX
-    BNE L854C
+    inx
+    bne L854C
 
-    JSR LBC25         ; Print newline
+    jsr LBC25         ; Print newline
 
-    LDX zp3F
+    ldx zp3F
 
 L8544:
     .if version < 3
-        JSR LB565     ; Print a space
-        DEX
-        BNE L8544     ; Loop to print spaces
+        jsr LB565     ; Print a space
+        dex
+        bne L8544     ; Loop to print spaces
     .elseif version >= 3
-        JSR LB580     ; Print multiple spaces
+        jsr LB580     ; Print multiple spaces
     .endif
 
-    LDX #$FD
+    ldx #$FD
 L854C:
-    LDA (zp3A),Y
-    JSR LB562
+    lda (zp3A),Y
+    jsr LB562
 
-    INY
-    DEC zp38
-    BNE L853C
+    iny
+    dec zp38
+    bne L853C
 
 L8556:
     .if version < 3
-        INX
-        BPL L8565
-        JSR LB565
-        JSR LB558
-        JSR LB558
-        JMP L8556
+        inx
+        bpl L8565
+        jsr LB565
+        jsr LB558
+        jsr LB558
+        jmp L8556
 L8565:
-        LDY #0
+        ldy #0
     .elseif version >= 3
-        TXA
-        TAY
+        txa
+        tay
 X855C:
-        INY
+        iny
 X855D:
-        BEQ X8566
-        LDX #3
-        JSR LB580
-        BEQ X855C
+        beq X8566
+        ldx #3
+        jsr LB580
+        beq X855C
 X8566:
-        LDX #$0A
-        LDA (zp0B),Y
-        CMP #$2E
-        BNE X857D
+        ldx #$0A
+        lda (zp0B),Y
+        cmp #$2E
+        bne X857D
 X856E:
-        JSR LB50E     ; Print char or token
-        DEX
-        BNE X8576
-        LDX #1
+        jsr LB50E     ; Print char or token
+        dex
+        bne X8576
+        ldx #1
 X8576:
-        INY
-        LDA (zp0B),Y
-        CPY zp4F
-        BNE X856E
+        iny
+        lda (zp0B),Y
+        cpy zp4F
+        bne X856E
 X857D:
-        JSR LB580
-        DEY
+        jsr LB580
+        dey
 X8581:
-        INY
-        CMP (zp0B),Y
-        BEQ X8581
+        iny
+        cmp (zp0B),Y
+        beq X8581
     .endif
 
 L8567:
-    LDA (zp0B),Y
-    CMP #$3A
-    BEQ L8577
-    CMP #$0D
-    BEQ L857B
+    lda (zp0B),Y
+    cmp #$3A
+    beq L8577
+    cmp #$0D
+    beq L857B
 L8571:
-    JSR LB50E         ; Print character or token
-    INY:BNE L8567
+    jsr LB50E         ; Print character or token
+    iny:BNE L8567
 L8577
-    CPY zp0A
-    BCC L8571
+    cpy zp0A
+    bcc L8571
 L857B:
-    JSR LBC25         ; Print newline
+    jsr LBC25         ; Print newline
 L857E
-    LDY zp0A
-    DEY
+    ldy zp0A
+    dey
 L8581:
-    INY
-    LDA (zp0B),Y
-    CMP #$3A
-    BEQ L858C
-    CMP #$0D
-    BNE L8581
+    iny
+    lda (zp0B),Y
+    cmp #$3A
+    beq L858C
+    cmp #$0D
+    bne L8581
 L858C:
-    JSR L9859
-    DEY
-    LDA (zp0B),Y
-    CMP #$3A
-    BEQ L85A2
-    LDA zp0C
-    CMP #$07+(ws/256)
-    BNE L859F
-    JMP L8AF6
+    jsr L9859
+    dey
+    lda (zp0B),Y
+    cmp #$3A
+    beq L85A2
+    lda zp0C
+    cmp #$07+(ws/256)
+    bne L859F
+    jmp L8AF6
 
 L859F:
-    JSR L9890
+    jsr L9890
 L85A2:
-    JMP L8508
+    jmp L8508
 
 L85A5:
-    JSR L9582
-    BEQ L8604
-    BCS L8604
-    JSR LBD94
-    JSR LAE3A         ; Find P%
-    STA zp27
-    JSR LB4B4
-    JSR L8827
+    jsr L9582
+    beq L8604
+    bcs L8604
+    jsr LBD94
+    jsr LAE3A         ; Find P%
+    sta zp27
+    jsr LB4B4
+    jsr L8827
 
     .if version >= 3
-        STY zp4F
+        sty zp4F
     .endif
 
 L85BA:
-    LDX #$03          ; Prepare to fetch three characters
-    JSR L8A97         ; Skip spaces
-    LDY #$00
-    STY zp3D
-    CMP #':'
-    BEQ L862B         ; End of statement
-    CMP #$0D
-    BEQ L862B         ; End of line
-    CMP #'\'
-    BEQ L862B         ; Comment
-    CMP #'.'
-    BEQ L85A5         ; Label
-    DEC zp0A
+    ldx #$03          ; Prepare to fetch three characters
+    jsr L8A97         ; Skip spaces
+    ldy #$00
+    sty zp3D
+    cmp #':'
+    beq L862B         ; End of statement
+    cmp #$0D
+    beq L862B         ; End of line
+    cmp #'\'
+    beq L862B         ; Comment
+    cmp #'.'
+    beq L85A5         ; Label
+    dec zp0A
 L85D5:
-    LDY zp0A
-    INC zp0A          ; Get current character, inc. index
-    LDA (zp0B),Y
-    BMI L8607         ; Token, check for tokenised AND, EOR, OR
-    CMP #$20
-    BEQ L85F1         ; Space, step past
-    LDY #$05
-    ASL
-    ASL
-    ASL               ; Compact first character
+    ldy zp0A
+    inc zp0A          ; Get current character, inc. index
+    lda (zp0B),Y
+    bmi L8607         ; Token, check for tokenised AND, EOR, OR
+    cmp #$20
+    beq L85F1         ; Space, step past
+    ldy #$05
+    asl
+    asl
+    asl               ; Compact first character
 L85E6:
-    ASL
-    ROL zp3D
-    ROL zp3E
-    DEY
-    BNE L85E6
-    DEX
-    BNE L85D5         ; Loop to fetch three characters
+    asl
+    rol zp3D
+    rol zp3E
+    dey
+    bne L85E6
+    dex
+    bne L85D5         ; Loop to fetch three characters
 
 ; The current opcode has now been compressed into two bytes
 ; ---------------------------------------------------------
 
 L85F1:
-    LDX #$3A          ; Point to end of opcode lookup table
-    LDA zp3D          ; Get low byte of compacted mnemonic
+    ldx #$3A          ; Point to end of opcode lookup table
+    lda zp3D          ; Get low byte of compacted mnemonic
 L85F5:
-    CMP L8451-1,X
-    BNE L8601         ; Low half doesn't match
-    LDY L848B-1,X     ; Check high half
-    CPY zp3E
-    BEQ L8620         ; Mnemonic matches
+    cmp L8451-1,X
+    bne L8601         ; Low half doesn't match
+    ldy L848B-1,X     ; Check high half
+    cpy zp3E
+    beq L8620         ; Mnemonic matches
 L8601:
-    DEX
-    BNE L85F5         ; Loop through opcode lookup table
+    dex
+    bne L85F5         ; Loop through opcode lookup table
 L8604:
-    JMP L982A         ; Mnemonic not matched, Mistake
+    jmp L982A         ; Mnemonic not matched, Mistake
 
 L8607:
-    LDX #$22          ; opcode number for 'AND'
-    CMP #tknAND
-    BEQ L8620         ; Tokenised 'AND'
-    INX               ; opcode number for 'EOR'
-    CMP #tknEOR
-    BEQ L8620         ; Tokenised 'EOR'
-    INX               ; opcode number for 'ORA'
-    CMP #tknOR
-    BNE L8604         ; Not tokenised 'OR'
-    INC zp0A
-    INY
-    LDA (zp0B),Y      ; Get next character
-    CMP #'A'
-    BNE L8604         ; Ensure 'OR' followed by 'A'
+    ldx #$22          ; opcode number for 'AND'
+    cmp #tknAND
+    beq L8620         ; Tokenised 'AND'
+    inx               ; opcode number for 'EOR'
+    cmp #tknEOR
+    beq L8620         ; Tokenised 'EOR'
+    inx               ; opcode number for 'ORA'
+    cmp #tknOR
+    bne L8604         ; Not tokenised 'OR'
+    inc zp0A
+    iny
+    lda (zp0B),Y      ; Get next character
+    cmp #'A'
+    bne L8604         ; Ensure 'OR' followed by 'A'
 
 ; Opcode found
 ; ------------
 
 L8620:
-    LDA L84C5-1,X
-    STA zp29          ; Get base opcode
-    LDY #$01          ; Y=1 for one byte
-    CPX #$1A
-    BCS L8673         ; Opcode $1A+ have arguments
+    lda L84C5-1,X
+    sta zp29          ; Get base opcode
+    ldy #$01          ; Y=1 for one byte
+    cpx #$1A
+    bcs L8673         ; Opcode $1A+ have arguments
 L862B:
-    LDA ws+$0440
-    STA zp37          ; Get P% low byte
-    STY zp39
-    LDX zp28
-    CPX #$04          ; Offset assembly (opt>3)
-    LDX ws+$0441
-    STX zp38          ; Get P% high byte
-    BCC L8643         ; No offset assembly
-    LDA ws+$043C
-    LDX ws+$043D      ; Get O%
+    lda ws+$0440
+    sta zp37          ; Get P% low byte
+    sty zp39
+    ldx zp28
+    cpx #$04          ; Offset assembly (opt>3)
+    ldx ws+$0441
+    stx zp38          ; Get P% high byte
+    bcc L8643         ; No offset assembly
+    lda ws+$043C
+    ldx ws+$043D      ; Get O%
 L8643:
-    STA zp3A
-    STX zp3B          ; Store destination pointer
-    TYA
-    BEQ L8672
-    BPL L8650
-    LDY zp36
-    BEQ L8672
+    sta zp3A
+    stx zp3B          ; Store destination pointer
+    tya
+    beq L8672
+    bpl L8650
+    ldy zp36
+    beq L8672
 L8650:
-    DEY
-    LDA zp29,Y        ; Get opcode byte   (lda abs,y (!))
-    BIT zp39
-    BPL L865B         ; Opcode - jump to store it
-    LDA ws+$0600,Y    ; Get EQU byte
+    dey
+    lda zp29,Y        ; Get opcode byte   (lda abs,y (!))
+    bit zp39
+    bpl L865B         ; Opcode - jump to store it
+    lda ws+$0600,Y    ; Get EQU byte
 L865B:
-    STA (zp3A),Y      ; Store byte
-    INC ws+$0440
-    BNE L8665         ; Increment P%
-    INC ws+$0441
+    sta (zp3A),Y      ; Store byte
+    inc ws+$0440
+    bne L8665         ; Increment P%
+    inc ws+$0441
 L8665:
-    BCC L866F
-    INC ws+$043C
-    BNE L866F         ; Increment O%
-    INC ws+$043D
+    bcc L866F
+    inc ws+$043C
+    bne L866F         ; Increment O%
+    inc ws+$043D
 L866F:
-    TYA
-    BNE L8650
+    tya
+    bne L8650
 L8672:
-    RTS
+    rts
 
 L8673:
-    CPX #$22
-    BCS L86B7
-    JSR L8821
-    CLC
-    LDA zp2A
-    SBC ws+$0440
-    TAY
-    LDA zp2B
-    SBC ws+$0441
-    CPY #$01
-    DEY
-    SBC #$00
-    BEQ L86B2
-    CMP #$FF
-    BEQ L86AD
+    cpx #$22
+    bcs L86B7
+    jsr L8821
+    clc
+    lda zp2A
+    sbc ws+$0440
+    tay
+    lda zp2B
+    sbc ws+$0441
+    cpy #$01
+    dey
+    sbc #$00
+    beq L86B2
+    cmp #$FF
+    beq L86AD
 
 L8691:
-    LDA zp28
+    lda zp28
     .if version < 3
-        LSR
+        lsr
     .elseif version >= 3
-        AND #$02
+        and #$02
     .endif
-    BEQ L86A5
+    beq L86A5
 
-    BRK
+    brk
     .if foldup == 1
         dta 1, 'OUT OF RANGE'
     .else
         dta 1, 'Out of range'
     .endif
-    BRK
+    brk
 
 L86A5:
-    TAY
+    tay
 L86A6:
-    STY zp2A
+    sty zp2A
 L86A8:
-    LDY #$02
-    JMP L862B
+    ldy #$02
+    jmp L862B
 
 L86AD:
-    TYA
-    BMI L86A6
-    BPL L8691
+    tya
+    bmi L86A6
+    bpl L8691
 
 L86B2:
-    TYA
-    BPL L86A6
-    BMI L8691
+    tya
+    bpl L86A6
+    bmi L8691
 
 L86B7:
-    CPX #$29
-    BCS L86D3
-    JSR L8A97         ; Skip spaces
-    CMP #'#'
-    BNE L86DA
-    JSR L882F
+    cpx #$29
+    bcs L86D3
+    jsr L8A97         ; Skip spaces
+    cmp #'#'
+    bne L86DA
+    jsr L882F
 L86C5:
-    JSR L8821
+    jsr L8821
 L86C8:
-    LDA zp2B
-    BEQ L86A8
+    lda zp2B
+    beq L86A8
 L86CC:
-    BRK
+    brk
     dta $02
     .if foldup == 1
         dta 'BYTE'
     .else
         dta 'Byte'
     .endif
-    BRK
+    brk
 
 ; Parse (zp),Y addressing mode
 ; ----------------------------
 L86D3:
-    CPX #$36
-    BNE L873F
-    JSR L8A97         ; Skip spaces
+    cpx #$36
+    bne L873F
+    jsr L8A97         ; Skip spaces
 L86DA:
-    CMP #'('
-    BNE L8715
-    JSR L8821
-    JSR L8A97         ; Skip spaces
-    CMP #')'
-    BNE L86FB
-    JSR L8A97         ; Skip spaces
-    CMP #','
-    BNE L870D         ; No comma, jump to Index error
-    JSR L882C
-    JSR L8A97         ; Skip spaces
-    CMP #'Y'
-    BNE L870D         ; (zp),Y missing Y, jump to Index error
-    BEQ L86C8
+    cmp #'('
+    bne L8715
+    jsr L8821
+    jsr L8A97         ; Skip spaces
+    cmp #')'
+    bne L86FB
+    jsr L8A97         ; Skip spaces
+    cmp #','
+    bne L870D         ; No comma, jump to Index error
+    jsr L882C
+    jsr L8A97         ; Skip spaces
+    cmp #'Y'
+    bne L870D         ; (zp),Y missing Y, jump to Index error
+    beq L86C8
 
 ; Parse (zp,X) addressing mode
 ; ----------------------------
 L86FB:
-    CMP #','
-    BNE L870D         ; No comma, jump to Index error
-    JSR L8A97         ; Skip spaces
-    CMP #'X'
-    BNE L870D         ; zp,X missing X, jump to Index error
-    JSR L8A97         ; Skip spaces
-    CMP #')'
-    BEQ L86C8         ; zp,X) - jump to process
+    cmp #','
+    bne L870D         ; No comma, jump to Index error
+    jsr L8A97         ; Skip spaces
+    cmp #'X'
+    bne L870D         ; zp,X missing X, jump to Index error
+    jsr L8A97         ; Skip spaces
+    cmp #')'
+    beq L86C8         ; zp,X) - jump to process
 L870D:
-    BRK
+    brk
     dta $03
     .if foldup == 1
         dta 'INDEX'
     .else
         dta 'Index'
     .endif
-    BRK
+    brk
 
 L8715:
-    DEC zp0A
-    JSR L8821
-    JSR L8A97         ; Skip spaces
-    CMP #','
-    BNE L8735         ; No comma - jump to process as abs,X
-    JSR L882C
-    JSR L8A97         ; Skip spaces
-    CMP #'X'
-    BEQ L8735         ; abs,X - jump to process
-    CMP #'Y'
-    BNE L870D         ; Not abs,Y - jump to Index error
+    dec zp0A
+    jsr L8821
+    jsr L8A97         ; Skip spaces
+    cmp #','
+    bne L8735         ; No comma - jump to process as abs,X
+    jsr L882C
+    jsr L8A97         ; Skip spaces
+    cmp #'X'
+    beq L8735         ; abs,X - jump to process
+    cmp #'Y'
+    bne L870D         ; Not abs,Y - jump to Index error
 L872F:
-    JSR L882F
-    JMP L879A
+    jsr L882F
+    jmp L879A
 
 ; abs and abs,X
 ; -------------
 L8735:
-    JSR L8832
+    jsr L8832
 L8738:
-    LDA zp2B
-    BNE L872F
-    JMP L86A8
+    lda zp2B
+    bne L872F
+    jmp L86A8
 
 L873F:
-    CPX #$2F
-    BCS L876E
-    CPX #$2D
-    BCS L8750
-    JSR L8A97         ; Skip spaces
-    CMP #'A'
-    BEQ L8767         ; ins A -
-    DEC zp0A
+    cpx #$2F
+    bcs L876E
+    cpx #$2D
+    bcs L8750
+    jsr L8A97         ; Skip spaces
+    cmp #'A'
+    beq L8767         ; ins A -
+    dec zp0A
 L8750:
-    JSR L8821
-    JSR L8A97         ; Skip spaces
-    CMP #','
-    BNE L8738         ; No comma, jump to ...
-    JSR L882C
-    JSR L8A97         ; Skip spaces
-    CMP #'X'
-    BEQ L8738         ; Jump with address,X
-    JMP L870D         ; Otherwise, jump to Index error
+    jsr L8821
+    jsr L8A97         ; Skip spaces
+    cmp #','
+    bne L8738         ; No comma, jump to ...
+    jsr L882C
+    jsr L8A97         ; Skip spaces
+    cmp #'X'
+    beq L8738         ; Jump with address,X
+    jmp L870D         ; Otherwise, jump to Index error
 
 L8767:
-    JSR L8832
-    LDY #$01
-    BNE L879C
+    jsr L8832
+    ldy #$01
+    bne L879C
 
 L876E:
-    CPX #$32
-    BCS L8788
-    CPX #$31
-    BEQ L8782
-    JSR L8A97         ; Skip spaces
-    CMP #'#'
-    BNE L8780         ; Not #, jump with address
-    JMP L86C5         ; Jump with immediate
+    cpx #$32
+    bcs L8788
+    cpx #$31
+    beq L8782
+    jsr L8A97         ; Skip spaces
+    cmp #'#'
+    bne L8780         ; Not #, jump with address
+    jmp L86C5         ; Jump with immediate
 
 L8780:
-    DEC zp0A
+    dec zp0A
 L8782:
-    JSR L8821
-    JMP L8735
+    jsr L8821
+    jmp L8735
 
 L8788:
-    CPX #$33
-    BEQ L8797
-    BCS L87B2
-    JSR L8A97         ; Skip spaces
-    CMP #'('
-    BEQ L879F         ; Jump with (... addressing mode
-    DEC zp0A
+    cpx #$33
+    beq L8797
+    bcs L87B2
+    jsr L8A97         ; Skip spaces
+    cmp #'('
+    beq L879F         ; Jump with (... addressing mode
+    dec zp0A
 L8797:
-    JSR L8821
+    jsr L8821
 L879A:
-    LDY #$03
+    ldy #$03
 L879C:
-    JMP L862B
+    jmp L862B
 
 L879F:
-    JSR L882C
-    JSR L882C
-    JSR L8821
-    JSR L8A97         ; Skip spaces
-    CMP #')'
-    BEQ L879A
-    JMP L870D         ; No ) - jump to Index error
+    jsr L882C
+    jsr L882C
+    jsr L8821
+    jsr L8A97         ; Skip spaces
+    cmp #')'
+    beq L879A
+    jmp L870D         ; No ) - jump to Index error
 
 L87B2:
-    CPX #$39
-    BCS L8813
-    LDA zp3D
-    EOR #$01
-    AND #$1F
-    PHA
-    CPX #$37
-    BCS L87F0
-    JSR L8A97         ; Skip spaces
-    CMP #'#'
-    BNE L87CC
-    PLA
-    JMP L86C5
+    cpx #$39
+    bcs L8813
+    lda zp3D
+    eor #$01
+    and #$1F
+    pha
+    cpx #$37
+    bcs L87F0
+    jsr L8A97         ; Skip spaces
+    cmp #'#'
+    bne L87CC
+    pla
+    jmp L86C5
 
 L87CC:
-    DEC zp0A
-    JSR L8821
-    PLA
-    STA zp37
-    JSR L8A97         ; Skip spaces
-    CMP #','
-    BEQ L87DE
-    JMP L8735
+    dec zp0A
+    jsr L8821
+    pla
+    sta zp37
+    jsr L8A97         ; Skip spaces
+    cmp #','
+    beq L87DE
+    jmp L8735
 
 L87DE:
-    JSR L8A97         ; Skip spaces
-    AND #$1F
-    CMP zp37
-    BNE L87ED
-    JSR L882C
-    JMP L8735
+    jsr L8A97         ; Skip spaces
+    and #$1F
+    cmp zp37
+    bne L87ED
+    jsr L882C
+    jmp L8735
 
 L87ED:
-    JMP L870D         ; Jump to Index error
+    jmp L870D         ; Jump to Index error
 
 L87F0:
-    JSR L8821
-    PLA
-    STA zp37
-    JSR L8A97         ; Skip spaces
-    CMP #','
-    BNE L8810
-    JSR L8A97         ; Skip spaces
-    AND #$1F
-    CMP zp37
-    BNE L87ED
-    JSR L882C
-    LDA zp2B
-    BEQ L8810         ; High byte=0, continue
-    JMP L86CC         ; value>255, jump to Byte error
+    jsr L8821
+    pla
+    sta zp37
+    jsr L8A97         ; Skip spaces
+    cmp #','
+    bne L8810
+    jsr L8A97         ; Skip spaces
+    and #$1F
+    cmp zp37
+    bne L87ED
+    jsr L882C
+    lda zp2B
+    beq L8810         ; High byte=0, continue
+    jmp L86CC         ; value>255, jump to Byte error
 
 L8810:
-    JMP L8738
+    jmp L8738
 
 L8813:
-    BNE L883A
-    JSR L8821
-    LDA zp2A
-    STA zp28
-    LDY #$00
-    JMP L862B
+    bne L883A
+    jsr L8821
+    lda zp2A
+    sta zp28
+    ldy #$00
+    jmp L862B
 
 L8821:
-    JSR L9B1D
-    JSR L92F0
+    jsr L9B1D
+    jsr L92F0
 L8827:
-    LDY zp1B
-    STY zp0A
-    RTS
+    ldy zp1B
+    sty zp0A
+    rts
 
 L882C:
-    JSR L882F
+    jsr L882F
 L882F:
-    JSR L8832
+    jsr L8832
 L8832:
-    LDA zp29
-    CLC
-    ADC #$04
-    STA zp29
-    RTS
+    lda zp29
+    clc
+    adc #$04
+    sta zp29
+    rts
 
 L883A:
-    LDX #$01          ; Prepare for one byte
-    LDY zp0A
-    INC zp0A          ; Increment index
-    LDA (zp0B),Y      ; Get next character
-    CMP #'B'
-    BEQ L8858         ; EQUB
-    INX               ; Prepare for two bytes
-    CMP #'W'
-    BEQ L8858         ; EQUW
-    LDX #$04          ; Prepare for four bytes
-    CMP #'D'
-    BEQ L8858         ; EQUD
-    CMP #'S'
-    BEQ L886A         ; EQUS
-    JMP L982A         ; Syntax error
+    ldx #$01          ; Prepare for one byte
+    ldy zp0A
+    inc zp0A          ; Increment index
+    lda (zp0B),Y      ; Get next character
+    cmp #'B'
+    beq L8858         ; EQUB
+    inx               ; Prepare for two bytes
+    cmp #'W'
+    beq L8858         ; EQUW
+    ldx #$04          ; Prepare for four bytes
+    cmp #'D'
+    beq L8858         ; EQUD
+    cmp #'S'
+    beq L886A         ; EQUS
+    jmp L982A         ; Syntax error
 
 L8858:
-    TXA
-    PHA
-    JSR L8821
-    LDX #$29
-    JSR LBE44
-    PLA
-    TAY
+    txa
+    pha
+    jsr L8821
+    ldx #$29
+    jsr LBE44
+    pla
+    tay
 L8864:
-    JMP L862B
+    jmp L862B
 
 L8867:
-    JMP L8C0E
+    jmp L8C0E
 
 L886A:
-    LDA zp28
-    PHA
-    JSR L9B1D
-    BNE L8867
-    PLA
-    STA zp28
-    JSR L8827
-    LDY #$FF
-    BNE L8864
+    lda zp28
+    pha
+    jsr L9B1D
+    bne L8867
+    pla
+    sta zp28
+    jsr L8827
+    ldy #$FF
+    bne L8864
 
 L887C:
-    PHA
-    CLC
-    TYA
-    ADC zp37
-    STA zp39
-    LDY #$00
-    TYA
-    ADC zp38
-    STA zp3A
-    PLA
-    STA (zp37),Y
+    pha
+    clc
+    tya
+    adc zp37
+    sta zp39
+    ldy #$00
+    tya
+    adc zp38
+    sta zp3A
+    pla
+    sta (zp37),Y
 L888D:
-    INY
-    LDA (zp39),Y
-    STA (zp37),Y
-    CMP #$0D
-    BNE L888D
-    RTS
+    iny
+    lda (zp39),Y
+    sta (zp37),Y
+    cmp #$0D
+    bne L888D
+    rts
 
 L8897:
-    AND #$0F
-    STA zp3D
-    STY zp3E
+    and #$0F
+    sta zp3D
+    sty zp3E
 L889D:
-    INY
-    LDA (zp37),Y
+    iny
+    lda (zp37),Y
     .if version < 3
-        CMP #'9'+1
-        BCS L88DA
-        CMP #'0'
+        cmp #'9'+1
+        bcs L88DA
+        cmp #'0'
     .elseif version >= 3
-        JSR L8936
+        jsr L8936
     .endif
-    BCC L88DA
-    AND #$0F
-    PHA
-    LDX zp3E
-    LDA zp3D
-    ASL
-    ROL zp3E
-    BMI L88D5
-    ASL
-    ROL zp3E
-    BMI L88D5
-    ADC zp3D
-    STA zp3D
-    TXA
-    ADC zp3E
-    ASL zp3D
-    ROL
-    BMI L88D5
-    BCS L88D5
-    STA zp3E
-    PLA
-    ADC zp3D
-    STA zp3D
-    BCC L889D
-    INC zp3E
-    BPL L889D
-    PHA
+    bcc L88DA
+    and #$0F
+    pha
+    ldx zp3E
+    lda zp3D
+    asl
+    rol zp3E
+    bmi L88D5
+    asl
+    rol zp3E
+    bmi L88D5
+    adc zp3D
+    sta zp3D
+    txa
+    adc zp3E
+    asl zp3D
+    rol
+    bmi L88D5
+    bcs L88D5
+    sta zp3E
+    pla
+    adc zp3D
+    sta zp3D
+    bcc L889D
+    inc zp3E
+    bpl L889D
+    pha
 L88D5:
-    PLA
-    LDY #$00
-    SEC
-    RTS
+    pla
+    ldy #$00
+    sec
+    rts
 
 L88DA:
-    DEY
-    LDA #$8D
-    JSR L887C
-    LDA zp37
-    ADC #$02
-    STA zp39
-    LDA zp38
-    ADC #$00
-    STA zp3A
+    dey
+    lda #$8D
+    jsr L887C
+    lda zp37
+    adc #$02
+    sta zp39
+    lda zp38
+    adc #$00
+    sta zp3A
 L88EC:
-    LDA (zp37),Y
-    STA (zp39),Y
-    DEY
-    BNE L88EC
-    LDY #$03
+    lda (zp37),Y
+    sta (zp39),Y
+    dey
+    bne L88EC
+    ldy #$03
 L88F5:
-    LDA zp3E
-    ORA #$40
-    STA (zp37),Y
-    DEY
-    LDA zp3D
-    AND #$3F
-    ORA #$40
-    STA (zp37),Y
-    DEY
-    LDA zp3D
-    AND #$C0
-    STA zp3D
-    LDA zp3E
-    AND #$C0
-    LSR
-    LSR
-    ORA zp3D
-    LSR
-    LSR
-    EOR #$54
-    STA (zp37),Y
-    JSR L8944         ; Increment $37/8
-    JSR L8944         ; Increment $37/8
-    JSR L8944         ; Increment $37/8
-    LDY #$00
+    lda zp3E
+    ora #$40
+    sta (zp37),Y
+    dey
+    lda zp3D
+    and #$3F
+    ora #$40
+    sta (zp37),Y
+    dey
+    lda zp3D
+    and #$C0
+    sta zp3D
+    lda zp3E
+    and #$C0
+    lsr
+    lsr
+    ora zp3D
+    lsr
+    lsr
+    eor #$54
+    sta (zp37),Y
+    jsr L8944         ; Increment $37/8
+    jsr L8944         ; Increment $37/8
+    jsr L8944         ; Increment $37/8
+    ldy #$00
 L8924:
-    CLC
-    RTS
+    clc
+    rts
 
 L8926:
-    CMP #$7B
-    BCS L8924
-    CMP #$5F
-    BCS L893C
-    CMP #$5B
-    BCS L8924
-    CMP #$41
-    BCS L893C
+    cmp #$7B
+    bcs L8924
+    cmp #$5F
+    bcs L893C
+    cmp #$5B
+    bcs L8924
+    cmp #$41
+    bcs L893C
 L8936:
-    CMP #$3A
-    BCS L8924
-    CMP #$30
+    cmp #$3A
+    bcs L8924
+    cmp #$30
 L893C:
-    RTS
+    rts
 
 L893D:
-    CMP #$2E
-    BNE L8936
-    RTS
+    cmp #$2E
+    bne L8936
+    rts
 
 L8942:
-    LDA (zp37),Y
+    lda (zp37),Y
 L8944:
-    INC zp37
-    BNE L894A
-    INC zp38
+    inc zp37
+    bne L894A
+    inc zp38
 L894A:
-    RTS
+    rts
 
 L894B:
-    JSR L8944         ; Increment $37/8
-    LDA (zp37),Y
-    RTS
+    jsr L8944         ; Increment $37/8
+    lda (zp37),Y
+    rts
 
 ; Tokenise line at $37/8
 ; ======================
 L8951:
-    LDY #$00
-    STY zp3B          ; Set tokeniser to left-hand-side
+    ldy #$00
+    sty zp3B          ; Set tokeniser to left-hand-side
 L8955:
-    STY zp3C
+    sty zp3C
 L8957:
-    LDA (zp37),Y      ; Get current character
-    CMP #$0D
-    BEQ L894A         ; Exit with <cr>
-    CMP #$20
-    BNE L8966         ; Skip <spc>
+    lda (zp37),Y      ; Get current character
+    cmp #$0D
+    beq L894A         ; Exit with <cr>
+    cmp #$20
+    bne L8966         ; Skip <spc>
 L8961:
-    JSR L8944
-    BNE L8957         ; Increment $37/8 and check next character
+    jsr L8944
+    bne L8957         ; Increment $37/8 and check next character
 
 L8966:
-    CMP #'&'
-    BNE L897C         ; Jump if not '&'
+    cmp #'&'
+    bne L897C         ; Jump if not '&'
 L896A:
-    JSR L894B         ; Increment $37/8 and get next character
-    JSR L8936
-    BCS L896A         ; Jump if numeric character
-    CMP #'A'
-    BCC L8957         ; Loop back if <'A'
-    CMP #'F'+1
-    BCC L896A         ; Step to next if 'A'..'F'
-    BCS L8957         ; Loop back for next character
+    jsr L894B         ; Increment $37/8 and get next character
+    jsr L8936
+    bcs L896A         ; Jump if numeric character
+    cmp #'A'
+    bcc L8957         ; Loop back if <'A'
+    cmp #'F'+1
+    bcc L896A         ; Step to next if 'A'..'F'
+    bcs L8957         ; Loop back for next character
 L897C:
-    CMP #$22
-    BNE L898C
+    cmp #$22
+    bne L898C
 L8980:
-    JSR L894B         ; Increment $37/8 and get next character
-    CMP #$22
-    BEQ L8961         ; Not quote, jump to process next character
-    CMP #$0D
-    BNE L8980
-    RTS
+    jsr L894B         ; Increment $37/8 and get next character
+    cmp #$22
+    beq L8961         ; Not quote, jump to process next character
+    cmp #$0D
+    bne L8980
+    rts
 
 L898C:
-    CMP #':'
-    BNE L8996
-    STY zp3B
-    STY zp3C
-    BEQ L8961
+    cmp #':'
+    bne L8996
+    sty zp3B
+    sty zp3C
+    beq L8961
 L8996:
-    CMP #','
-    BEQ L8961
-    CMP #'*'
-    BNE L89A3
-    LDA zp3B
-    BNE L89E3
-    RTS
+    cmp #','
+    beq L8961
+    cmp #'*'
+    bne L89A3
+    lda zp3B
+    bne L89E3
+    rts
 
 L89A3:
-    CMP #'.'
-    BEQ L89B5
-    JSR L8936
-    BCC L89DF
-    LDX zp3C
-    BEQ L89B5
-    JSR L8897
-    BCC L89E9
+    cmp #'.'
+    beq L89B5
+    jsr L8936
+    bcc L89DF
+    ldx zp3C
+    beq L89B5
+    jsr L8897
+    bcc L89E9
 L89B5:
-    LDA (zp37),Y
-    JSR L893D
-    BCC L89C2
-    JSR L8944
-    JMP L89B5
+    lda (zp37),Y
+    jsr L893D
+    bcc L89C2
+    jsr L8944
+    jmp L89B5
 
 L89C2:
-    LDX #$FF
-    STX zp3B
-    STY zp3C
-    JMP L8957
+    ldx #$FF
+    stx zp3B
+    sty zp3C
+    jmp L8957
 
 L89CB:
-    JSR L8926
-    BCC L89E3
+    jsr L8926
+    bcc L89E3
 L89D0:
-    LDY #$00
+    ldy #$00
 L89D2:
-    LDA (zp37),Y
-    JSR L8926
-    BCC L89C2
-    JSR L8944
-    JMP L89D2
+    lda (zp37),Y
+    jsr L8926
+    bcc L89C2
+    jsr L8944
+    jmp L89D2
 
 L89DF:
-    CMP #'A'
-    BCS L89EC         ; Jump if letter
+    cmp #'A'
+    bcs L89EC         ; Jump if letter
 L89E3:
-    LDX #$FF
-    STX zp3B
-    STY zp3C
+    ldx #$FF
+    stx zp3B
+    sty zp3C
 L89E9:
-    JMP L8961
+    jmp L8961
 
 L89EC:
-    CMP #'X'
-    BCS L89CB         ; Jump if >='X', nothing starts with X,Y,Z
-    LDX #<L8071
-    STX zp39          ; Point to token table
-    LDX #>L8071
-    STX zp3A
+    cmp #'X'
+    bcs L89CB         ; Jump if >='X', nothing starts with X,Y,Z
+    ldx #<L8071
+    stx zp39          ; Point to token table
+    ldx #>L8071
+    stx zp3A
 L89F8:
-    CMP (zp39),Y
-    BCC L89D2
-    BNE L8A0D
+    cmp (zp39),Y
+    bcc L89D2
+    bne L8A0D
 L89FE:
-    INY
-    LDA (zp39),Y
-    BMI L8A37
-    CMP (zp37),Y
-    BEQ L89FE
-    LDA (zp37),Y
-    CMP #'.'
-    BEQ L8A18
+    iny
+    lda (zp39),Y
+    bmi L8A37
+    cmp (zp37),Y
+    beq L89FE
+    lda (zp37),Y
+    cmp #'.'
+    beq L8A18
 L8A0D:
-    INY
-    LDA (zp39),Y
-    BPL L8A0D
-    CMP #$FE
-    BNE L8A25
-    BCS L89D0
+    iny
+    lda (zp39),Y
+    bpl L8A0D
+    cmp #$FE
+    bne L8A25
+    bcs L89D0
 L8A18:
-    INY
+    iny
 L8A19:
-    LDA (zp39),Y
-    BMI L8A37
-    INC zp39
-    BNE L8A19
-    INC zp3A
-    BNE L8A19
+    lda (zp39),Y
+    bmi L8A37
+    inc zp39
+    bne L8A19
+    inc zp3A
+    bne L8A19
 L8A25:
-    SEC
-    INY
-    TYA
-    ADC zp39
-    STA zp39
-    BCC L8A30
-    INC zp3A
+    sec
+    iny
+    tya
+    adc zp39
+    sta zp39
+    bcc L8A30
+    inc zp3A
 L8A30:
-    LDY #$00
-    LDA (zp37),Y
-    JMP L89F8
+    ldy #$00
+    lda (zp37),Y
+    jmp L89F8
 
 L8A37:
-    TAX
-    INY
-    LDA (zp39),Y
-    STA zp3D          ; Get token flag
-    DEY
-    LSR
-    BCC L8A48
-    LDA (zp37),Y
-    JSR L8926
-    BCS L89D0
+    tax
+    iny
+    lda (zp39),Y
+    sta zp3D          ; Get token flag
+    dey
+    lsr
+    bcc L8A48
+    lda (zp37),Y
+    jsr L8926
+    bcs L89D0
 L8A48:
-    TXA
-    BIT zp3D
-    BVC L8A54
-    LDX zp3B
-    BNE L8A54
+    txa
+    bit zp3D
+    bvc L8A54
+    ldx zp3B
+    bne L8A54
     .if split == 0
-        CLC           ; Superflous as all paths to here have CLC
+        clc           ; Superflous as all paths to here have CLC
     .endif
-    ADC #$40
+    adc #$40
 L8A54:
-    DEY
-    JSR L887C
-    LDY #$00
-    LDX #$FF
-    LDA zp3D
-    LSR
-    LSR
-    BCC L8A66
-    STX zp3B
-    STY zp3C
+    dey
+    jsr L887C
+    ldy #$00
+    ldx #$FF
+    lda zp3D
+    lsr
+    lsr
+    bcc L8A66
+    stx zp3B
+    sty zp3C
 L8A66:
-    LSR
-    BCC L8A6D
-    STY zp3B
-    STY zp3C
+    lsr
+    bcc L8A6D
+    sty zp3B
+    sty zp3C
 L8A6D:
-    LSR
-    BCC L8A81
-    PHA
-    INY
+    lsr
+    bcc L8A81
+    pha
+    iny
 L8A72:
-    LDA (zp37),Y
-    JSR L8926
-    BCC L8A7F
-    JSR L8944
-    JMP L8A72
+    lda (zp37),Y
+    jsr L8926
+    bcc L8A7F
+    jsr L8944
+    jmp L8A72
 
 L8A7F:
-    DEY
-    PLA
+    dey
+    pla
 L8A81:
-    LSR
-    BCC L8A86
-    STX zp3C
+    lsr
+    bcc L8A86
+    stx zp3C
 L8A86:
-    LSR
-    BCS L8A96
-    JMP L8961
+    lsr
+    bcs L8A96
+    jmp L8961
 
 ; Skip Spaces
 ; ===========
 L8A8C:
-    LDY zp1B
-    INC zp1B          ; Get offset, increment it
-    LDA (zp19),Y      ; Get current character
-    CMP #' '
-    BEQ L8A8C         ; Loop until not space
+    ldy zp1B
+    inc zp1B          ; Get offset, increment it
+    lda (zp19),Y      ; Get current character
+    cmp #' '
+    beq L8A8C         ; Loop until not space
 L8A96:
-    RTS
+    rts
 
 ; Skip spaces at PtrA
 ; -------------------
 L8A97:
-    LDY zp0A
-    INC zp0A
-    LDA (zp0B),Y
-    CMP #$20
-    BEQ L8A97
+    ldy zp0A
+    inc zp0A
+    lda (zp0B),Y
+    cmp #$20
+    beq L8A97
 L8AA1:
-    RTS
+    rts
 
     .if version < 3
 L8AA2:
-        BRK
+        brk
         dta 5
         .if foldup == 1
             dta 'MISSING ,'
         .else
             dta 'Missing ,'
         .endif
-        BRK
+        brk
     .endif
 
 L8AAE:
-    JSR L8A8C
-    CMP #','
+    jsr L8A8C
+    cmp #','
     .if version < 3
-        BNE L8AA2
-        RTS
+        bne L8AA2
+        rts
     .elseif version >= 3
-        BEQ L8AA1
+        beq L8AA1
 X8AC8:
-        BRK
+        brk
         dta 5
         .if foldup == 1
             dta 'MISSING ,'
         .else
             dta 'Missing ,'
         .endif
-        BRK
+        brk
     .endif
 
 
 ; OLD - Attempt to restore program
 ; ================================
 L8AB6:
-    JSR L9857         ; Check end of statement
-    LDA zp18
-    STA zp38          ; Point $37/8 to PAGE
-    LDA #$00
-    STA zp37
-    STA (zp37),Y      ; Remove end marker
-    JSR LBE6F         ; Check program and set TOP
-    BNE L8AF3         ; Jump to clear heap and go to immediate mode
+    jsr L9857         ; Check end of statement
+    lda zp18
+    sta zp38          ; Point $37/8 to PAGE
+    lda #$00
+    sta zp37
+    sta (zp37),Y      ; Remove end marker
+    jsr LBE6F         ; Check program and set TOP
+    bne L8AF3         ; Jump to clear heap and go to immediate mode
 
 ; END - Return to immediate mode
 ; ==============================
 L8AC8:
-    JSR L9857         ; Check end of statement
-    JSR LBE6F         ; Check program and set TOP
-    BNE L8AF6         ; Jump to immediate mode, keeping variables, etc
+    jsr L9857         ; Check end of statement
+    jsr LBE6F         ; Check program and set TOP
+    bne L8AF6         ; Jump to immediate mode, keeping variables, etc
 
 ; STOP - Abort program with an error
 ; ==================================
 L8AD0:
-    JSR L9857         ; Check end of statement
+    jsr L9857         ; Check end of statement
     .if version < 3 && foldup == 0
-        BRK
+        brk
         dta 0
         dta 'STOP'
-        BRK
+        brk
     .endif
     .if version >= 3 || foldup != 0
-        BRK
+        brk
         dta 0
         dta tknSTOP
-        BRK
+        brk
     .endif
 
 ; NEW - Clear program, enter immediate mode
 ; =========================================
 L8ADA:
-    JSR L9857         ; Check end of statement
+    jsr L9857         ; Check end of statement
     .if title != 0
-        JSR X8ADD     ; NEW program
+        jsr X8ADD     ; NEW program
     .endif
 
 ; Start up with NEW program
 ; -------------------------
 L8ADD:
     .if title == 0
-        LDA #$0D
-        LDY zp18
-        STY zp13      ; TOP hi=PAGE hi
-        LDY #$00
-        STY zp12
-        STY zp20      ; TOP=PAGE, TRACE OFF
-        STA (zp12),Y  ; ?(PAGE+0)=<cr>
-        LDA #$FF
-        INY
-        STA (zp12),Y  ; ?(PAGE+1)=$FF
-        INY
-        STY zp12      ; TOP=PAGE+2
+        lda #$0D
+        ldy zp18
+        sty zp13      ; TOP hi=PAGE hi
+        ldy #$00
+        sty zp12
+        sty zp20      ; TOP=PAGE, TRACE OFF
+        sta (zp12),Y  ; ?(PAGE+0)=<cr>
+        lda #$FF
+        iny
+        sta (zp12),Y  ; ?(PAGE+1)=$FF
+        iny
+        sty zp12      ; TOP=PAGE+2
     .endif
 
 L8AF3:
-    JSR LBD20         ; Clear variables, heap, stack
+    jsr LBD20         ; Clear variables, heap, stack
 
 ; IMMEDIATE LOOP
 ; ==============
 L8AF6:
-    LDY #$07+(ws/256)
-    STY zp0C          ; PtrA=$0700 - input buffer
-    LDY #$00
-    STY zp0B
-    LDA #<LB433
-    STA zp16          ; ON ERROR OFF
-    LDA #>LB433
-    STA zp17
-    LDA #'>'
-    JSR LBC02         ; Print '>' prompt, read input to buffer at PtrA
+    ldy #$07+(ws/256)
+    sty zp0C          ; PtrA=$0700 - input buffer
+    ldy #$00
+    sty zp0B
+    lda #<LB433
+    sta zp16          ; ON ERROR OFF
+    lda #>LB433
+    sta zp17
+    lda #'>'
+    jsr LBC02         ; Print '>' prompt, read input to buffer at PtrA
 
 ; Execute line at program pointer in $0B/C
 ; ----------------------------------------
 L8B0B:
-    LDA #<LB433
-    STA zp16          ; ON ERROR OFF again
-    LDA #>LB433
-    STA zp17
-    LDX #$FF
-    STX zp28          ; OPT=$FF - not within assembler
-    STX zp3C
-    TXS               ; Clear machine stack
-    JSR LBD3A
-    TAY               ; Clear DATA and stacks
-    LDA zp0B
-    STA zp37          ; Point $37/8 to program line
-    LDA zp0C
-    STA zp38
-    STY zp3B
-    STY zp0A
-    JSR L8957
-    JSR L97DF
-    BCC L8B38         ; Tokenise, jump forward if no line number
-    JSR LBC8D
-    JMP L8AF3         ; Insert into program, jump back to immediate loop
+    lda #<LB433
+    sta zp16          ; ON ERROR OFF again
+    lda #>LB433
+    sta zp17
+    ldx #$FF
+    stx zp28          ; OPT=$FF - not within assembler
+    stx zp3C
+    txs               ; Clear machine stack
+    jsr LBD3A
+    tay               ; Clear DATA and stacks
+    lda zp0B
+    sta zp37          ; Point $37/8 to program line
+    lda zp0C
+    sta zp38
+    sty zp3B
+    sty zp0A
+    jsr L8957
+    jsr L97DF
+    bcc L8B38         ; Tokenise, jump forward if no line number
+    jsr LBC8D
+    jmp L8AF3         ; Insert into program, jump back to immediate loop
 
 ; Command entered at immediate prompt
 ; -----------------------------------
 L8B38:
-    JSR L8A97         ; Skip spaces at PtrA
-    CMP #$C6
-    BCS L8BB1         ; If command token, jump to execute command
-    BCC L8BBF         ; Not command token, try variable assignment
+    jsr L8A97         ; Skip spaces at PtrA
+    cmp #$C6
+    bcs L8BB1         ; If command token, jump to execute command
+    bcc L8BBF         ; Not command token, try variable assignment
 
 L8B41:
-    JMP L8AF6         ; Jump back to immediate mode
+    jmp L8AF6         ; Jump back to immediate mode
 
 ; [ - enter assembler
 ; ===================
 L8B44:
-    JMP L8504         ; Jump to assembler
+    jmp L8504         ; Jump to assembler
 
 ; =<value> - return from FN
 ; =========================
 ; Stack needs to contain these items,
 ;  ret_lo, ret_hi, PtrB_hi, PtrB_lo, PtrB_off, numparams, PtrA_hi, PtrA_lo, PtrA_off, tknFN
 L8B47:
-    TSX
-    CPX #$FC
-    BCS L8B59         ; If stack is empty, jump to give error
-    LDA $01FF
-    CMP #tknFN
-    BNE L8B59; If pushed token<>'FN', give error
-    JSR L9B1D         ; Evaluate expression
-    JMP L984C         ; Check for end of statement and return to pop from function
+    tsx
+    cpx #$FC
+    bcs L8B59         ; If stack is empty, jump to give error
+    lda $01FF
+    cmp #tknFN
+    bne L8B59; If pushed token<>'FN', give error
+    jsr L9B1D         ; Evaluate expression
+    jmp L984C         ; Check for end of statement and return to pop from function
 L8B59:
-    BRK
+    brk
     dta 7
     .if foldup == 1
         dta 'NO '
@@ -1921,36 +1921,36 @@ L8B59:
         dta 'No '
     .endif
     dta tknFN
-    BRK
+    brk
 
 ; Check for =, *, [ commands
 ; ==========================
 L8B60:
-    LDY zp0A
-    DEY
-    LDA (zp0B),Y      ; Step program pointer back and fetch char
-    CMP #'='
-    BEQ L8B47         ; Jump for '=', return from FN
-    CMP #'*'
-    BEQ L8B73         ; Jump for '*', embedded *command
-    CMP #'['
-    BEQ L8B44         ; Jump for '[', start assembler
-    BNE L8B96         ; Otherwise, see if end of statement
+    ldy zp0A
+    dey
+    lda (zp0B),Y      ; Step program pointer back and fetch char
+    cmp #'='
+    beq L8B47         ; Jump for '=', return from FN
+    cmp #'*'
+    beq L8B73         ; Jump for '*', embedded *command
+    cmp #'['
+    beq L8B44         ; Jump for '[', start assembler
+    bne L8B96         ; Otherwise, see if end of statement
 
 ; Embedded *command
 ; =================
 L8B73:
-    JSR L986D         ; Update PtrA to current address
-    LDX zp0B
-    LDY zp0C          ; XY=>command string
+    jsr L986D         ; Update PtrA to current address
+    ldx zp0B
+    ldy zp0C          ; XY=>command string
 
 
     .ifdef MOS_ATOM
-        JSR cmdStar       ; Pass command at ptrA to Atom OSCLI
+        jsr cmdStar       ; Pass command at ptrA to Atom OSCLI
     .endif
 
     .ifdef MOS_BBC
-        JSR OS_CLI    ; Pass command at ptrA to OSCLI
+        jsr OS_CLI    ; Pass command at ptrA to OSCLI
     .endif
 
 ; DATA, DEF, REM, ELSE
@@ -1958,583 +1958,583 @@ L8B73:
 ; Skip to end of line
 ; -------------------
 L8B7D:
-    LDA #$0D
-    LDY zp0A
-    DEY               ; Get program pointer
+    lda #$0D
+    ldy zp0A
+    dey               ; Get program pointer
 L8B82:
-    INY
-    CMP (zp0B),Y
-    BNE L8B82         ; Loop until <cr> found
+    iny
+    cmp (zp0B),Y
+    bne L8B82         ; Loop until <cr> found
 L8B87:
-    CMP #tknELSE
-    BEQ L8B7D         ; If 'ELSE', jump to skip to end of line
-    LDA zp0C
-    CMP #(ws+$0700)/256
-    BEQ L8B41; Program in command buffer, jump back to immediate loop
-    JSR L9890
-    BNE L8BA3         ; Check for end of program, step past <cr>
+    cmp #tknELSE
+    beq L8B7D         ; If 'ELSE', jump to skip to end of line
+    lda zp0C
+    cmp #(ws+$0700)/256
+    beq L8B41; Program in command buffer, jump back to immediate loop
+    jsr L9890
+    bne L8BA3         ; Check for end of program, step past <cr>
 
 L8B96:
-    DEC zp0A
+    dec zp0A
 L8B98:
-    JSR L9857
+    jsr L9857
 
 ; Main execution loop
 ; -------------------
 L8B9B:
-    LDY #$00
-    LDA (zp0B),Y      ; Get current character
-    CMP #':'
-    BNE L8B87         ; Not <colon>, check for ELSE
+    ldy #$00
+    lda (zp0B),Y      ; Get current character
+    cmp #':'
+    bne L8B87         ; Not <colon>, check for ELSE
 
 L8BA3:
-    LDY zp0A
-    INC zp0A          ; Get program pointer, increment for next time
-    LDA (zp0B),Y      ; Get current character
-    CMP #$20
-    BEQ L8BA3         ; Skip spaces
-    CMP #$CF
-    BCC L8BBF         ; Not program command, jump to try variable assignment
+    ldy zp0A
+    inc zp0A          ; Get program pointer, increment for next time
+    lda (zp0B),Y      ; Get current character
+    cmp #$20
+    beq L8BA3         ; Skip spaces
+    cmp #$CF
+    bcc L8BBF         ; Not program command, jump to try variable assignment
 
 ; Dispatch function/command
 ; -------------------------
 L8BB1:
-    TAX               ; Index into dispatch table
-    LDA L836D-$8E,X
-    STA zp37          ; Get routine address from table
-    LDA L83DF-$8E,X
-    STA zp38
-    JMP (zp37)        ; Jump to routine
+    tax               ; Index into dispatch table
+    lda L836D-$8E,X
+    sta zp37          ; Get routine address from table
+    lda L83DF-$8E,X
+    sta zp38
+    jmp (zp37)        ; Jump to routine
 
 ; Not a command byte, try variable assignment, or =, *, [
 ; -------------------------------------------------------
 L8BBF:
-    LDX zp0B
-    STX zp19          ; Copy PtrA to PtrB
-    LDX zp0C
-    STX zp1A
-    STY zp1B
-    JSR L95DD         ; Check if variable or indirection
-    BNE L8BE9         ; NE - jump for existing variable or indirection assignment
-    BCS L8B60         ; CS - not variable assignment, try =, *, [ commands
+    ldx zp0B
+    stx zp19          ; Copy PtrA to PtrB
+    ldx zp0C
+    stx zp1A
+    sty zp1B
+    jsr L95DD         ; Check if variable or indirection
+    bne L8BE9         ; NE - jump for existing variable or indirection assignment
+    bcs L8B60         ; CS - not variable assignment, try =, *, [ commands
 
 ; Variable not found, create a new one
 ; ------------------------------------
-    STX zp1B
-    JSR L9841         ; Check for and step past '='
-    JSR L94FC         ; Create new variable
-    LDX #$05          ; X=$05 = float
-    CPX zp2C
-    BNE L8BDF         ; Jump if dest. not a float
-    INX               ; X=$06
+    stx zp1B
+    jsr L9841         ; Check for and step past '='
+    jsr L94FC         ; Create new variable
+    ldx #$05          ; X=$05 = float
+    cpx zp2C
+    bne L8BDF         ; Jump if dest. not a float
+    inx               ; X=$06
 L8BDF:
-    JSR L9531
-    DEC zp0A
+    jsr L9531
+    dec zp0A
 
 ; LET variable = expression
 ; =========================
 L8BE4:
-    JSR L9582
-    BEQ L8C0B
+    jsr L9582
+    beq L8C0B
 L8BE9:
-    BCC L8BFB
-    JSR LBD94         ; Stack integer (address of data)
-    JSR L9813         ; Check for end of statement
-    LDA zp27          ; Get evaluation type
-    BNE L8C0E         ; If not string, error
-    JSR L8C1E         ; Assign the string
-    JMP L8B9B         ; Return to execution loop
+    bcc L8BFB
+    jsr LBD94         ; Stack integer (address of data)
+    jsr L9813         ; Check for end of statement
+    lda zp27          ; Get evaluation type
+    bne L8C0E         ; If not string, error
+    jsr L8C1E         ; Assign the string
+    jmp L8B9B         ; Return to execution loop
 
 L8BFB:
-    JSR LBD94         ; Stack integer (address of data)
-    JSR L9813         ; Check for end of statement
-    LDA zp27          ; Get evaluation type
-    BEQ L8C0E         ; If not number, error
-    JSR LB4B4         ; Assign the number
-    JMP L8B9B         ; Return to execution loop
+    jsr LBD94         ; Stack integer (address of data)
+    jsr L9813         ; Check for end of statement
+    lda zp27          ; Get evaluation type
+    beq L8C0E         ; If not number, error
+    jsr LB4B4         ; Assign the number
+    jmp L8B9B         ; Return to execution loop
 
 L8C0B:
-    JMP L982A
+    jmp L982A
 
 L8C0E:
-    BRK
+    brk
     dta 6
     .if foldup == 1
         dta 'TYPE MISMATCH'
     .else
         dta 'Type mismatch'
     .endif
-    BRK
+    brk
 
 L8C1E:
-    JSR LBDEA         ; Unstack integer (address of data)
+    jsr LBDEA         ; Unstack integer (address of data)
 L8C21:
-    LDA zp2C
-    CMP #$80
-    BEQ L8CA2         ; Jump if absolute string $addr
-    LDY #$02
-    LDA (zp2A),Y
-    CMP zp36
-    BCS L8C84
-    LDA zp02
-    STA zp2C
-    LDA zp03
-    STA zp2D
-    LDA zp36
-    CMP #$08
-    BCC L8C43
-    ADC #$07
-    BCC L8C43
-    LDA #$FF
+    lda zp2C
+    cmp #$80
+    beq L8CA2         ; Jump if absolute string $addr
+    ldy #$02
+    lda (zp2A),Y
+    cmp zp36
+    bcs L8C84
+    lda zp02
+    sta zp2C
+    lda zp03
+    sta zp2D
+    lda zp36
+    cmp #$08
+    bcc L8C43
+    adc #$07
+    bcc L8C43
+    lda #$FF
 L8C43:
-    CLC
-    PHA
-    TAX
-    LDA (zp2A),Y
-    LDY #$00
-    ADC (zp2A),Y
-    EOR zp02
-    BNE L8C5F
-    INY
-    ADC (zp2A),Y
-    EOR zp03
-    BNE L8C5F
-    STA zp2D
-    TXA
-    INY
-    SEC
-    SBC (zp2A),Y
-    TAX
+    clc
+    pha
+    tax
+    lda (zp2A),Y
+    ldy #$00
+    adc (zp2A),Y
+    eor zp02
+    bne L8C5F
+    iny
+    adc (zp2A),Y
+    eor zp03
+    bne L8C5F
+    sta zp2D
+    txa
+    iny
+    sec
+    sbc (zp2A),Y
+    tax
 L8C5F:
-    TXA
-    CLC
-    ADC zp02
-    TAY
-    LDA zp03
-    ADC #$00
-    CPY zp04
-    TAX
-    SBC zp05
-    BCS L8CB7
-    STY zp02
-    STX zp03
-    PLA
-    LDY #$02
-    STA (zp2A),Y
-    DEY
-    LDA zp2D
-    BEQ L8C84
-    STA (zp2A),Y
-    DEY
-    LDA zp2C
-    STA (zp2A),Y
+    txa
+    clc
+    adc zp02
+    tay
+    lda zp03
+    adc #$00
+    cpy zp04
+    tax
+    sbc zp05
+    bcs L8CB7
+    sty zp02
+    stx zp03
+    pla
+    ldy #$02
+    sta (zp2A),Y
+    dey
+    lda zp2D
+    beq L8C84
+    sta (zp2A),Y
+    dey
+    lda zp2C
+    sta (zp2A),Y
 L8C84:
-    LDY #$03
-    LDA zp36
-    STA (zp2A),Y
-    BEQ L8CA1
-    DEY
-    DEY
-    LDA (zp2A),Y
-    STA zp2D
-    DEY
-    LDA (zp2A),Y
-    STA zp2C
+    ldy #$03
+    lda zp36
+    sta (zp2A),Y
+    beq L8CA1
+    dey
+    dey
+    lda (zp2A),Y
+    sta zp2D
+    dey
+    lda (zp2A),Y
+    sta zp2C
 L8C97:
-    LDA ws+$0600,Y
-    STA (zp2C),Y
-    INY
-    CPY zp36
-    BNE L8C97
+    lda ws+$0600,Y
+    sta (zp2C),Y
+    iny
+    cpy zp36
+    bne L8C97
 L8CA1:
-    RTS
+    rts
 
 L8CA2:
-    JSR LBEBA
-    CPY #$00
-    BEQ L8CB4
+    jsr LBEBA
+    cpy #$00
+    beq L8CB4
 L8CA9:
-    LDA ws+$0600,Y
-    STA (zp2A),Y
-    DEY
-    BNE L8CA9
-    LDA ws+$0600
+    lda ws+$0600,Y
+    sta (zp2A),Y
+    dey
+    bne L8CA9
+    lda ws+$0600
 L8CB4:
-    STA (zp2A),Y
-    RTS
+    sta (zp2A),Y
+    rts
 
 L8CB7:
-    BRK
+    brk
     dta 0
     .if foldup == 1
         dta 'NO ROOM'
     .else
         dta 'No room'
     .endif
-    BRK
+    brk
 
 L8CC1:
-    LDA zp39
-    CMP #$80
-    BEQ L8CEE
-    BCC L8D03
-    LDY #$00
-    LDA (zp04),Y
-    TAX
-    BEQ L8CE5
-    LDA (zp37),Y
-    SBC #$01
-    STA zp39
-    INY
-    LDA (zp37),Y
-    SBC #$00
-    STA zp3A
+    lda zp39
+    cmp #$80
+    beq L8CEE
+    bcc L8D03
+    ldy #$00
+    lda (zp04),Y
+    tax
+    beq L8CE5
+    lda (zp37),Y
+    sbc #$01
+    sta zp39
+    iny
+    lda (zp37),Y
+    sbc #$00
+    sta zp3A
 L8CDD:
-    LDA (zp04),Y
-    STA (zp39),Y
-    INY
-    DEX
-    BNE L8CDD
+    lda (zp04),Y
+    sta (zp39),Y
+    iny
+    dex
+    bne L8CDD
 L8CE5:
-    LDA (zp04,X)
-    LDY #$03
+    lda (zp04,X)
+    ldy #$03
 L8CE9:
-    STA (zp37),Y
-    JMP LBDDC
+    sta (zp37),Y
+    jmp LBDDC
 
 L8CEE:
-    LDY #$00
-    LDA (zp04),Y
-    TAX
-    BEQ L8CFF
+    ldy #$00
+    lda (zp04),Y
+    tax
+    beq L8CFF
 L8CF5:
-    INY
-    LDA (zp04),Y
-    DEY
-    STA (zp37),Y
-    INY
-    DEX
-    BNE L8CF5
+    iny
+    lda (zp04),Y
+    dey
+    sta (zp37),Y
+    iny
+    dex
+    bne L8CF5
 L8CFF:
-    LDA #$0D
-    BNE L8CE9
+    lda #$0D
+    bne L8CE9
 L8D03:
-    LDY #$00
-    LDA (zp04),Y
-    STA (zp37),Y
+    ldy #$00
+    lda (zp04),Y
+    sta (zp37),Y
     .if version < 3
-        INY
-        CPY zp39
-        BCS L8D26
+        iny
+        cpy zp39
+        bcs L8D26
     .elseif version >= 3
-        LDY #4
-        LDA zp39
-        BEQ L8D26
-        LDY #$01
+        ldy #4
+        lda zp39
+        beq L8D26
+        ldy #$01
     .endif
-    LDA (zp04),Y
-    STA (zp37),Y
-    INY
-    LDA (zp04),Y
-    STA (zp37),Y
-    INY
-    LDA (zp04),Y
-    STA (zp37),Y
-    INY
-    CPY zp39
-    BCS L8D26
-    LDA (zp04),Y
-    STA (zp37),Y
-    INY
+    lda (zp04),Y
+    sta (zp37),Y
+    iny
+    lda (zp04),Y
+    sta (zp37),Y
+    iny
+    lda (zp04),Y
+    sta (zp37),Y
+    iny
+    cpy zp39
+    bcs L8D26
+    lda (zp04),Y
+    sta (zp37),Y
+    iny
 L8D26:
-    TYA
-    CLC
-    JMP LBDE1
+    tya
+    clc
+    jmp LBDE1
 
 ; PRINT#
 L8D2B:
-    DEC zp0A
-    JSR LBFA9
+    dec zp0A
+    jsr LBFA9
 L8D30:
-    TYA
-    PHA
-    JSR L8A8C
-    CMP #$2C
-    BNE L8D77
-    JSR L9B29
-    JSR LA385
-    PLA
-    TAY
-    LDA zp27
-    JSR OSBPUT
-    TAX
-    BEQ L8D64
-    BMI L8D57
-    LDX #$03
+    tya
+    pha
+    jsr L8A8C
+    cmp #$2C
+    bne L8D77
+    jsr L9B29
+    jsr LA385
+    pla
+    tay
+    lda zp27
+    jsr OSBPUT
+    tax
+    beq L8D64
+    bmi L8D57
+    ldx #$03
 L8D4D:
-    LDA zp2A,X
-    JSR OSBPUT
-    DEX
-    BPL L8D4D
-    BMI L8D30
+    lda zp2A,X
+    jsr OSBPUT
+    dex
+    bpl L8D4D
+    bmi L8D30
 L8D57:
-    LDX #$04
+    ldx #$04
 L8D59:
-    LDA ws+$046C,X
-    JSR OSBPUT
-    DEX
-    BPL L8D59
-    BMI L8D30
+    lda ws+$046C,X
+    jsr OSBPUT
+    dex
+    bpl L8D59
+    bmi L8D30
 L8D64:
-    LDA zp36
-    JSR OSBPUT
-    TAX
-    BEQ L8D30
+    lda zp36
+    jsr OSBPUT
+    tax
+    beq L8D30
 L8D6C:
-    LDA ws+$05FF,X
-    JSR OSBPUT
-    DEX
-    BNE L8D6C
-    BEQ L8D30
+    lda ws+$05FF,X
+    jsr OSBPUT
+    dex
+    bne L8D6C
+    beq L8D30
 L8D77:
-    PLA
-    STY zp0A
-    JMP L8B98
+    pla
+    sty zp0A
+    jmp L8B98
 
 ; End of PRINT statement
 ; ----------------------
 L8D7D:
-    JSR LBC25         ; Output new line and set COUNT to zero
+    jsr LBC25         ; Output new line and set COUNT to zero
 L8D80:
-    JMP L8B96         ; Check end of statement, return to execution loop
+    jmp L8B96         ; Check end of statement, return to execution loop
 
 L8D83:
-    LDA #$00
-    STA zp14
-    STA zp15          ; Set current field to zero, hex/dec flag to decimal
-    JSR L8A97         ; Get next non-space character
-    CMP #':'
-    BEQ L8D80         ; <colon> found, finish printing
-    CMP #$0D
-    BEQ L8D80         ; <cr> found, finish printing
-    CMP #tknELSE
-    BEQ L8D80         ; 'ELSE' found, finish printing
-    BNE L8DD2         ; Otherwise, continue into main loop
+    lda #$00
+    sta zp14
+    sta zp15          ; Set current field to zero, hex/dec flag to decimal
+    jsr L8A97         ; Get next non-space character
+    cmp #':'
+    beq L8D80         ; <colon> found, finish printing
+    cmp #$0D
+    beq L8D80         ; <cr> found, finish printing
+    cmp #tknELSE
+    beq L8D80         ; 'ELSE' found, finish printing
+    bne L8DD2         ; Otherwise, continue into main loop
 
 ; PRINT [~][print items]['][,][;]
 ; ===============================
 L8D9A:
-    JSR L8A97         ; Get next non-space char
-    CMP #'#'
-    BEQ L8D2B         ; If '#' jump to do PRINT#
-    DEC zp0A
-    JMP L8DBB         ; Jump into PRINT loop
+    jsr L8A97         ; Get next non-space char
+    cmp #'#'
+    beq L8D2B         ; If '#' jump to do PRINT#
+    dec zp0A
+    jmp L8DBB         ; Jump into PRINT loop
 
 ; Print a comma
 ; -------------
 L8DA6:
-    LDA ws+$0400
-    BEQ L8DBB         ; If field width zero, no padding needed, jump back into main loop
-    LDA zp1E          ; Get COUNT
+    lda ws+$0400
+    beq L8DBB         ; If field width zero, no padding needed, jump back into main loop
+    lda zp1E          ; Get COUNT
 L8DAD:
-    BEQ L8DBB         ; Zero, just started a new line, no padding, jump back into main loop
-    SBC ws+$0400      ; Get COUNT-field width
-    BCS L8DAD         ; Loop to reduce until (COUNT MOD fieldwidth)<0
-    TAY               ; Y=number of spaces to get back to (COUNT MOD width)=zero
+    beq L8DBB         ; Zero, just started a new line, no padding, jump back into main loop
+    sbc ws+$0400      ; Get COUNT-field width
+    bcs L8DAD         ; Loop to reduce until (COUNT MOD fieldwidth)<0
+    tay               ; Y=number of spaces to get back to (COUNT MOD width)=zero
 L8DB5:
-    JSR LB565
-    INY
-    BNE L8DB5         ; Loop to print required spaces
+    jsr LB565
+    iny
+    bne L8DB5         ; Loop to print required spaces
 
 L8DBB:
-    CLC               ; Prepare to print decimal
-    LDA ws+$0400
-    STA zp14          ; Set current field width from @%
+    clc               ; Prepare to print decimal
+    lda ws+$0400
+    sta zp14          ; Set current field width from @%
 L8DC1:
-    ROR zp15          ; Set hex/dec flag from Carry
+    ror zp15          ; Set hex/dec flag from Carry
 L8DC3:
-    JSR L8A97         ; Get next non-space character
-    CMP #':'
-    BEQ L8D7D         ; End of statement if <colon> found
-    CMP #$0D
-    BEQ L8D7D         ; End if statement if <cr> found
-    CMP #tknELSE
-    BEQ L8D7D         ; End of statement if 'ELSE' found
+    jsr L8A97         ; Get next non-space character
+    cmp #':'
+    beq L8D7D         ; End of statement if <colon> found
+    cmp #$0D
+    beq L8D7D         ; End if statement if <cr> found
+    cmp #tknELSE
+    beq L8D7D         ; End of statement if 'ELSE' found
 
 L8DD2:
-    CMP #'~'
-    BEQ L8DC1         ; Jump back to set hex/dec flag from Carry
-    CMP #','
-    BEQ L8DA6         ; Jump to pad to next print field
-    CMP #';'
-    BEQ L8D83         ; Jump to check for end of print statement
-    JSR L8E70
-    BCC L8DC3         ; Check for ' TAB SPC, if print token found return to outer main loop
+    cmp #'~'
+    beq L8DC1         ; Jump back to set hex/dec flag from Carry
+    cmp #','
+    beq L8DA6         ; Jump to pad to next print field
+    cmp #';'
+    beq L8D83         ; Jump to check for end of print statement
+    jsr L8E70
+    bcc L8DC3         ; Check for ' TAB SPC, if print token found return to outer main loop
 
 ; All print formatting have been checked, so it now must be an expression
 ; -----------------------------------------------------------------------
-    LDA zp14
-    PHA
-    LDA zp15
-    PHA               ; Save field width and flags, as evaluator
+    lda zp14
+    pha
+    lda zp15
+    pha               ; Save field width and flags, as evaluator
                       ;  may call PRINT (eg FN, STR$, etc.)
-    DEC zp1B
-    JSR L9B29         ; Evaluate expression
-    PLA
-    STA zp15
-    PLA
-    STA zp14          ; Restore field width and flags
-    LDA zp1B
-    STA zp0A          ; Update program pointer
-    TYA
-    BEQ L8E0E         ; If type=0, jump to print string
-    JSR L9EDF         ; Convert numeric value to string
-    LDA zp14          ; Get current field width
-    SEC
-    SBC zp36          ; A=width-stringlength
-    BCC L8E0E         ; length>width - print it
-    BEQ L8E0E         ; length=width - print it
-    TAY               ; Otherwise, Y=number of spaces to pad with
+    dec zp1B
+    jsr L9B29         ; Evaluate expression
+    pla
+    sta zp15
+    pla
+    sta zp14          ; Restore field width and flags
+    lda zp1B
+    sta zp0A          ; Update program pointer
+    tya
+    beq L8E0E         ; If type=0, jump to print string
+    jsr L9EDF         ; Convert numeric value to string
+    lda zp14          ; Get current field width
+    sec
+    sbc zp36          ; A=width-stringlength
+    bcc L8E0E         ; length>width - print it
+    beq L8E0E         ; length=width - print it
+    tay               ; Otherwise, Y=number of spaces to pad with
 L8E08:
-    JSR LB565
-    DEY
-    BNE L8E08         ; Loop to print required spaces to pad the number
+    jsr LB565
+    dey
+    bne L8E08         ; Loop to print required spaces to pad the number
 
 ; Print string in string buffer
 ; -----------------------------
 L8E0E:
-    LDA zp36
-    BEQ L8DC3         ; Null string, jump back to main loop
-    LDY #$00          ; Point to start of string
+    lda zp36
+    beq L8DC3         ; Null string, jump back to main loop
+    ldy #$00          ; Point to start of string
 L8E14:
-    LDA ws+$0600,Y
-    JSR LB558         ; Print character from string buffer
-    INY
-    CPY zp36
-    BNE L8E14         ; Increment pointer, loop for full string
-    BEQ L8DC3         ; Jump back for next print item
+    lda ws+$0600,Y
+    jsr LB558         ; Print character from string buffer
+    iny
+    cpy zp36
+    bne L8E14         ; Increment pointer, loop for full string
+    beq L8DC3         ; Jump back for next print item
 
 L8E21:
     .if version < 3
-        JMP L8AA2
+        jmp L8AA2
     .elseif version >= 3
-        JMP X8AC8
+        jmp X8AC8
     .endif
 
 L8E24:
-    CMP #','
-    BNE L8E21         ; No comma, jump to TAB(x)
-    LDA zp2A
-    PHA               ; Save X
-    JSR LAE56
-    JSR L92F0
+    cmp #','
+    bne L8E21         ; No comma, jump to TAB(x)
+    lda zp2A
+    pha               ; Save X
+    jsr LAE56
+    jsr L92F0
 
 ; Atom - manually position cursor
 ; -------------------------------
     .ifdef MOS_ATOM
-        LDA #$1E
-        JSR OSWRCH    ; Home cursor
-        LDY zp2A
-        BEQ XADDC     ; Y=0, no movement needed
-        LDA #$0A
+        lda #$1E
+        jsr OSWRCH    ; Home cursor
+        ldy zp2A
+        beq XADDC     ; Y=0, no movement needed
+        lda #$0A
 XADD6:
-        JSR OSWRCH    ; Move cursor down
-        DEY
-        BNE XADD6     ; Loop until Y position reached
+        jsr OSWRCH    ; Move cursor down
+        dey
+        bne XADD6     ; Loop until Y position reached
 XADDC:
-        PLA
-        BEQ XADE8     ; X=0, no movement needed
-        TAY
-        LDA #$09
+        pla
+        beq XADE8     ; X=0, no movement needed
+        tay
+        lda #$09
 XADE2:
-        JSR OSWRCH    ; Move cursor right
-        DEY
-        BNE XADE2     ; Loop until X position reached
+        jsr OSWRCH    ; Move cursor right
+        dey
+        bne XADE2     ; Loop until X position reached
 XADE8:
     .endif
 
 ; BBC - send VDU 31,x,y sequence
 ; ------------------------------
     .ifdef MOS_BBC
-        LDA #$1F
-        JSR OSWRCH    ; TAB()
-        PLA
-        JSR OSWRCH    ; X coord
-        JSR L9456     ; Y coord
+        lda #$1F
+        jsr OSWRCH    ; TAB()
+        pla
+        jsr OSWRCH    ; X coord
+        jsr L9456     ; Y coord
     .endif
 
-    JMP L8E6A         ; Continue to next PRINT item
+    jmp L8E6A         ; Continue to next PRINT item
 
 L8E40:
-    JSR L92DD
-    JSR L8A8C
-    CMP #')'
-    BNE L8E24
-    LDA zp2A
-    SBC zp1E
-    BEQ L8E6A
+    jsr L92DD
+    jsr L8A8C
+    cmp #')'
+    bne L8E24
+    lda zp2A
+    sbc zp1E
+    beq L8E6A
     .if version < 3
-        TAY
+        tay
     .elseif version >= 3
-        TAX
+        tax
     .endif
-    BCS L8E5F
-    JSR LBC25
-    BEQ L8E5B
+    bcs L8E5F
+    jsr LBC25
+    beq L8E5B
 L8E58:
-    JSR L92E3
+    jsr L92E3
 L8E5B:
     .if version < 3
-        LDY zp2A
+        ldy zp2A
     .elseif version >= 3
-        LDX zp2A
+        ldx zp2A
     .endif
-    BEQ L8E6A
+    beq L8E6A
 L8E5F:
     .if version < 3
-        JSR LB565
-        DEY
-        BNE L8E5F
+        jsr LB565
+        dey
+        bne L8E5F
     .elseif version >= 3
-        JSR LB580
+        jsr LB580
     .endif
-    BEQ L8E6A
+    beq L8E6A
 L8E67:
-    JSR LBC25
+    jsr LBC25
 L8E6A:
-    CLC
-    LDY zp1B
-    STY zp0A
-    RTS
+    clc
+    ldy zp1B
+    sty zp0A
+    rts
 
 L8E70:
-    LDX zp0B
-    STX zp19
-    LDX zp0C
-    STX zp1A
-    LDX zp0A
-    STX zp1B
-    CMP #$27
-    BEQ L8E67
-    CMP #$8A
-    BEQ L8E40
-    CMP #$89
-    BEQ L8E58
-    SEC
+    ldx zp0B
+    stx zp19
+    ldx zp0C
+    stx zp1A
+    ldx zp0A
+    stx zp1B
+    cmp #$27
+    beq L8E67
+    cmp #$8A
+    beq L8E40
+    cmp #$89
+    beq L8E58
+    sec
 L8E89:
-    RTS
+    rts
 
 L8E8A:
-    JSR L8A97         ; Skip spaces
-    JSR L8E70
-    BCC L8E89
-    CMP #$22
-    BEQ L8EA7
-    SEC
-    RTS
+    jsr L8A97         ; Skip spaces
+    jsr L8E70
+    bcc L8E89
+    cmp #$22
+    beq L8EA7
+    sec
+    rts
 
 L8E98:
-    BRK
+    brk
     dta 9
     .if foldup == 1
         dta 'MISSING '
@@ -2542,201 +2542,201 @@ L8E98:
         dta 'Missing '
     .endif
     dta 0x22          ; "
-    BRK
+    brk
 
 L8EA4:
-    JSR LB558
+    jsr LB558
 L8EA7:
-    INY
-    LDA (zp19),Y
-    CMP #$0D
-    BEQ L8E98
-    CMP #$22
-    BNE L8EA4
-    INY
-    STY zp1B
-    LDA (zp19),Y
-    CMP #$22
-    BNE L8E6A
-    BEQ L8EA4
+    iny
+    lda (zp19),Y
+    cmp #$0D
+    beq L8E98
+    cmp #$22
+    bne L8EA4
+    iny
+    sty zp1B
+    lda (zp19),Y
+    cmp #$22
+    bne L8E6A
+    beq L8EA4
 
 ; CLG
 ; ===
 L8EBD:
-    JSR L9857         ; Check end of statement
-    LDA #$10
-    BNE L8ECC         ; Jump to do VDU 16
+    jsr L9857         ; Check end of statement
+    lda #$10
+    bne L8ECC         ; Jump to do VDU 16
 
 ; CLS
 ; ===
 L8EC4:
-    JSR L9857         ; Check end of statement
-    JSR LBC28         ; Set COUNT to zero
-    LDA #$0C          ; Do VDU 12
+    jsr L9857         ; Check end of statement
+    jsr LBC28         ; Set COUNT to zero
+    lda #$0C          ; Do VDU 12
 L8ECC:
-    JSR OSWRCH
-    JMP L8B9B         ; Send A to OSWRCH, jump to execution loop
+    jsr OSWRCH
+    jmp L8B9B         ; Send A to OSWRCH, jump to execution loop
 
 ; CALL numeric [,items ... ]
 ; ==========================
 L8ED2:
-    JSR L9B1D
-    JSR L92EE
-    JSR LBD94
-    LDY #$00
-    STY ws+$0600
+    jsr L9B1D
+    jsr L92EE
+    jsr LBD94
+    ldy #$00
+    sty ws+$0600
 L8EE0:
-    STY ws+$06FF
-    JSR L8A8C
-    CMP #$2C
-    BNE L8F0C
-    LDY zp1B
-    JSR L95D5
-    BEQ L8F1B
-    LDY ws+$06FF
-    INY
-    LDA zp2A
-    STA ws+$0600,Y
-    INY
-    LDA zp2B
-    STA ws+$0600,Y
-    INY
-    LDA zp2C
-    STA ws+$0600,Y
-    INC ws+$0600
-    JMP L8EE0
+    sty ws+$06FF
+    jsr L8A8C
+    cmp #$2C
+    bne L8F0C
+    ldy zp1B
+    jsr L95D5
+    beq L8F1B
+    ldy ws+$06FF
+    iny
+    lda zp2A
+    sta ws+$0600,Y
+    iny
+    lda zp2B
+    sta ws+$0600,Y
+    iny
+    lda zp2C
+    sta ws+$0600,Y
+    inc ws+$0600
+    jmp L8EE0
 
 L8F0C:
-    DEC zp1B
-    JSR L9852         ; Check for end of statement
-    JSR LBDEA         ; Pop integer to IntA
-    JSR L8F1E         ; Set up registers and call code at IntA
-    CLD               ; Ensure Binary mode on return
-    JMP L8B9B         ; Jump back to program loop
+    dec zp1B
+    jsr L9852         ; Check for end of statement
+    jsr LBDEA         ; Pop integer to IntA
+    jsr L8F1E         ; Set up registers and call code at IntA
+    cld               ; Ensure Binary mode on return
+    jmp L8B9B         ; Jump back to program loop
 
 L8F1B:
-    JMP LAE43
+    jmp LAE43
 
 ; Call code
 ; ---------
 L8F1E:
-    LDA ws+$040C
-    LSR
-    LDA ws+$0404      ; Get Carry from C%, A from A%
-    LDX ws+$0460
-    LDY ws+$0464      ; Get X from X%, Y from Y%
+    lda ws+$040C
+    lsr
+    lda ws+$0404      ; Get Carry from C%, A from A%
+    ldx ws+$0460
+    ldy ws+$0464      ; Get X from X%, Y from Y%
     .if .def TARGET_C64
         jmp $ff9b
     .else
-        JMP (zp2A)    ; Jump to address in IntA
+        jmp (zp2A)    ; Jump to address in IntA
     .endif
 
 
 L8F2E:
-    JMP L982A
+    jmp L982A
 
 ; DELETE linenum, linenum
 ; =======================
 L8F31:
-    JSR L97DF
-    BCC L8F2E
-    JSR LBD94
-    JSR L8A97
-    CMP #$2C
-    BNE L8F2E
-    JSR L97DF
-    BCC L8F2E
-    JSR L9857
-    LDA zp2A
-    STA zp39
-    LDA zp2B
-    STA zp3A
-    JSR LBDEA
+    jsr L97DF
+    bcc L8F2E
+    jsr LBD94
+    jsr L8A97
+    cmp #$2C
+    bne L8F2E
+    jsr L97DF
+    bcc L8F2E
+    jsr L9857
+    lda zp2A
+    sta zp39
+    lda zp2B
+    sta zp3A
+    jsr LBDEA
 L8F53:
-    JSR LBC2D
-    JSR L987B
-    JSR L9222
-    LDA zp39
-    CMP zp2A
-    LDA zp3A
-    SBC zp2B
-    BCS L8F53
-    JMP L8AF3
+    jsr LBC2D
+    jsr L987B
+    jsr L9222
+    lda zp39
+    cmp zp2A
+    lda zp3A
+    sbc zp2B
+    bcs L8F53
+    jmp L8AF3
 
 ; Called by RENUMBER and AUTO
 L8F69:
-    LDA #$0A
+    lda #$0A
     .if version < 3
-        JSR LAED8
+        jsr LAED8
     .elseif version >= 3
-        JSR XAED3
+        jsr XAED3
     .endif
-    JSR L97DF
-    JSR LBD94
-    LDA #$0A
+    jsr L97DF
+    jsr LBD94
+    lda #$0A
     .if version < 3
-        JSR LAED8
+        jsr LAED8
     .elseif version >= 3
-        JSR XAED3
+        jsr XAED3
     .endif
-    JSR L8A97
-    CMP #$2C
-    BNE L8F8D
-    JSR L97DF
-    LDA zp2B
-    BNE L8FDF
-    LDA zp2A
-    BEQ L8FDF
-    INC zp0A
+    jsr L8A97
+    cmp #$2C
+    bne L8F8D
+    jsr L97DF
+    lda zp2B
+    bne L8FDF
+    lda zp2A
+    beq L8FDF
+    inc zp0A
 L8F8D:
-    DEC zp0A
-    JMP L9857
+    dec zp0A
+    jmp L9857
 
 ; called by renumber
 L8F92:
-    LDA zp12
-    STA zp3B
-    LDA zp13
-    STA zp3C
+    lda zp12
+    sta zp3B
+    lda zp13
+    sta zp3C
 L8F9A:
-    LDA zp18
-    STA zp38
-    LDA #$01
-    STA zp37
-    RTS
+    lda zp18
+    sta zp38
+    lda #$01
+    sta zp37
+    rts
 
 ; RENUMBER [linenume [,linenum]]
 ; ==============================
 L8FA3:
-    JSR L8F69
-    LDX #$39
-    JSR LBE0D
-    JSR LBE6F
-    JSR L8F92
+    jsr L8F69
+    ldx #$39
+    jsr LBE0D
+    jsr LBE6F
+    jsr L8F92
 ; Build up table of line numbers
 L8FB1:
-    LDY #$00
-    LDA (zp37),Y
-    BMI L8FE7         ; Line.hi>$7F, end of program
-    STA (zp3B),Y
-    INY
-    LDA (zp37),Y
-    STA (zp3B),Y
-    SEC
-    TYA
-    ADC zp3B
-    STA zp3B
-    TAX
-    LDA zp3C
-    ADC #$00
-    STA zp3C
-    CPX zp06
-    SBC zp07
-    BCS L8FD6
-    JSR L909F
-    BCC L8FB1
+    ldy #$00
+    lda (zp37),Y
+    bmi L8FE7         ; Line.hi>$7F, end of program
+    sta (zp3B),Y
+    iny
+    lda (zp37),Y
+    sta (zp3B),Y
+    sec
+    tya
+    adc zp3B
+    sta zp3B
+    tax
+    lda zp3C
+    adc #$00
+    sta zp3C
+    cpx zp06
+    sbc zp07
+    bcs L8FD6
+    jsr L909F
+    bcc L8FB1
 L8FD6:
-    BRK
+    brk
     dta 0
     dta tknRENUMBER
     .if foldup == 1
@@ -2745,238 +2745,238 @@ L8FD6:
         dta ' space'      ; Terminated by following BRK
     .endif
 L8FDF:
-    BRK
+    brk
     dta 0
     .if foldup == 1
        dta 'SILLY'
     .else
        dta 'Silly'
     .endif
-    BRK
+    brk
 
 ; Do 4K+12K split here
 ; --------------------
 L8FE7:
     .if split == 1
-        JMP X8FE7
+        jmp X8FE7
 
 ; PROCname [(parameters)]
 ; =======================
 X9304:
-        LDA zp0B
-        STA zp19      ; PtrB=PtrA=>after 'PROC' token
-        LDA zp0C
-        STA zp1A
-        LDA zp0A
-        STA zp1B
-        LDA #$F2
-        JSR LB197     ; Call PROC/FN dispatcher
+        lda zp0B
+        sta zp19      ; PtrB=PtrA=>after 'PROC' token
+        lda zp0C
+        sta zp1A
+        lda zp0A
+        sta zp1B
+        lda #$F2
+        jsr LB197     ; Call PROC/FN dispatcher
                       ; Will return here after ENDPROC
-        JSR L9852     ; Check for end of statement
-        JMP L8B9B     ; Return to execution loop
+        jsr L9852     ; Check for end of statement
+        jmp L8B9B     ; Return to execution loop
     .endif
 
 ; Look for renumber references
 X8FE7:
-    JSR L8F9A
+    jsr L8F9A
 L8FEA:
-    LDY #$00
-    LDA (zp37),Y
-    BMI L900D
-    LDA zp3A
-    STA (zp37),Y
-    LDA zp39
-    INY
-    STA (zp37),Y
-    CLC
-    LDA zp2A
-    ADC zp39
-    STA zp39
-    LDA #$00
-    ADC zp3A
-    AND #$7F
-    STA zp3A
-    JSR L909F
-    BCC L8FEA
+    ldy #$00
+    lda (zp37),Y
+    bmi L900D
+    lda zp3A
+    sta (zp37),Y
+    lda zp39
+    iny
+    sta (zp37),Y
+    clc
+    lda zp2A
+    adc zp39
+    sta zp39
+    lda #$00
+    adc zp3A
+    and #$7F
+    sta zp3A
+    jsr L909F
+    bcc L8FEA
 L900D:
-    LDA zp18
-    STA zp0C
-    LDY #$00
-    STY zp0B
-    INY
-    LDA (zp0B),Y
+    lda zp18
+    sta zp0C
+    ldy #$00
+    sty zp0B
+    iny
+    lda (zp0B),Y
     .if version < 3
-        BMI L903A
+        bmi L903A
     .elseif version >= 3
-        BMI L9080
+        bmi L9080
     .endif
 L901A:
-    LDY #$04
+    ldy #$04
 L901C:
-    LDA (zp0B),Y
-    CMP #$8D
-    BEQ L903D
-    INY
-    CMP #$0D
-    BNE L901C
-    LDA (zp0B),Y
+    lda (zp0B),Y
+    cmp #$8D
+    beq L903D
+    iny
+    cmp #$0D
+    bne L901C
+    lda (zp0B),Y
     .if version < 3
-        BMI L903A
+        bmi L903A
     .elseif version >= 3
-        BMI L9080
+        bmi L9080
     .endif
-    LDY #$03
-    LDA (zp0B),Y
-    CLC
-    ADC zp0B
-    STA zp0B
-    BCC L901A
-    INC zp0C
-    BCS L901A
+    ldy #$03
+    lda (zp0B),Y
+    clc
+    adc zp0B
+    sta zp0B
+    bcc L901A
+    inc zp0C
+    bcs L901A
 L903A:
     .if version < 3
-        JMP L8AF3
+        jmp L8AF3
     .endif
 
 L903D:
-    JSR L97EB
-    JSR L8F92
+    jsr L97EB
+    jsr L8F92
 L9043:
-    LDY #$00
-    LDA (zp37),Y
-    BMI L9082
-    LDA (zp3B),Y
-    INY
-    CMP zp2B
-    BNE L9071
-    LDA (zp3B),Y
-    CMP zp2A
-    BNE L9071
-    LDA (zp37),Y
-    STA zp3D
-    DEY
-    LDA (zp37),Y
-    STA zp3E
-    LDY zp0A
-    DEY
-    LDA zp0B
-    STA zp37
-    LDA zp0C
-    STA zp38
-    JSR L88F5
+    ldy #$00
+    lda (zp37),Y
+    bmi L9082
+    lda (zp3B),Y
+    iny
+    cmp zp2B
+    bne L9071
+    lda (zp3B),Y
+    cmp zp2A
+    bne L9071
+    lda (zp37),Y
+    sta zp3D
+    dey
+    lda (zp37),Y
+    sta zp3E
+    ldy zp0A
+    dey
+    lda zp0B
+    sta zp37
+    lda zp0C
+    sta zp38
+    jsr L88F5
 L906D:
-    LDY zp0A
-    BNE L901C
+    ldy zp0A
+    bne L901C
 L9071:
     .if version >= 3
-        CLC
+        clc
     .endif
-    JSR L909F
-    LDA zp3B
-    ADC #$02
-    STA zp3B
-    BCC L9043
-    INC zp3C
-    BCS L9043
+    jsr L909F
+    lda zp3B
+    adc #$02
+    sta zp3B
+    bcc L9043
+    inc zp3C
+    bcs L9043
 L9080:
     .if version >= 3
-        BMI L90D9
+        bmi L90D9
     .endif
 L9082:
-    JSR LBFCF         ; Print inline text
+    jsr LBFCF         ; Print inline text
     .if foldup == 1
         dta 'FAILED AT '
     .else
         dta 'Failed at '
     .endif
-    INY
-    LDA (zp0B),Y
-    STA zp2B
-    INY
-    LDA (zp0B),Y
-    STA zp2A
-    JSR L991F         ; Print in decimal
-    JSR LBC25         ; Print newline
-    BEQ L906D
+    iny
+    lda (zp0B),Y
+    sta zp2B
+    iny
+    lda (zp0B),Y
+    sta zp2A
+    jsr L991F         ; Print in decimal
+    jsr LBC25         ; Print newline
+    beq L906D
 L909F:
-    INY
-    LDA (zp37),Y
-    ADC zp37
-    STA zp37
-    BCC L90AB
-    INC zp38
-    CLC
+    iny
+    lda (zp37),Y
+    adc zp37
+    sta zp37
+    bcc L90AB
+    inc zp38
+    clc
 L90AB:
-    RTS
+    rts
 
 ; AUTO [numeric [, numeric ]]
 ; ===========================
 L90AC:
-    JSR L8F69
-    LDA zp2A
-    PHA
-    JSR LBDEA
+    jsr L8F69
+    lda zp2A
+    pha
+    jsr LBDEA
 L90B5:
-    JSR LBD94
-    JSR L9923
-    LDA #$20
-    JSR LBC02
-    JSR LBDEA
-    JSR L8951
-    JSR LBC8D
-    JSR LBD20
-    PLA
-    PHA
-    CLC
-    ADC zp2A
-    STA zp2A
-    BCC L90B5
-    INC zp2B
-    BPL L90B5
+    jsr LBD94
+    jsr L9923
+    lda #$20
+    jsr LBC02
+    jsr LBDEA
+    jsr L8951
+    jsr LBC8D
+    jsr LBD20
+    pla
+    pha
+    clc
+    adc zp2A
+    sta zp2A
+    bcc L90B5
+    inc zp2B
+    bpl L90B5
 L90D9:
-    JMP L8AF3
+    jmp L8AF3
 
 L90DC:
-    JMP L9218
+    jmp L9218
 
 L90DF:
-    DEC zp0A
-    JSR L9582
-    BEQ L9127
-    BCS L9127
-    JSR LBD94
-    JSR L92DD
-    JSR L9222
-    LDA zp2D
-    ORA zp2C
-    BNE L9127
-    CLC
-    LDA zp2A
-    ADC zp02
-    TAY
-    LDA zp2B
-    ADC zp03
-    TAX
-    CPY zp04
-    SBC zp05
-    BCS L90DC
-    LDA zp02
-    STA zp2A
-    LDA zp03
-    STA zp2B
-    STY zp02
-    STX zp03
-    LDA #$00
-    STA zp2C
-    STA zp2D
-    LDA #$40
-    STA zp27
-    JSR LB4B4
-    JSR L8827
-    JMP L920B
+    dec zp0A
+    jsr L9582
+    beq L9127
+    bcs L9127
+    jsr LBD94
+    jsr L92DD
+    jsr L9222
+    lda zp2D
+    ora zp2C
+    bne L9127
+    clc
+    lda zp2A
+    adc zp02
+    tay
+    lda zp2B
+    adc zp03
+    tax
+    cpy zp04
+    sbc zp05
+    bcs L90DC
+    lda zp02
+    sta zp2A
+    lda zp03
+    sta zp2B
+    sty zp02
+    stx zp03
+    lda #$00
+    sta zp2C
+    sta zp2D
+    lda #$40
+    sta zp27
+    jsr LB4B4
+    jsr L8827
+    jmp L920B
 
 L9127:
-    BRK
+    brk
     dta 10
     .if foldup == 1
         dta 'BAD '
@@ -2984,151 +2984,151 @@ L9127:
         dta 'Bad '
     .endif
     dta tknDIM
-    BRK
+    brk
 
 ; DIM numvar [numeric] [(arraydef)]
 ; =================================
 L912F:
-    JSR L8A97
-    TYA
-    CLC
-    ADC zp0B
-    LDX zp0C
-    BCC L913C
-    INX
-    CLC
+    jsr L8A97
+    tya
+    clc
+    adc zp0B
+    ldx zp0C
+    bcc L913C
+    inx
+    clc
 L913C:
-    SBC #$00
-    STA zp37
-    TXA
-    SBC #$00
-    STA zp38
-    LDX #$05
-    STX zp3F
-    LDX zp0A
-    JSR L9559
-    CPY #$01
-    BEQ L9127
-    CMP #'('
-    BEQ L916B
-    CMP #$24
-    BEQ L915E
-    CMP #$25
-    BNE L9168
+    sbc #$00
+    sta zp37
+    txa
+    sbc #$00
+    sta zp38
+    ldx #$05
+    stx zp3F
+    ldx zp0A
+    jsr L9559
+    cpy #$01
+    beq L9127
+    cmp #'('
+    beq L916B
+    cmp #$24
+    beq L915E
+    cmp #$25
+    bne L9168
 L915E:
-    DEC zp3F
-    INY
-    INX
-    LDA (zp37),Y
-    CMP #'('
-    BEQ L916B
+    dec zp3F
+    iny
+    inx
+    lda (zp37),Y
+    cmp #'('
+    beq L916B
 L9168:
-    JMP L90DF
+    jmp L90DF
 
 L916B:
-    STY zp39
-    STX zp0A
-    JSR L9469
-    BNE L9127
-    JSR L94FC
-    LDX #$01
-    JSR L9531
-    LDA zp3F
-    PHA
-    LDA #$01
-    PHA
+    sty zp39
+    stx zp0A
+    jsr L9469
+    bne L9127
+    jsr L94FC
+    ldx #$01
+    jsr L9531
+    lda zp3F
+    pha
+    lda #$01
+    pha
     .if version < 3
-        JSR LAED8
+        jsr LAED8
     .elseif version >= 3
-        JSR XAED3
+        jsr XAED3
     .endif
 L9185:
-    JSR LBD94
-    JSR L8821
-    LDA zp2B
-    AND #$C0
-    ORA zp2C
-    ORA zp2D
-    BNE L9127
-    JSR L9222
-    PLA
-    TAY
-    LDA zp2A
-    STA (zp02),Y
-    INY
-    LDA zp2B
-    STA (zp02),Y
-    INY
-    TYA
-    PHA
-    JSR L9231
-    JSR L8A97
-    CMP #$2C
-    BEQ L9185
-    CMP #')'
-    BEQ L91B7
-    JMP L9127
+    jsr LBD94
+    jsr L8821
+    lda zp2B
+    and #$C0
+    ora zp2C
+    ora zp2D
+    bne L9127
+    jsr L9222
+    pla
+    tay
+    lda zp2A
+    sta (zp02),Y
+    iny
+    lda zp2B
+    sta (zp02),Y
+    iny
+    tya
+    pha
+    jsr L9231
+    jsr L8A97
+    cmp #$2C
+    beq L9185
+    cmp #')'
+    beq L91B7
+    jmp L9127
 
 L91B7:
-    PLA
-    STA zp15
-    PLA
-    STA zp3F
-    LDA #$00
-    STA zp40
-    JSR L9236
-    LDY #$00
-    LDA zp15
-    STA (zp02),Y
-    ADC zp2A
-    STA zp2A
-    BCC L91D2
-    INC zp2B
+    pla
+    sta zp15
+    pla
+    sta zp3F
+    lda #$00
+    sta zp40
+    jsr L9236
+    ldy #$00
+    lda zp15
+    sta (zp02),Y
+    adc zp2A
+    sta zp2A
+    bcc L91D2
+    inc zp2B
 L91D2:
-    LDA zp03
-    STA zp38
-    LDA zp02
-    STA zp37
-    CLC
-    ADC zp2A
-    TAY
-    LDA zp2B
-    ADC zp03
-    BCS L9218
-    TAX
-    CPY zp04
-    SBC zp05
-    BCS L9218
-    STY zp02
-    STX zp03
-    LDA zp37
-    ADC zp15
-    TAY
-    LDA #$00
-    STA zp37
-    BCC L91FC
-    INC zp38
+    lda zp03
+    sta zp38
+    lda zp02
+    sta zp37
+    clc
+    adc zp2A
+    tay
+    lda zp2B
+    adc zp03
+    bcs L9218
+    tax
+    cpy zp04
+    sbc zp05
+    bcs L9218
+    sty zp02
+    stx zp03
+    lda zp37
+    adc zp15
+    tay
+    lda #$00
+    sta zp37
+    bcc L91FC
+    inc zp38
 L91FC:
-    STA (zp37),Y
-    INY
-    BNE L9203
-    INC zp38
+    sta (zp37),Y
+    iny
+    bne L9203
+    inc zp38
 L9203:
-    CPY zp02
-    BNE L91FC
-    CPX zp38
-    BNE L91FC
+    cpy zp02
+    bne L91FC
+    cpx zp38
+    bne L91FC
 L920B:
-    JSR L8A97
-    CMP #$2C
-    BEQ L9215
-    JMP L8B96
+    jsr L8A97
+    cmp #$2C
+    beq L9215
+    jmp L8B96
 
 L9215:
-    JMP L912F
+    jmp L912F
 
 L9218:
-    BRK
+    brk
     dta 11
     dta tknDIM
     .if foldup == 1
@@ -3136,262 +3136,262 @@ L9218:
     .else
         dta ' space'
     .endif
-    BRK
+    brk
 
 L9222:
-    INC zp2A
-    BNE L9230
-    INC zp2B
-    BNE L9230
-    INC zp2C
-    BNE L9230
-    INC zp2D
+    inc zp2A
+    bne L9230
+    inc zp2B
+    bne L9230
+    inc zp2C
+    bne L9230
+    inc zp2D
 L9230:
-    RTS
+    rts
 
 L9231:
-    LDX #$3F
-    JSR LBE0D
+    ldx #$3F
+    jsr LBE0D
 L9236:
-    LDX #$00
-    LDY #$00
+    ldx #$00
+    ldy #$00
 L923A:
-    LSR zp40
-    ROR zp3F
-    BCC L924B
-    CLC
-    TYA
-    ADC zp2A
-    TAY
-    TXA
-    ADC zp2B
-    TAX
-    BCS L925A
+    lsr zp40
+    ror zp3F
+    bcc L924B
+    clc
+    tya
+    adc zp2A
+    tay
+    txa
+    adc zp2B
+    tax
+    bcs L925A
 L924B:
-    ASL zp2A
-    ROL zp2B
-    LDA zp3F
-    ORA zp40
-    BNE L923A
-    STY zp2A
-    STX zp2B
-    RTS
+    asl zp2A
+    rol zp2B
+    lda zp3F
+    ora zp40
+    bne L923A
+    sty zp2A
+    stx zp2B
+    rts
 
 L925A:
-    JMP L9127
+    jmp L9127
 
 ; HIMEM=numeric
 ; =============
 L925D:
-    JSR L92EB         ; Set past '=', evaluate integer
-    LDA zp2A
-    STA zp06
-    STA zp04          ; Set HIMEM and STACK
-    LDA zp2B
-    STA zp07
-    STA zp05
-    JMP L8B9B         ; Jump back to execution loop
+    jsr L92EB         ; Set past '=', evaluate integer
+    lda zp2A
+    sta zp06
+    sta zp04          ; Set HIMEM and STACK
+    lda zp2B
+    sta zp07
+    sta zp05
+    jmp L8B9B         ; Jump back to execution loop
 
 ; LOMEM=numeric
 ; =============
 L926F:
-    JSR L92EB         ; Step past '=', evaluate integer
-    LDA zp2A
-    STA zp00
-    STA zp02          ; Set LOMEM and VAREND
-    LDA zp2B
-    STA zp01
-    STA zp03
-    JSR LBD2F
-    BEQ L928A         ; Clear dynamic variables, jump to execution loop
+    jsr L92EB         ; Step past '=', evaluate integer
+    lda zp2A
+    sta zp00
+    sta zp02          ; Set LOMEM and VAREND
+    lda zp2B
+    sta zp01
+    sta zp03
+    jsr LBD2F
+    beq L928A         ; Clear dynamic variables, jump to execution loop
 
 ; PAGE=numeric
 ; ============
 L9283:
-    JSR L92EB         ; Step past '=', evaluate integer
-    LDA zp2B
-    STA zp18          ; Set PAGE
+    jsr L92EB         ; Step past '=', evaluate integer
+    lda zp2B
+    sta zp18          ; Set PAGE
 L928A:
-    JMP L8B9B         ; Jump to execution loop
+    jmp L8B9B         ; Jump to execution loop
 
 ; CLEAR
 ; =====
 L928D:
-    JSR L9857         ; Check end of statement
-    JSR LBD20         ; Clear heap, stack, data, variables
-    BEQ L928A         ; Jump to execution loop
+    jsr L9857         ; Check end of statement
+    jsr LBD20         ; Clear heap, stack, data, variables
+    beq L928A         ; Jump to execution loop
 
 ; TRACE ON | OFF | numeric
 ; ========================
 L9295:
-    JSR L97DF
-    BCS L92A5         ; If line number, jump for TRACE linenum
-    CMP #$EE
-    BEQ L92B7         ; Jump for TRACE ON
-    CMP #$87
-    BEQ L92C0         ; Jump for TRACE OFF
-    JSR L8821         ; Evaluate integer
+    jsr L97DF
+    bcs L92A5         ; If line number, jump for TRACE linenum
+    cmp #$EE
+    beq L92B7         ; Jump for TRACE ON
+    cmp #$87
+    beq L92C0         ; Jump for TRACE OFF
+    jsr L8821         ; Evaluate integer
 
 ; TRACE numeric
 ; -------------
 L92A5:
-    JSR L9857         ; Check end of statement
-    LDA zp2A
-    STA zp21          ; Set trace limit low byte
-    LDA zp2B
+    jsr L9857         ; Check end of statement
+    lda zp2A
+    sta zp21          ; Set trace limit low byte
+    lda zp2B
 L92AE:
-    STA zp22
-    LDA #$FF          ; Set trace limit high byte, set TRACE ON
+    sta zp22
+    lda #$FF          ; Set trace limit high byte, set TRACE ON
 L92B2:
-    STA zp20
-    JMP L8B9B         ; Set TRACE flag, return to execution loop
+    sta zp20
+    jmp L8B9B         ; Set TRACE flag, return to execution loop
 
 ; TRACE ON
 ; --------
 L92B7:
-    INC zp0A
-    JSR L9857         ; Step past, check end of statement
-    LDA #$FF
-    BNE L92AE         ; Jump to set TRACE $FFxx
+    inc zp0A
+    jsr L9857         ; Step past, check end of statement
+    lda #$FF
+    bne L92AE         ; Jump to set TRACE $FFxx
 
 ; TRACE OFF
 ; ---------
 L92C0:
-    INC zp0A
-    JSR L9857         ; Step past, check end of statement
-    LDA #$00
-    BEQ L92B2         ; Jump to set TRACE OFF
+    inc zp0A
+    jsr L9857         ; Step past, check end of statement
+    lda #$00
+    beq L92B2         ; Jump to set TRACE OFF
 
 ; TIME=numeric
 ; ============
 L92C9:
-    JSR L92EB         ; Step past '=', evaluate integer
+    jsr L92EB         ; Step past '=', evaluate integer
     .ifdef MOS_BBC
-        LDX #$2A
-        LDY #$00
-        STY zp2E      ; Point to integer, set 5th byte to 0
-        LDA #$02
-        JSR OSWORD    ; Call OSWORD $02 to do TIME=
+        ldx #$2A
+        ldy #$00
+        sty zp2E      ; Point to integer, set 5th byte to 0
+        lda #$02
+        jsr OSWORD    ; Call OSWORD $02 to do TIME=
     .endif
-    JMP L8B9B         ; Jump to execution loop
+    jmp L8B9B         ; Jump to execution loop
 
 ; Evaluate <comma><numeric>
 ; =========================
 L92DA:
-    JSR L8AAE         ; Check for and step past comma
+    jsr L8AAE         ; Check for and step past comma
 L92DD:
-    JSR L9B29
-    JMP L92F0
+    jsr L9B29
+    jmp L92F0
 
 L92E3:
-    JSR LADEC
-    BEQ L92F7
-    BMI L92F4
+    jsr LADEC
+    beq L92F7
+    bmi L92F4
 L92EA:
-    RTS
+    rts
 
 ; Evaluate <equals><integer>
 ; ==========================
 L92EB:
-    JSR L9807         ; Check for equals, evaluate numeric
+    jsr L9807         ; Check for equals, evaluate numeric
 L92EE:
-    LDA zp27          ; Get result type
+    lda zp27          ; Get result type
 L92F0:
-    BEQ L92F7         ; String, jump to 'Type mismatch'
-    BPL L92EA         ; Integer, return
+    beq L92F7         ; String, jump to 'Type mismatch'
+    bpl L92EA         ; Integer, return
 L92F4:
-    JMP LA3E4         ; Real, jump to convert to integer
+    jmp LA3E4         ; Real, jump to convert to integer
 
 L92F7:
-    JMP L8C0E         ; Jump to 'Type mismatch' error
+    jmp L8C0E         ; Jump to 'Type mismatch' error
 
 ; Evaluate <real>
 ; ===============
 L92FA:
-    JSR LADEC         ; Evaluate expression
+    jsr LADEC         ; Evaluate expression
 
 ; Ensure value is real
 ; --------------------
 L92FD:
-    BEQ L92F7         ; String, jump to 'Type mismatch'
-    BMI L92EA         ; Real, return
-    JMP LA2BE         ; Integer, jump to convert to real
+    beq L92F7         ; String, jump to 'Type mismatch'
+    bmi L92EA         ; Real, return
+    jmp LA2BE         ; Integer, jump to convert to real
 
     .if split == 0
 ; PROCname [(parameters)]
 ; =======================
 L9304:
-        LDA zp0B
-        STA zp19      ; PtrB=PtrA=>after 'PROC' token
-        LDA zp0C
-        STA zp1A
-        LDA zp0A
-        STA zp1B
-        LDA #$F2
-        JSR LB197     ; Call PROC/FN dispatcher
+        lda zp0B
+        sta zp19      ; PtrB=PtrA=>after 'PROC' token
+        lda zp0C
+        sta zp1A
+        lda zp0A
+        sta zp1B
+        lda #$F2
+        jsr LB197     ; Call PROC/FN dispatcher
                       ; Will return here after ENDPROC
-        JSR L9852     ; Check for end of statement
-        JMP L8B9B     ; Return to execution loop
+        jsr L9852     ; Check for end of statement
+        jmp L8B9B     ; Return to execution loop
     .endif
 
 ; Make string zero length
 ; -----------------------
 L931B:
-    LDY #$03
-    LDA #$00          ; Set length to zero
-    STA (zp2A),Y
-    BEQ L9341         ; Jump to look for next LOCAL item
+    ldy #$03
+    lda #$00          ; Set length to zero
+    sta (zp2A),Y
+    beq L9341         ; Jump to look for next LOCAL item
 
 ; LOCAL variable [,variable ...]
 ; ==============================
 L9323:
-    TSX
-    CPX #$FC
-    BCS L936B         ; Not inside subroutine, error
-    JSR L9582
-    BEQ L9353         ; Find variable, jump if bad variable name
-    JSR LB30D         ; Push value on stack, push variable info on stack
-    LDY zp2C
-    BMI L931B         ; If a string, jump to make zero length
-    JSR LBD94         ; 
-    LDA #$00          ; Set IntA to zero
+    tsx
+    cpx #$FC
+    bcs L936B         ; Not inside subroutine, error
+    jsr L9582
+    beq L9353         ; Find variable, jump if bad variable name
+    jsr LB30D         ; Push value on stack, push variable info on stack
+    ldy zp2C
+    bmi L931B         ; If a string, jump to make zero length
+    jsr LBD94         ; 
+    lda #$00          ; Set IntA to zero
     .if version < 3
-        JSR LAED8
+        jsr LAED8
     .elseif version >= 3
-        JSR XAED3
+        jsr XAED3
     .endif
-    STA zp27
-    JSR LB4B4         ; Set current variable to IntA (zero)
+    sta zp27
+    jsr LB4B4         ; Set current variable to IntA (zero)
 
 ; Next LOCAL item
 ; ---------------
 L9341:
-    TSX
-    INC $0106,X       ; Increment number of LOCAL items
-    LDY zp1B
-    STY zp0A          ; Update line pointer
-    JSR L8A97         ; Get next character
-    CMP #$2C
-    BEQ L9323         ; Comma, loop back to do another item
-    JMP L8B96         ; Jump to main execution loop
+    tsx
+    inc $0106,X       ; Increment number of LOCAL items
+    ldy zp1B
+    sty zp0A          ; Update line pointer
+    jsr L8A97         ; Get next character
+    cmp #$2C
+    beq L9323         ; Comma, loop back to do another item
+    jmp L8B96         ; Jump to main execution loop
 
 L9353:
-    JMP L8B98
+    jmp L8B98
 
 ; ENDPROC
 ; =======
 ; Stack needs to contain these items,
 ;  ret_lo, ret_hi, PtrB_hi, PtrB_lo, PtrB_off, numparams, PtrA_hi, PtrA_lo, PtrA_off, tknPROC
 L9356:
-    TSX
-    CPX #$FC
-    BCS L9365         ; If stack empty, jump to give error
-    LDA $01FF
-    CMP #$F2
-    BNE L9365         ; If pushed token<>'PROC', give error
-    JMP L9857         ; Check for end of statement and return to pop from subroutine
+    tsx
+    cpx #$FC
+    bcs L9365         ; If stack empty, jump to give error
+    lda $01FF
+    cmp #$F2
+    bne L9365         ; If pushed token<>'PROC', give error
+    jmp L9857         ; Check for end of statement and return to pop from subroutine
 L9365:
-    BRK
+    brk
     dta 13
     .if foldup == 1
         dta 'NO '
@@ -3400,7 +3400,7 @@ L9365:
     .endif
     dta tknPROC       ; Terminated by following BRK
 L936B:
-    BRK
+    brk
     dta 12
     .if foldup == 1
         dta 'NOT '
@@ -3409,7 +3409,7 @@ L936B:
     .endif
     dta tknLOCAL      ; Terminated by following BRK
 L9372:
-    BRK
+    brk
     dta $19
     .if foldup == 1
         dta 'BAD '
@@ -3417,163 +3417,163 @@ L9372:
         dta 'Bad '
     .endif
     dta tknMODE
-    BRK
+    brk
 
 ; GCOL numeric, numeric
 ; =====================
 L937A:
-    JSR L8821
-    LDA zp2A
-    PHA               ; Evaluate integer
-    JSR L92DA         ; Step past comma, evaluate integer
-    JSR L9852         ; Update program pointer, check for end of statement
-    LDA #$12
-    JSR OSWRCH        ; Send VDU 18 for GCOL
-    JMP L93DA         ; Jump to send two bytes to OSWRCH
+    jsr L8821
+    lda zp2A
+    pha               ; Evaluate integer
+    jsr L92DA         ; Step past comma, evaluate integer
+    jsr L9852         ; Update program pointer, check for end of statement
+    lda #$12
+    jsr OSWRCH        ; Send VDU 18 for GCOL
+    jmp L93DA         ; Jump to send two bytes to OSWRCH
 
 ; COLOUR numeric
 ; ==============
 L938E:
-    LDA #$11
-    PHA               ; Stack VDU 17 for COLOUR
-    JSR L8821
-    JSR L9857         ; Evaluate integer, check end of statement
-    JMP L93DA         ; Jump to send two bytes to OSWRCH
+    lda #$11
+    pha               ; Stack VDU 17 for COLOUR
+    jsr L8821
+    jsr L9857         ; Evaluate integer, check end of statement
+    jmp L93DA         ; Jump to send two bytes to OSWRCH
 
 ; MODE numeric
 ; ============
 L939A:
-    LDA #$16
-    PHA               ; Stack VDU 22 for MODE
-    JSR L8821
-    JSR L9857         ; Evaluate integer, check end of statement
+    lda #$16
+    pha               ; Stack VDU 22 for MODE
+    jsr L8821
+    jsr L9857         ; Evaluate integer, check end of statement
 
 ; BBC - Check if changing MODE will move screen into stack
 ; --------------------------------------------------------
     .ifdef MOS_BBC
-        JSR LBEE7     ; Get machine address high word
-        CPX #$FF
-        BNE L93D7     ; Not $xxFFxxxx, skip memory test
-        CPY #$FF
-        BNE L93D7     ; Not $FFFFxxxx, skip memory test
+        jsr LBEE7     ; Get machine address high word
+        cpx #$FF
+        bne L93D7     ; Not $xxFFxxxx, skip memory test
+        cpy #$FF
+        bne L93D7     ; Not $FFFFxxxx, skip memory test
 
                       ; MODE change in I/O processor, must check memory limits
-        LDA zp04
-        CMP zp06
-        BNE L9372     ; STACK<>HIMEM, stack not empty, give 'Bad MODE' error
-        LDA zp05
-        CMP zp07
-        BNE L9372
-        LDX zp2A
-        LDA #$85
-        JSR OSBYTE    ; Get top of memory if we used this MODE
-        CPX zp02
-        TYA
-        SBC zp03
-        BCC L9372     ; Would be below VAREND, give error
-        CPX zp12
-        TYA
-        SBC zp13
-        BCC L9372     ; Would be below TOP, give error
+        lda zp04
+        cmp zp06
+        bne L9372     ; STACK<>HIMEM, stack not empty, give 'Bad MODE' error
+        lda zp05
+        cmp zp07
+        bne L9372
+        ldx zp2A
+        lda #$85
+        jsr OSBYTE    ; Get top of memory if we used this MODE
+        cpx zp02
+        tya
+        sbc zp03
+        bcc L9372     ; Would be below VAREND, give error
+        cpx zp12
+        tya
+        sbc zp13
+        bcc L9372     ; Would be below TOP, give error
 
                       ; BASIC stack is empty, screen would not hit heap or program
-        STX zp06
-        STX zp04      ; Set STACK and HIMEM to new address
-        STY zp07
-        STY zp05
+        stx zp06
+        stx zp04      ; Set STACK and HIMEM to new address
+        sty zp07
+        sty zp05
     .endif
 
 ; Change MODE
 L93D7:
-    JSR LBC28         ; Set COUNT to zero
+    jsr LBC28         ; Set COUNT to zero
 
 ; Send two bytes to OSWRCH, stacked byte, then IntA
 ; -------------------------------------------------
 L93DA:
-    PLA
-    JSR OSWRCH        ; Send stacked byte to OSWRCH
-    JSR L9456
-    JMP L8B9B         ; Send IntA to OSWRCH, jump to execution loop
+    pla
+    jsr OSWRCH        ; Send stacked byte to OSWRCH
+    jsr L9456
+    jmp L8B9B         ; Send IntA to OSWRCH, jump to execution loop
 
 ; MOVE numeric, numeric
 ; =====================
 L93E4:
-    LDA #$04
-    BNE L93EA         ; Jump forward to do PLOT 4 for MOVE
+    lda #$04
+    bne L93EA         ; Jump forward to do PLOT 4 for MOVE
 
 ; DRAW numeric, numeric
 ; =====================
 L93E8:
-    LDA #$05          ; Do PLOT 5 for DRAW
+    lda #$05          ; Do PLOT 5 for DRAW
 L93EA:
-    PHA
-    JSR L9B1D         ; Evaluate first expression
-    JMP L93FD         ; Jump to evaluate second expression and send to OSWRCH
+    pha
+    jsr L9B1D         ; Evaluate first expression
+    jmp L93FD         ; Jump to evaluate second expression and send to OSWRCH
 
 ; PLOT numeric, numeric, numeric
 ; ==============================
 L93F1:
-    JSR L8821
-    LDA zp2A
-    PHA               ; Evaluate integer
-    JSR L8AAE
-    JSR L9B29         ; Step past comma, evaluate expression
+    jsr L8821
+    lda zp2A
+    pha               ; Evaluate integer
+    jsr L8AAE
+    jsr L9B29         ; Step past comma, evaluate expression
 L93FD:
-    JSR L92EE         ; Confirm numeric and ensure is integer
-    JSR LBD94         ; Stack integer
-    JSR L92DA         ; Step past command and evaluate integer
-    JSR L9852         ; Update program pointer, check for end of statement
-    LDA #$19
-    JSR OSWRCH        ; Send VDU 25 for PLOT
-    PLA
-    JSR OSWRCH        ; Send PLOT action
-    JSR LBE0B         ; Pop integer to temporary store at $37/8
-    LDA zp37
-    JSR OSWRCH        ; Send first coordinate to OSWRCH
-    LDA zp38
-    JSR OSWRCH
-    JSR L9456         ; Send IntA to OSWRCH, second coordinate
-    LDA zp2B
-    JSR OSWRCH        ; Send IntA high byte to OSWRCH
-    JMP L8B9B         ; Jump to execution loop
+    jsr L92EE         ; Confirm numeric and ensure is integer
+    jsr LBD94         ; Stack integer
+    jsr L92DA         ; Step past command and evaluate integer
+    jsr L9852         ; Update program pointer, check for end of statement
+    lda #$19
+    jsr OSWRCH        ; Send VDU 25 for PLOT
+    pla
+    jsr OSWRCH        ; Send PLOT action
+    jsr LBE0B         ; Pop integer to temporary store at $37/8
+    lda zp37
+    jsr OSWRCH        ; Send first coordinate to OSWRCH
+    lda zp38
+    jsr OSWRCH
+    jsr L9456         ; Send IntA to OSWRCH, second coordinate
+    lda zp2B
+    jsr OSWRCH        ; Send IntA high byte to OSWRCH
+    jmp L8B9B         ; Jump to execution loop
 
 
 L942A:
-    LDA zp2B
-    JSR OSWRCH        ; Send IntA byte 2 to OSWRCH
+    lda zp2B
+    jsr OSWRCH        ; Send IntA byte 2 to OSWRCH
 
 ; VDU num[,][;][...]
 ; ==================
 L942F:
-    JSR L8A97         ; Get next character
+    jsr L8A97         ; Get next character
 L9432:
-    CMP #$3A
-    BEQ L9453         ; If end of statement, jump to exit
-    CMP #$0D
-    BEQ L9453
-    CMP #$8B
-    BEQ L9453
-    DEC zp0A          ; Step back to current character
-    JSR L8821
-    JSR L9456         ; Evaluate integer and output low byte
-    JSR L8A97         ; Get next character
-    CMP #','
-    BEQ L942F         ; Comma, loop to read another number
-    CMP #';'
-    BNE L9432         ; Not semicolon, loop to check for end of statement
-    BEQ L942A         ; Loop to output high byte and read another
+    cmp #$3A
+    beq L9453         ; If end of statement, jump to exit
+    cmp #$0D
+    beq L9453
+    cmp #$8B
+    beq L9453
+    dec zp0A          ; Step back to current character
+    jsr L8821
+    jsr L9456         ; Evaluate integer and output low byte
+    jsr L8A97         ; Get next character
+    cmp #','
+    beq L942F         ; Comma, loop to read another number
+    cmp #';'
+    bne L9432         ; Not semicolon, loop to check for end of statement
+    beq L942A         ; Loop to output high byte and read another
 L9453:
-    JMP L8B96         ; Jump to execution loop
+    jmp L8B96         ; Jump to execution loop
 
 
 ; Send IntA to OSWRCH via WRCHV
 ; =============================
 L9456:
-    LDA zp2A
+    lda zp2A
     .if WRCHV != 0
-        JMP (WRCHV)
+        jmp (WRCHV)
     .elseif WRCHV == 0
-        JMP OSWRCH 
+        jmp OSWRCH 
     .endif
 
 
@@ -3584,661 +3584,661 @@ L9456:
 ; On entry, ($37)+1=>FN/PROC token (ie, first character of name)
 ;
 L945B:
-    LDY #$01
-    LDA (zp37),Y      ; Get PROC/FN character
-    LDY #$F6          ; Point to PROC list start
-    CMP #tknPROC
-    BEQ L946F         ; If PROC, jump to scan list
-    LDY #$F8
-    BNE L946F         ; Point to FN list start and scan list
+    ldy #$01
+    lda (zp37),Y      ; Get PROC/FN character
+    ldy #$F6          ; Point to PROC list start
+    cmp #tknPROC
+    beq L946F         ; If PROC, jump to scan list
+    ldy #$F8
+    bne L946F         ; Point to FN list start and scan list
 
 ; Look for a variable in the heap
 ; -------------------------------
 ; On entry, ($37)+1=>first character of name
 ;
 L9469:
-    LDY #$01
-    LDA (zp37),Y      ; Get first character of variable
-    ASL
-    TAY               ; Double it to index into index list
+    ldy #$01
+    lda (zp37),Y      ; Get first character of variable
+    asl
+    tay               ; Double it to index into index list
 
 ; Scan though linked lists in heap
 ; --------------------------------
 L946F:
-    LDA ws+$0400,Y
-    STA zp3A          ; Get start of linked list
-    LDA ws+$0401,Y
-    STA zp3B
+    lda ws+$0400,Y
+    sta zp3A          ; Get start of linked list
+    lda ws+$0401,Y
+    sta zp3B
 L9479:
-    LDA zp3B
-    BEQ L94B2         ; End of list
-    LDY #$00
-    LDA (zp3A),Y
-    STA zp3C
-    INY
-    LDA (zp3A),Y
-    STA zp3D
-    INY
-    LDA (zp3A),Y
-    BNE L949A         ; Jump if not null name
-    DEY
-    CPY zp39
-    BNE L94B3
-    INY
-    BCS L94A7
+    lda zp3B
+    beq L94B2         ; End of list
+    ldy #$00
+    lda (zp3A),Y
+    sta zp3C
+    iny
+    lda (zp3A),Y
+    sta zp3D
+    iny
+    lda (zp3A),Y
+    bne L949A         ; Jump if not null name
+    dey
+    cpy zp39
+    bne L94B3
+    iny
+    bcs L94A7
 L9495:
-    INY
-    LDA (zp3A),Y
-    BEQ L94B3
+    iny
+    lda (zp3A),Y
+    beq L94B3
 L949A:
-    CMP (zp37),Y
-    BNE L94B3
-    CPY zp39
-    BNE L9495
-    INY
-    LDA (zp3A),Y
-    BNE L94B3
+    cmp (zp37),Y
+    bne L94B3
+    cpy zp39
+    bne L9495
+    iny
+    lda (zp3A),Y
+    bne L94B3
 L94A7:
-    TYA
-    ADC zp3A
-    STA zp2A
-    LDA zp3B
-    ADC #$00
-    STA zp2B
+    tya
+    adc zp3A
+    sta zp2A
+    lda zp3B
+    adc #$00
+    sta zp2B
 L94B2:
-    RTS
+    rts
 
 L94B3:
-    LDA zp3D
-    BEQ L94B2
-    LDY #$00
-    LDA (zp3C),Y
-    STA zp3A
-    INY
-    LDA (zp3C),Y
-    STA zp3B
-    INY
-    LDA (zp3C),Y
-    BNE L94D4
-    DEY
-    CPY zp39
-    BNE L9479
-    INY
-    BCS L94E1
+    lda zp3D
+    beq L94B2
+    ldy #$00
+    lda (zp3C),Y
+    sta zp3A
+    iny
+    lda (zp3C),Y
+    sta zp3B
+    iny
+    lda (zp3C),Y
+    bne L94D4
+    dey
+    cpy zp39
+    bne L9479
+    iny
+    bcs L94E1
 L94CF:
-    INY
-    LDA (zp3C),Y
-    BEQ L9479
+    iny
+    lda (zp3C),Y
+    beq L9479
 L94D4:
-    CMP (zp37),Y
-    BNE L9479
-    CPY zp39
-    BNE L94CF
-    INY
-    LDA (zp3C),Y
-    BNE L9479
+    cmp (zp37),Y
+    bne L9479
+    cpy zp39
+    bne L94CF
+    iny
+    lda (zp3C),Y
+    bne L9479
 L94E1:
-    TYA
-    ADC zp3C
-    STA zp2A
-    LDA zp3D
-    ADC #$00
-    STA zp2B
-    RTS
+    tya
+    adc zp3C
+    sta zp2A
+    lda zp3D
+    adc #$00
+    sta zp2B
+    rts
 
 L94ED:
-    LDY #$01
-    LDA (zp37),Y
-    TAX
-    LDA #$F6
-    CPX #$F2
-    BEQ L9501
-    LDA #$F8
-    BNE L9501
+    ldy #$01
+    lda (zp37),Y
+    tax
+    lda #$F6
+    cpx #$F2
+    beq L9501
+    lda #$F8
+    bne L9501
 L94FC:
-    LDY #$01
-    LDA (zp37),Y
-    ASL
+    ldy #$01
+    lda (zp37),Y
+    asl
 L9501:
-    STA zp3A
-    LDA #$04+(ws/256)
-    STA zp3B
+    sta zp3A
+    lda #$04+(ws/256)
+    sta zp3B
 L9507:
-    LDA (zp3A),Y
-    BEQ L9516
-    TAX
-    DEY
-    LDA (zp3A),Y
-    STA zp3A
-    STX zp3B
-    INY
-    BPL L9507
+    lda (zp3A),Y
+    beq L9516
+    tax
+    dey
+    lda (zp3A),Y
+    sta zp3A
+    stx zp3B
+    iny
+    bpl L9507
 L9516:
-    LDA zp03
-    STA (zp3A),Y
-    LDA zp02
-    DEY
-    STA (zp3A),Y
-    TYA
-    INY
-    STA (zp02),Y
-    CPY zp39
-    BEQ L9558
+    lda zp03
+    sta (zp3A),Y
+    lda zp02
+    dey
+    sta (zp3A),Y
+    tya
+    iny
+    sta (zp02),Y
+    cpy zp39
+    beq L9558
 L9527:
-    INY
-    LDA (zp37),Y
-    STA (zp02),Y
-    CPY zp39
-    BNE L9527
-    RTS
+    iny
+    lda (zp37),Y
+    sta (zp02),Y
+    cpy zp39
+    bne L9527
+    rts
 
 L9531:
-    LDA #$00
+    lda #$00
 L9533:
-    INY
-    STA (zp02),Y
-    DEX
-    BNE L9533
+    iny
+    sta (zp02),Y
+    dex
+    bne L9533
 L9539:
-    SEC
-    TYA
-    ADC zp02
-    BCC L9541
-    INC zp03
+    sec
+    tya
+    adc zp02
+    bcc L9541
+    inc zp03
 L9541:
-    LDY zp03
-    CPY zp05
-    BCC L9556
-    BNE L954D
-    CMP zp04
-    BCC L9556
+    ldy zp03
+    cpy zp05
+    bcc L9556
+    bne L954D
+    cmp zp04
+    bcc L9556
 L954D:
-    LDA #$00
-    LDY #$01
-    STA (zp3A),Y
-    JMP L8CB7
+    lda #$00
+    ldy #$01
+    sta (zp3A),Y
+    jmp L8CB7
 
 L9556:
-    STA zp02
+    sta zp02
 L9558:
-    RTS
+    rts
 
 
 ; Check if variable name is valid
 ; ===============================
 L9559:
-    LDY #$01
+    ldy #$01
 L955B:
-    LDA (zp37),Y
-    CMP #$30
-    BCC L9579
-    CMP #$40
-    BCS L9571
-    CMP #$3A
-    BCS L9579
-    CPY #$01
-    BEQ L9579
+    lda (zp37),Y
+    cmp #$30
+    bcc L9579
+    cmp #$40
+    bcs L9571
+    cmp #$3A
+    bcs L9579
+    cpy #$01
+    beq L9579
 L956D:
-    INX
-    INY
-    BNE L955B
+    inx
+    iny
+    bne L955B
 L9571:
-    CMP #$5F
-    BCS L957A
-    CMP #$5B
-    BCC L956D
+    cmp #$5F
+    bcs L957A
+    cmp #$5B
+    bcc L956D
 L9579:
-    RTS
+    rts
 
 L957A:
-    CMP #$7B
-    BCC L956D
-    RTS
+    cmp #$7B
+    bcc L956D
+    rts
 
 L957F:
-    JSR L9531
+    jsr L9531
 L9582:
-    JSR L95C9
-    BNE L95A4
-    BCS L95A4
-    JSR L94FC
-    LDX #$05
-    CPX zp2C
-    BNE L957F
-    INX
-    BNE L957F
+    jsr L95C9
+    bne L95A4
+    bcs L95A4
+    jsr L94FC
+    ldx #$05
+    cpx zp2C
+    bne L957F
+    inx
+    bne L957F
 L9595:
-    CMP #$21
-    BEQ L95A5
-    CMP #$24
-    BEQ L95B0
-    EOR #$3F
-    BEQ L95A7
-    LDA #$00
-    SEC
+    cmp #$21
+    beq L95A5
+    cmp #$24
+    beq L95B0
+    eor #$3F
+    beq L95A7
+    lda #$00
+    sec
 L95A4:
-    RTS
+    rts
 
 L95A5:
-    LDA #$04
+    lda #$04
 L95A7:
-    PHA
-    INC zp1B
-    JSR L92E3
-    JMP L969F
+    pha
+    inc zp1B
+    jsr L92E3
+    jmp L969F
 
 L95B0:
-    INC zp1B
-    JSR L92E3
-    LDA zp2B
-    BEQ L95BF
-    LDA #$80
-    STA zp2C
-    SEC
-    RTS
+    inc zp1B
+    jsr L92E3
+    lda zp2B
+    beq L95BF
+    lda #$80
+    sta zp2C
+    sec
+    rts
 
 L95BF:
-    BRK
+    brk
     dta 8
     .if foldup == 1
         dta '$ RANGE'
     .else
         dta '$ range'
     .endif
-    BRK
+    brk
 L95C9:
-    LDA zp0B
-    STA zp19
-    LDA zp0C
-    STA zp1A
-    LDY zp0A
-    DEY
+    lda zp0B
+    sta zp19
+    lda zp0C
+    sta zp1A
+    ldy zp0A
+    dey
 L95D4:
-    INY
+    iny
 L95D5:
-    STY zp1B
-    LDA (zp19),Y
-    CMP #$20
-    BEQ L95D4
+    sty zp1B
+    lda (zp19),Y
+    cmp #$20
+    beq L95D4
 L95DD:
-    CMP #$40
-    BCC L9595
-    CMP #$5B
-    BCS L95FF
-    ASL
-    ASL
-    STA zp2A
-    LDA #$04+(ws/256)
-    STA zp2B
-    INY
-    LDA (zp19),Y
-    INY
-    CMP #$25
-    BNE L95FF
-    LDX #$04
-    STX zp2C
-    LDA (zp19),Y
-    CMP #'('
-    BNE L9665
+    cmp #$40
+    bcc L9595
+    cmp #$5B
+    bcs L95FF
+    asl
+    asl
+    sta zp2A
+    lda #$04+(ws/256)
+    sta zp2B
+    iny
+    lda (zp19),Y
+    iny
+    cmp #$25
+    bne L95FF
+    ldx #$04
+    stx zp2C
+    lda (zp19),Y
+    cmp #'('
+    bne L9665
 L95FF:
-    LDX #$05
-    STX zp2C
-    LDA zp1B
-    CLC
-    ADC zp19
-    LDX zp1A
-    BCC L960E
-    INX
-    CLC
+    ldx #$05
+    stx zp2C
+    lda zp1B
+    clc
+    adc zp19
+    ldx zp1A
+    bcc L960E
+    inx
+    clc
 L960E:
-    SBC #$00
-    STA zp37
-    BCS L9615
-    DEX
+    sbc #$00
+    sta zp37
+    bcs L9615
+    dex
 L9615:
-    STX zp38
-    LDX zp1B
-    LDY #$01
+    stx zp38
+    ldx zp1B
+    ldy #$01
 L961B:
-    LDA (zp37),Y
-    CMP #$41
-    BCS L962D
-    CMP #$30
-    BCC L9641
-    CMP #$3A
-    BCS L9641
-    INX
-    INY
-    BNE L961B
+    lda (zp37),Y
+    cmp #$41
+    bcs L962D
+    cmp #$30
+    bcc L9641
+    cmp #$3A
+    bcs L9641
+    inx
+    iny
+    bne L961B
 L962D:
-    CMP #$5B
-    BCS L9635
-    INX
-    INY
-    BNE L961B
+    cmp #$5B
+    bcs L9635
+    inx
+    iny
+    bne L961B
 L9635:
-    CMP #$5F
-    BCC L9641
-    CMP #$7B
-    BCS L9641
-    INX
-    INY
-    BNE L961B
+    cmp #$5F
+    bcc L9641
+    cmp #$7B
+    bcs L9641
+    inx
+    iny
+    bne L961B
 L9641:
-    DEY
-    BEQ L9673
-    CMP #$24
-    BEQ L96AF
-    CMP #$25
-    BNE L9654
-    DEC zp2C
-    INY
-    INX
-    INY
-    LDA (zp37),Y
-    DEY
+    dey
+    beq L9673
+    cmp #$24
+    beq L96AF
+    cmp #$25
+    bne L9654
+    dec zp2C
+    iny
+    inx
+    iny
+    lda (zp37),Y
+    dey
 L9654:
-    STY zp39
-    CMP #'('
-    BEQ L96A6
-    JSR L9469
-    BEQ L9677
-    STX zp1B
+    sty zp39
+    cmp #'('
+    beq L96A6
+    jsr L9469
+    beq L9677
+    stx zp1B
 L9661:
-    LDY zp1B
-    LDA (zp19),Y
+    ldy zp1B
+    lda (zp19),Y
 L9665:
-    CMP #$21
-    BEQ L967F
-    CMP #$3F
-    BEQ L967B
-    CLC
-    STY zp1B
-    LDA #$FF
-    RTS
+    cmp #$21
+    beq L967F
+    cmp #$3F
+    beq L967B
+    clc
+    sty zp1B
+    lda #$FF
+    rts
 
 L9673:
-    LDA #$00
-    SEC
-    RTS
+    lda #$00
+    sec
+    rts
 
 L9677:
-    LDA #$00
-    CLC
-    RTS
+    lda #$00
+    clc
+    rts
 
 L967B:
-    LDA #$00
-    BEQ L9681
+    lda #$00
+    beq L9681
 L967F:
-    LDA #$04
+    lda #$04
 L9681:
-    PHA
-    INY
-    STY zp1B
-    JSR LB32C
-    JSR L92F0
-    LDA zp2B
-    PHA
-    LDA zp2A
-    PHA
-    JSR L92E3
-    CLC
-    PLA
-    ADC zp2A
-    STA zp2A
-    PLA
-    ADC zp2B
-    STA zp2B
+    pha
+    iny
+    sty zp1B
+    jsr LB32C
+    jsr L92F0
+    lda zp2B
+    pha
+    lda zp2A
+    pha
+    jsr L92E3
+    clc
+    pla
+    adc zp2A
+    sta zp2A
+    pla
+    adc zp2B
+    sta zp2B
 L969F:
-    PLA
-    STA zp2C
-    CLC
-    LDA #$FF
-    RTS
+    pla
+    sta zp2C
+    clc
+    lda #$FF
+    rts
 
 L96A6:
-    INX
-    INC zp39
-    JSR L96DF
-    JMP L9661
+    inx
+    inc zp39
+    jsr L96DF
+    jmp L9661
 
 L96AF:
-    INX
-    INY
-    STY zp39
-    INY
-    DEC zp2C
-    LDA (zp37),Y
-    CMP #'('
-    BEQ L96C9
-    JSR L9469
-    BEQ L9677
-    STX zp1B
-    LDA #$81
-    STA zp2C
-    SEC
-    RTS
+    inx
+    iny
+    sty zp39
+    iny
+    dec zp2C
+    lda (zp37),Y
+    cmp #'('
+    beq L96C9
+    jsr L9469
+    beq L9677
+    stx zp1B
+    lda #$81
+    sta zp2C
+    sec
+    rts
 
 L96C9:
-    INX
-    STY zp39
-    DEC zp2C
-    JSR L96DF
-    LDA #$81
-    STA zp2C
-    SEC
-    RTS
+    inx
+    sty zp39
+    dec zp2C
+    jsr L96DF
+    lda #$81
+    sta zp2C
+    sec
+    rts
 
 L96D7:
-    BRK
+    brk
     dta 14
     .if foldup == 1
         dta 'ARRAY'
     .else
         dta 'Array'
     .endif
-    BRK
+    brk
 
 L96DF:
-    JSR L9469
-    BEQ L96D7
-    STX zp1B
-    LDA zp2C
-    PHA
-    LDA zp2A
-    PHA
-    LDA zp2B
-    PHA
-    LDY #$00
-    LDA (zp2A),Y
-    CMP #$04
-    BCC L976C
-    TYA
+    jsr L9469
+    beq L96D7
+    stx zp1B
+    lda zp2C
+    pha
+    lda zp2A
+    pha
+    lda zp2B
+    pha
+    ldy #$00
+    lda (zp2A),Y
+    cmp #$04
+    bcc L976C
+    tya
     .if version < 3
-        JSR LAED8
+        jsr LAED8
     .elseif version >= 3
-        JSR XAED3
+        jsr XAED3
     .endif
-    LDA #$01
-    STA zp2D
+    lda #$01
+    sta zp2D
 L96FF:
-    JSR LBD94
-    JSR L92DD
-    INC zp1B
-    CPX #$2C
-    BNE L96D7
-    LDX #$39
-    JSR LBE0D
-    LDY zp3C
-    PLA
-    STA zp38
-    PLA
-    STA zp37
-    PHA
-    LDA zp38
-    PHA
-    JSR L97BA
-    STY zp2D
-    LDA (zp37),Y
-    STA zp3F
-    INY
-    LDA (zp37),Y
-    STA zp40
-    LDA zp2A
-    ADC zp39
-    STA zp2A
-    LDA zp2B
-    ADC zp3A
-    STA zp2B
-    JSR L9236
-    LDY #$00
-    SEC
-    LDA (zp37),Y
-    SBC zp2D
-    CMP #$03
-    BCS L96FF
-    JSR LBD94
-    JSR LAE56
-    JSR L92F0
-    PLA
-    STA zp38
-    PLA
-    STA zp37
-    LDX #$39
-    JSR LBE0D
-    LDY zp3C
-    JSR L97BA
-    CLC
-    LDA zp39
-    ADC zp2A
-    STA zp2A
-    LDA zp3A
-    ADC zp2B
-    STA zp2B
-    BCC L977D
+    jsr LBD94
+    jsr L92DD
+    inc zp1B
+    cpx #$2C
+    bne L96D7
+    ldx #$39
+    jsr LBE0D
+    ldy zp3C
+    pla
+    sta zp38
+    pla
+    sta zp37
+    pha
+    lda zp38
+    pha
+    jsr L97BA
+    sty zp2D
+    lda (zp37),Y
+    sta zp3F
+    iny
+    lda (zp37),Y
+    sta zp40
+    lda zp2A
+    adc zp39
+    sta zp2A
+    lda zp2B
+    adc zp3A
+    sta zp2B
+    jsr L9236
+    ldy #$00
+    sec
+    lda (zp37),Y
+    sbc zp2D
+    cmp #$03
+    bcs L96FF
+    jsr LBD94
+    jsr LAE56
+    jsr L92F0
+    pla
+    sta zp38
+    pla
+    sta zp37
+    ldx #$39
+    jsr LBE0D
+    ldy zp3C
+    jsr L97BA
+    clc
+    lda zp39
+    adc zp2A
+    sta zp2A
+    lda zp3A
+    adc zp2B
+    sta zp2B
+    bcc L977D
 L976C:
-    JSR LAE56
-    JSR L92F0
-    PLA
-    STA zp38
-    PLA
-    STA zp37
-    LDY #$01
-    JSR L97BA
+    jsr LAE56
+    jsr L92F0
+    pla
+    sta zp38
+    pla
+    sta zp37
+    ldy #$01
+    jsr L97BA
 L977D:
-    PLA
-    STA zp2C
-    CMP #$05
-    BNE L979B
-    LDX zp2B
-    LDA zp2A
-    ASL zp2A
-    ROL zp2B
-    ASL zp2A
-    ROL zp2B
-    ADC zp2A
-    STA zp2A
-    TXA
-    ADC zp2B
-    STA zp2B
-    BCC L97A3
+    pla
+    sta zp2C
+    cmp #$05
+    bne L979B
+    ldx zp2B
+    lda zp2A
+    asl zp2A
+    rol zp2B
+    asl zp2A
+    rol zp2B
+    adc zp2A
+    sta zp2A
+    txa
+    adc zp2B
+    sta zp2B
+    bcc L97A3
 L979B:
-    ASL zp2A
-    ROL zp2B
-    ASL zp2A
-    ROL zp2B
+    asl zp2A
+    rol zp2B
+    asl zp2A
+    rol zp2B
 L97A3:
-    TYA
-    ADC zp2A
-    STA zp2A
-    BCC L97AD
-    INC zp2B
-    CLC
+    tya
+    adc zp2A
+    sta zp2A
+    bcc L97AD
+    inc zp2B
+    clc
 L97AD:
-    LDA zp37
-    ADC zp2A
-    STA zp2A
-    LDA zp38
-    ADC zp2B
-    STA zp2B
-    RTS
+    lda zp37
+    adc zp2A
+    sta zp2A
+    lda zp38
+    adc zp2B
+    sta zp2B
+    rts
 
 L97BA:
-    LDA zp2B
-    AND #$C0
-    ORA zp2C
-    ORA zp2D
-    BNE L97D1
-    LDA zp2A
-    CMP (zp37),Y
-    INY
-    LDA zp2B
-    SBC (zp37),Y
-    BCS L97D1
-    INY
-    RTS
+    lda zp2B
+    and #$C0
+    ora zp2C
+    ora zp2D
+    bne L97D1
+    lda zp2A
+    cmp (zp37),Y
+    iny
+    lda zp2B
+    sbc (zp37),Y
+    bcs L97D1
+    iny
+    rts
 
 L97D1:
-    BRK
+    brk
     dta 15
     .if foldup == 1
         dta 'SUBSCRIPT'
     .else
         dta 'Subscript'
     .endif
-    BRK
+    brk
 L97DD:
-    INC zp0A
+    inc zp0A
 L97DF:
-    LDY zp0A
-    LDA (zp0B),Y
-    CMP #$20
-    BEQ L97DD
-    CMP #$8D
-    BNE L9805
+    ldy zp0A
+    lda (zp0B),Y
+    cmp #$20
+    beq L97DD
+    cmp #$8D
+    bne L9805
 L97EB:
-    INY
-    LDA (zp0B),Y
-    ASL
-    ASL
-    TAX
-    AND #$C0
-    INY
-    EOR (zp0B),Y
-    STA zp2A
-    TXA
-    ASL
-    ASL
-    INY
-    EOR (zp0B),Y
-    STA zp2B
-    INY
-    STY zp0A
-    SEC
-    RTS
+    iny
+    lda (zp0B),Y
+    asl
+    asl
+    tax
+    and #$C0
+    iny
+    eor (zp0B),Y
+    sta zp2A
+    txa
+    asl
+    asl
+    iny
+    eor (zp0B),Y
+    sta zp2B
+    iny
+    sty zp0A
+    sec
+    rts
 
 L9805:
-    CLC
-    RTS
+    clc
+    rts
 
 L9807:
-    LDA zp0B
-    STA zp19
-    LDA zp0C
-    STA zp1A
-    LDA zp0A
-    STA zp1B
+    lda zp0B
+    sta zp19
+    lda zp0C
+    sta zp1A
+    lda zp0A
+    sta zp1B
 L9813:
-    LDY zp1B
-    INC zp1B
-    LDA (zp19),Y
-    CMP #$20
-    BEQ L9813
-    CMP #$3D
-    BEQ L9849
+    ldy zp1B
+    inc zp1B
+    lda (zp19),Y
+    cmp #$20
+    beq L9813
+    cmp #$3D
+    beq L9849
 L9821:
-    BRK
+    brk
     dta 4
     .if foldup == 1
         dta 'MISTAKE'
@@ -4246,7 +4246,7 @@ L9821:
         dta 'Mistake'
     .endif
 L982A:
-    BRK
+    brk
     dta 16
     .if foldup == 1
         dta 'SYNTAX ERROR'    ; Terminated by following BRK
@@ -4254,80 +4254,80 @@ L982A:
         dta 'Syntax error'    ; Terminated by following BRK
     .endif
     .ifdef MOS_ATOM
-        BRK
+        brk
     .endif
 
 ; Escape error
 ; ------------
 L9838:
     .ifdef TARGET_ATOM
-        LDA ESCFLG
-        AND #$20
-        BEQ L9838     ; Loop until Escape not pressed
+        lda ESCFLG
+        and #$20
+        beq L9838     ; Loop until Escape not pressed
     .endif
 
     .ifdef TARGET_SYSTEM
-        CMP ESCFLG
-        BEQ L9838     ; Loop until key no longer pressed
+        cmp ESCFLG
+        beq L9838     ; Loop until key no longer pressed
     .endif
 
-    BRK
+    brk
     dta 17
     .if foldup == 1
         dta 'ESCAPE'
     .else
         dta 'Escape'
     .endif
-    BRK
+    brk
 
 L9841:
-    JSR L8A8C
-    CMP #'='
-    BNE L9821
-    RTS
+    jsr L8A8C
+    cmp #'='
+    bne L9821
+    rts
 
 L9849:
-    JSR L9B29
+    jsr L9B29
 L984C:
-    TXA
-    LDY zp1B
-    JMP L9861
+    txa
+    ldy zp1B
+    jmp L9861
 
 L9852:
-    LDY zp1B
-    JMP L9859
+    ldy zp1B
+    jmp L9859
 
 ; Check for end of statement, check for Escape
 ; ============================================
 L9857:
-    LDY zp0A          ; Get program pointer offset
+    ldy zp0A          ; Get program pointer offset
 L9859:
-    DEY               ; Step back to previous character
+    dey               ; Step back to previous character
 L985A:
-    INY
-    LDA (zp0B),Y      ; Get next character
-    CMP #$20
-    BEQ L985A         ; Skip spaces
+    iny
+    lda (zp0B),Y      ; Get next character
+    cmp #$20
+    beq L985A         ; Skip spaces
 L9861:
-    CMP #':'
-    BEQ L986D         ; Colon, jump to update program pointer
-    CMP #$0D
-    BEQ L986D         ; <cr>, jump to update program pointer
-    CMP #tknELSE
-    BNE L982A         ; Not 'ELSE', jump to 'Syntax error'
+    cmp #':'
+    beq L986D         ; Colon, jump to update program pointer
+    cmp #$0D
+    beq L986D         ; <cr>, jump to update program pointer
+    cmp #tknELSE
+    bne L982A         ; Not 'ELSE', jump to 'Syntax error'
 
 ; Update program pointer
 ; ----------------------
 L986D:
-    CLC
-    TYA
-    ADC zp0B
-    STA zp0B          ; Update program pointer in PtrA
-    BCC L9877
-    INC zp0C
+    clc
+    tya
+    adc zp0B
+    sta zp0B          ; Update program pointer in PtrA
+    bcc L9877
+    inc zp0C
 L9877:
-    LDY #$01
-    STY zp0A
+    ldy #$01
+    sty zp0A
 
 ; Check background Escape state
 ; -----------------------------
@@ -4336,203 +4336,203 @@ L987B:
 ; Atom - check keyboard matrix
 ; ----------------------------
     .ifdef TARGET_ATOM
-        PHA           ; Save A
-        LDA ESCFLG
-        AND #$20      ; Check keyboard matrix
-        BEQ L9838     ; Escape key pressed, jump to error
-        PLA           ; Restore A
+        pha           ; Save A
+        lda ESCFLG
+        and #$20      ; Check keyboard matrix
+        beq L9838     ; Escape key pressed, jump to error
+        pla           ; Restore A
     .endif
 
 ; System - check current keypress
 ; -------------------------------
     .ifdef TARGET_SYSTEM
-        BIT ESCFLG
-        BMI L987F     ; Nothing pressed
-        PHA
-        LDA ESCFLG    ; Save A, get keypress
-        CMP #$1B
-        BEQ L9838     ; If Escape, jump to error
-        PLA           ; Restore A
+        bit ESCFLG
+        bmi L987F     ; Nothing pressed
+        pha
+        lda ESCFLG    ; Save A, get keypress
+        cmp #$1B
+        beq L9838     ; If Escape, jump to error
+        pla           ; Restore A
     .endif
 
 ; BBC - check background Escape state
 ; -----------------------------------
     .ifdef MOS_BBC
-        BIT ESCFLG
-        BMI L9838     ; If Escape set, jump to give error
+        bit ESCFLG
+        bmi L9838     ; If Escape set, jump to give error
     .endif
 
 L987F:
-    RTS
+    rts
 
 L9880:
-    JSR L9857
-    DEY
-    LDA (zp0B),Y
-    CMP #$3A
-    BEQ L987F
-    LDA zp0C
-    CMP #$07+(ws/256)
-    BEQ L98BC
+    jsr L9857
+    dey
+    lda (zp0B),Y
+    cmp #$3A
+    beq L987F
+    lda zp0C
+    cmp #$07+(ws/256)
+    beq L98BC
 L9890:
-    INY
-    LDA (zp0B),Y
-    BMI L98BC
-    LDA zp20
-    BEQ L98AC
-    TYA
-    PHA
-    INY
-    LDA (zp0B),Y
-    PHA
-    DEY
-    LDA (zp0B),Y
-    TAY
-    PLA
+    iny
+    lda (zp0B),Y
+    bmi L98BC
+    lda zp20
+    beq L98AC
+    tya
+    pha
+    iny
+    lda (zp0B),Y
+    pha
+    dey
+    lda (zp0B),Y
+    tay
+    pla
     .if version < 3
-        JSR LAEEA
+        jsr LAEEA
     .elseif version >= 3
-        JSR XAED5
+        jsr XAED5
     .endif
-    JSR L9905
-    PLA
-    TAY
+    jsr L9905
+    pla
+    tay
 L98AC:
-    INY
-    SEC
-    TYA
-    ADC zp0B
-    STA zp0B
-    BCC L98B7
-    INC zp0C
+    iny
+    sec
+    tya
+    adc zp0B
+    sta zp0B
+    bcc L98B7
+    inc zp0C
 L98B7:
-    LDY #$01
-    STY zp0A
+    ldy #$01
+    sty zp0A
 L98BB:
-    RTS
+    rts
 
 L98BC:
-    JMP L8AF6
+    jmp L8AF6
 
 L98BF:
-    JMP L8C0E
+    jmp L8C0E
 
 ; IF numeric
 ; ==========
 L98C2:
-    JSR L9B1D
-    BEQ L98BF
-    BPL L98CC
-    JSR LA3E4
+    jsr L9B1D
+    beq L98BF
+    bpl L98CC
+    jsr LA3E4
 L98CC:
-    LDY zp1B
-    STY zp0A
-    LDA zp2A
-    ORA zp2B
-    ORA zp2C
-    ORA zp2D
-    BEQ L98F1
-    CPX #$8C
-    BEQ L98E1
+    ldy zp1B
+    sty zp0A
+    lda zp2A
+    ora zp2B
+    ora zp2C
+    ora zp2D
+    beq L98F1
+    cpx #$8C
+    beq L98E1
 L98DE:
-    JMP L8BA3
+    jmp L8BA3
 
 L98E1:
-    INC zp0A
+    inc zp0A
 L98E3:
-    JSR L97DF
-    BCC L98DE
-    JSR LB9AF
-    JSR L9877
-    JMP LB8D2
+    jsr L97DF
+    bcc L98DE
+    jsr LB9AF
+    jsr L9877
+    jmp LB8D2
 
 L98F1:
-    LDY zp0A
+    ldy zp0A
 L98F3:
-    LDA (zp0B),Y
-    CMP #$0D
-    BEQ L9902
-    INY
-    CMP #$8B
-    BNE L98F3
-    STY zp0A
-    BEQ L98E3
+    lda (zp0B),Y
+    cmp #$0D
+    beq L9902
+    iny
+    cmp #$8B
+    bne L98F3
+    sty zp0A
+    beq L98E3
 L9902:
-    JMP L8B87
+    jmp L8B87
 
 L9905:
-    LDA zp2A
-    CMP zp21
-    LDA zp2B
-    SBC zp22
-    BCS L98BB
-    LDA #$5B
+    lda zp2A
+    cmp zp21
+    lda zp2B
+    sbc zp22
+    bcs L98BB
+    lda #$5B
 L9911:
-    JSR LB558
-    JSR L991F
-    LDA #$5D
-    JSR LB558
-    JMP LB565
+    jsr LB558
+    jsr L991F
+    lda #$5D
+    jsr LB558
+    jmp LB565
 
 ; Print 16-bit decimal number
 ; ===========================
 L991F:
-    LDA #$00          ; No padding
-    BEQ L9925
+    lda #$00          ; No padding
+    beq L9925
 L9923:
-    LDA #$05          ; Pad to five characters
+    lda #$05          ; Pad to five characters
 L9925:
-    STA zp14
-    LDX #$04
+    sta zp14
+    ldx #$04
 L9929:
-    LDA #$00
-    STA zp3F,X
-    SEC
+    lda #$00
+    sta zp3F,X
+    sec
 L992E:
-    LDA zp2A
-    SBC L996B,X       ; Subtract 10s low byte
-    TAY
-    LDA zp2B
-    SBC L99B9,X       ; Subtract 10s high byte
-    BCC L9943         ; Result<0, no more for this digit
-    STA zp2B
-    STY zp2A          ; Update number
-    INC zp3F,X
-    BNE L992E
+    lda zp2A
+    sbc L996B,X       ; Subtract 10s low byte
+    tay
+    lda zp2B
+    sbc L99B9,X       ; Subtract 10s high byte
+    bcc L9943         ; Result<0, no more for this digit
+    sta zp2B
+    sty zp2A          ; Update number
+    inc zp3F,X
+    bne L992E
 
 L9943:
-    DEX
-    BPL L9929
-    LDX #$05
+    dex
+    bpl L9929
+    ldx #$05
 L9948:
-    DEX
-    BEQ L994F
-    LDA zp3F,X
-    BEQ L9948
+    dex
+    beq L994F
+    lda zp3F,X
+    beq L9948
 L994F:
-    STX zp37
-    LDA zp14
-    BEQ L9960
-    SBC zp37
-    BEQ L9960
+    stx zp37
+    lda zp14
+    beq L9960
+    sbc zp37
+    beq L9960
     .if version < 3
-        TAY
+        tay
 L995A:
-        JSR LB565
-        DEY
-        BNE L995A
+        jsr LB565
+        dey
+        bne L995A
     .elseif version >= 3
-        TAX
-        JSR LB580
-        LDX zp37
+        tax
+        jsr LB580
+        ldx zp37
     .endif
 L9960:
-    LDA zp3F,X
-    ORA #$30
-    JSR LB558
-    DEX
-    BPL L9960
-    RTS
+    lda zp3F,X
+    ora #$30
+    jsr LB558
+    dex
+    bpl L9960
+    rts
 
 ; Low bytes of powers of ten
 L996B:
@@ -4540,42 +4540,42 @@ L996B:
 
 ; Line Search
 L9970:
-    LDY #$00
-    STY zp3D
-    LDA zp18
-    STA zp3E
+    ldy #$00
+    sty zp3D
+    lda zp18
+    sta zp3E
 L9978:
-    LDY #$01
-    LDA (zp3D),Y
-    CMP zp2B
-    BCS L998E
+    ldy #$01
+    lda (zp3D),Y
+    cmp zp2B
+    bcs L998E
 L9980:
-    LDY #$03
-    LDA (zp3D),Y
-    ADC zp3D
-    STA zp3D
-    BCC L9978
-    INC zp3E
-    BCS L9978
+    ldy #$03
+    lda (zp3D),Y
+    adc zp3D
+    sta zp3D
+    bcc L9978
+    inc zp3E
+    bcs L9978
 L998E:
-    BNE L99A4
-    LDY #$02
-    LDA (zp3D),Y
-    CMP zp2A
-    BCC L9980
-    BNE L99A4
-    TYA
-    ADC zp3D
-    STA zp3D
-    BCC L99A4
-    INC zp3E
-    CLC
+    bne L99A4
+    ldy #$02
+    lda (zp3D),Y
+    cmp zp2A
+    bcc L9980
+    bne L99A4
+    tya
+    adc zp3D
+    sta zp3D
+    bcc L99A4
+    inc zp3E
+    clc
 L99A4:
-    LDY #$02
-    RTS
+    ldy #$02
+    rts
 
 L99A7:
-    BRK
+    brk
     dta $12
     .if foldup == 1
         dta 'DIVISION BY ZERO'
@@ -4588,232 +4588,232 @@ L99B9:
     dta 0, 0, 0, >1000, >10000
 
 L99BE:
-    TAY               ; 99BE= A8           (
-    JSR L92F0         ; 99BF= 20 F0 92     p.
-    LDA zp2D          ; 99C2= A5 2D       %-
-    PHA               ; 99C4= 48          H
-    JSR LAD71         ; 99C5= 20 71 AD     q-
-    JSR L9E1D         ; 99C8= 20 1D 9E     ..
-    STX zp27          ; 99CB= 86 27       .'
-    TAY               ; 99CD= A8          (
-    JSR L92F0         ; 99CE= 20 F0 92     p.
-    PLA               ; 99D1= 68          h
-    STA zp38          ; 99D2= 85 38       .8
-    EOR zp2D          ; 99D4= 45 2D       E-
-    STA zp37          ; 99D6= 85 37       .7
-    JSR LAD71         ; 99D8= 20 71 AD     q-
-    LDX #$39          ; 99DB= A2 39       "9
-    JSR LBE0D         ; 99DD= 20 0D BE     .>
-    STY zp3D          ; 99E0= 84 3D       .=
-    STY zp3E          ; 99E2= 84 3E       .>
-    STY zp3F          ; 99E4= 84 3F       .?
-    STY zp40          ; 99E6= 84 40       .@
-    LDA zp2D          ; 99E8= A5 2D       %-
-    ORA zp2A          ; 99EA= 05 2A       .*
-    ORA zp2B          ; 99EC= 05 2B       .+
-    ORA zp2C          ; 99EE= 05 2C       .,
-    BEQ L99A7         ; 99F0= F0 B5       p5
-    LDY #$20          ; 99F2= A0 20
+    tay               ; 99BE= A8           (
+    jsr L92F0         ; 99BF= 20 F0 92     p.
+    lda zp2D          ; 99C2= A5 2D       %-
+    pha               ; 99C4= 48          H
+    jsr LAD71         ; 99C5= 20 71 AD     q-
+    jsr L9E1D         ; 99C8= 20 1D 9E     ..
+    stx zp27          ; 99CB= 86 27       .'
+    tay               ; 99CD= A8          (
+    jsr L92F0         ; 99CE= 20 F0 92     p.
+    pla               ; 99D1= 68          h
+    sta zp38          ; 99D2= 85 38       .8
+    eor zp2D          ; 99D4= 45 2D       E-
+    sta zp37          ; 99D6= 85 37       .7
+    jsr LAD71         ; 99D8= 20 71 AD     q-
+    ldx #$39          ; 99DB= A2 39       "9
+    jsr LBE0D         ; 99DD= 20 0D BE     .>
+    sty zp3D          ; 99E0= 84 3D       .=
+    sty zp3E          ; 99E2= 84 3E       .>
+    sty zp3F          ; 99E4= 84 3F       .?
+    sty zp40          ; 99E6= 84 40       .@
+    lda zp2D          ; 99E8= A5 2D       %-
+    ora zp2A          ; 99EA= 05 2A       .*
+    ora zp2B          ; 99EC= 05 2B       .+
+    ora zp2C          ; 99EE= 05 2C       .,
+    beq L99A7         ; 99F0= F0 B5       p5
+    ldy #$20          ; 99F2= A0 20
 L99F4:
-    DEY               ; 99F4= 88          .
-    BEQ L9A38         ; 99F5= F0 41       pA
-    ASL zp39          ; 99F7= 06 39       .9
-    ROL zp3A          ; 99F9= 26 3A       $
+    dey               ; 99F4= 88          .
+    beq L9A38         ; 99F5= F0 41       pA
+    asl zp39          ; 99F7= 06 39       .9
+    rol zp3A          ; 99F9= 26 3A       $
 
-    ROL zp3B          ; 99FB= 26 3B       $;
-    ROL zp3C          ; 99FD= 26 3C       $<
-    BPL L99F4         ; 99FF= 10 F3       .s
+    rol zp3B          ; 99FB= 26 3B       $;
+    rol zp3C          ; 99FD= 26 3C       $<
+    bpl L99F4         ; 99FF= 10 F3       .s
 L9A01:
-    ROL zp39          ; 9A01= 26 39       $9
-    ROL zp3A          ; 9A03= 26 3A       $
+    rol zp39          ; 9A01= 26 39       $9
+    rol zp3A          ; 9A03= 26 3A       $
 
-    ROL zp3B          ; 9A05= 26 3B       $;
-    ROL zp3C          ; 9A07= 26 3C       $<
-    ROL zp3D          ; 9A09= 26 3D       $=
-    ROL zp3E          ; 9A0B= 26 3E       $>
-    ROL zp3F          ; 9A0D= 26 3F       $?
-    ROL zp40          ; 9A0F= 26 40       $@
-    SEC               ; 9A11= 38          8
-    LDA zp3D          ; 9A12= A5 3D       %=
-    SBC zp2A          ; 9A14= E5 2A       e*
-    PHA               ; 9A16= 48          H
-    LDA zp3E          ; 9A17= A5 3E       %>
-    SBC zp2B          ; 9A19= E5 2B       e+
-    PHA               ; 9A1B= 48          H
-    LDA zp3F          ; 9A1C= A5 3F       %?
-    SBC zp2C          ; 9A1E= E5 2C       e,
-    TAX               ; 9A20= AA          *
-    LDA zp40          ; 9A21= A5 40       %@
-    SBC zp2D          ; 9A23= E5 2D       e-
-    BCC L9A33         ; 9A25= 90 0C       ..
-    STA zp40          ; 9A27= 85 40       .@
-    STX zp3F          ; 9A29= 86 3F       .?
-    PLA               ; 9A2B= 68          h
-    STA zp3E          ; 9A2C= 85 3E       .>
-    PLA               ; 9A2E= 68          h
-    STA zp3D          ; 9A2F= 85 3D       .=
-    BCS L9A35         ; 9A31= B0 02       0.
+    rol zp3B          ; 9A05= 26 3B       $;
+    rol zp3C          ; 9A07= 26 3C       $<
+    rol zp3D          ; 9A09= 26 3D       $=
+    rol zp3E          ; 9A0B= 26 3E       $>
+    rol zp3F          ; 9A0D= 26 3F       $?
+    rol zp40          ; 9A0F= 26 40       $@
+    sec               ; 9A11= 38          8
+    lda zp3D          ; 9A12= A5 3D       %=
+    sbc zp2A          ; 9A14= E5 2A       e*
+    pha               ; 9A16= 48          H
+    lda zp3E          ; 9A17= A5 3E       %>
+    sbc zp2B          ; 9A19= E5 2B       e+
+    pha               ; 9A1B= 48          H
+    lda zp3F          ; 9A1C= A5 3F       %?
+    sbc zp2C          ; 9A1E= E5 2C       e,
+    tax               ; 9A20= AA          *
+    lda zp40          ; 9A21= A5 40       %@
+    sbc zp2D          ; 9A23= E5 2D       e-
+    bcc L9A33         ; 9A25= 90 0C       ..
+    sta zp40          ; 9A27= 85 40       .@
+    stx zp3F          ; 9A29= 86 3F       .?
+    pla               ; 9A2B= 68          h
+    sta zp3E          ; 9A2C= 85 3E       .>
+    pla               ; 9A2E= 68          h
+    sta zp3D          ; 9A2F= 85 3D       .=
+    bcs L9A35         ; 9A31= B0 02       0.
 L9A33:
-    PLA               ; 9A33= 68          h
-    PLA               ; 9A34= 68          h
+    pla               ; 9A33= 68          h
+    pla               ; 9A34= 68          h
 L9A35:
-    DEY               ; 9A35= 88          .
-    BNE L9A01         ; 9A36= D0 C9       PI
+    dey               ; 9A35= 88          .
+    bne L9A01         ; 9A36= D0 C9       PI
 L9A38:
-    RTS               ; 9A38= 60          `
+    rts               ; 9A38= 60          `
 
 L9A39:
-    STX zp27          ; 9A39= 86 27       .'
-    JSR LBDEA         ; 9A3B= 20 EA BD     j=
-    JSR LBD51         ; 9A3E= 20 51 BD     Q=
-    JSR LA2BE         ; 9A41= 20 BE A2     >"
-    JSR LA21E         ; 9A44= 20 1E A2     ."
-    JSR LBD7E         ; 9A47= 20 7E BD     ~=
-    JSR LA3B5         ; 9A4A= 20 B5 A3     5#
-    JMP L9A62         ; 9A4D= 4C 62 9A    Lb.
+    stx zp27          ; 9A39= 86 27       .'
+    jsr LBDEA         ; 9A3B= 20 EA BD     j=
+    jsr LBD51         ; 9A3E= 20 51 BD     Q=
+    jsr LA2BE         ; 9A41= 20 BE A2     >"
+    jsr LA21E         ; 9A44= 20 1E A2     ."
+    jsr LBD7E         ; 9A47= 20 7E BD     ~=
+    jsr LA3B5         ; 9A4A= 20 B5 A3     5#
+    jmp L9A62         ; 9A4D= 4C 62 9A    Lb.
 
 L9A50:
-    JSR LBD51         ; 9A50= 20 51 BD     Q=
-    JSR L9C42         ; 9A53= 20 42 9C     B.
-    STX zp27          ; 9A56= 86 27       .'
-    TAY               ; 9A58= A8          (
-    JSR L92FD         ; 9A59= 20 FD 92     }.
-    JSR LBD7E         ; 9A5C= 20 7E BD     ~=
+    jsr LBD51         ; 9A50= 20 51 BD     Q=
+    jsr L9C42         ; 9A53= 20 42 9C     B.
+    stx zp27          ; 9A56= 86 27       .'
+    tay               ; 9A58= A8          (
+    jsr L92FD         ; 9A59= 20 FD 92     }.
+    jsr LBD7E         ; 9A5C= 20 7E BD     ~=
 L9A5F:
-    JSR LA34E         ; 9A5F= 20 4E A3     N#
+    jsr LA34E         ; 9A5F= 20 4E A3     N#
 
 ; Compare FPA = FPB
 ; -----------------
 L9A62:
-    LDX zp27
-    LDY #$00
-    LDA zp3B
-    AND #$80
-    STA zp3B
-    LDA zp2E
-    AND #$80
-    CMP zp3B
-    BNE L9A92
-    LDA zp3D
-    CMP zp30
-    BNE L9A93
-    LDA zp3E
-    CMP zp31
-    BNE L9A93
-    LDA zp3F
-    CMP zp32
-    BNE L9A93
-    LDA zp40
-    CMP zp33
-    BNE L9A93
-    LDA zp41
-    CMP zp34
-    BNE L9A93
+    ldx zp27
+    ldy #$00
+    lda zp3B
+    and #$80
+    sta zp3B
+    lda zp2E
+    and #$80
+    cmp zp3B
+    bne L9A92
+    lda zp3D
+    cmp zp30
+    bne L9A93
+    lda zp3E
+    cmp zp31
+    bne L9A93
+    lda zp3F
+    cmp zp32
+    bne L9A93
+    lda zp40
+    cmp zp33
+    bne L9A93
+    lda zp41
+    cmp zp34
+    bne L9A93
 L9A92:
-    RTS
+    rts
 
 L9A93:
-    ROR
-    EOR zp3B
-    ROL
-    LDA #$01
-    RTS
+    ror
+    eor zp3B
+    rol
+    lda #$01
+    rts
 
 L9A9A:
-    JMP L8C0E         ; Jump to 'Type mismatch' error
+    jmp L8C0E         ; Jump to 'Type mismatch' error
 
 
 ; Evaluate next expression and compare with previous
 ; --------------------------------------------------
 L9A9D:
-    TXA
+    txa
 L9A9E:
-    BEQ L9AE7         ; Jump if current is string
-    BMI L9A50         ; Jump if current is float
-    JSR LBD94         ; Stack integer
-    JSR L9C42
-    TAY               ; Evaluate next expression
-    BEQ L9A9A         ; Error if string
-    BMI L9A39         ; Float, jump to compare floats
+    beq L9AE7         ; Jump if current is string
+    bmi L9A50         ; Jump if current is float
+    jsr LBD94         ; Stack integer
+    jsr L9C42
+    tay               ; Evaluate next expression
+    beq L9A9A         ; Error if string
+    bmi L9A39         ; Float, jump to compare floats
 
 ; Compare IntA with top of stack
 ; ------------------------------
-    LDA zp2D
-    EOR #$80
-    STA zp2D
-    SEC
-    LDY #$00
-    LDA (zp04),Y
-    SBC zp2A
-    STA zp2A
-    INY
-    LDA (zp04),Y
-    SBC zp2B
-    STA zp2B
-    INY
-    LDA (zp04),Y
-    SBC zp2C
-    STA zp2C
-    INY
-    LDA (zp04),Y
-    LDY #$00
-    EOR #$80
-    SBC zp2D
-    ORA zp2A
-    ORA zp2B
-    ORA zp2C
-    PHP
-    CLC
-    LDA #$04
-    ADC zp04          ; Drop integer from stack
-    STA zp04
-    BCC L9AE5
-    INC zp05
+    lda zp2D
+    eor #$80
+    sta zp2D
+    sec
+    ldy #$00
+    lda (zp04),Y
+    sbc zp2A
+    sta zp2A
+    iny
+    lda (zp04),Y
+    sbc zp2B
+    sta zp2B
+    iny
+    lda (zp04),Y
+    sbc zp2C
+    sta zp2C
+    iny
+    lda (zp04),Y
+    ldy #$00
+    eor #$80
+    sbc zp2D
+    ora zp2A
+    ora zp2B
+    ora zp2C
+    php
+    clc
+    lda #$04
+    adc zp04          ; Drop integer from stack
+    sta zp04
+    bcc L9AE5
+    inc zp05
 L9AE5:
-    PLP
-    RTS
+    plp
+    rts
 
 ; Compare string with next expression
 ; -----------------------------------
 L9AE7:
-    JSR LBDB2         ; 9AE7= 20 B2 BD     2=
-    JSR L9C42         ; 9AEA= 20 42 9C     B.
-    TAY               ; 9AED= A8          (
-    BNE L9A9A         ; 9AEE= D0 AA       P*
-    STX zp37          ; 9AF0= 86 37       .7
-    LDX zp36          ; 9AF2= A6 36       $6
+    jsr LBDB2         ; 9AE7= 20 B2 BD     2=
+    jsr L9C42         ; 9AEA= 20 42 9C     B.
+    tay               ; 9AED= A8          (
+    bne L9A9A         ; 9AEE= D0 AA       P*
+    stx zp37          ; 9AF0= 86 37       .7
+    ldx zp36          ; 9AF2= A6 36       $6
     .if version < 3 || (version == 3 && minorversion < 10)
-        LDY #$00
+        ldy #$00
     .endif
-    LDA (zp04),Y      ; 9AF6= B1 04       1.
-    STA zp39          ; 9AF8= 85 39       .9
-    CMP zp36          ; 9AFA= C5 36       E6
-    BCS L9AFF         ; 9AFC= B0 01       0.
-    TAX               ; 9AFE= AA          *
+    lda (zp04),Y      ; 9AF6= B1 04       1.
+    sta zp39          ; 9AF8= 85 39       .9
+    cmp zp36          ; 9AFA= C5 36       E6
+    bcs L9AFF         ; 9AFC= B0 01       0.
+    tax               ; 9AFE= AA          *
 L9AFF:
-    STX zp3A          ; 9AFF= 86 3A       .
+    stx zp3A          ; 9AFF= 86 3A       .
 
     .if version < 3 || (version == 3 && minorversion < 10)
-        LDY #$00
+        ldy #$00
     .endif
 L9B03:
-    CPY zp3A          ; 9B03= C4 3A       D
+    cpy zp3A          ; 9B03= C4 3A       D
 
-    BEQ L9B11         ; 9B05= F0 0A       p.
-    INY               ; 9B07= C8          H
-    LDA (zp04),Y      ; 9B08= B1 04       1.
-    CMP ws+$05FF,Y    ; 9B0A= D9 FF 05    Y..
-    BEQ L9B03         ; 9B0D= F0 F4       pt
-    BNE L9B15         ; 9B0F= D0 04       P.
+    beq L9B11         ; 9B05= F0 0A       p.
+    iny               ; 9B07= C8          H
+    lda (zp04),Y      ; 9B08= B1 04       1.
+    cmp ws+$05FF,Y    ; 9B0A= D9 FF 05    Y..
+    beq L9B03         ; 9B0D= F0 F4       pt
+    bne L9B15         ; 9B0F= D0 04       P.
 L9B11:
-    LDA zp39          ; 9B11= A5 39       %9
-    CMP zp36          ; 9B13= C5 36       E6
+    lda zp39          ; 9B11= A5 39       %9
+    cmp zp36          ; 9B13= C5 36       E6
 L9B15:
-    PHP               ; 9B15= 08          .
-    JSR LBDDC         ; 9B16= 20 DC BD     \=
-    LDX zp37          ; 9B19= A6 37       $7
-    PLP               ; 9B1B= 28          (
-    RTS               ; 9B1C= 60          `
+    php               ; 9B15= 08          .
+    jsr LBDDC         ; 9B16= 20 DC BD     \=
+    ldx zp37          ; 9B19= A6 37       $7
+    plp               ; 9B1B= 28          (
+    rts               ; 9B1C= 60          `
 
 
 ; EXPRESSION EVALUATOR
@@ -4822,12 +4822,12 @@ L9B15:
 ; Evaluate expression at PtrA
 ; ---------------------------
 L9B1D:
-    LDA zp0B
-    STA zp19          ; Copy PtrA to PtrB
-    LDA zp0C
-    STA zp1A
-    LDA zp0A
-    STA zp1B
+    lda zp0B
+    sta zp19          ; Copy PtrA to PtrB
+    lda zp0C
+    sta zp1A
+    lda zp0A
+    sta zp1B
 
 ; Evaluate expression at PtrB
 ; ---------------------------
@@ -4836,659 +4836,659 @@ L9B1D:
 ; Evaluator Level 7 - OR, EOR
 ; ---------------------------
 L9B29:
-    JSR L9B72         ; Call Evaluator Level 6 - AND
+    jsr L9B72         ; Call Evaluator Level 6 - AND
                       ; Returns A=type, value in IntA/FPA/StrA, X=next char
 L9B2C:
-    CPX #tknOR
-    BEQ L9B3A         ; Jump if next char is OR
-    CPX #tknEOR
-    BEQ L9B55         ; Jump if next char is EOR
-    DEC zp1B          ; Step PtrB back to last char
-    TAY
-    STA zp27
-    RTS               ; Set flags from type, store type in $27 and return
+    cpx #tknOR
+    beq L9B3A         ; Jump if next char is OR
+    cpx #tknEOR
+    beq L9B55         ; Jump if next char is EOR
+    dec zp1B          ; Step PtrB back to last char
+    tay
+    sta zp27
+    rts               ; Set flags from type, store type in $27 and return
 
 ; OR numeric
 ; ----------
 L9B3A:
-    JSR L9B6B
-    TAY               ; Stack as integer, call Evaluator Level 6
-    JSR L92F0
-    LDY #$03          ; If float, convert to integer
+    jsr L9B6B
+    tay               ; Stack as integer, call Evaluator Level 6
+    jsr L92F0
+    ldy #$03          ; If float, convert to integer
 L9B43:
-    LDA (zp04),Y
-    ORA zp2A,Y        ; OR IntA with top of stack    ; abs,y (!)
-    STA zp2A,Y              ; abs,y (!)
-    DEY
-    BPL L9B43         ; Store result in IntA
+    lda (zp04),Y
+    ora zp2A,Y        ; OR IntA with top of stack    ; abs,y (!)
+    sta zp2A,Y              ; abs,y (!)
+    dey
+    bpl L9B43         ; Store result in IntA
 L9B4E:
-    JSR LBDFF         ; Drop integer from stack
-    LDA #$40
-    BNE L9B2C         ; Return type=Int, jump to check for more OR/EOR
+    jsr LBDFF         ; Drop integer from stack
+    lda #$40
+    bne L9B2C         ; Return type=Int, jump to check for more OR/EOR
 
 ; EOR numeric
 ; -----------
 L9B55:
-    JSR L9B6B
-    TAY
-    JSR L92F0
-    LDY #$03          ; If float, convert to integer
+    jsr L9B6B
+    tay
+    jsr L92F0
+    ldy #$03          ; If float, convert to integer
 L9B5E:
-    LDA (zp04),Y
-    EOR zp2A,Y        ; EOR IntA with top of stack       ; abs,y (!)
-    STA zp2A,Y                  ; abs,y (!)
-    DEY
-    BPL L9B5E         ; Store result in IntA
-    BMI L9B4E         ; Jump to drop from stack and continue
+    lda (zp04),Y
+    eor zp2A,Y        ; EOR IntA with top of stack       ; abs,y (!)
+    sta zp2A,Y                  ; abs,y (!)
+    dey
+    bpl L9B5E         ; Store result in IntA
+    bmi L9B4E         ; Jump to drop from stack and continue
 
 ; Stack current as integer, evaluate another Level 6
 ; --------------------------------------------------
 L9B6B:
-    TAY
-    JSR L92F0
-    JSR LBD94         ; If float, convert to integer, push into stack
+    tay
+    jsr L92F0
+    jsr LBD94         ; If float, convert to integer, push into stack
 
 ; Evaluator Level 6 - AND
 ; -----------------------
 L9B72:
-    JSR L9B9C         ; Call Evaluator Level 5, < <= = >= > <>
+    jsr L9B9C         ; Call Evaluator Level 5, < <= = >= > <>
 L9B75:
-    CPX #tknAND
-    BEQ L9B7A
-    RTS               ; Return if next char not AND
+    cpx #tknAND
+    beq L9B7A
+    rts               ; Return if next char not AND
 
 ; AND numeric
 ; -----------
 L9B7A:
-    TAY
-    JSR L92F0
-    JSR LBD94         ; If float, convert to integer, push onto stack
-    JSR L9B9C         ; Call Evaluator Level 5, < <= = >= > <>
-    TAY
-    JSR L92F0
-    LDY #$03          ; If float, convert to integer
+    tay
+    jsr L92F0
+    jsr LBD94         ; If float, convert to integer, push onto stack
+    jsr L9B9C         ; Call Evaluator Level 5, < <= = >= > <>
+    tay
+    jsr L92F0
+    ldy #$03          ; If float, convert to integer
 L9B8A:
-    LDA (zp04),Y
-    AND zp2A,Y        ; AND IntA with top of stack   ; abs,y (!)
-    STA zp2A,Y              ; abs,y (!)
-    DEY
-    BPL L9B8A         ; Store result in IntA
-    JSR LBDFF         ; Drop integer from stack
-    LDA #$40
-    BNE L9B75         ; Return type=Int, jump to check for another AND
+    lda (zp04),Y
+    and zp2A,Y        ; AND IntA with top of stack   ; abs,y (!)
+    sta zp2A,Y              ; abs,y (!)
+    dey
+    bpl L9B8A         ; Store result in IntA
+    jsr LBDFF         ; Drop integer from stack
+    lda #$40
+    bne L9B75         ; Return type=Int, jump to check for another AND
 
 ; Evaluator Level 5 - >... =... or <...
 ; -------------------------------------
 L9B9C:
-    JSR L9C42         ; Call Evaluator Level 4, + -
-    CPX #'>'+1
-    BCS L9BA7         ; Larger than '>', return
-    CPX #'<'
-    BCS L9BA8         ; Smaller than '<', return
+    jsr L9C42         ; Call Evaluator Level 4, + -
+    cpx #'>'+1
+    bcs L9BA7         ; Larger than '>', return
+    cpx #'<'
+    bcs L9BA8         ; Smaller than '<', return
 L9BA7:
-    RTS
+    rts
 
 ; >... =... or <...
 ; -----------------
 L9BA8:
-    BEQ L9BC0         ; Jump with '<'
-    CPX #'>'
-    BEQ L9BE8         ; Jump with '>'
+    beq L9BC0         ; Jump with '<'
+    cpx #'>'
+    beq L9BE8         ; Jump with '>'
                       ; Must be '='
 ; = numeric
 ; ---------
-    TAX
-    JSR L9A9E
-    BNE L9BB5         ; Jump with result=0 for not equal
+    tax
+    jsr L9A9E
+    bne L9BB5         ; Jump with result=0 for not equal
 L9BB4:
-    DEY               ; Decrement to $FF for equal
+    dey               ; Decrement to $FF for equal
 L9BB5:
-    STY zp2A
-    STY zp2B
-    STY zp2C          ; Store 0/-1 in IntA
-    STY zp2D
-    LDA #$40
-    RTS               ; Return type=Int
+    sty zp2A
+    sty zp2B
+    sty zp2C          ; Store 0/-1 in IntA
+    sty zp2D
+    lda #$40
+    rts               ; Return type=Int
 
 ; < <= <>
 ; -------
 L9BC0:
-    TAX
-    LDY zp1B
-    LDA (zp19),Y      ; Get next char from PtrB
-    CMP #'='
-    BEQ L9BD4         ; Jump for <=
-    CMP #'>'
-    BEQ L9BDF         ; Jump for <>
+    tax
+    ldy zp1B
+    lda (zp19),Y      ; Get next char from PtrB
+    cmp #'='
+    beq L9BD4         ; Jump for <=
+    cmp #'>'
+    beq L9BDF         ; Jump for <>
 
 ; Must be < numeric
 ; -----------------
-    JSR L9A9D         ; Evaluate next and compare
-    BCC L9BB4
-    BCS L9BB5         ; Jump to return TRUE if <, FALSE if not <
+    jsr L9A9D         ; Evaluate next and compare
+    bcc L9BB4
+    bcs L9BB5         ; Jump to return TRUE if <, FALSE if not <
 
 ; <= numeric
 ; ----------
 L9BD4:
-    INC zp1B
-    JSR L9A9D         ; Step past '=', evaluate next and compare
-    BEQ L9BB4
-    BCC L9BB4         ; Jump to return TRUE if =, TRUE if <
-    BCS L9BB5         ; Jump to return FALSE otherwise
+    inc zp1B
+    jsr L9A9D         ; Step past '=', evaluate next and compare
+    beq L9BB4
+    bcc L9BB4         ; Jump to return TRUE if =, TRUE if <
+    bcs L9BB5         ; Jump to return FALSE otherwise
 
 ; <> numeric
 ; ----------
 L9BDF:
-    INC zp1B
-    JSR L9A9D         ; Step past '>', evaluate next and compare
-    BNE L9BB4
-    BEQ L9BB5         ; Jump to return TRUE if <>, FALSE if =
+    inc zp1B
+    jsr L9A9D         ; Step past '>', evaluate next and compare
+    bne L9BB4
+    beq L9BB5         ; Jump to return TRUE if <>, FALSE if =
 
 ; > >=
 ; ----
 L9BE8:
-    TAX
-    LDY zp1B
-    LDA (zp19),Y      ; Get next char from PtrB
-    CMP #'='
-    BEQ L9BFA         ; Jump for >=
+    tax
+    ldy zp1B
+    lda (zp19),Y      ; Get next char from PtrB
+    cmp #'='
+    beq L9BFA         ; Jump for >=
 
 ; > numeric
 ; ---------
-    JSR L9A9D         ; Evaluate next and compare
-    BEQ L9BB5
-    BCS L9BB4         ; Jump to return FALSE if =, TRUE if >
-    BCC L9BB5         ; Jump to return FALSE if <
+    jsr L9A9D         ; Evaluate next and compare
+    beq L9BB5
+    bcs L9BB4         ; Jump to return FALSE if =, TRUE if >
+    bcc L9BB5         ; Jump to return FALSE if <
 
 ; >= numeric
 ; ----------
 L9BFA:
-    INC zp1B
-    JSR L9A9D         ; Step past '=', evaluate next and compare
-    BCS L9BB4
-    BCC L9BB5         ; Jump to return TRUE if >=, FALSE if <
+    inc zp1B
+    jsr L9A9D         ; Step past '=', evaluate next and compare
+    bcs L9BB4
+    bcc L9BB5         ; Jump to return TRUE if >=, FALSE if <
 
 L9C03:
-    BRK
+    brk
     dta $13
     .if foldup == 1
         dta 'STRING TOO LONG'
     .else
         dta 'String too long'
     .endif
-    BRK
+    brk
 
 ; String addition
 ; ---------------
 L9C15:
-    JSR LBDB2
-    JSR L9E20         ; Stack string, call Evaluator Level 2
-    TAY
-    BNE L9C88         ; string + number, jump to 'Type mismatch' error
-    CLC
-    STX zp37
-    LDY #$00
-    LDA (zp04),Y      ; Get stacked string length
-    ADC zp36
-    BCS L9C03         ; If added string length >255, jump to error
-    TAX
-    PHA
-    LDY zp36          ; Save new string length
+    jsr LBDB2
+    jsr L9E20         ; Stack string, call Evaluator Level 2
+    tay
+    bne L9C88         ; string + number, jump to 'Type mismatch' error
+    clc
+    stx zp37
+    ldy #$00
+    lda (zp04),Y      ; Get stacked string length
+    adc zp36
+    bcs L9C03         ; If added string length >255, jump to error
+    tax
+    pha
+    ldy zp36          ; Save new string length
 L9C2D:
-    LDA ws+$05FF,Y
-    STA ws+$05FF,X    ; Move current string up in string buffer
-    DEX
-    DEY
-    BNE L9C2D
-    JSR LBDCB         ; Unstack string to start of string buffer
-    PLA
-    STA zp36
-    LDX zp37          ; Set new string length
-    TYA
-    BEQ L9C45         ; Set type=string, jump to check for more + or -
+    lda ws+$05FF,Y
+    sta ws+$05FF,X    ; Move current string up in string buffer
+    dex
+    dey
+    bne L9C2D
+    jsr LBDCB         ; Unstack string to start of string buffer
+    pla
+    sta zp36
+    ldx zp37          ; Set new string length
+    tya
+    beq L9C45         ; Set type=string, jump to check for more + or -
 
 ; Evaluator Level 4, + -
 ; ----------------------
 L9C42:
-    JSR L9DD1         ; Call Evaluator Level 3, * / DIV MOD
+    jsr L9DD1         ; Call Evaluator Level 3, * / DIV MOD
 L9C45:
-    CPX #'+'
-    BEQ L9C4E         ; Jump with addition
-    CPX #'-'
-    BEQ L9CB5         ; Jump with subtraction
-    RTS               ; Return otherwise
+    cpx #'+'
+    beq L9C4E         ; Jump with addition
+    cpx #'-'
+    beq L9CB5         ; Jump with subtraction
+    rts               ; Return otherwise
 
 ; + <value>
 ; ---------
 L9C4E:
-    TAY
-    BEQ L9C15         ; Jump if current value is a string
-    BMI L9C8B         ; Jump if current value is a float
+    tay
+    beq L9C15         ; Jump if current value is a string
+    bmi L9C8B         ; Jump if current value is a float
 
 ; Integer addition
 ; ----------------
-    JSR L9DCE         ; Stack current and call Evaluator Level 3
-    TAY
-    BEQ L9C88         ; If int + string, jump to 'Type mismatch' error
-    BMI L9CA7         ; If int + float, jump ...
-    LDY #$00
-    CLC
-    LDA (zp04),Y
-    ADC zp2A
-    STA zp2A          ; Add top of stack to IntA
-    INY
-    LDA (zp04),Y
-    ADC zp2B
-    STA zp2B          ; Store result in IntA
-    INY
-    LDA (zp04),Y
-    ADC zp2C
-    STA zp2C
-    INY
-    LDA (zp04),Y
-    ADC zp2D
+    jsr L9DCE         ; Stack current and call Evaluator Level 3
+    tay
+    beq L9C88         ; If int + string, jump to 'Type mismatch' error
+    bmi L9CA7         ; If int + float, jump ...
+    ldy #$00
+    clc
+    lda (zp04),Y
+    adc zp2A
+    sta zp2A          ; Add top of stack to IntA
+    iny
+    lda (zp04),Y
+    adc zp2B
+    sta zp2B          ; Store result in IntA
+    iny
+    lda (zp04),Y
+    adc zp2C
+    sta zp2C
+    iny
+    lda (zp04),Y
+    adc zp2D
 L9C77:
-    STA zp2D
-    CLC
-    LDA zp04
-    ADC #$04
-    STA zp04          ; Drop integer from stack
-    LDA #$40
-    BCC L9C45         ; Set result=integer, jump to check for more + or -
-    INC zp05
-    BCS L9C45         ; Jump to check for more + or -
+    sta zp2D
+    clc
+    lda zp04
+    adc #$04
+    sta zp04          ; Drop integer from stack
+    lda #$40
+    bcc L9C45         ; Set result=integer, jump to check for more + or -
+    inc zp05
+    bcs L9C45         ; Jump to check for more + or -
 
 L9C88:
-    JMP L8C0E         ; Jump to 'Type mismatch' error
+    jmp L8C0E         ; Jump to 'Type mismatch' error
 
 ; Real addition
 ; -------------
 L9C8B:
-    JSR LBD51
-    JSR L9DD1         ; Stack float, call Evaluator Level 3
-    TAY
-    BEQ L9C88         ; float + string, jump to 'Type mismatch' error
-    STX zp27
-    BMI L9C9B         ; float + float, skip conversion
-    JSR LA2BE         ; float + int, convert int to float
+    jsr LBD51
+    jsr L9DD1         ; Stack float, call Evaluator Level 3
+    tay
+    beq L9C88         ; float + string, jump to 'Type mismatch' error
+    stx zp27
+    bmi L9C9B         ; float + float, skip conversion
+    jsr LA2BE         ; float + int, convert int to float
 L9C9B:
-    JSR LBD7E         ; Pop float from stack, point FPTR to it
-    JSR LA500         ; Unstack float to FPA2 and add to FPA1
+    jsr LBD7E         ; Pop float from stack, point FPTR to it
+    jsr LA500         ; Unstack float to FPA2 and add to FPA1
 L9CA1:
-    LDX zp27          ; Get nextchar back
-    LDA #$FF
-    BNE L9C45         ; Set result=float, loop to check for more + or -
+    ldx zp27          ; Get nextchar back
+    lda #$FF
+    bne L9C45         ; Set result=float, loop to check for more + or -
 
 ; int + float
 ; -----------
 L9CA7:
-    STX zp27
-    JSR LBDEA         ; Unstack integer to IntA
-    JSR LBD51
-    JSR LA2BE         ; Stack float, convert integer in IntA to float in FPA1
-    JMP L9C9B         ; Jump to do float + <stacked float>
+    stx zp27
+    jsr LBDEA         ; Unstack integer to IntA
+    jsr LBD51
+    jsr LA2BE         ; Stack float, convert integer in IntA to float in FPA1
+    jmp L9C9B         ; Jump to do float + <stacked float>
 
 ; - numeric
 ; ---------
 L9CB5:
-    TAY
-    BEQ L9C88         ; If current value is a string, jump to error
-    BMI L9CE1         ; Jump if current value is a float
+    tay
+    beq L9C88         ; If current value is a string, jump to error
+    bmi L9CE1         ; Jump if current value is a float
 
 ; Integer subtraction
 ; -------------------
-    JSR L9DCE         ; Stack current and call Evaluator Level 3
-    TAY
-    BEQ L9C88         ; int + string, jump to error
-    BMI L9CFA         ; int + float, jump to convert and do real subtraction
-    SEC
-    LDY #$00
-    LDA (zp04),Y
-    SBC zp2A
-    STA zp2A
-    INY
-    LDA (zp04),Y
-    SBC zp2B
-    STA zp2B          ; Subtract IntA from top of stack
-    INY
-    LDA (zp04),Y
-    SBC zp2C
-    STA zp2C          ; Store in IntA
-    INY
-    LDA (zp04),Y
-    SBC zp2D
-    JMP L9C77         ; Jump to pop stack and loop for more + or -
+    jsr L9DCE         ; Stack current and call Evaluator Level 3
+    tay
+    beq L9C88         ; int + string, jump to error
+    bmi L9CFA         ; int + float, jump to convert and do real subtraction
+    sec
+    ldy #$00
+    lda (zp04),Y
+    sbc zp2A
+    sta zp2A
+    iny
+    lda (zp04),Y
+    sbc zp2B
+    sta zp2B          ; Subtract IntA from top of stack
+    iny
+    lda (zp04),Y
+    sbc zp2C
+    sta zp2C          ; Store in IntA
+    iny
+    lda (zp04),Y
+    sbc zp2D
+    jmp L9C77         ; Jump to pop stack and loop for more + or -
 
 ; Real subtraction
 ; ----------------
 L9CE1:
-    JSR LBD51
-    JSR L9DD1         ; Stack float, call Evaluator Level 3
-    TAY
-    BEQ L9C88         ; float - string, jump to 'Type mismatch' error
-    STX zp27
-    BMI L9CF1         ; float - float, skip conversion
-    JSR LA2BE         ; float - int, convert int to float
+    jsr LBD51
+    jsr L9DD1         ; Stack float, call Evaluator Level 3
+    tay
+    beq L9C88         ; float - string, jump to 'Type mismatch' error
+    stx zp27
+    bmi L9CF1         ; float - float, skip conversion
+    jsr LA2BE         ; float - int, convert int to float
 L9CF1:
-    JSR LBD7E         ; Pop float from stack and point FPTR to it
-    JSR LA4FD         ; Unstack float to FPA2 and subtract it from FPA1
-    JMP L9CA1         ; Jump to set result and loop for more + or -
+    jsr LBD7E         ; Pop float from stack and point FPTR to it
+    jsr LA4FD         ; Unstack float to FPA2 and subtract it from FPA1
+    jmp L9CA1         ; Jump to set result and loop for more + or -
 
 ; int - float
 ; -----------
 L9CFA:
-    STX zp27
-    JSR LBDEA         ; Unstack integer to IntA
-    JSR LBD51
-    JSR LA2BE         ; Stack float, convert integer in IntA to float in FPA1
-    JSR LBD7E         ; Pop float from stack, point FPTR to it
-    JSR LA4D0         ; Subtract FPTR float from FPA1 float
-    JMP L9CA1         ; Jump to set result and loop for more + or -
+    stx zp27
+    jsr LBDEA         ; Unstack integer to IntA
+    jsr LBD51
+    jsr LA2BE         ; Stack float, convert integer in IntA to float in FPA1
+    jsr LBD7E         ; Pop float from stack, point FPTR to it
+    jsr LA4D0         ; Subtract FPTR float from FPA1 float
+    jmp L9CA1         ; Jump to set result and loop for more + or -
 
 L9D0E:
-    JSR LA2BE         ; 9D0E= 20 BE A2     >"
+    jsr LA2BE         ; 9D0E= 20 BE A2     >"
 L9D11:
-    JSR LBDEA         ; 9D11= 20 EA BD     j=
-    JSR LBD51         ; 9D14= 20 51 BD     Q=
-    JSR LA2BE         ; 9D17= 20 BE A2     >"
-    JMP L9D2C         ; 9D1A= 4C 2C 9D    L,.
+    jsr LBDEA         ; 9D11= 20 EA BD     j=
+    jsr LBD51         ; 9D14= 20 51 BD     Q=
+    jsr LA2BE         ; 9D17= 20 BE A2     >"
+    jmp L9D2C         ; 9D1A= 4C 2C 9D    L,.
 
 L9D1D:
-    JSR LA2BE         ; 9D1D= 20 BE A2     >"
+    jsr LA2BE         ; 9D1D= 20 BE A2     >"
 L9D20:
-    JSR LBD51         ; 9D20= 20 51 BD     Q=
-    JSR L9E20         ; 9D23= 20 20 9E      .
-    STX zp27          ; 9D26= 86 27       .'
-    TAY               ; 9D28= A8          (
-    JSR L92FD         ; 9D29= 20 FD 92     }.
+    jsr LBD51         ; 9D20= 20 51 BD     Q=
+    jsr L9E20         ; 9D23= 20 20 9E      .
+    stx zp27          ; 9D26= 86 27       .'
+    tay               ; 9D28= A8          (
+    jsr L92FD         ; 9D29= 20 FD 92     }.
 L9D2C:
-    JSR LBD7E         ; 9D2C= 20 7E BD     ~=
-    JSR LA656         ; 9D2F= 20 56 A6     V$
-    LDA #$FF          ; 9D32= A9 FF       ).
-    LDX zp27          ; 9D34= A6 27       $'
-    JMP L9DD4         ; 9D36= 4C D4 9D    LT.
+    jsr LBD7E         ; 9D2C= 20 7E BD     ~=
+    jsr LA656         ; 9D2F= 20 56 A6     V$
+    lda #$FF          ; 9D32= A9 FF       ).
+    ldx zp27          ; 9D34= A6 27       $'
+    jmp L9DD4         ; 9D36= 4C D4 9D    LT.
 
 L9D39:
-    JMP L8C0E         ; 9D39= 4C 0E 8C    L..
+    jmp L8C0E         ; 9D39= 4C 0E 8C    L..
 
 ; * <value>
 ; ---------
 L9D3C:
-    TAY
-    BEQ L9D39         ; If current value is string, jump to error
-    BMI L9D20         ; Jump if current valus ia a float
-    LDA zp2D
-    CMP zp2C
-    BNE L9D1D
-    TAY
-    BEQ L9D4E
-    CMP #$FF
-    BNE L9D1D
+    tay
+    beq L9D39         ; If current value is string, jump to error
+    bmi L9D20         ; Jump if current valus ia a float
+    lda zp2D
+    cmp zp2C
+    bne L9D1D
+    tay
+    beq L9D4E
+    cmp #$FF
+    bne L9D1D
 
 L9D4E:
-    EOR zp2B          ; 9D4E= 45 2B       E+
-    BMI L9D1D         ; 9D50= 30 CB       0K
-    JSR L9E1D         ; 9D52= 20 1D 9E     ..
-    STX zp27          ; 9D55= 86 27       .'
-    TAY               ; 9D57= A8          (
-    BEQ L9D39         ; 9D58= F0 DF       p_
-    BMI L9D11         ; 9D5A= 30 B5       05
-    LDA zp2D          ; 9D5C= A5 2D       %-
-    CMP zp2C          ; 9D5E= C5 2C       E,
-    BNE L9D0E         ; 9D60= D0 AC       P,
-    TAY               ; 9D62= A8          (
-    BEQ L9D69         ; 9D63= F0 04       p.
-    CMP #$FF          ; 9D65= C9 FF       I.
-    BNE L9D0E         ; 9D67= D0 A5       P%
+    eor zp2B          ; 9D4E= 45 2B       E+
+    bmi L9D1D         ; 9D50= 30 CB       0K
+    jsr L9E1D         ; 9D52= 20 1D 9E     ..
+    stx zp27          ; 9D55= 86 27       .'
+    tay               ; 9D57= A8          (
+    beq L9D39         ; 9D58= F0 DF       p_
+    bmi L9D11         ; 9D5A= 30 B5       05
+    lda zp2D          ; 9D5C= A5 2D       %-
+    cmp zp2C          ; 9D5E= C5 2C       E,
+    bne L9D0E         ; 9D60= D0 AC       P,
+    tay               ; 9D62= A8          (
+    beq L9D69         ; 9D63= F0 04       p.
+    cmp #$FF          ; 9D65= C9 FF       I.
+    bne L9D0E         ; 9D67= D0 A5       P%
 L9D69:
-    EOR zp2B          ; 9D69= 45 2B       E+
-    BMI L9D0E         ; 9D6B= 30 A1       0!
-    LDA zp2D          ; 9D6D= A5 2D       %-
-    PHA               ; 9D6F= 48          H
-    JSR LAD71         ; 9D70= 20 71 AD     q-
-    LDX #$39          ; 9D73= A2 39       "9
-    JSR LBE44         ; 9D75= 20 44 BE     D>
-    JSR LBDEA         ; 9D78= 20 EA BD     j=
-    PLA               ; 9D7B= 68          h
-    EOR zp2D          ; 9D7C= 45 2D       E-
-    STA zp37          ; 9D7E= 85 37       .7
-    JSR LAD71         ; 9D80= 20 71 AD     q-
-    LDY #$00          ; 9D83= A0 00        .
-    LDX #$00          ; 9D85= A2 00       ".
-    STY zp3F          ; 9D87= 84 3F       .?
-    STY zp40          ; 9D89= 84 40       .@
+    eor zp2B          ; 9D69= 45 2B       E+
+    bmi L9D0E         ; 9D6B= 30 A1       0!
+    lda zp2D          ; 9D6D= A5 2D       %-
+    pha               ; 9D6F= 48          H
+    jsr LAD71         ; 9D70= 20 71 AD     q-
+    ldx #$39          ; 9D73= A2 39       "9
+    jsr LBE44         ; 9D75= 20 44 BE     D>
+    jsr LBDEA         ; 9D78= 20 EA BD     j=
+    pla               ; 9D7B= 68          h
+    eor zp2D          ; 9D7C= 45 2D       E-
+    sta zp37          ; 9D7E= 85 37       .7
+    jsr LAD71         ; 9D80= 20 71 AD     q-
+    ldy #$00          ; 9D83= A0 00        .
+    ldx #$00          ; 9D85= A2 00       ".
+    sty zp3F          ; 9D87= 84 3F       .?
+    sty zp40          ; 9D89= 84 40       .@
 L9D8B:
-    LSR zp3A          ; 9D8B= 46 3A       F
+    lsr zp3A          ; 9D8B= 46 3A       F
 
-    ROR zp39          ; 9D8D= 66 39       f9
-    BCC L9DA6         ; 9D8F= 90 15       ..
-    CLC               ; 9D91= 18          .
-    TYA               ; 9D92= 98          .
-    ADC zp2A          ; 9D93= 65 2A       e*
-    TAY               ; 9D95= A8          (
-    TXA               ; 9D96= 8A          .
-    ADC zp2B          ; 9D97= 65 2B       e+
-    TAX               ; 9D99= AA          *
-    LDA zp3F          ; 9D9A= A5 3F       %?
-    ADC zp2C          ; 9D9C= 65 2C       e,
-    STA zp3F          ; 9D9E= 85 3F       .?
-    LDA zp40          ; 9DA0= A5 40       %@
-    ADC zp2D          ; 9DA2= 65 2D       e-
-    STA zp40          ; 9DA4= 85 40       .@
+    ror zp39          ; 9D8D= 66 39       f9
+    bcc L9DA6         ; 9D8F= 90 15       ..
+    clc               ; 9D91= 18          .
+    tya               ; 9D92= 98          .
+    adc zp2A          ; 9D93= 65 2A       e*
+    tay               ; 9D95= A8          (
+    txa               ; 9D96= 8A          .
+    adc zp2B          ; 9D97= 65 2B       e+
+    tax               ; 9D99= AA          *
+    lda zp3F          ; 9D9A= A5 3F       %?
+    adc zp2C          ; 9D9C= 65 2C       e,
+    sta zp3F          ; 9D9E= 85 3F       .?
+    lda zp40          ; 9DA0= A5 40       %@
+    adc zp2D          ; 9DA2= 65 2D       e-
+    sta zp40          ; 9DA4= 85 40       .@
 L9DA6:
-    ASL zp2A          ; 9DA6= 06 2A       .*
-    ROL zp2B          ; 9DA8= 26 2B       $+
-    ROL zp2C          ; 9DAA= 26 2C       $,
-    ROL zp2D          ; 9DAC= 26 2D       $-
-    LDA zp39          ; 9DAE= A5 39       %9
-    ORA zp3A          ; 9DB0= 05 3A       .
+    asl zp2A          ; 9DA6= 06 2A       .*
+    rol zp2B          ; 9DA8= 26 2B       $+
+    rol zp2C          ; 9DAA= 26 2C       $,
+    rol zp2D          ; 9DAC= 26 2D       $-
+    lda zp39          ; 9DAE= A5 39       %9
+    ora zp3A          ; 9DB0= 05 3A       .
 
-    BNE L9D8B         ; 9DB2= D0 D7       PW
-    STY zp3D          ; 9DB4= 84 3D       .=
-    STX zp3E          ; 9DB6= 86 3E       .>
-    LDA zp37          ; 9DB8= A5 37       %7
-    PHP               ; 9DBA= 08          .
+    bne L9D8B         ; 9DB2= D0 D7       PW
+    sty zp3D          ; 9DB4= 84 3D       .=
+    stx zp3E          ; 9DB6= 86 3E       .>
+    lda zp37          ; 9DB8= A5 37       %7
+    php               ; 9DBA= 08          .
 
 L9DBB:
-    LDX #$3D          ; 9DBB= A2 3D       "=
+    ldx #$3D          ; 9DBB= A2 3D       "=
 L9DBD:
-    JSR LAF56         ; 9DBD= 20 56 AF     V/
-    PLP               ; 9DC0= 28          (
-    BPL L9DC6         ; 9DC1= 10 03       ..
-    JSR LAD93         ; 9DC3= 20 93 AD     .-
+    jsr LAF56         ; 9DBD= 20 56 AF     V/
+    plp               ; 9DC0= 28          (
+    bpl L9DC6         ; 9DC1= 10 03       ..
+    jsr LAD93         ; 9DC3= 20 93 AD     .-
 L9DC6:
-    LDX zp27          ; 9DC6= A6 27       $'
-    JMP L9DD4         ; 9DC8= 4C D4 9D    LT.
+    ldx zp27          ; 9DC6= A6 27       $'
+    jmp L9DD4         ; 9DC8= 4C D4 9D    LT.
 
 ; * <value>
 ; ---------
 L9DCB:
-    JMP L9D3C         ; Bounce back to multiply code
+    jmp L9D3C         ; Bounce back to multiply code
 
 
 ; Stack current value and continue in Evaluator Level 3
 ; ------------------------------------------------------- 
 L9DCE:
-    JSR LBD94
+    jsr LBD94
 
 ; Evaluator Level 3, * / DIV MOD
 ; ------------------------------
 L9DD1:
-    JSR L9E20         ; Call Evaluator Level 2, ^
+    jsr L9E20         ; Call Evaluator Level 2, ^
 L9DD4:
-    CPX #'*'
-    BEQ L9DCB         ; Jump with multiply
-    CPX #'/'
-    BEQ L9DE5         ; Jump with divide
-    CPX #tknMOD
-    BEQ L9E01         ; Jump with MOD
-    CPX #tknDIV
-    BEQ L9E0A
-    RTS               ; Jump with DIV
+    cpx #'*'
+    beq L9DCB         ; Jump with multiply
+    cpx #'/'
+    beq L9DE5         ; Jump with divide
+    cpx #tknMOD
+    beq L9E01         ; Jump with MOD
+    cpx #tknDIV
+    beq L9E0A
+    rts               ; Jump with DIV
 
 ; / <value>
 ; ---------
 L9DE5:
-    TAY
-    JSR L92FD         ; Ensure current value is real
-    JSR LBD51
-    JSR L9E20         ; Stack float, call Evaluator Level 2
-    STX zp27
-    TAY
-    JSR L92FD         ; Ensure current value is real
-    JSR LBD7E
-    JSR LA6AD         ; Unstack to FPTR, call divide routine
-    LDX zp27
-    LDA #$FF
-    BNE L9DD4; Set result, loop for more * / MOD DIV
+    tay
+    jsr L92FD         ; Ensure current value is real
+    jsr LBD51
+    jsr L9E20         ; Stack float, call Evaluator Level 2
+    stx zp27
+    tay
+    jsr L92FD         ; Ensure current value is real
+    jsr LBD7E
+    jsr LA6AD         ; Unstack to FPTR, call divide routine
+    ldx zp27
+    lda #$FF
+    bne L9DD4; Set result, loop for more * / MOD DIV
 
 ; MOD <value>
 ; -----------
 L9E01:
-    JSR L99BE         ; Ensure current value is integer
-    LDA zp38
-    PHP
-    JMP L9DBB         ; Jump to MOD routine
+    jsr L99BE         ; Ensure current value is integer
+    lda zp38
+    php
+    jmp L9DBB         ; Jump to MOD routine
 
 ; DIV <value>
 ; -----------
 L9E0A:
-    JSR L99BE         ; Ensure current value is integer
-    ROL zp39
-    ROL zp3A
-    ROL zp3B          ; Multiply IntA by 2
-    ROL zp3C
-    BIT zp37
-    PHP
-    LDX #$39
-    JMP L9DBD         ; Jump to DIV routine
+    jsr L99BE         ; Ensure current value is integer
+    rol zp39
+    rol zp3A
+    rol zp3B          ; Multiply IntA by 2
+    rol zp3C
+    bit zp37
+    php
+    ldx #$39
+    jmp L9DBD         ; Jump to DIV routine
 
 
 ; Stack current integer and evaluate another Level 2
 ; --------------------------------------------------
 L9E1D:
-    JSR LBD94         ; Stack integer
+    jsr LBD94         ; Stack integer
 
 ; Evaluator Level 2, ^
 ; --------------------
 L9E20:
-    JSR LADEC         ; Call Evaluator Level 1, - + NOT function ( ) ? ! $ | "
+    jsr LADEC         ; Call Evaluator Level 1, - + NOT function ( ) ? ! $ | "
 L9E23:
-    PHA
+    pha
 L9E24:
-    LDY zp1B
-    INC zp1B
-    LDA (zp19),Y      ; Get character
-    CMP #$20
-    BEQ L9E24         ; Skip spaces
-    TAX
-    PLA
-    CPX #'^'
-    BEQ L9E35
-    RTS               ; Return if not ^
+    ldy zp1B
+    inc zp1B
+    lda (zp19),Y      ; Get character
+    cmp #$20
+    beq L9E24         ; Skip spaces
+    tax
+    pla
+    cpx #'^'
+    beq L9E35
+    rts               ; Return if not ^
 
 ; ^ <value>
 ; ---------
 L9E35:
-    TAY
-    JSR L92FD         ; Ensure current value is a float
-    JSR LBD51
-    JSR L92FA         ; Stack float, evaluate a real
-    LDA zp30
-    CMP #$87
-    BCS L9E88
-    JSR LA486
-    BNE L9E59
-    JSR LBD7E
-    JSR LA3B5
-    LDA zp4A
-    JSR LAB12
-    LDA #$FF
-    BNE L9E23         ; Set result=real, loop to check for more ^
+    tay
+    jsr L92FD         ; Ensure current value is a float
+    jsr LBD51
+    jsr L92FA         ; Stack float, evaluate a real
+    lda zp30
+    cmp #$87
+    bcs L9E88
+    jsr LA486
+    bne L9E59
+    jsr LBD7E
+    jsr LA3B5
+    lda zp4A
+    jsr LAB12
+    lda #$FF
+    bne L9E23         ; Set result=real, loop to check for more ^
 
 L9E59:
-    JSR LA381
-    LDA zp04
-    STA zp4B
-    LDA zp05
-    STA zp4C
-    JSR LA3B5
-    LDA zp4A
-    JSR LAB12
+    jsr LA381
+    lda zp04
+    sta zp4B
+    lda zp05
+    sta zp4C
+    jsr LA3B5
+    lda zp4A
+    jsr LAB12
 L9E6C:
-    JSR LA37D
-    JSR LBD7E
-    JSR LA3B5
-    JSR LA801
-    JSR LAAD1
-    JSR LAA94
-    JSR LA7ED
-    JSR LA656
-    LDA #$FF
-    BNE L9E23         ; Set result=real, loop to check for more ^
+    jsr LA37D
+    jsr LBD7E
+    jsr LA3B5
+    jsr LA801
+    jsr LAAD1
+    jsr LAA94
+    jsr LA7ED
+    jsr LA656
+    lda #$FF
+    bne L9E23         ; Set result=real, loop to check for more ^
 
 L9E88:
-    JSR LA381
-    JSR LA699
-    BNE L9E6C
+    jsr LA381
+    jsr LA699
+    bne L9E6C
 
 
 ; Convert number to hex string
 ; ----------------------------
 L9E90:
-    TYA
-    BPL L9E96
-    JSR LA3E4         ; Convert real to integer
+    tya
+    bpl L9E96
+    jsr LA3E4         ; Convert real to integer
 L9E96:
-    LDX #$00
-    LDY #$00
+    ldx #$00
+    ldy #$00
 L9E9A:
-    LDA zp2A,Y        ; abs,y (!)
-    PHA               ; Expand four bytes into eight digits
-    AND #$0F
-    STA zp3F,X
-    PLA
-    LSR
-    LSR
-    LSR
-    LSR
-    INX
-    STA zp3F,X
-    INX
-    INY
-    CPY #$04
-    BNE L9E9A         ; Loop for four bytes
+    lda zp2A,Y        ; abs,y (!)
+    pha               ; Expand four bytes into eight digits
+    and #$0F
+    sta zp3F,X
+    pla
+    lsr
+    lsr
+    lsr
+    lsr
+    inx
+    sta zp3F,X
+    inx
+    iny
+    cpy #$04
+    bne L9E9A         ; Loop for four bytes
 L9EB0:
-    DEX
-    BEQ L9EB7         ; No digits left, output a single zero
-    LDA zp3F,X
-    BEQ L9EB0         ; Skip leading zeros
+    dex
+    beq L9EB7         ; No digits left, output a single zero
+    lda zp3F,X
+    beq L9EB0         ; Skip leading zeros
 L9EB7:
-    LDA zp3F,X
-    CMP #$0A          ; Get byte from workspace
-    BCC L9EBF
-    ADC #$06          ; Convert byte to hex
+    lda zp3F,X
+    cmp #$0A          ; Get byte from workspace
+    bcc L9EBF
+    adc #$06          ; Convert byte to hex
 L9EBF:
-    ADC #'0'
-    JSR LA066         ; Convert to digit and store in buffer
-    DEX
-    BPL L9EB7
-    RTS               ; Loop for all digits
+    adc #'0'
+    jsr LA066         ; Convert to digit and store in buffer
+    dex
+    bpl L9EB7
+    rts               ; Loop for all digits
 
 ; Output nonzero real number
 ; --------------------------
 L9EC8:
-    BPL L9ED1         ; Jump forward if positive
-    LDA #'-'
-    STA zp2E          ; A='-', clear sign flag
-    JSR LA066         ; Add '-' to string buffer
+    bpl L9ED1         ; Jump forward if positive
+    lda #'-'
+    sta zp2E          ; A='-', clear sign flag
+    jsr LA066         ; Add '-' to string buffer
 L9ED1:
-    LDA zp30          ; Get exponent
-    CMP #$81
-    BCS L9F25         ; If m*2^1 or larger, number>=1, jump to output it
-    JSR LA1F4         ; FloatA=FloatA*10
-    DEC zp49
-    JMP L9ED1         ; Loop until number is >=1
+    lda zp30          ; Get exponent
+    cmp #$81
+    bcs L9F25         ; If m*2^1 or larger, number>=1, jump to output it
+    jsr LA1F4         ; FloatA=FloatA*10
+    dec zp49
+    jmp L9ED1         ; Loop until number is >=1
 
 ; Convert numeric value to string
 ; ===============================
@@ -5504,831 +5504,831 @@ L9ED1:
 ;           $36=string length
 ;
 L9EDF:
-    LDX ws+$0402      ; Get format byte
-    CPX #$03
-    BCC L9EE8         ; If <3, ok - use it
-    LDX #$00          ; If invalid, $00 for General format
+    ldx ws+$0402      ; Get format byte
+    cpx #$03
+    bcc L9EE8         ; If <3, ok - use it
+    ldx #$00          ; If invalid, $00 for General format
 L9EE8:
-    STX zp37          ; Store format type
-    LDA ws+$0401
-    BEQ L9EF5         ; If digits=0, jump to check format
-    CMP #$0A
-    BCS L9EF9         ; If 10+ digits, jump to use 10 digits
-    BCC L9EFB         ; If <10 digits, use specified number
+    stx zp37          ; Store format type
+    lda ws+$0401
+    beq L9EF5         ; If digits=0, jump to check format
+    cmp #$0A
+    bcs L9EF9         ; If 10+ digits, jump to use 10 digits
+    bcc L9EFB         ; If <10 digits, use specified number
 L9EF5:
-    CPX #$02
-    BEQ L9EFB         ; If fixed format, use zero digits
+    cpx #$02
+    beq L9EFB         ; If fixed format, use zero digits
 
 ; STR$ enters here to use general format
 ; --------------------------------------
 L9EF9:
-    LDA #$0A          ; Otherwise, default to ten digits
+    lda #$0A          ; Otherwise, default to ten digits
 L9EFB:
-    STA zp38
-    STA zp4E          ; Store digit length
-    LDA #$00
-    STA zp36
-    STA zp49          ; Set initial output length to 0, initial exponent to 0
-    BIT zp15
-    BMI L9E90         ; Jump for hex conversion if $15.b7 set
-    TYA
-    BMI L9F0F
-    JSR LA2BE         ; Convert integer to real
+    sta zp38
+    sta zp4E          ; Store digit length
+    lda #$00
+    sta zp36
+    sta zp49          ; Set initial output length to 0, initial exponent to 0
+    bit zp15
+    bmi L9E90         ; Jump for hex conversion if $15.b7 set
+    tya
+    bmi L9F0F
+    jsr LA2BE         ; Convert integer to real
 L9F0F:
-    JSR LA1DA
-    BNE L9EC8         ; Get -1/0/+1 sign, jump if not zero to output nonzero number
-    LDA zp37
-    BNE L9F1D         ; If not General format, output fixed or exponential zero
-    LDA #'0'
-    JMP LA066         ; Store single '0' into string buffer and return
+    jsr LA1DA
+    bne L9EC8         ; Get -1/0/+1 sign, jump if not zero to output nonzero number
+    lda zp37
+    bne L9F1D         ; If not General format, output fixed or exponential zero
+    lda #'0'
+    jmp LA066         ; Store single '0' into string buffer and return
 L9F1D:
-    JMP L9F9C         ; Jump to output zero in fixed or exponential format
+    jmp L9F9C         ; Jump to output zero in fixed or exponential format
 
 L9F20:
-    JSR LA699
-    BNE L9F34         ; FloatA=1.0
+    jsr LA699
+    bne L9F34         ; FloatA=1.0
 
 ; FloatA now is >=1, check that it is <10
 ; ---------------------------------------
 L9F25:
-    CMP #$84
-    BCC L9F39         ; Exponent<4, FloatA<10, jump to convert it
-    BNE L9F31         ; Exponent<>4, need to divide it
-    LDA zp31          ; Get mantissa top byte
-    CMP #$A0
-    BCC L9F39         ; Less than $A0, less than ten, jump to convert it
+    cmp #$84
+    bcc L9F39         ; Exponent<4, FloatA<10, jump to convert it
+    bne L9F31         ; Exponent<>4, need to divide it
+    lda zp31          ; Get mantissa top byte
+    cmp #$A0
+    bcc L9F39         ; Less than $A0, less than ten, jump to convert it
 L9F31:
-    JSR LA24D         ; FloatA=FloatA / 10
+    jsr LA24D         ; FloatA=FloatA / 10
 L9F34:
-    INC zp49
-    JMP L9ED1         ; Jump back to get the number >=1 again
+    inc zp49
+    jmp L9ED1         ; Jump back to get the number >=1 again
 
 ; FloatA is now between 1 and 9.999999999
 ; ---------------------------------------
 L9F39:
-    LDA zp35
-    STA zp27
-    JSR LA385; Copy FloatA to FloatTemp at $27/$046C
-    LDA zp4E
-    STA zp38          ; Get number of digits
-    LDX zp37          ; Get print format
-    CPX #$02
-    BNE L9F5C         ; Not fixed format, jump to do exponent/general
-    ADC zp49
-    BMI L9FA0
-    STA zp38
-    CMP #$0B
-    BCC L9F5C
-    LDA #$0A          ; 9F54= A9 0A       ).
-    STA zp38          ; 9F56= 85 38       .8
-    LDA #$00
-    STA zp37          ; 9F5A= 85 37       .7
+    lda zp35
+    sta zp27
+    jsr LA385; Copy FloatA to FloatTemp at $27/$046C
+    lda zp4E
+    sta zp38          ; Get number of digits
+    ldx zp37          ; Get print format
+    cpx #$02
+    bne L9F5C         ; Not fixed format, jump to do exponent/general
+    adc zp49
+    bmi L9FA0
+    sta zp38
+    cmp #$0B
+    bcc L9F5C
+    lda #$0A          ; 9F54= A9 0A       ).
+    sta zp38          ; 9F56= 85 38       .8
+    lda #$00
+    sta zp37          ; 9F5A= 85 37       .7
 L9F5C:
-    JSR LA686; Clear FloatA
-    LDA #$A0          ; 9F5F= A9 A0       )
-    STA zp31          ; 9F61= 85 31       .1
-    LDA #$83          ; 9F63= A9 83       ).
-    STA zp30          ; 9F65= 85 30       .0
-    LDX zp38          ; 9F67= A6 38       $8
-    BEQ L9F71         ; 9F69= F0 06       p.
+    jsr LA686; Clear FloatA
+    lda #$A0          ; 9F5F= A9 A0       )
+    sta zp31          ; 9F61= 85 31       .1
+    lda #$83          ; 9F63= A9 83       ).
+    sta zp30          ; 9F65= 85 30       .0
+    ldx zp38          ; 9F67= A6 38       $8
+    beq L9F71         ; 9F69= F0 06       p.
 L9F6B:
-    JSR LA24D; FloatA=FloatA/10
-    DEX
-    BNE L9F6B
+    jsr LA24D; FloatA=FloatA/10
+    dex
+    bne L9F6B
 L9F71:
-    JSR LA7F5; Point to $46C
-    JSR LA34E; Unpack to FloatB
-    LDA zp27
-    STA zp42
-    JSR LA50B; Add
+    jsr LA7F5; Point to $46C
+    jsr LA34E; Unpack to FloatB
+    lda zp27
+    sta zp42
+    jsr LA50B; Add
 L9F7E:
-    LDA zp30
-    CMP #$84
-    BCS L9F92
-    ROR zp31          ; 9F84= 66 31       f1
-    ROR zp32          ; 9F86= 66 32       f2
-    ROR zp33          ; 9F88= 66 33       f3
-    ROR zp34          ; 9F8A= 66 34       f4
-    ROR zp35          ; 9F8C= 66 35       f5
-    INC zp30          ; 9F8E= E6 30       f0
-    BNE L9F7E         ; 9F90= D0 EC       Pl
+    lda zp30
+    cmp #$84
+    bcs L9F92
+    ror zp31          ; 9F84= 66 31       f1
+    ror zp32          ; 9F86= 66 32       f2
+    ror zp33          ; 9F88= 66 33       f3
+    ror zp34          ; 9F8A= 66 34       f4
+    ror zp35          ; 9F8C= 66 35       f5
+    inc zp30          ; 9F8E= E6 30       f0
+    bne L9F7E         ; 9F90= D0 EC       Pl
 L9F92:
-    LDA zp31          ; 9F92= A5 31       %1
-    CMP #$A0
-    BCS L9F20         ; 9F96= B0 88       0.
-    LDA zp38          ; 9F98= A5 38       %8
-    BNE L9FAD         ; 9F9A= D0 11       P.
+    lda zp31          ; 9F92= A5 31       %1
+    cmp #$A0
+    bcs L9F20         ; 9F96= B0 88       0.
+    lda zp38          ; 9F98= A5 38       %8
+    bne L9FAD         ; 9F9A= D0 11       P.
 
 ; Output zero in Exponent or Fixed format
 ; ---------------------------------------
 L9F9C:
-    CMP #$01
-    BEQ L9FE6         ; 9F9E= F0 46       pF
+    cmp #$01
+    beq L9FE6         ; 9F9E= F0 46       pF
 L9FA0:
-    JSR LA686; Clear FloatA
-    LDA #$00
-    STA zp49          ; 9FA5= 85 49       .I
-    LDA zp4E          ; 9FA7= A5 4E       %N
-    STA zp38          ; 9FA9= 85 38       .8
-    INC zp38          ; 9FAB= E6 38       f8
+    jsr LA686; Clear FloatA
+    lda #$00
+    sta zp49          ; 9FA5= 85 49       .I
+    lda zp4E          ; 9FA7= A5 4E       %N
+    sta zp38          ; 9FA9= 85 38       .8
+    inc zp38          ; 9FAB= E6 38       f8
 L9FAD:
-    LDA #$01          ; 9FAD= A9 01       ).
-    CMP zp37
-    BEQ L9FE6         ; 9FB1= F0 33       p3
-    LDY zp49
-    BMI L9FC3         ; 9FB5= 30 0C       0.
-    CPY zp38
-    BCS L9FE6         ; 9FB9= B0 2B       0+
-    LDA #$00
-    STA zp49          ; 9FBD= 85 49       .I
-    INY               ; 9FBF= C8          H
-    TYA               ; 9FC0= 98          .
-    BNE L9FE6         ; 9FC1= D0 23       P#
+    lda #$01          ; 9FAD= A9 01       ).
+    cmp zp37
+    beq L9FE6         ; 9FB1= F0 33       p3
+    ldy zp49
+    bmi L9FC3         ; 9FB5= 30 0C       0.
+    cpy zp38
+    bcs L9FE6         ; 9FB9= B0 2B       0+
+    lda #$00
+    sta zp49          ; 9FBD= 85 49       .I
+    iny               ; 9FBF= C8          H
+    tya               ; 9FC0= 98          .
+    bne L9FE6         ; 9FC1= D0 23       P#
 L9FC3:
-    LDA zp37          ; 9FC3= A5 37       %7
-    CMP #$02
-    BEQ L9FCF         ; 9FC7= F0 06       p.
-    LDA #$01          ; 9FC9= A9 01       ).
-    CPY #$FF
-    BNE L9FE6         ; 9FCD= D0 17       P.
+    lda zp37          ; 9FC3= A5 37       %7
+    cmp #$02
+    beq L9FCF         ; 9FC7= F0 06       p.
+    lda #$01          ; 9FC9= A9 01       ).
+    cpy #$FF
+    bne L9FE6         ; 9FCD= D0 17       P.
 L9FCF:
-    LDA #'0'
-    JSR LA066; Output '0'
-    LDA #'.'
-    JSR LA066; Output '.'
-    LDA #'0'          ; Prepare '0'
+    lda #'0'
+    jsr LA066; Output '0'
+    lda #'.'
+    jsr LA066; Output '.'
+    lda #'0'          ; Prepare '0'
 L9FDB:
-    INC zp49
-    BEQ L9FE4
-    JSR LA066; Output
-    BNE L9FDB
+    inc zp49
+    beq L9FE4
+    jsr LA066; Output
+    bne L9FDB
 
 L9FE4:
-    LDA #$80          ; 9FE4= A9 80       ).
+    lda #$80          ; 9FE4= A9 80       ).
 L9FE6:
-    STA zp4E          ; 9FE6= 85 4E       .N
+    sta zp4E          ; 9FE6= 85 4E       .N
 L9FE8:
-    JSR LA040         ; 9FE8= 20 40 A0     @
-    DEC zp4E          ; 9FEB= C6 4E       FN
-    BNE L9FF4         ; 9FED= D0 05       P.
-    LDA #$2E          ; 9FEF= A9 2E       ).
-    JSR LA066         ; 9FF1= 20 66 A0     f
+    jsr LA040         ; 9FE8= 20 40 A0     @
+    dec zp4E          ; 9FEB= C6 4E       FN
+    bne L9FF4         ; 9FED= D0 05       P.
+    lda #$2E          ; 9FEF= A9 2E       ).
+    jsr LA066         ; 9FF1= 20 66 A0     f
 L9FF4:
-    DEC zp38          ; 9FF4= C6 38       F8
-    BNE L9FE8         ; 9FF6= D0 F0       Pp
-    LDY zp37          ; 9FF8= A4 37       $7
-    DEY               ; 9FFA= 88          .
-    BEQ LA015         ; 9FFB= F0 18       p.
-    DEY               ; 9FFD= 88          .
-    BEQ LA011         ; 9FFE= F0 11       p.
-    LDY zp36          ; A000= A4 36       $6
+    dec zp38          ; 9FF4= C6 38       F8
+    bne L9FE8         ; 9FF6= D0 F0       Pp
+    ldy zp37          ; 9FF8= A4 37       $7
+    dey               ; 9FFA= 88          .
+    beq LA015         ; 9FFB= F0 18       p.
+    dey               ; 9FFD= 88          .
+    beq LA011         ; 9FFE= F0 11       p.
+    ldy zp36          ; A000= A4 36       $6
 LA002:
-    DEY               ; A002= 88          .
-    LDA ws+$0600,Y    ; A003= B9 00 06    9..
-    CMP #'0'
-    BEQ LA002         ; A008= F0 F8       px
-    CMP #'.'
-    BEQ LA00F         ; A00C= F0 01       p.
-    INY               ; A00E= C8          H
+    dey               ; A002= 88          .
+    lda ws+$0600,Y    ; A003= B9 00 06    9..
+    cmp #'0'
+    beq LA002         ; A008= F0 F8       px
+    cmp #'.'
+    beq LA00F         ; A00C= F0 01       p.
+    iny               ; A00E= C8          H
 LA00F:
-    STY zp36          ; A00F= 84 36       .6
+    sty zp36          ; A00F= 84 36       .6
 LA011:
-    LDA zp49          ; A011= A5 49       %I
-    BEQ LA03F         ; A013= F0 2A       p*
+    lda zp49          ; A011= A5 49       %I
+    beq LA03F         ; A013= F0 2A       p*
 LA015:
-    LDA #'E'
-    JSR LA066         ; Output 'E'
-    LDA zp49
-    BPL LA028
-    LDA #'-'
-    JSR LA066         ; Output '-'
-    SEC
-    LDA #$00
-    SBC zp49          ; Negate
+    lda #'E'
+    jsr LA066         ; Output 'E'
+    lda zp49
+    bpl LA028
+    lda #'-'
+    jsr LA066         ; Output '-'
+    sec
+    lda #$00
+    sbc zp49          ; Negate
 LA028:
-    JSR LA052         ; A028= 20 52 A0     R
-    LDA zp37          ; A02B= A5 37       %7
-    BEQ LA03F         ; A02D= F0 10       p.
-    LDA #$20          ; A02F= A9 20       )
-    LDY zp49          ; A031= A4 49       $I
-    BMI LA038         ; A033= 30 03       0.
-    JSR LA066         ; A035= 20 66 A0     f
+    jsr LA052         ; A028= 20 52 A0     R
+    lda zp37          ; A02B= A5 37       %7
+    beq LA03F         ; A02D= F0 10       p.
+    lda #$20          ; A02F= A9 20       )
+    ldy zp49          ; A031= A4 49       $I
+    bmi LA038         ; A033= 30 03       0.
+    jsr LA066         ; A035= 20 66 A0     f
 LA038:
-    CPX #$00          ; A038= E0 00       `.
-    BNE LA03F         ; A03A= D0 03       P.
-    JMP LA066         ; A03C= 4C 66 A0    Lf
+    cpx #$00          ; A038= E0 00       `.
+    bne LA03F         ; A03A= D0 03       P.
+    jmp LA066         ; A03C= 4C 66 A0    Lf
 
 LA03F:
-    RTS               ; A03F= 60          `
+    rts               ; A03F= 60          `
 
 LA040:
-    LDA zp31          ; A040= A5 31       %1
-    LSR               ; A042= 4A          J
-    LSR               ; A043= 4A          J
-    LSR               ; A044= 4A          J
-    LSR               ; A045= 4A          J
-    JSR LA064         ; A046= 20 64 A0     d
-    LDA zp31          ; A049= A5 31       %1
-    AND #$0F          ; A04B= 29 0F       ).
-    STA zp31          ; A04D= 85 31       .1
-    JMP LA197         ; A04F= 4C 97 A1    L.!
+    lda zp31          ; A040= A5 31       %1
+    lsr               ; A042= 4A          J
+    lsr               ; A043= 4A          J
+    lsr               ; A044= 4A          J
+    lsr               ; A045= 4A          J
+    jsr LA064         ; A046= 20 64 A0     d
+    lda zp31          ; A049= A5 31       %1
+    and #$0F          ; A04B= 29 0F       ).
+    sta zp31          ; A04D= 85 31       .1
+    jmp LA197         ; A04F= 4C 97 A1    L.!
 
 LA052:
-    LDX #$FF          ; A052= A2 FF       ".
-    SEC               ; A054= 38          8
+    ldx #$FF          ; A052= A2 FF       ".
+    sec               ; A054= 38          8
 LA055:
-    INX               ; A055= E8          h
-    SBC #$0A          ; A056= E9 0A       i.
-    BCS LA055         ; A058= B0 FB       0{
-    ADC #$0A          ; A05A= 69 0A       i.
-    PHA               ; A05C= 48          H
-    TXA               ; A05D= 8A          .
-    BEQ LA063         ; A05E= F0 03       p.
-    JSR LA064         ; A060= 20 64 A0     d
+    inx               ; A055= E8          h
+    sbc #$0A          ; A056= E9 0A       i.
+    bcs LA055         ; A058= B0 FB       0{
+    adc #$0A          ; A05A= 69 0A       i.
+    pha               ; A05C= 48          H
+    txa               ; A05D= 8A          .
+    beq LA063         ; A05E= F0 03       p.
+    jsr LA064         ; A060= 20 64 A0     d
 LA063:
-    PLA               ; A063= 68          h
+    pla               ; A063= 68          h
 LA064:
-    ORA #'0'          ; A064= 09 30       .0
+    ora #'0'          ; A064= 09 30       .0
 
 ; Store character in string buffer
 ; --------------------------------
 LA066:
-    STX zp3B
-    LDX zp36
-    STA ws+$0600,X    ; Store character
-    LDX zp3B
-    INC zp36
-    RTS               ; Increment string length
+    stx zp3B
+    ldx zp36
+    sta ws+$0600,X    ; Store character
+    ldx zp3B
+    inc zp36
+    rts               ; Increment string length
 
 LA072:
-    CLC
-    STX zp35
-    JSR LA1DA
-    LDA #$FF
-    RTS
+    clc
+    stx zp35
+    jsr LA1DA
+    lda #$FF
+    rts
 
 ; Scan decimal number
 ; -------------------
 LA07B:
-    LDX #$00
-    STX zp31
-    STX zp32; Clear FloatA
-    STX zp33
-    STX zp34
-    STX zp35
-    STX zp48          ; Clear 'Decimal point' flag
-    STX zp49          ; Set exponent to zero
-    CMP #'.'
-    BEQ LA0A0         ; Leading decimal point
-    CMP #'9'+1
-    BCS LA072         ; Not a decimal digit, finish
-    SBC #'0'-1
-    BMI LA072         ; Convert to binary, if not digit finish
-    STA zp35          ; Store digit
+    ldx #$00
+    stx zp31
+    stx zp32; Clear FloatA
+    stx zp33
+    stx zp34
+    stx zp35
+    stx zp48          ; Clear 'Decimal point' flag
+    stx zp49          ; Set exponent to zero
+    cmp #'.'
+    beq LA0A0         ; Leading decimal point
+    cmp #'9'+1
+    bcs LA072         ; Not a decimal digit, finish
+    sbc #'0'-1
+    bmi LA072         ; Convert to binary, if not digit finish
+    sta zp35          ; Store digit
 LA099:
-    INY
-    LDA (zp19),Y      ; Get next character
-    CMP #'.'
-    BNE LA0A8         ; Not decimal point
+    iny
+    lda (zp19),Y      ; Get next character
+    cmp #'.'
+    bne LA0A8         ; Not decimal point
 LA0A0:
-    LDA zp48
-    BNE LA0E8         ; Already got decimal point, 
-    INC zp48
-    BNE LA099         ; Set Decimal Point flag, loop for next
+    lda zp48
+    bne LA0E8         ; Already got decimal point, 
+    inc zp48
+    bne LA099         ; Set Decimal Point flag, loop for next
 LA0A8:
-    CMP #'E'
-    BEQ LA0E1         ; Jump to scan exponent
-    CMP #'9'+1
-    BCS LA0E8         ; Not a digit, jump to finish
-    SBC #'0'-1
-    BCC LA0E8         ; Not a digit, jump to finish
-    LDX zp31          ; Get mantissa top byte
-    CPX #$18
-    BCC LA0C2         ; If <25, still small enough to add to
-    LDX zp48
-    BNE LA099         ; Decimal point found, skip digits to end of number
-    INC zp49
-    BCS LA099         ; No decumal point, increment exponent and skip digits
+    cmp #'E'
+    beq LA0E1         ; Jump to scan exponent
+    cmp #'9'+1
+    bcs LA0E8         ; Not a digit, jump to finish
+    sbc #'0'-1
+    bcc LA0E8         ; Not a digit, jump to finish
+    ldx zp31          ; Get mantissa top byte
+    cpx #$18
+    bcc LA0C2         ; If <25, still small enough to add to
+    ldx zp48
+    bne LA099         ; Decimal point found, skip digits to end of number
+    inc zp49
+    bcs LA099         ; No decumal point, increment exponent and skip digits
 
 LA0C2:
-    LDX zp48
-    BEQ LA0C8 
-    DEC zp49          ; Decimal point found, decrement exponent
+    ldx zp48
+    beq LA0C8 
+    dec zp49          ; Decimal point found, decrement exponent
 LA0C8:
-    JSR LA197         ; Multiply FloatA by 10
-    ADC zp35
-    STA zp35          ; Add digit to mantissa low byte
-    BCC LA099         ; No overflow
-    INC zp34
-    BNE LA099         ; Add carry through mantissa
-    INC zp33
-    BNE LA099
-    INC zp32
-    BNE LA099
-    INC zp31
-    BNE LA099         ; Loop to check next digit
+    jsr LA197         ; Multiply FloatA by 10
+    adc zp35
+    sta zp35          ; Add digit to mantissa low byte
+    bcc LA099         ; No overflow
+    inc zp34
+    bne LA099         ; Add carry through mantissa
+    inc zp33
+    bne LA099
+    inc zp32
+    bne LA099
+    inc zp31
+    bne LA099         ; Loop to check next digit
 
 ; Deal with Exponent in scanned number
 ; ------------------------------------
 LA0E1:
-    JSR LA140         ; Scan following number
-    ADC zp49
-    STA zp49          ; Add to current exponent
+    jsr LA140         ; Scan following number
+    adc zp49
+    sta zp49          ; Add to current exponent
 
 ; End of number found
 ; -------------------
 LA0E8:
-    STY zp1B          ; Store PtrB offset
-    LDA zp49
-    ORA zp48          ; Check exponent and 'decimal point' flag
-    BEQ LA11F         ; No exponent, no decimal point, return integer
-    JSR LA1DA         ; A0F0= 20 DA A1     Z!
-    BEQ LA11B         ; A0F3= F0 26       p$
+    sty zp1B          ; Store PtrB offset
+    lda zp49
+    ora zp48          ; Check exponent and 'decimal point' flag
+    beq LA11F         ; No exponent, no decimal point, return integer
+    jsr LA1DA         ; A0F0= 20 DA A1     Z!
+    beq LA11B         ; A0F3= F0 26       p$
 LA0F5:
-    LDA #$A8          ; A0F5= A9 A8       )(
-    STA zp30          ; A0F7= 85 30       .0
-    LDA #$00          ; A0F9= A9 00       ).
-    STA zp2F          ; A0FB= 85 2F       ./
-    STA zp2E          ; A0FD= 85 2E       ..
-    JSR LA303         ; A0FF= 20 03 A3     .#
-    LDA zp49          ; A102= A5 49       %I
-    BMI LA111         ; A104= 30 0B       0.
-    BEQ LA118         ; A106= F0 10       p.
+    lda #$A8          ; A0F5= A9 A8       )(
+    sta zp30          ; A0F7= 85 30       .0
+    lda #$00          ; A0F9= A9 00       ).
+    sta zp2F          ; A0FB= 85 2F       ./
+    sta zp2E          ; A0FD= 85 2E       ..
+    jsr LA303         ; A0FF= 20 03 A3     .#
+    lda zp49          ; A102= A5 49       %I
+    bmi LA111         ; A104= 30 0B       0.
+    beq LA118         ; A106= F0 10       p.
 LA108:
-    JSR LA1F4         ; A108= 20 F4 A1     t!
-    DEC zp49          ; A10B= C6 49       FI
-    BNE LA108         ; A10D= D0 F9       Py
-    BEQ LA118         ; A10F= F0 07       p.
+    jsr LA1F4         ; A108= 20 F4 A1     t!
+    dec zp49          ; A10B= C6 49       FI
+    bne LA108         ; A10D= D0 F9       Py
+    beq LA118         ; A10F= F0 07       p.
 LA111:
-    JSR LA24D         ; A111= 20 4D A2     M"
-    INC zp49          ; A114= E6 49       fI
-    BNE LA111         ; A116= D0 F9       Py
+    jsr LA24D         ; A111= 20 4D A2     M"
+    inc zp49          ; A114= E6 49       fI
+    bne LA111         ; A116= D0 F9       Py
 LA118:
-    JSR LA65C         ; A118= 20 5C A6     \$
+    jsr LA65C         ; A118= 20 5C A6     \$
 LA11B:
-    SEC               ; A11B= 38          8
-    LDA #$FF          ; A11C= A9 FF       ).
-    RTS               ; A11E= 60          `
+    sec               ; A11B= 38          8
+    lda #$FF          ; A11C= A9 FF       ).
+    rts               ; A11E= 60          `
 
 LA11F:
-    LDA zp32
-    STA zp2D
-    AND #$80
-    ORA zp31
-    BNE LA0F5
-    LDA zp35
-    STA zp2A
-    LDA zp34
-    STA zp2B
-    LDA zp33
-    STA zp2C
-    LDA #$40
-    SEC
-    RTS
+    lda zp32
+    sta zp2D
+    and #$80
+    ora zp31
+    bne LA0F5
+    lda zp35
+    sta zp2A
+    lda zp34
+    sta zp2B
+    lda zp33
+    sta zp2C
+    lda #$40
+    sec
+    rts
 
 LA139:
-    JSR LA14B         ; Scan following number
-    EOR #$FF
-    SEC
-    RTS               ; Negate it, return CS=Ok
+    jsr LA14B         ; Scan following number
+    eor #$FF
+    sec
+    rts               ; Negate it, return CS=Ok
 
 ; Scan exponent, allows E E+ E- followed by one or two digits
 ; -----------------------------------------------------------
 LA140:
-    INY
-    LDA (zp19),Y      ; Get next character
-    CMP #'-'
-    BEQ LA139         ; If '-', jump to scan and negate
-    CMP #'+'
-    BNE LA14E         ; If '+', just step past
+    iny
+    lda (zp19),Y      ; Get next character
+    cmp #'-'
+    beq LA139         ; If '-', jump to scan and negate
+    cmp #'+'
+    bne LA14E         ; If '+', just step past
 LA14B:
-    INY
-    LDA (zp19),Y      ; Get next character
+    iny
+    lda (zp19),Y      ; Get next character
 LA14E:
-    CMP #'9'+1
-    BCS LA174         ; Not a digit, exit with CC and A=0
-    SBC #'0'-1
-    BCC LA174         ; Not a digit, exit with CC and A=0
-    STA zp4A          ; Store exponent digit
-    INY
-    LDA (zp19),Y      ; Get next character
-    CMP #'9'+1
-    BCS LA170         ; Not a digit, exit with CC and A=exp
-    SBC #'0'-1
-    BCC LA170         ; Not a digit, exit with CC and A=exp
-    INY
-    STA zp43          ; Step past digit, store current digit
-    LDA zp4A          ; Get current exponent
-    ASL
-    ASL
-    ADC zp4A          ; exp=exp*10
-    ASL
-    ADC zp43          ; exp=exp*10+digit
-    RTS
+    cmp #'9'+1
+    bcs LA174         ; Not a digit, exit with CC and A=0
+    sbc #'0'-1
+    bcc LA174         ; Not a digit, exit with CC and A=0
+    sta zp4A          ; Store exponent digit
+    iny
+    lda (zp19),Y      ; Get next character
+    cmp #'9'+1
+    bcs LA170         ; Not a digit, exit with CC and A=exp
+    sbc #'0'-1
+    bcc LA170         ; Not a digit, exit with CC and A=exp
+    iny
+    sta zp43          ; Step past digit, store current digit
+    lda zp4A          ; Get current exponent
+    asl
+    asl
+    adc zp4A          ; exp=exp*10
+    asl
+    adc zp43          ; exp=exp*10+digit
+    rts
 
 LA170:
-    LDA zp4A
-    CLC
-    RTS               ; Get exp and return CC=Ok
+    lda zp4A
+    clc
+    rts               ; Get exp and return CC=Ok
 
 LA174:
-    LDA #$00
-    CLC
-    RTS               ; Return exp=0 and CC=Ok
+    lda #$00
+    clc
+    rts               ; Return exp=0 and CC=Ok
 
 LA178:
-    LDA zp35
-    ADC zp42
-    STA zp35
-    LDA zp34
-    ADC zp41
-    STA zp34
-    LDA zp33
-    ADC zp40
-    STA zp33
-    LDA zp32
-    ADC zp3F
-    STA zp32
-    LDA zp31
-    ADC zp3E
-    STA zp31
-    RTS
+    lda zp35
+    adc zp42
+    sta zp35
+    lda zp34
+    adc zp41
+    sta zp34
+    lda zp33
+    adc zp40
+    sta zp33
+    lda zp32
+    adc zp3F
+    sta zp32
+    lda zp31
+    adc zp3E
+    sta zp31
+    rts
 
 LA197:
-    PHA
-    LDX zp34
-    LDA zp31
-    PHA
-    LDA zp32
-    PHA
-    LDA zp33
-    PHA
-    LDA zp35
-    ASL
-    ROL zp34          ; A1A6= 26 34       $4
-    ROL zp33          ; A1A8= 26 33       $3
-    ROL zp32          ; A1AA= 26 32       $2
-    ROL zp31          ; A1AC= 26 31       $1
-    ASL               ; A1AE= 0A          .
-    ROL zp34          ; A1AF= 26 34       $4
-    ROL zp33          ; A1B1= 26 33       $3
-    ROL zp32          ; A1B3= 26 32       $2
-    ROL zp31          ; A1B5= 26 31       $1
-    ADC zp35          ; A1B7= 65 35       e5
-    STA zp35          ; A1B9= 85 35       .5
-    TXA               ; A1BB= 8A          .
-    ADC zp34          ; A1BC= 65 34       e4
-    STA zp34          ; A1BE= 85 34       .4
-    PLA               ; A1C0= 68          h
-    ADC zp33          ; A1C1= 65 33       e3
-    STA zp33          ; A1C3= 85 33       .3
-    PLA               ; A1C5= 68          h
-    ADC zp32          ; A1C6= 65 32       e2
-    STA zp32          ; A1C8= 85 32       .2
-    PLA               ; A1CA= 68          h
-    ADC zp31          ; A1CB= 65 31       e1
-    ASL zp35          ; A1CD= 06 35       .5
-    ROL zp34          ; A1CF= 26 34       $4
-    ROL zp33          ; A1D1= 26 33       $3
-    ROL zp32          ; A1D3= 26 32       $2
-    ROL               ; A1D5= 2A          *
-    STA zp31          ; A1D6= 85 31       .1
-    PLA               ; A1D8= 68          h
-    RTS               ; A1D9= 60          `
+    pha
+    ldx zp34
+    lda zp31
+    pha
+    lda zp32
+    pha
+    lda zp33
+    pha
+    lda zp35
+    asl
+    rol zp34          ; A1A6= 26 34       $4
+    rol zp33          ; A1A8= 26 33       $3
+    rol zp32          ; A1AA= 26 32       $2
+    rol zp31          ; A1AC= 26 31       $1
+    asl               ; A1AE= 0A          .
+    rol zp34          ; A1AF= 26 34       $4
+    rol zp33          ; A1B1= 26 33       $3
+    rol zp32          ; A1B3= 26 32       $2
+    rol zp31          ; A1B5= 26 31       $1
+    adc zp35          ; A1B7= 65 35       e5
+    sta zp35          ; A1B9= 85 35       .5
+    txa               ; A1BB= 8A          .
+    adc zp34          ; A1BC= 65 34       e4
+    sta zp34          ; A1BE= 85 34       .4
+    pla               ; A1C0= 68          h
+    adc zp33          ; A1C1= 65 33       e3
+    sta zp33          ; A1C3= 85 33       .3
+    pla               ; A1C5= 68          h
+    adc zp32          ; A1C6= 65 32       e2
+    sta zp32          ; A1C8= 85 32       .2
+    pla               ; A1CA= 68          h
+    adc zp31          ; A1CB= 65 31       e1
+    asl zp35          ; A1CD= 06 35       .5
+    rol zp34          ; A1CF= 26 34       $4
+    rol zp33          ; A1D1= 26 33       $3
+    rol zp32          ; A1D3= 26 32       $2
+    rol               ; A1D5= 2A          *
+    sta zp31          ; A1D6= 85 31       .1
+    pla               ; A1D8= 68          h
+    rts               ; A1D9= 60          `
 
 LA1DA:
-    LDA zp31          ; A1DA= A5 31       %1
-    ORA zp32          ; A1DC= 05 32       .2
-    ORA zp33          ; A1DE= 05 33       .3
-    ORA zp34          ; A1E0= 05 34       .4
-    ORA zp35          ; A1E2= 05 35       .5
-    BEQ LA1ED         ; A1E4= F0 07       p.
-    LDA zp2E          ; A1E6= A5 2E       %.
-    BNE LA1F3         ; A1E8= D0 09       P.
-    LDA #$01          ; A1EA= A9 01       ).
-    RTS               ; A1EC= 60          `
+    lda zp31          ; A1DA= A5 31       %1
+    ora zp32          ; A1DC= 05 32       .2
+    ora zp33          ; A1DE= 05 33       .3
+    ora zp34          ; A1E0= 05 34       .4
+    ora zp35          ; A1E2= 05 35       .5
+    beq LA1ED         ; A1E4= F0 07       p.
+    lda zp2E          ; A1E6= A5 2E       %.
+    bne LA1F3         ; A1E8= D0 09       P.
+    lda #$01          ; A1EA= A9 01       ).
+    rts               ; A1EC= 60          `
 
 LA1ED:
-    STA zp2E          ; A1ED= 85 2E       ..
-    STA zp30          ; A1EF= 85 30       .0
-    STA zp2F          ; A1F1= 85 2F       ./
+    sta zp2E          ; A1ED= 85 2E       ..
+    sta zp30          ; A1EF= 85 30       .0
+    sta zp2F          ; A1F1= 85 2F       ./
 LA1F3:
-    RTS               ; A1F3= 60          `
+    rts               ; A1F3= 60          `
 
 LA1F4:
-    CLC               ; A1F4= 18          .
-    LDA zp30          ; A1F5= A5 30       %0
-    ADC #$03          ; A1F7= 69 03       i.
-    STA zp30          ; A1F9= 85 30       .0
-    BCC LA1FF         ; A1FB= 90 02       ..
-    INC zp2F          ; A1FD= E6 2F       f/
+    clc               ; A1F4= 18          .
+    lda zp30          ; A1F5= A5 30       %0
+    adc #$03          ; A1F7= 69 03       i.
+    sta zp30          ; A1F9= 85 30       .0
+    bcc LA1FF         ; A1FB= 90 02       ..
+    inc zp2F          ; A1FD= E6 2F       f/
 LA1FF:
-    JSR LA21E         ; A1FF= 20 1E A2     ."
-    JSR LA242         ; A202= 20 42 A2     B"
-    JSR LA242         ; A205= 20 42 A2     B"
+    jsr LA21E         ; A1FF= 20 1E A2     ."
+    jsr LA242         ; A202= 20 42 A2     B"
+    jsr LA242         ; A205= 20 42 A2     B"
 LA208:
-    JSR LA178         ; A208= 20 78 A1     x!
+    jsr LA178         ; A208= 20 78 A1     x!
 LA20B:
-    BCC LA21D         ; A20B= 90 10       ..
-    ROR zp31          ; A20D= 66 31       f1
-    ROR zp32          ; A20F= 66 32       f2
-    ROR zp33          ; A211= 66 33       f3
-    ROR zp34          ; A213= 66 34       f4
-    ROR zp35          ; A215= 66 35       f5
-    INC zp30          ; A217= E6 30       f0
-    BNE LA21D         ; A219= D0 02       P.
-    INC zp2F          ; A21B= E6 2F       f/
+    bcc LA21D         ; A20B= 90 10       ..
+    ror zp31          ; A20D= 66 31       f1
+    ror zp32          ; A20F= 66 32       f2
+    ror zp33          ; A211= 66 33       f3
+    ror zp34          ; A213= 66 34       f4
+    ror zp35          ; A215= 66 35       f5
+    inc zp30          ; A217= E6 30       f0
+    bne LA21D         ; A219= D0 02       P.
+    inc zp2F          ; A21B= E6 2F       f/
 LA21D:
-    RTS               ; A21D= 60          `
+    rts               ; A21D= 60          `
 
 LA21E:
-    LDA zp2E
+    lda zp2E
 LA220:
-    STA zp3B
-    LDA zp2F
-    STA zp3C
-    LDA zp30
-    STA zp3D
-    LDA zp31
-    STA zp3E
-    LDA zp32
-    STA zp3F
-    LDA zp33
-    STA zp40
-    LDA zp34
-    STA zp41
-    LDA zp35
-    STA zp42
-    RTS
+    sta zp3B
+    lda zp2F
+    sta zp3C
+    lda zp30
+    sta zp3D
+    lda zp31
+    sta zp3E
+    lda zp32
+    sta zp3F
+    lda zp33
+    sta zp40
+    lda zp34
+    sta zp41
+    lda zp35
+    sta zp42
+    rts
 
 LA23F:
-    JSR LA21E         ; A23F= 20 1E A2     ."
+    jsr LA21E         ; A23F= 20 1E A2     ."
 LA242:
-    LSR zp3E          ; A242= 46 3E       F>
-    ROR zp3F          ; A244= 66 3F       f?
-    ROR zp40          ; A246= 66 40       f@
-    ROR zp41          ; A248= 66 41       fA
-    ROR zp42          ; A24A= 66 42       fB
-    RTS               ; A24C= 60          `
+    lsr zp3E          ; A242= 46 3E       F>
+    ror zp3F          ; A244= 66 3F       f?
+    ror zp40          ; A246= 66 40       f@
+    ror zp41          ; A248= 66 41       fA
+    ror zp42          ; A24A= 66 42       fB
+    rts               ; A24C= 60          `
 
 LA24D:
-    SEC               ; A24D= 38          8
-    LDA zp30          ; A24E= A5 30       %0
-    SBC #$04          ; A250= E9 04       i.
-    STA zp30          ; A252= 85 30       .0
-    BCS LA258         ; A254= B0 02       0.
-    DEC zp2F          ; A256= C6 2F       F/
+    sec               ; A24D= 38          8
+    lda zp30          ; A24E= A5 30       %0
+    sbc #$04          ; A250= E9 04       i.
+    sta zp30          ; A252= 85 30       .0
+    bcs LA258         ; A254= B0 02       0.
+    dec zp2F          ; A256= C6 2F       F/
 LA258:
-    JSR LA23F         ; A258= 20 3F A2     ?"
-    JSR LA208         ; A25B= 20 08 A2     ."
-    JSR LA23F         ; A25E= 20 3F A2     ?"
-    JSR LA242         ; A261= 20 42 A2     B"
-    JSR LA242         ; A264= 20 42 A2     B"
-    JSR LA242         ; A267= 20 42 A2     B"
-    JSR LA208         ; A26A= 20 08 A2     ."
-    LDA #$00
-    STA zp3E
-    LDA zp31
-    STA zp3F
-    LDA zp32
-    STA zp40
-    LDA zp33
-    STA zp41
-    LDA zp34
-    STA zp42
-    LDA zp35
-    ROL
-    JSR LA208
-    LDA #$00
-    STA zp3E
-    STA zp3F
-    LDA zp31
-    STA zp40
-    LDA zp32
-    STA zp41
-    LDA zp33
-    STA zp42
-    LDA zp34
-    ROL
-    JSR LA208
-    LDA zp32
-    ROL
-    LDA zp31
+    jsr LA23F         ; A258= 20 3F A2     ?"
+    jsr LA208         ; A25B= 20 08 A2     ."
+    jsr LA23F         ; A25E= 20 3F A2     ?"
+    jsr LA242         ; A261= 20 42 A2     B"
+    jsr LA242         ; A264= 20 42 A2     B"
+    jsr LA242         ; A267= 20 42 A2     B"
+    jsr LA208         ; A26A= 20 08 A2     ."
+    lda #$00
+    sta zp3E
+    lda zp31
+    sta zp3F
+    lda zp32
+    sta zp40
+    lda zp33
+    sta zp41
+    lda zp34
+    sta zp42
+    lda zp35
+    rol
+    jsr LA208
+    lda #$00
+    sta zp3E
+    sta zp3F
+    lda zp31
+    sta zp40
+    lda zp32
+    sta zp41
+    lda zp33
+    sta zp42
+    lda zp34
+    rol
+    jsr LA208
+    lda zp32
+    rol
+    lda zp31
 LA2A4:
-    ADC zp35
-    STA zp35
-    BCC LA2BD
-    INC zp34
-    BNE LA2BD
-    INC zp33
-    BNE LA2BD
-    INC zp32
-    BNE LA2BD
-    INC zp31
-    BNE LA2BD
-    JMP LA20B
+    adc zp35
+    sta zp35
+    bcc LA2BD
+    inc zp34
+    bne LA2BD
+    inc zp33
+    bne LA2BD
+    inc zp32
+    bne LA2BD
+    inc zp31
+    bne LA2BD
+    jmp LA20B
 
 LA2BD:
-    RTS
+    rts
 
 LA2BE:
-    LDX #$00          ; A2BE= A2 00       ".
-    STX zp35          ; A2C0= 86 35       .5
-    STX zp2F          ; A2C2= 86 2F       ./
-    LDA zp2D          ; A2C4= A5 2D       %-
-    BPL LA2CD         ; A2C6= 10 05       ..
-    JSR LAD93         ; A2C8= 20 93 AD     .-
-    LDX #$FF          ; A2CB= A2 FF       ".
+    ldx #$00          ; A2BE= A2 00       ".
+    stx zp35          ; A2C0= 86 35       .5
+    stx zp2F          ; A2C2= 86 2F       ./
+    lda zp2D          ; A2C4= A5 2D       %-
+    bpl LA2CD         ; A2C6= 10 05       ..
+    jsr LAD93         ; A2C8= 20 93 AD     .-
+    ldx #$FF          ; A2CB= A2 FF       ".
 LA2CD:
-    STX zp2E          ; A2CD= 86 2E       ..
-    LDA zp2A          ; A2CF= A5 2A       %*
-    STA zp34          ; A2D1= 85 34       .4
-    LDA zp2B          ; A2D3= A5 2B       %+
-    STA zp33          ; A2D5= 85 33       .3
-    LDA zp2C          ; A2D7= A5 2C       %,
-    STA zp32          ; A2D9= 85 32       .2
-    LDA zp2D          ; A2DB= A5 2D       %-
-    STA zp31          ; A2DD= 85 31       .1
-    LDA #$A0          ; A2DF= A9 A0       )
-    STA zp30          ; A2E1= 85 30       .0
-    JMP LA303         ; A2E3= 4C 03 A3    L.#
+    stx zp2E          ; A2CD= 86 2E       ..
+    lda zp2A          ; A2CF= A5 2A       %*
+    sta zp34          ; A2D1= 85 34       .4
+    lda zp2B          ; A2D3= A5 2B       %+
+    sta zp33          ; A2D5= 85 33       .3
+    lda zp2C          ; A2D7= A5 2C       %,
+    sta zp32          ; A2D9= 85 32       .2
+    lda zp2D          ; A2DB= A5 2D       %-
+    sta zp31          ; A2DD= 85 31       .1
+    lda #$A0          ; A2DF= A9 A0       )
+    sta zp30          ; A2E1= 85 30       .0
+    jmp LA303         ; A2E3= 4C 03 A3    L.#
 
 LA2E6:
-    STA zp2E          ; A2E6= 85 2E       ..
-    STA zp30          ; A2E8= 85 30       .0
-    STA zp2F          ; A2EA= 85 2F       ./
+    sta zp2E          ; A2E6= 85 2E       ..
+    sta zp30          ; A2E8= 85 30       .0
+    sta zp2F          ; A2EA= 85 2F       ./
 LA2EC:
-    RTS               ; A2EC= 60          `
+    rts               ; A2EC= 60          `
 
 LA2ED:
-    PHA               ; A2ED= 48          H
-    JSR LA686         ; A2EE= 20 86 A6     .$
-    PLA               ; A2F1= 68          h
-    BEQ LA2EC         ; A2F2= F0 F8       px
-    BPL LA2FD         ; A2F4= 10 07       ..
-    STA zp2E          ; A2F6= 85 2E       ..
-    LDA #$00          ; A2F8= A9 00       ).
-    SEC               ; A2FA= 38          8
-    SBC zp2E          ; A2FB= E5 2E       e.
+    pha               ; A2ED= 48          H
+    jsr LA686         ; A2EE= 20 86 A6     .$
+    pla               ; A2F1= 68          h
+    beq LA2EC         ; A2F2= F0 F8       px
+    bpl LA2FD         ; A2F4= 10 07       ..
+    sta zp2E          ; A2F6= 85 2E       ..
+    lda #$00          ; A2F8= A9 00       ).
+    sec               ; A2FA= 38          8
+    sbc zp2E          ; A2FB= E5 2E       e.
 LA2FD:
-    STA zp31          ; A2FD= 85 31       .1
-    LDA #$88          ; A2FF= A9 88       ).
-    STA zp30          ; A301= 85 30       .0
+    sta zp31          ; A2FD= 85 31       .1
+    lda #$88          ; A2FF= A9 88       ).
+    sta zp30          ; A301= 85 30       .0
 LA303:
-    LDA zp31          ; A303= A5 31       %1
-    BMI LA2EC         ; A305= 30 E5       0e
-    ORA zp32          ; A307= 05 32       .2
-    ORA zp33          ; A309= 05 33       .3
-    ORA zp34          ; A30B= 05 34       .4
-    ORA zp35          ; A30D= 05 35       .5
-    BEQ LA2E6         ; A30F= F0 D5       pU
-    LDA zp30          ; A311= A5 30       %0
+    lda zp31          ; A303= A5 31       %1
+    bmi LA2EC         ; A305= 30 E5       0e
+    ora zp32          ; A307= 05 32       .2
+    ora zp33          ; A309= 05 33       .3
+    ora zp34          ; A30B= 05 34       .4
+    ora zp35          ; A30D= 05 35       .5
+    beq LA2E6         ; A30F= F0 D5       pU
+    lda zp30          ; A311= A5 30       %0
 LA313:
-    LDY zp31          ; A313= A4 31       $1
-    BMI LA2EC         ; A315= 30 D5       0U
-    BNE LA33A         ; A317= D0 21       P!
-    LDX zp32          ; A319= A6 32       $2
-    STX zp31          ; A31B= 86 31       .1
-    LDX zp33          ; A31D= A6 33       $3
-    STX zp32          ; A31F= 86 32       .2
-    LDX zp34          ; A321= A6 34       $4
-    STX zp33          ; A323= 86 33       .3
-    LDX zp35          ; A325= A6 35       $5
-    STX zp34          ; A327= 86 34       .4
-    STY zp35          ; A329= 84 35       .5
-    SEC               ; A32B= 38          8
-    SBC #$08          ; A32C= E9 08       i.
-    STA zp30          ; A32E= 85 30       .0
-    BCS LA313         ; A330= B0 E1       0a
-    DEC zp2F          ; A332= C6 2F       F/
-    BCC LA313         ; A334= 90 DD       .]
+    ldy zp31          ; A313= A4 31       $1
+    bmi LA2EC         ; A315= 30 D5       0U
+    bne LA33A         ; A317= D0 21       P!
+    ldx zp32          ; A319= A6 32       $2
+    stx zp31          ; A31B= 86 31       .1
+    ldx zp33          ; A31D= A6 33       $3
+    stx zp32          ; A31F= 86 32       .2
+    ldx zp34          ; A321= A6 34       $4
+    stx zp33          ; A323= 86 33       .3
+    ldx zp35          ; A325= A6 35       $5
+    stx zp34          ; A327= 86 34       .4
+    sty zp35          ; A329= 84 35       .5
+    sec               ; A32B= 38          8
+    sbc #$08          ; A32C= E9 08       i.
+    sta zp30          ; A32E= 85 30       .0
+    bcs LA313         ; A330= B0 E1       0a
+    dec zp2F          ; A332= C6 2F       F/
+    bcc LA313         ; A334= 90 DD       .]
 LA336:
-    LDY zp31          ; A336= A4 31       $1
-    BMI LA2EC         ; A338= 30 B2       02
+    ldy zp31          ; A336= A4 31       $1
+    bmi LA2EC         ; A338= 30 B2       02
 LA33A:
-    ASL zp35          ; A33A= 06 35       .5
-    ROL zp34          ; A33C= 26 34       $4
-    ROL zp33          ; A33E= 26 33       $3
-    ROL zp32          ; A340= 26 32       $2
-    ROL zp31          ; A342= 26 31       $1
-    SBC #$00          ; A344= E9 00       i.
-    STA zp30          ; A346= 85 30       .0
-    BCS LA336         ; A348= B0 EC       0l
-    DEC zp2F          ; A34A= C6 2F       F/
-    BCC LA336         ; A34C= 90 E8       .h
+    asl zp35          ; A33A= 06 35       .5
+    rol zp34          ; A33C= 26 34       $4
+    rol zp33          ; A33E= 26 33       $3
+    rol zp32          ; A340= 26 32       $2
+    rol zp31          ; A342= 26 31       $1
+    sbc #$00          ; A344= E9 00       i.
+    sta zp30          ; A346= 85 30       .0
+    bcs LA336         ; A348= B0 EC       0l
+    dec zp2F          ; A34A= C6 2F       F/
+    bcc LA336         ; A34C= 90 E8       .h
 LA34E:
-    LDY #$04          ; A34E= A0 04        .
-    LDA (zp4B),Y      ; A350= B1 4B       1K
-    STA zp41          ; A352= 85 41       .A
-    DEY               ; A354= 88          .
-    LDA (zp4B),Y      ; A355= B1 4B       1K
-    STA zp40          ; A357= 85 40       .@
-    DEY               ; A359= 88          .
-    LDA (zp4B),Y      ; A35A= B1 4B       1K
-    STA zp3F          ; A35C= 85 3F       .?
-    DEY               ; A35E= 88          .
-    LDA (zp4B),Y      ; A35F= B1 4B       1K
-    STA zp3B          ; A361= 85 3B       .;
-    DEY               ; A363= 88          .
-    STY zp42          ; A364= 84 42       .B
-    STY zp3C          ; A366= 84 3C       .<
-    LDA (zp4B),Y      ; A368= B1 4B       1K
-    STA zp3D          ; A36A= 85 3D       .=
-    ORA zp3B          ; A36C= 05 3B       .;
-    ORA zp3F          ; A36E= 05 3F       .?
-    ORA zp40          ; A370= 05 40       .@
-    ORA zp41          ; A372= 05 41       .A
-    BEQ LA37A         ; A374= F0 04       p.
-    LDA zp3B          ; A376= A5 3B       %;
-    ORA #$80          ; A378= 09 80       ..
+    ldy #$04          ; A34E= A0 04        .
+    lda (zp4B),Y      ; A350= B1 4B       1K
+    sta zp41          ; A352= 85 41       .A
+    dey               ; A354= 88          .
+    lda (zp4B),Y      ; A355= B1 4B       1K
+    sta zp40          ; A357= 85 40       .@
+    dey               ; A359= 88          .
+    lda (zp4B),Y      ; A35A= B1 4B       1K
+    sta zp3F          ; A35C= 85 3F       .?
+    dey               ; A35E= 88          .
+    lda (zp4B),Y      ; A35F= B1 4B       1K
+    sta zp3B          ; A361= 85 3B       .;
+    dey               ; A363= 88          .
+    sty zp42          ; A364= 84 42       .B
+    sty zp3C          ; A366= 84 3C       .<
+    lda (zp4B),Y      ; A368= B1 4B       1K
+    sta zp3D          ; A36A= 85 3D       .=
+    ora zp3B          ; A36C= 05 3B       .;
+    ora zp3F          ; A36E= 05 3F       .?
+    ora zp40          ; A370= 05 40       .@
+    ora zp41          ; A372= 05 41       .A
+    beq LA37A         ; A374= F0 04       p.
+    lda zp3B          ; A376= A5 3B       %;
+    ora #$80          ; A378= 09 80       ..
 LA37A:
-    STA zp3E          ; A37A= 85 3E       .>
-    RTS               ; A37C= 60          `
+    sta zp3E          ; A37A= 85 3E       .>
+    rts               ; A37C= 60          `
 
 LA37D:
-    LDA #$71          ; A37D= A9 71       )q
-    BNE LA387         ; A37F= D0 06       P.
+    lda #$71          ; A37D= A9 71       )q
+    bne LA387         ; A37F= D0 06       P.
 LA381:
-    LDA #$76          ; A381= A9 76       )v
-    BNE LA387         ; A383= D0 02       P.
+    lda #$76          ; A381= A9 76       )v
+    bne LA387         ; A383= D0 02       P.
 LA385:
-    LDA #$6C          ; A385= A9 6C       )l
+    lda #$6C          ; A385= A9 6C       )l
 LA387:
-    STA zp4B          ; A387= 85 4B       .K
-    LDA #$04+(ws/256) ; A389= A9 04       ).
-    STA zp4C          ; A38B= 85 4C       .L
+    sta zp4B          ; A387= 85 4B       .K
+    lda #$04+(ws/256) ; A389= A9 04       ).
+    sta zp4C          ; A38B= 85 4C       .L
 LA38D:
-    LDY #$00          ; A38D= A0 00        .
-    LDA zp30          ; A38F= A5 30       %0
-    STA (zp4B),Y      ; A391= 91 4B       .K
-    INY               ; A393= C8          H
-    LDA zp2E          ; A394= A5 2E       %.
-    AND #$80          ; A396= 29 80       ).
-    STA zp2E          ; A398= 85 2E       ..
-    LDA zp31          ; A39A= A5 31       %1
-    AND #$7F          ; A39C= 29 7F       ).
-    ORA zp2E          ; A39E= 05 2E       ..
-    STA (zp4B),Y      ; A3A0= 91 4B       .K
-    LDA zp32          ; A3A2= A5 32       %2
-    INY               ; A3A4= C8          H
-    STA (zp4B),Y      ; A3A5= 91 4B       .K
-    LDA zp33          ; A3A7= A5 33       %3
-    INY               ; A3A9= C8          H
-    STA (zp4B),Y      ; A3AA= 91 4B       .K
-    LDA zp34          ; A3AC= A5 34       %4
-    INY               ; A3AE= C8          H
-    STA (zp4B),Y      ; A3AF= 91 4B       .K
-    RTS               ; A3B1= 60          `
+    ldy #$00          ; A38D= A0 00        .
+    lda zp30          ; A38F= A5 30       %0
+    sta (zp4B),Y      ; A391= 91 4B       .K
+    iny               ; A393= C8          H
+    lda zp2E          ; A394= A5 2E       %.
+    and #$80          ; A396= 29 80       ).
+    sta zp2E          ; A398= 85 2E       ..
+    lda zp31          ; A39A= A5 31       %1
+    and #$7F          ; A39C= 29 7F       ).
+    ora zp2E          ; A39E= 05 2E       ..
+    sta (zp4B),Y      ; A3A0= 91 4B       .K
+    lda zp32          ; A3A2= A5 32       %2
+    iny               ; A3A4= C8          H
+    sta (zp4B),Y      ; A3A5= 91 4B       .K
+    lda zp33          ; A3A7= A5 33       %3
+    iny               ; A3A9= C8          H
+    sta (zp4B),Y      ; A3AA= 91 4B       .K
+    lda zp34          ; A3AC= A5 34       %4
+    iny               ; A3AE= C8          H
+    sta (zp4B),Y      ; A3AF= 91 4B       .K
+    rts               ; A3B1= 60          `
 
 LA3B2:
-    JSR LA7F5         ; A3B2= 20 F5 A7     u'
+    jsr LA7F5         ; A3B2= 20 F5 A7     u'
 LA3B5:
-    LDY #$04          ; A3B5= A0 04        .
-    LDA (zp4B),Y      ; A3B7= B1 4B       1K
-    STA zp34          ; A3B9= 85 34       .4
-    DEY               ; A3BB= 88          .
-    LDA (zp4B),Y      ; A3BC= B1 4B       1K
-    STA zp33          ; A3BE= 85 33       .3
-    DEY               ; A3C0= 88          .
-    LDA (zp4B),Y      ; A3C1= B1 4B       1K
-    STA zp32          ; A3C3= 85 32       .2
-    DEY               ; A3C5= 88          .
-    LDA (zp4B),Y      ; A3C6= B1 4B       1K
-    STA zp2E          ; A3C8= 85 2E       ..
-    DEY               ; A3CA= 88          .
-    LDA (zp4B),Y      ; A3CB= B1 4B       1K
-    STA zp30          ; A3CD= 85 30       .0
-    STY zp35          ; A3CF= 84 35       .5
-    STY zp2F          ; A3D1= 84 2F       ./
-    ORA zp2E          ; A3D3= 05 2E       ..
-    ORA zp32          ; A3D5= 05 32       .2
-    ORA zp33          ; A3D7= 05 33       .3
-    ORA zp34          ; A3D9= 05 34       .4
-    BEQ LA3E1         ; A3DB= F0 04       p.
-    LDA zp2E          ; A3DD= A5 2E       %.
-    ORA #$80          ; A3DF= 09 80       ..
+    ldy #$04          ; A3B5= A0 04        .
+    lda (zp4B),Y      ; A3B7= B1 4B       1K
+    sta zp34          ; A3B9= 85 34       .4
+    dey               ; A3BB= 88          .
+    lda (zp4B),Y      ; A3BC= B1 4B       1K
+    sta zp33          ; A3BE= 85 33       .3
+    dey               ; A3C0= 88          .
+    lda (zp4B),Y      ; A3C1= B1 4B       1K
+    sta zp32          ; A3C3= 85 32       .2
+    dey               ; A3C5= 88          .
+    lda (zp4B),Y      ; A3C6= B1 4B       1K
+    sta zp2E          ; A3C8= 85 2E       ..
+    dey               ; A3CA= 88          .
+    lda (zp4B),Y      ; A3CB= B1 4B       1K
+    sta zp30          ; A3CD= 85 30       .0
+    sty zp35          ; A3CF= 84 35       .5
+    sty zp2F          ; A3D1= 84 2F       ./
+    ora zp2E          ; A3D3= 05 2E       ..
+    ora zp32          ; A3D5= 05 32       .2
+    ora zp33          ; A3D7= 05 33       .3
+    ora zp34          ; A3D9= 05 34       .4
+    beq LA3E1         ; A3DB= F0 04       p.
+    lda zp2E          ; A3DD= A5 2E       %.
+    ora #$80          ; A3DF= 09 80       ..
 LA3E1:
-    STA zp31          ; A3E1= 85 31       .1
-    RTS               ; A3E3= 60          `
+    sta zp31          ; A3E1= 85 31       .1
+    rts               ; A3E3= 60          `
 
 ; Convert real to integer
 ; =======================
 LA3E4:
-    JSR LA3FE         ; Convert real to integer
+    jsr LA3FE         ; Convert real to integer
 LA3E7:
-    LDA zp31
-    STA zp2D          ; Copy to Integer Accumulator
-    LDA zp32
-    STA zp2C
-    LDA zp33
-    STA zp2B
-    LDA zp34
-    STA zp2A
-    RTS
+    lda zp31
+    sta zp2D          ; Copy to Integer Accumulator
+    lda zp32
+    sta zp2C
+    lda zp33
+    sta zp2B
+    lda zp34
+    sta zp2A
+    rts
 
 LA3F8:
-    JSR LA21E         ; Copy FloatA to FloatB
-    JMP LA686         ; Set FloatA to zero and return
+    jsr LA21E         ; Copy FloatA to FloatB
+    jmp LA686         ; Set FloatA to zero and return
 
 ; Convert float to integer
 ; ========================
@@ -6340,703 +6340,703 @@ LA3F8:
 ; exponent is $80, indicating that we have got to mantissa * 2^0.
 ;
 LA3FE:
-    LDA zp30
-    BPL LA3F8         ; Exponent<$80, number<1, jump to return 0
-    JSR LA453         ; Set $3B-$42 to zero
-    JSR LA1DA
-    BNE LA43C
-    BEQ LA468
+    lda zp30
+    bpl LA3F8         ; Exponent<$80, number<1, jump to return 0
+    jsr LA453         ; Set $3B-$42 to zero
+    jsr LA1DA
+    bne LA43C
+    beq LA468
 
 LA40C:
-    LDA zp30          ; Get exponent
-    CMP #$A0
-    BCS LA466         ; Exponent is +32, float has been denormalised to an integer
-    CMP #$99
-    BCS LA43C         ; Loop to keep dividing
-    ADC #$08
-    STA zp30          ; Increment exponent by 8
-    LDA zp40
-    STA zp41
-    LDA zp3F
-    STA zp40
-    LDA zp3E
-    STA zp3F
-    LDA zp34
-    STA zp3E
-    LDA zp33
-    STA zp34          ; Divide mantissa by 2^8
-    LDA zp32
-    STA zp33
-    LDA zp31
-    STA zp32
-    LDA #$00
-    STA zp31
-    BEQ LA40C         ; Loop to keep dividing
+    lda zp30          ; Get exponent
+    cmp #$A0
+    bcs LA466         ; Exponent is +32, float has been denormalised to an integer
+    cmp #$99
+    bcs LA43C         ; Loop to keep dividing
+    adc #$08
+    sta zp30          ; Increment exponent by 8
+    lda zp40
+    sta zp41
+    lda zp3F
+    sta zp40
+    lda zp3E
+    sta zp3F
+    lda zp34
+    sta zp3E
+    lda zp33
+    sta zp34          ; Divide mantissa by 2^8
+    lda zp32
+    sta zp33
+    lda zp31
+    sta zp32
+    lda #$00
+    sta zp31
+    beq LA40C         ; Loop to keep dividing
 
 LA43C:
-    LSR zp31
-    ROR zp32
-    ROR zp33
-    ROR zp34
-    ROR zp3E
-    ROR zp3F
-    ROR zp40
-    ROR zp41
-    INC zp30
-    BNE LA40C
+    lsr zp31
+    ror zp32
+    ror zp33
+    ror zp34
+    ror zp3E
+    ror zp3F
+    ror zp40
+    ror zp41
+    inc zp30
+    bne LA40C
 LA450:
-    JMP LA66C
+    jmp LA66C
 
 LA453:
-    LDA #$00
-    STA zp3B
-    STA zp3C
-    STA zp3D
-    STA zp3E
-    STA zp3F
-    STA zp40
-    STA zp41
-    STA zp42
-    RTS
+    lda #$00
+    sta zp3B
+    sta zp3C
+    sta zp3D
+    sta zp3E
+    sta zp3F
+    sta zp40
+    sta zp41
+    sta zp42
+    rts
 
 LA466:
-    BNE LA450         ; Exponent>32, jump to 'Too big' error
+    bne LA450         ; Exponent>32, jump to 'Too big' error
 LA468:
-    LDA zp2E
-    BPL LA485         ; If positive, jump to return
+    lda zp2E
+    bpl LA485         ; If positive, jump to return
 LA46C:
-    SEC               ; Negate the mantissa to get integer
-    LDA #$00
-    SBC zp34
-    STA zp34
-    LDA #$00
-    SBC zp33
-    STA zp33
-    LDA #$00
-    SBC zp32
-    STA zp32
-    LDA #$00
-    SBC zp31
-    STA zp31
+    sec               ; Negate the mantissa to get integer
+    lda #$00
+    sbc zp34
+    sta zp34
+    lda #$00
+    sbc zp33
+    sta zp33
+    lda #$00
+    sbc zp32
+    sta zp32
+    lda #$00
+    sbc zp31
+    sta zp31
 LA485:
-    RTS
+    rts
 
 LA486:
-    LDA zp30
-    BMI LA491
-    LDA #$00
-    STA zp4A
-    JMP LA1DA
+    lda zp30
+    bmi LA491
+    lda #$00
+    sta zp4A
+    jmp LA1DA
 
 LA491:
-    JSR LA3FE
-    LDA zp34
-    STA zp4A
-    JSR LA4E8
-    LDA #$80
-    STA zp30
-    LDX zp31
-    BPL LA4B3
-    EOR zp2E
-    STA zp2E
-    BPL LA4AE
-    INC zp4A
-    JMP LA4B0
+    jsr LA3FE
+    lda zp34
+    sta zp4A
+    jsr LA4E8
+    lda #$80
+    sta zp30
+    ldx zp31
+    bpl LA4B3
+    eor zp2E
+    sta zp2E
+    bpl LA4AE
+    inc zp4A
+    jmp LA4B0
 
 LA4AE:
-    DEC zp4A
+    dec zp4A
 LA4B0:
-    JSR LA46C
+    jsr LA46C
 LA4B3:
-    JMP LA303
+    jmp LA303
 
 LA4B6:
-    INC zp34
-    BNE LA4C6
-    INC zp33
-    BNE LA4C6
-    INC zp32
-    BNE LA4C6
-    INC zp31
-    BEQ LA450
+    inc zp34
+    bne LA4C6
+    inc zp33
+    bne LA4C6
+    inc zp32
+    bne LA4C6
+    inc zp31
+    beq LA450
 LA4C6:
-    RTS
+    rts
 
 LA4C7:
-    JSR LA46C
-    JSR LA4B6
-    JMP LA46C
+    jsr LA46C
+    jsr LA4B6
+    jmp LA46C
 
 LA4D0:
-    JSR LA4FD
-    JMP LAD7E
+    jsr LA4FD
+    jmp LAD7E
 
 LA4D6:
-    JSR LA34E
-    JSR LA38D
+    jsr LA34E
+    jsr LA38D
 LA4DC:
-    LDA zp3B
-    STA zp2E
-    LDA zp3C
-    STA zp2F
-    LDA zp3D
-    STA zp30
+    lda zp3B
+    sta zp2E
+    lda zp3C
+    sta zp2F
+    lda zp3D
+    sta zp30
 LA4E8:
-    LDA zp3E
-    STA zp31
-    LDA zp3F
-    STA zp32
-    LDA zp40
-    STA zp33
-    LDA zp41
-    STA zp34
-    LDA zp42
-    STA zp35
+    lda zp3E
+    sta zp31
+    lda zp3F
+    sta zp32
+    lda zp40
+    sta zp33
+    lda zp41
+    sta zp34
+    lda zp42
+    sta zp35
 LA4FC:
-    RTS
+    rts
 
 LA4FD:
-    JSR LAD7E
+    jsr LAD7E
 LA500:
-    JSR LA34E
-    BEQ LA4FC
+    jsr LA34E
+    beq LA4FC
 LA505:
-    JSR LA50B
-    JMP LA65C
+    jsr LA50B
+    jmp LA65C
 
 LA50B:
-    JSR LA1DA
-    BEQ LA4DC
-    LDY #$00
-    SEC
-    LDA zp30
-    SBC zp3D
-    BEQ LA590
-    BCC LA552
-    CMP #$25
-    BCS LA4FC
-    PHA
-    AND #$38
-    BEQ LA53D
-    LSR
-    LSR
-    LSR
-    TAX
+    jsr LA1DA
+    beq LA4DC
+    ldy #$00
+    sec
+    lda zp30
+    sbc zp3D
+    beq LA590
+    bcc LA552
+    cmp #$25
+    bcs LA4FC
+    pha
+    and #$38
+    beq LA53D
+    lsr
+    lsr
+    lsr
+    tax
 LA528:
-    LDA zp41
-    STA zp42
-    LDA zp40
-    STA zp41
-    LDA zp3F
-    STA zp40
-    LDA zp3E
-    STA zp3F
-    STY zp3E
-    DEX
-    BNE LA528
+    lda zp41
+    sta zp42
+    lda zp40
+    sta zp41
+    lda zp3F
+    sta zp40
+    lda zp3E
+    sta zp3F
+    sty zp3E
+    dex
+    bne LA528
 LA53D:
-    PLA
-    AND #$07
-    BEQ LA590
-    TAX
+    pla
+    and #$07
+    beq LA590
+    tax
 LA543:
-    LSR zp3E
-    ROR zp3F
-    ROR zp40
-    ROR zp41
-    ROR zp42
-    DEX
-    BNE LA543
-    BEQ LA590
+    lsr zp3E
+    ror zp3F
+    ror zp40
+    ror zp41
+    ror zp42
+    dex
+    bne LA543
+    beq LA590
 LA552:
-    SEC
-    LDA zp3D
-    SBC zp30
-    CMP #$25
-    BCS LA4DC
-    PHA
-    AND #$38
-    BEQ LA579
-    LSR
-    LSR
-    LSR
-    TAX
+    sec
+    lda zp3D
+    sbc zp30
+    cmp #$25
+    bcs LA4DC
+    pha
+    and #$38
+    beq LA579
+    lsr
+    lsr
+    lsr
+    tax
 LA564:
-    LDA zp34
-    STA zp35
-    LDA zp33
-    STA zp34
-    LDA zp32
-    STA zp33
-    LDA zp31
-    STA zp32
-    STY zp31
-    DEX
-    BNE LA564
+    lda zp34
+    sta zp35
+    lda zp33
+    sta zp34
+    lda zp32
+    sta zp33
+    lda zp31
+    sta zp32
+    sty zp31
+    dex
+    bne LA564
 LA579:
-    PLA
-    AND #$07
-    BEQ LA58C
-    TAX
+    pla
+    and #$07
+    beq LA58C
+    tax
 LA57F:
-    LSR zp31
-    ROR zp32
-    ROR zp33
-    ROR zp34
-    ROR zp35
-    DEX
-    BNE LA57F
+    lsr zp31
+    ror zp32
+    ror zp33
+    ror zp34
+    ror zp35
+    dex
+    bne LA57F
 LA58C:
-    LDA zp3D
-    STA zp30
+    lda zp3D
+    sta zp30
 LA590:
-    LDA zp2E
-    EOR zp3B
-    BPL LA5DF
-    LDA zp31
-    CMP zp3E
-    BNE LA5B7
-    LDA zp32
-    CMP zp3F
-    BNE LA5B7
-    LDA zp33
-    CMP zp40
-    BNE LA5B7
-    LDA zp34
-    CMP zp41
-    BNE LA5B7
-    LDA zp35
-    CMP zp42
-    BNE LA5B7
-    JMP LA686
+    lda zp2E
+    eor zp3B
+    bpl LA5DF
+    lda zp31
+    cmp zp3E
+    bne LA5B7
+    lda zp32
+    cmp zp3F
+    bne LA5B7
+    lda zp33
+    cmp zp40
+    bne LA5B7
+    lda zp34
+    cmp zp41
+    bne LA5B7
+    lda zp35
+    cmp zp42
+    bne LA5B7
+    jmp LA686
 
 LA5B7:
-    BCS LA5E3
-    SEC
-    LDA zp42
-    SBC zp35
-    STA zp35
-    LDA zp41
-    SBC zp34
-    STA zp34
-    LDA zp40
-    SBC zp33
-    STA zp33
-    LDA zp3F
-    SBC zp32
-    STA zp32
-    LDA zp3E
-    SBC zp31
-    STA zp31
-    LDA zp3B
-    STA zp2E
-    JMP LA303
+    bcs LA5E3
+    sec
+    lda zp42
+    sbc zp35
+    sta zp35
+    lda zp41
+    sbc zp34
+    sta zp34
+    lda zp40
+    sbc zp33
+    sta zp33
+    lda zp3F
+    sbc zp32
+    sta zp32
+    lda zp3E
+    sbc zp31
+    sta zp31
+    lda zp3B
+    sta zp2E
+    jmp LA303
 
 LA5DF:
-    CLC
-    JMP LA208
+    clc
+    jmp LA208
 
 LA5E3:
-    SEC
-    LDA zp35
-    SBC zp42
-    STA zp35
-    LDA zp34
-    SBC zp41
-    STA zp34
-    LDA zp33
-    SBC zp40
-    STA zp33
-    LDA zp32
-    SBC zp3F
-    STA zp32
-    LDA zp31
-    SBC zp3E
-    STA zp31
-    JMP LA303
+    sec
+    lda zp35
+    sbc zp42
+    sta zp35
+    lda zp34
+    sbc zp41
+    sta zp34
+    lda zp33
+    sbc zp40
+    sta zp33
+    lda zp32
+    sbc zp3F
+    sta zp32
+    lda zp31
+    sbc zp3E
+    sta zp31
+    jmp LA303
 
 LA605:
-    RTS
+    rts
 
 LA606:
-    JSR LA1DA
-    BEQ LA605
-    JSR LA34E
-    BNE LA613
-    JMP LA686
+    jsr LA1DA
+    beq LA605
+    jsr LA34E
+    bne LA613
+    jmp LA686
 
 LA613:
-    CLC
-    LDA zp30
-    ADC zp3D
-    BCC LA61D
-    INC zp2F
-    CLC
+    clc
+    lda zp30
+    adc zp3D
+    bcc LA61D
+    inc zp2F
+    clc
 LA61D:
-    SBC #$7F
-    STA zp30
-    BCS LA625
-    DEC zp2F
+    sbc #$7F
+    sta zp30
+    bcs LA625
+    dec zp2F
 LA625:
-    LDX #$05
-    LDY #$00
+    ldx #$05
+    ldy #$00
 LA629:
-    LDA zp30,X
-    STA zp42,X
-    STY zp30,X
-    DEX
-    BNE LA629
-    LDA zp2E
-    EOR zp3B
-    STA zp2E
-    LDY #$20
+    lda zp30,X
+    sta zp42,X
+    sty zp30,X
+    dex
+    bne LA629
+    lda zp2E
+    eor zp3B
+    sta zp2E
+    ldy #$20
 LA63A:
-    LSR zp3E
-    ROR zp3F
-    ROR zp40
-    ROR zp41
-    ROR zp42
-    ASL zp46
-    ROL zp45
-    ROL zp44
-    ROL zp43
-    BCC LA652
-    CLC
-    JSR LA178
+    lsr zp3E
+    ror zp3F
+    ror zp40
+    ror zp41
+    ror zp42
+    asl zp46
+    rol zp45
+    rol zp44
+    rol zp43
+    bcc LA652
+    clc
+    jsr LA178
 LA652:
-    DEY
-    BNE LA63A
-    RTS
+    dey
+    bne LA63A
+    rts
 
 LA656:
-    JSR LA606
+    jsr LA606
 LA659:
-    JSR LA303
+    jsr LA303
 LA65C:
-    LDA zp35
-    CMP #$80
-    BCC LA67C
-    BEQ LA676
-    LDA #$FF
-    JSR LA2A4
-    JMP LA67C
+    lda zp35
+    cmp #$80
+    bcc LA67C
+    beq LA676
+    lda #$FF
+    jsr LA2A4
+    jmp LA67C
 
 LA66C:
-    BRK
+    brk
     dta $14
     .if foldup == 1
         dta 'TOO BIG'
     .else
         dta 'Too big'
     .endif
-    BRK
+    brk
 LA676:
-    LDA zp34
-    ORA #$01
-    STA zp34
+    lda zp34
+    ora #$01
+    sta zp34
 LA67C:
-    LDA #$00
-    STA zp35
-    LDA zp2F
-    BEQ LA698
-    BPL LA66C
+    lda #$00
+    sta zp35
+    lda zp2F
+    beq LA698
+    bpl LA66C
 LA686:
-    LDA #$00
-    STA zp2E
-    STA zp2F
-    STA zp30
-    STA zp31
-    STA zp32
-    STA zp33
-    STA zp34
-    STA zp35
+    lda #$00
+    sta zp2E
+    sta zp2F
+    sta zp30
+    sta zp31
+    sta zp32
+    sta zp33
+    sta zp34
+    sta zp35
 LA698:
-    RTS
+    rts
 
 LA699:
-    JSR LA686
-    LDY #$80
-    STY zp31
-    INY
-    STY zp30
-    TYA
-    RTS
+    jsr LA686
+    ldy #$80
+    sty zp31
+    iny
+    sty zp30
+    tya
+    rts
 
 LA6A5:
-    JSR LA385
-    JSR LA699
-    BNE LA6E7
+    jsr LA385
+    jsr LA699
+    bne LA6E7
 
 LA6AD:
-    JSR LA1DA
-    BEQ LA6BB
-    JSR LA21E
-    JSR LA3B5
-    BNE LA6F1
-    RTS
+    jsr LA1DA
+    beq LA6BB
+    jsr LA21E
+    jsr LA3B5
+    bne LA6F1
+    rts
 
 LA6BB:
-    JMP L99A7
+    jmp L99A7
 
 ; =TAN numeric
 ; ============
 LA6BE:
-    JSR L92FA
-    JSR LA9D3
-    LDA zp4A
-    PHA
-    JSR LA7E9
-    JSR LA38D
-    INC zp4A
-    JSR LA99E
-    JSR LA7E9
-    JSR LA4D6
-    PLA
-    STA zp4A
-    JSR LA99E
-    JSR LA7E9
-    JSR LA6E7
-    LDA #$FF
-    RTS
+    jsr L92FA
+    jsr LA9D3
+    lda zp4A
+    pha
+    jsr LA7E9
+    jsr LA38D
+    inc zp4A
+    jsr LA99E
+    jsr LA7E9
+    jsr LA4D6
+    pla
+    sta zp4A
+    jsr LA99E
+    jsr LA7E9
+    jsr LA6E7
+    lda #$FF
+    rts
 
 LA6E7:
-    JSR LA1DA
-    BEQ LA698
-    JSR LA34E
-    BEQ LA6BB
+    jsr LA1DA
+    beq LA698
+    jsr LA34E
+    beq LA6BB
 LA6F1:
-    LDA zp2E
-    EOR zp3B
-    STA zp2E
-    SEC
-    LDA zp30
-    SBC zp3D
-    BCS LA701
-    DEC zp2F
-    SEC
+    lda zp2E
+    eor zp3B
+    sta zp2E
+    sec
+    lda zp30
+    sbc zp3D
+    bcs LA701
+    dec zp2F
+    sec
 LA701:
-    ADC #$80
-    STA zp30
-    BCC LA70A
-    INC zp2F
-    CLC
+    adc #$80
+    sta zp30
+    bcc LA70A
+    inc zp2F
+    clc
 LA70A:
-    LDX #$20
+    ldx #$20
 LA70C:
-    BCS LA726
-    LDA zp31
-    CMP zp3E
-    BNE LA724
-    LDA zp32
-    CMP zp3F
-    BNE LA724
-    LDA zp33
-    CMP zp40
-    BNE LA724
-    LDA zp34
-    CMP zp41
+    bcs LA726
+    lda zp31
+    cmp zp3E
+    bne LA724
+    lda zp32
+    cmp zp3F
+    bne LA724
+    lda zp33
+    cmp zp40
+    bne LA724
+    lda zp34
+    cmp zp41
 LA724:
-    BCC LA73F
+    bcc LA73F
 LA726:
-    LDA zp34
-    SBC zp41
-    STA zp34
-    LDA zp33
-    SBC zp40
-    STA zp33
-    LDA zp32
-    SBC zp3F
-    STA zp32
-    LDA zp31
-    SBC zp3E
-    STA zp31
-    SEC
+    lda zp34
+    sbc zp41
+    sta zp34
+    lda zp33
+    sbc zp40
+    sta zp33
+    lda zp32
+    sbc zp3F
+    sta zp32
+    lda zp31
+    sbc zp3E
+    sta zp31
+    sec
 LA73F:
-    ROL zp46
-    ROL zp45
-    ROL zp44
-    ROL zp43
-    ASL zp34
-    ROL zp33
-    ROL zp32
-    ROL zp31
-    DEX
-    BNE LA70C
-    LDX #$07
+    rol zp46
+    rol zp45
+    rol zp44
+    rol zp43
+    asl zp34
+    rol zp33
+    rol zp32
+    rol zp31
+    dex
+    bne LA70C
+    ldx #$07
 LA754:
-    BCS LA76E
-    LDA zp31
-    CMP zp3E
-    BNE LA76C
-    LDA zp32
-    CMP zp3F
-    BNE LA76C
-    LDA zp33
-    CMP zp40
-    BNE LA76C
-    LDA zp34
-    CMP zp41
+    bcs LA76E
+    lda zp31
+    cmp zp3E
+    bne LA76C
+    lda zp32
+    cmp zp3F
+    bne LA76C
+    lda zp33
+    cmp zp40
+    bne LA76C
+    lda zp34
+    cmp zp41
 LA76C:
-    BCC LA787
+    bcc LA787
 LA76E:
-    LDA zp34
-    SBC zp41
-    STA zp34
-    LDA zp33
-    SBC zp40
-    STA zp33
-    LDA zp32
-    SBC zp3F
-    STA zp32
-    LDA zp31
-    SBC zp3E
-    STA zp31
-    SEC
+    lda zp34
+    sbc zp41
+    sta zp34
+    lda zp33
+    sbc zp40
+    sta zp33
+    lda zp32
+    sbc zp3F
+    sta zp32
+    lda zp31
+    sbc zp3E
+    sta zp31
+    sec
 LA787:
-    ROL zp35
-    ASL zp34
-    ROL zp33
-    ROL zp32
-    ROL zp31
-    DEX
-    BNE LA754
-    ASL zp35
-    LDA zp46
-    STA zp34
-    LDA zp45
-    STA zp33
-    LDA zp44
-    STA zp32
-    LDA zp43
-    STA zp31
-    JMP LA659
+    rol zp35
+    asl zp34
+    rol zp33
+    rol zp32
+    rol zp31
+    dex
+    bne LA754
+    asl zp35
+    lda zp46
+    sta zp34
+    lda zp45
+    sta zp33
+    lda zp44
+    sta zp32
+    lda zp43
+    sta zp31
+    jmp LA659
 
 LA7A9:
-    BRK
+    brk
     dta $15
     .if foldup == 1
         dta '-VE ROOT'
     .else
         dta '-ve root'
     .endif
-    BRK
+    brk
 
 ; =SQR numeric
 ; ============
 LA7B4:
-    JSR L92FA
+    jsr L92FA
 LA7B7:
-    JSR LA1DA
-    BEQ LA7E6
-    BMI LA7A9
-    JSR LA385
-    LDA zp30
-    LSR
-    ADC #$40
-    STA zp30
-    LDA #$05
-    STA zp4A
-    JSR LA7ED
+    jsr LA1DA
+    beq LA7E6
+    bmi LA7A9
+    jsr LA385
+    lda zp30
+    lsr
+    adc #$40
+    sta zp30
+    lda #$05
+    sta zp4A
+    jsr LA7ED
 LA7CF:
-    JSR LA38D
-    LDA #$6C
-    STA zp4B
-    JSR LA6AD
-    LDA #$71
-    STA zp4B
-    JSR LA500
-    DEC zp30
-    DEC zp4A
-    BNE LA7CF
+    jsr LA38D
+    lda #$6C
+    sta zp4B
+    jsr LA6AD
+    lda #$71
+    sta zp4B
+    jsr LA500
+    dec zp30
+    dec zp4A
+    bne LA7CF
 LA7E6:
-    LDA #$FF
-    RTS
+    lda #$FF
+    rts
 
 ; Point $4B/C to a floating point temp
 ; ------------------------------------
 LA7E9:
-    LDA #$7B
-    BNE LA7F7         ; ws+$047B-7F FPTEMP4
+    lda #$7B
+    bne LA7F7         ; ws+$047B-7F FPTEMP4
 LA7ED:
-    LDA #$71
-    BNE LA7F7         ; ws+$0471-75 FPTEMP2
+    lda #$71
+    bne LA7F7         ; ws+$0471-75 FPTEMP2
 LA7F1:
-    LDA #$76
-    BNE LA7F7         ; ws+$0476-7A FPTEMP3
+    lda #$76
+    bne LA7F7         ; ws+$0476-7A FPTEMP3
 LA7F5:
-    LDA #$6C          ; ws+$046C-70 FPTEMP1
+    lda #$6C          ; ws+$046C-70 FPTEMP1
 
 
 LA7F7:
-    STA zp4B          ; $4B/C=>FPTEMP
-    LDA #$04+(ws/256)
-    STA zp4C
-    RTS
+    sta zp4B          ; $4B/C=>FPTEMP
+    lda #$04+(ws/256)
+    sta zp4C
+    rts
 
 ; =LN numeric
 ; ===========
 LA7FE:
-    JSR L92FA
+    jsr L92FA
 LA801:
-    JSR LA1DA
-    BEQ LA808
-    BPL LA814
+    jsr LA1DA
+    beq LA808
+    bpl LA814
 LA808:
     .if foldup == 0
-        BRK
+        brk
         dta $16
         dta 'Log range'
-        BRK
+        brk
     .elseif foldup != 0
-        BRK
+        brk
         dta $16
         dta tknLOG
         dta ' RANGE'
-        BRK
+        brk
     .endif
 LA814:
-    JSR LA453
-    LDY #$80
-    STY zp3B
-    STY zp3E
-    INY
-    STY zp3D
-    LDX zp30
-    BEQ LA82A
-    LDA zp31
-    CMP #$B5
-    BCC LA82C
+    jsr LA453
+    ldy #$80
+    sty zp3B
+    sty zp3E
+    iny
+    sty zp3D
+    ldx zp30
+    beq LA82A
+    lda zp31
+    cmp #$B5
+    bcc LA82C
 LA82A:
-    INX
-    DEY
+    inx
+    dey
 LA82C:
-    TXA
-    PHA
-    STY zp30
-    JSR LA505
-    LDA #$7B
-    JSR LA387
-    LDA #<FLOGTC
-    LDY #>FLOGTC
-    JSR LA897
-    JSR LA7E9
-    JSR LA656
-    JSR LA656
-    JSR LA500
-    JSR LA385
-    PLA
-    SEC
-    SBC #$81
-    JSR LA2ED
-    LDA #<LOGTWO
-    STA zp4B
-    LDA #>LOGTWO
-    STA zp4C
-    JSR LA656
-    JSR LA7F5
-    JSR LA500
-    LDA #$FF
-    RTS
+    txa
+    pha
+    sty zp30
+    jsr LA505
+    lda #$7B
+    jsr LA387
+    lda #<FLOGTC
+    ldy #>FLOGTC
+    jsr LA897
+    jsr LA7E9
+    jsr LA656
+    jsr LA656
+    jsr LA500
+    jsr LA385
+    pla
+    sec
+    sbc #$81
+    jsr LA2ED
+    lda #<LOGTWO
+    sta zp4B
+    lda #>LOGTWO
+    sta zp4C
+    jsr LA656
+    jsr LA7F5
+    jsr LA500
+    lda #$FF
+    rts
 
     .if version < 3
 RPLN10:
@@ -7058,114 +7058,114 @@ FLOGTC:
 
 LA897:
     sta zp4D
-    STY zp4E
-    JSR LA385
-    LDY #$00
-    LDA (zp4D),Y
-    STA zp48
-    INC zp4D
-    BNE LA8AA
-    INC zp4E
+    sty zp4E
+    jsr LA385
+    ldy #$00
+    lda (zp4D),Y
+    sta zp48
+    inc zp4D
+    bne LA8AA
+    inc zp4E
 LA8AA:
-    LDA zp4D
-    STA zp4B
-    LDA zp4E
-    STA zp4C
-    JSR LA3B5
+    lda zp4D
+    sta zp4B
+    lda zp4E
+    sta zp4C
+    jsr LA3B5
 LA8B5:
-    JSR LA7F5
-    JSR LA6AD
-    CLC
-    LDA zp4D
-    ADC #$05
-    STA zp4D
-    STA zp4B
-    LDA zp4E
-    ADC #$00
-    STA zp4E
-    STA zp4C
-    JSR LA500
-    DEC zp48
-    BNE LA8B5
-    RTS
+    jsr LA7F5
+    jsr LA6AD
+    clc
+    lda zp4D
+    adc #$05
+    sta zp4D
+    sta zp4B
+    lda zp4E
+    adc #$00
+    sta zp4E
+    sta zp4C
+    jsr LA500
+    dec zp48
+    bne LA8B5
+    rts
 
 ; =ACS numeric
 ; ============
 LA8D4:
-    JSR LA8DA
-    JMP LA927
+    jsr LA8DA
+    jmp LA927
 
 ; =ASN numeric
 ; ============
 LA8DA:
-    JSR L92FA
-    JSR LA1DA
-    BPL LA8EA
-    LSR zp2E
-    JSR LA8EA
-    JMP LA916
+    jsr L92FA
+    jsr LA1DA
+    bpl LA8EA
+    lsr zp2E
+    jsr LA8EA
+    jmp LA916
 
 LA8EA:
-    JSR LA381
-    JSR LA9B1
-    JSR LA1DA
-    BEQ LA8FE
-    JSR LA7F1
-    JSR LA6AD
-    JMP LA90A
+    jsr LA381
+    jsr LA9B1
+    jsr LA1DA
+    beq LA8FE
+    jsr LA7F1
+    jsr LA6AD
+    jmp LA90A
 
 LA8FE:
-    JSR LAA55
-    JSR LA3B5
+    jsr LAA55
+    jsr LA3B5
 LA904:
-    LDA #$FF
-    RTS
+    lda #$FF
+    rts
 
 ; =ATN numeric
 ; ============
 LA907:
-    JSR L92FA
+    jsr L92FA
 LA90A:
-    JSR LA1DA
-    BEQ LA904
-    BPL LA91B
-    LSR zp2E
-    JSR LA91B
+    jsr LA1DA
+    beq LA904
+    bpl LA91B
+    lsr zp2E
+    jsr LA91B
 LA916:
-    LDA #$80
-    STA zp2E
-    RTS
+    lda #$80
+    sta zp2E
+    rts
 
 LA91B:
-    LDA zp30
-    CMP #$81
-    BCC LA936
-    JSR LA6A5
-    JSR LA936
+    lda zp30
+    cmp #$81
+    bcc LA936
+    jsr LA6A5
+    jsr LA936
 LA927:
-    JSR LAA48
-    JSR LA500
-    JSR LAA4C
-    JSR LA500
-    JMP LAD7E
+    jsr LAA48
+    jsr LA500
+    jsr LAA4C
+    jsr LA500
+    jmp LAD7E
 
 LA936:
-    LDA zp30
-    CMP #$73
-    BCC LA904
-    JSR LA381
-    JSR LA453
-    LDA #$80
-    STA zp3D
-    STA zp3E
-    STA zp3B
-    JSR LA505
-    LDA #<FATANC
-    LDY #>FATANC
-    JSR LA897
-    JSR LAAD1
-    LDA #$FF
-    RTS
+    lda zp30
+    cmp #$73
+    bcc LA904
+    jsr LA381
+    jsr LA453
+    lda #$80
+    sta zp3D
+    sta zp3E
+    sta zp3B
+    jsr LA505
+    lda #<FATANC
+    ldy #>FATANC
+    jsr LA897
+    jsr LAAD1
+    lda #$FF
+    rts
 
 FATANC:
     dta $09                         ; Length - 1
@@ -7185,117 +7185,117 @@ FATANC:
 ; =COS numeric
 ; ============
 LA98D:
-    JSR L92FA         ; Evaluate float
-    JSR LA9D3
-    INC zp4A
-    JMP LA99E
+    jsr L92FA         ; Evaluate float
+    jsr LA9D3
+    inc zp4A
+    jmp LA99E
 
 ; =SIN numeric
 ; ============
 LA998:
-    JSR L92FA
-    JSR LA9D3
+    jsr L92FA
+    jsr LA9D3
 LA99E:
-    LDA zp4A
-    AND #$02
-    BEQ LA9AA
-    JSR LA9AA
-    JMP LAD7E
+    lda zp4A
+    and #$02
+    beq LA9AA
+    jsr LA9AA
+    jmp LAD7E
 
 LA9AA:
-    LSR zp4A
-    BCC LA9C3
-    JSR LA9C3
+    lsr zp4A
+    bcc LA9C3
+    jsr LA9C3
 LA9B1:
-    JSR LA385
-    JSR LA656
-    JSR LA38D
-    JSR LA699
-    JSR LA4D0
-    JMP LA7B7
+    jsr LA385
+    jsr LA656
+    jsr LA38D
+    jsr LA699
+    jsr LA4D0
+    jmp LA7B7
 
 LA9C3:
-    JSR LA381
-    JSR LA656
-    LDA #<FSINC
-    LDY #>FSINC
-    JSR LA897
-    JMP LAAD1
+    jsr LA381
+    jsr LA656
+    lda #<FSINC
+    ldy #>FSINC
+    jsr LA897
+    jmp LAAD1
 
 LA9D3:
-    LDA zp30
-    CMP #$98
-    BCS LAA38
-    JSR LA385
-    JSR LAA55
-    JSR LA34E
-    LDA zp2E
-    STA zp3B
-    DEC zp3D
-    JSR LA505
-    JSR LA6E7
-    JSR LA3FE
-    LDA zp34
-    STA zp4A
-    ORA zp33
-    ORA zp32
-    ORA zp31
-    BEQ LAA35
-    LDA #$A0
-    STA zp30
-    LDY #$00
-    STY zp35
-    LDA zp31
-    STA zp2E
-    BPL LAA0E
-    JSR LA46C
+    lda zp30
+    cmp #$98
+    bcs LAA38
+    jsr LA385
+    jsr LAA55
+    jsr LA34E
+    lda zp2E
+    sta zp3B
+    dec zp3D
+    jsr LA505
+    jsr LA6E7
+    jsr LA3FE
+    lda zp34
+    sta zp4A
+    ora zp33
+    ora zp32
+    ora zp31
+    beq LAA35
+    lda #$A0
+    sta zp30
+    ldy #$00
+    sty zp35
+    lda zp31
+    sta zp2E
+    bpl LAA0E
+    jsr LA46C
 LAA0E:
-    JSR LA303
-    JSR LA37D
-    JSR LAA48
-    JSR LA656
-    JSR LA7F5
-    JSR LA500
-    JSR LA38D
-    JSR LA7ED
-    JSR LA3B5
-    JSR LAA4C
-    JSR LA656
-    JSR LA7F5
-    JMP LA500
+    jsr LA303
+    jsr LA37D
+    jsr LAA48
+    jsr LA656
+    jsr LA7F5
+    jsr LA500
+    jsr LA38D
+    jsr LA7ED
+    jsr LA3B5
+    jsr LAA4C
+    jsr LA656
+    jsr LA7F5
+    jmp LA500
 
 LAA35:
-    JMP LA3B2
+    jmp LA3B2
 
 LAA38:
-    BRK
+    brk
     dta $17
     .if foldup == 1
         dta 'ACCURACY LOST'
     .else
         dta 'Accuracy lost'
     .endif
-    BRK
+    brk
 LAA48:
-    LDA #<HPIHI
+    lda #<HPIHI
     .if (HPIHI & 0xff) == 0
         .error "BNE as BRA will not be taken!"
     .endif
-    BNE LAA4E
+    bne LAA4E
 LAA4C:
-    LDA #<HPILO
+    lda #<HPILO
 LAA4E:
-    STA zp4B
-    LDA #>HPIHI
-    STA zp4C
-    RTS
+    sta zp4B
+    lda #>HPIHI
+    sta zp4C
+    rts
 
 LAA55:
-    LDA #<HALFPI
+    lda #<HALFPI
     .if (HALFPI & 0xff) == 0
         .error "BNE as BRA will not be taken!"
     .endif
-    BNE LAA4E         ; AA57= D0 F5       Pu
+    bne LAA4E         ; AA57= D0 F5       Pu
 
 ; HPIHI + HPILO = -PI/2
 
@@ -7328,59 +7328,59 @@ FSINC:
 ; = EXP numeric
 ; =============
 LAA91:
-    JSR L92FA
+    jsr L92FA
 LAA94:
-    LDA zp30
-    CMP #$87
-    BCC LAAB8
-    BNE LAAA2
+    lda zp30
+    cmp #$87
+    bcc LAAB8
+    bne LAAA2
 LAA9C:
-    LDY zp31
-    CPY #$B3
-    BCC LAAB8
+    ldy zp31
+    cpy #$B3
+    bcc LAAB8
 LAAA2:
-    LDA zp2E
-    BPL LAAAC
-    JSR LA686
-    LDA #$FF
-    RTS
+    lda zp2E
+    bpl LAAAC
+    jsr LA686
+    lda #$FF
+    rts
 
 LAAAC:
     .if foldup == 0
-        BRK
+        brk
         dta $18
         dta 'Exp range'
-        BRK
+        brk
     .elseif foldup != 0
-        BRK
+        brk
         dta $18
         dta tknEXP
         dta ' RANGE'
-        BRK
+        brk
     .endif
 LAAB8:
-    JSR LA486
-    JSR LAADA
-    JSR LA381
-    LDA #<FNUME
-    STA zp4B
-    LDA #>FNUME
-    STA zp4C
-    JSR LA3B5
-    LDA zp4A
-    JSR LAB12
+    jsr LA486
+    jsr LAADA
+    jsr LA381
+    lda #<FNUME
+    sta zp4B
+    lda #>FNUME
+    sta zp4C
+    jsr LA3B5
+    lda zp4A
+    jsr LAB12
 LAAD1:
-    JSR LA7F1
-    JSR LA656
-    LDA #$FF
-    RTS
+    jsr LA7F1
+    jsr LA656
+    lda #$FF
+    rts
 
 LAADA:
-    LDA #<FEXPCO
-    LDY #>FEXPCO
-    JSR LA897
-    LDA #$FF
-    RTS
+    lda #<FEXPCO
+    ldy #>FEXPCO
+    jsr LA897
+    lda #$FF
+    rts
 
 FNUME:
     dta $82, $2d, $f8, $54, $58     ; 2.71828183 = e
@@ -7399,36 +7399,36 @@ FEXPCO:
 ; ----------------------------------------------------------------------------
 
 LAB12:
-    TAX
-    BPL LAB1E
-    DEX
-    TXA
-    EOR #$FF
-    PHA
-    JSR LA6A5
-    PLA
+    tax
+    bpl LAB1E
+    dex
+    txa
+    eor #$FF
+    pha
+    jsr LA6A5
+    pla
 LAB1E:
-    PHA
-    JSR LA385
-    JSR LA699
+    pha
+    jsr LA385
+    jsr LA699
 LAB25:
-    PLA
-    BEQ LAB32
-    SEC
-    SBC #$01
-    PHA
-    JSR LA656
-    JMP LAB25
+    pla
+    beq LAB32
+    sec
+    sbc #$01
+    pha
+    jsr LA656
+    jmp LAB25
 
 LAB32:
-    RTS
+    rts
 
 ; =ADVAL numeric - Call OSBYTE to read buffer/device
 ; ==================================================
 LAB33:
-    JSR L92E3         ; Evaluate integer
-    LDX zp2A
-    LDA #$80          ; X=low byte, A=$80 for ADVAL
+    jsr L92E3         ; Evaluate integer
+    ldx zp2A
+    lda #$80          ; X=low byte, A=$80 for ADVAL
 ; 
 ; WRONG in original disassembly
 ;    .if 0            ; FALSE
@@ -7444,738 +7444,738 @@ LAB33:
             jsr OSBYTE
         .endif
     .endif
-    TXA
+    txa
     .if version < 3
-        JMP LAEEA
+        jmp LAEEA
     .elseif version >= 3
-        JMP XAED5
+        jmp XAED5
     .endif
 
     .if version < 3
 ; =POINT(numeric, numeric)
 ; ========================
 LAB41:
-        JSR L92DD
-        JSR LBD94
-        JSR L8AAE
-        JSR LAE56
-        JSR L92F0
-        LDA zp2A
-        PHA
-        LDA zp2B
-        PHA
-        JSR LBDEA
-        PLA
-        STA zp2D
-        PLA
-        STA zp2C
-        LDX #$2A
-        LDA #$09
-        JSR OSWORD
-        LDA zp2E
-        BMI LAB9D
-        JMP LAED8
+        jsr L92DD
+        jsr LBD94
+        jsr L8AAE
+        jsr LAE56
+        jsr L92F0
+        lda zp2A
+        pha
+        lda zp2B
+        pha
+        jsr LBDEA
+        pla
+        sta zp2D
+        pla
+        sta zp2C
+        ldx #$2A
+        lda #$09
+        jsr OSWORD
+        lda zp2E
+        bmi LAB9D
+        jmp LAED8
     .elseif version >= 3
 ; =NOT
 ; ====
 XAB5B:
-        JSR L92E3
+        jsr L92E3
 XAB5E:
-        LDX #$03
+        ldx #$03
 XAB60:
-        LDA zp2A,X
-        EOR #$FF
-        STA zp2A,X
-        DEX
-        BPL XAB60
-        LDA #$40
-        RTS
+        lda zp2A,X
+        eor #$FF
+        sta zp2A,X
+        dex
+        bpl XAB60
+        lda #$40
+        rts
     .endif
 
 ; =POS
 ; ====
 LAB6D:
     .if version < 3
-        LDA #$86
-        JSR OSBYTE
-        TXA
-        JMP LAED8
+        lda #$86
+        jsr OSBYTE
+        txa
+        jmp LAED8
     .elseif version >= 3
-        JSR LAB76
-        STX zp2A
-        RTS
+        jsr LAB76
+        stx zp2A
+        rts
     .endif
 
 ; =VPOS
 ; =====
 LAB76:
-    LDA #$86
-    JSR OSBYTE
-    TYA
+    lda #$86
+    jsr OSBYTE
+    tya
     .if version < 3
-        JMP LAED8
+        jmp LAED8
     .elseif version >= 3
-        JMP XAED3
+        jmp XAED3
     .endif
 
     .if version < 3
 LAB7F:
-        JSR LA1DA
-        BEQ LABA2
-        BPL LABA0
-        BMI LAB9D
+        jsr LA1DA
+        beq LABA2
+        bpl LABA0
+        bmi LAB9D
      
 ; =SGN numeric
 ; ============
 LAB88:
-        JSR LADEC
-        BEQ LABE6
-        BMI LAB7F
-        LDA zp2D
-        ORA zp2C
-        ORA zp2B
-        ORA zp2A
-        BEQ LABA5
-        LDA zp2D
-        BPL LABA0
+        jsr LADEC
+        beq LABE6
+        bmi LAB7F
+        lda zp2D
+        ora zp2C
+        ora zp2B
+        ora zp2A
+        beq LABA5
+        lda zp2D
+        bpl LABA0
 LAB9D:
-        JMP LACC4
+        jmp LACC4
 
 LABA0:
-        LDA #$01
+        lda #$01
 LABA2:
-        JMP LAED8
+        jmp LAED8
 
 LABA5:
-        LDA #$40
-        RTS
+        lda #$40
+        rts
     .endif
 
 ; =LOG numeric
 ; ============
 LABA8:
-    JSR LA7FE
-    LDY #<RPLN10
+    jsr LA7FE
+    ldy #<RPLN10
     .if version < 3
-        LDA #>RPLN10
+        lda #>RPLN10
     .endif
-    BNE LABB8
+    bne LABB8
 
 ; =RAD numeric
 ; ============
 LABB1:
-    JSR L92FA
-    LDY #<FPIs18
+    jsr L92FA
+    ldy #<FPIs18
     .if version < 3
-        LDA #>FPIs18
+        lda #>FPIs18
     .endif
 LABB8:
     .if version >= 3
-        LDA #>FPIs18       ; identical to version < 3
+        lda #>FPIs18       ; identical to version < 3
     .endif
-    STY zp4B
-    STA zp4C
-    JSR LA656
-    LDA #$FF
-    RTS
+    sty zp4B
+    sta zp4C
+    jsr LA656
+    lda #$FF
+    rts
 
 ; =DEG numeric
 ; ============
 LABC2:
-    JSR L92FA
-    LDY #<F180sP
+    jsr L92FA
+    ldy #<F180sP
     .if version < 3
-        LDA #>F180sP
+        lda #>F180sP
     .endif
-    BNE LABB8
+    bne LABB8
 
 ; =PI
 ; ===
 LABCB:
-    JSR LA8FE
-    INC zp30
-    TAY
-    RTS
+    jsr LA8FE
+    inc zp30
+    tay
+    rts
 
 ; =USR numeric
 ; ============
 LABD2:
-    JSR L92E3         ; Evaluate integer
-    JSR L8F1E         ; Set up registers and call code at IntA
-    STA zp2A
-    STX zp2B          ; Store returned A,X in IntA
-    STY zp2C          ; Store returned Y
-    PHP
-    PLA
-    STA zp2D          ; Store returned flags in IntA
-    CLD               ; Ensure in binary mode on return
-    LDA #$40
-    RTS               ; Return INTEGER
+    jsr L92E3         ; Evaluate integer
+    jsr L8F1E         ; Set up registers and call code at IntA
+    sta zp2A
+    stx zp2B          ; Store returned A,X in IntA
+    sty zp2C          ; Store returned Y
+    php
+    pla
+    sta zp2D          ; Store returned flags in IntA
+    cld               ; Ensure in binary mode on return
+    lda #$40
+    rts               ; Return INTEGER
 
     .if version < 3
 LABE6:
-        JMP L8C0E
+        jmp L8C0E
     .endif
 
 ; =EVAL string$ - Tokenise and evaluate expression
 ; ================================================
 LABE9:
-    JSR LADEC         ; Evaluate value
+    jsr LADEC         ; Evaluate value
     .if version < 3
-        BNE LABE6
+        bne LABE6
     .elseif version >= 3
-        BNE LAC2C
+        bne LAC2C
     .endif
-    INC zp36
-    LDY zp36          ; Increment string length to add a <cr>
-    LDA #$0D
-    STA ws+$05FF,Y    ; Put in terminating <cr>
-    JSR LBDB2         ; Stack the string
+    inc zp36
+    ldy zp36          ; Increment string length to add a <cr>
+    lda #$0D
+    sta ws+$05FF,Y    ; Put in terminating <cr>
+    jsr LBDB2         ; Stack the string
                       ; String has to be stacked as otherwise would
                       ;  be overwritten by any string operations
                       ;  called by Evaluator
-    LDA zp19
-    PHA               ; Save PTRB
-    LDA zp1A
-    PHA
-    LDA zp1B
-    PHA
-    LDY zp04
-    LDX zp05          ; YX=>stackbottom (wrong way around)
-    INY               ; Step over length byte
-    STY zp19          ; PTRB=>stacked string
-    STY zp37          ; GPTR=>stacked string
-    BNE LAC0F
-    INX               ; Inc high byte if next page
+    lda zp19
+    pha               ; Save PTRB
+    lda zp1A
+    pha
+    lda zp1B
+    pha
+    ldy zp04
+    ldx zp05          ; YX=>stackbottom (wrong way around)
+    iny               ; Step over length byte
+    sty zp19          ; PTRB=>stacked string
+    sty zp37          ; GPTR=>stacked string
+    bne LAC0F
+    inx               ; Inc high byte if next page
 LAC0F:
-    STX zp1A
-    STX zp38          ; PTRB and GPTR high bytes
-    LDY #$FF
-    STY zp3B
-    INY
-    STY zp1B          ; Point PTRB offset back to start
-    JSR L8955         ; Tokenise string on stack at GPTR
-    JSR L9B29         ; Call expression evaluator
-    JSR LBDDC         ; Drop string from stack
+    stx zp1A
+    stx zp38          ; PTRB and GPTR high bytes
+    ldy #$FF
+    sty zp3B
+    iny
+    sty zp1B          ; Point PTRB offset back to start
+    jsr L8955         ; Tokenise string on stack at GPTR
+    jsr L9B29         ; Call expression evaluator
+    jsr LBDDC         ; Drop string from stack
 LAC23:
-    PLA
-    STA zp1B          ; Restore PTRB
-    PLA
-    STA zp1A
-    PLA
-    STA zp19
-    LDA zp27          ; Get expression return value
-    RTS               ; And return
+    pla
+    sta zp1B          ; Restore PTRB
+    pla
+    sta zp1A
+    pla
+    sta zp19
+    lda zp27          ; Get expression return value
+    rts               ; And return
 
     .if version >= 3
 LAC2C:
-        JMP L8C0E
+        jmp L8C0E
     .endif
 
 ; =VAL numeric
 ; ============
 LAC2F:
-    JSR LADEC
+    jsr LADEC
     .if version < 3
-        BNE LAC9B
+        bne LAC9B
     .elseif version >= 3
-        BNE LAC2C
+        bne LAC2C
     .endif
 LAC34:
-    LDY zp36
-    LDA #$00
-    STA ws+$0600,Y
-    LDA zp19
-    PHA
-    LDA zp1A
-    PHA
-    LDA zp1B
-    PHA
-    LDA #$00
-    STA zp1B
+    ldy zp36
+    lda #$00
+    sta ws+$0600,Y
+    lda zp19
+    pha
+    lda zp1A
+    pha
+    lda zp1B
+    pha
+    lda #$00
+    sta zp1B
     .if version < 3
-        LDA #$00
+        lda #$00
     .endif
-    STA zp19
-    LDA #$06+(ws/256)
-    STA zp1A
-    JSR L8A8C
-    CMP #$2D
-    BEQ LAC66
-    CMP #$2B
-    BNE LAC5E
-    JSR L8A8C
+    sta zp19
+    lda #$06+(ws/256)
+    sta zp1A
+    jsr L8A8C
+    cmp #$2D
+    beq LAC66
+    cmp #$2B
+    bne LAC5E
+    jsr L8A8C
 LAC5E:
-    DEC zp1B
-    JSR LA07B
-    JMP LAC73
+    dec zp1B
+    jsr LA07B
+    jmp LAC73
 
 LAC66:
-    JSR L8A8C
-    DEC zp1B
-    JSR LA07B
-    BCC LAC73
-    JSR LAD8F
+    jsr L8A8C
+    dec zp1B
+    jsr LA07B
+    bcc LAC73
+    jsr LAD8F
 LAC73:
-    STA zp27
-    JMP LAC23
+    sta zp27
+    jmp LAC23
 
 ; =INT numeric
 ; ============
 LAC78:
-    JSR LADEC
+    jsr LADEC
     .if version < 3
-        BEQ LAC9B
+        beq LAC9B
     .elseif version >= 3
-        BEQ XAC81
+        beq XAC81
     .endif
-    BPL LAC9A
-    LDA zp2E
-    PHP
-    JSR LA3FE
-    PLP
-    BPL LAC95
-    LDA zp3E
-    ORA zp3F
-    ORA zp40
-    ORA zp41
-    BEQ LAC95
-    JSR LA4C7
+    bpl LAC9A
+    lda zp2E
+    php
+    jsr LA3FE
+    plp
+    bpl LAC95
+    lda zp3E
+    ora zp3F
+    ora zp40
+    ora zp41
+    beq LAC95
+    jsr LA4C7
 LAC95:
-    JSR LA3E7
-    LDA #$40
+    jsr LA3E7
+    lda #$40
 LAC9A:
-    RTS
+    rts
 
     .if version < 3
 LAC9B:
-        JMP L8C0E
+        jmp L8C0E
     .endif
 
 ; =ASC string$
 ; ============
 LAC9E:
-    JSR LADEC
+    jsr LADEC
     .if version < 3
-        BNE LAC9B
+        bne LAC9B
     .elseif version >= 3
-        BNE XAC81
+        bne XAC81
     .endif
-    LDA zp36
-    BEQ LACC4
-    LDA ws+$0600
+    lda zp36
+    beq LACC4
+    lda ws+$0600
 LACAA:
     .if version < 3
-        JMP LAED8
+        jmp LAED8
     .elseif version >= 3
-        JMP XAED3
+        jmp XAED3
     .endif
 
 ; =INKEY numeric
 ; ==============
 LACAD:
-    JSR LAFAD
+    jsr LAFAD
     .if version < 3
-        CPY #$00
+        cpy #$00
     .elseif version >= 3
-        TYA     
+        tya     
     .endif
-    BNE LACC4
-    TXA
+    bne LACC4
+    txa
     .if version < 3
-        JMP LAEEA
+        jmp LAEEA
     .elseif version >= 3
-        JMP XAED5
+        jmp XAED5
     .endif
 
     .if version >= 3
 XAC81:
-        JMP L8C0E
+        jmp L8C0E
     .endif
 
 ; =EOF#numeric
 ; ============
 LACB8:
-    JSR LBFB5
-    TAX
-    LDA #$7F
+    jsr LBFB5
+    tax
+    lda #$7F
     .ifdef MOS_BBC
-        JSR OSBYTE
+        jsr OSBYTE
     .endif
-    TXA
+    txa
     .if version < 3
-        BEQ LACAA
+        beq LACAA
     .elseif version >= 3
-        BEQ LACC6
+        beq LACC6
     .endif
 
 ; =TRUE
 ; =====
 LACC4:
     .if version < 3
-        LDA #$FF
+        lda #$FF
     .elseif version >= 3
-        LDX #$FF
+        ldx #$FF
     .endif
 LACC6:
     .if version < 3
-        STA zp2A
-        STA zp2B
-        STA zp2C
-        STA zp2D
+        sta zp2A
+        sta zp2B
+        sta zp2C
+        sta zp2D
     .elseif version >= 3
-        STX zp2A
-        STX zp2B
-        STX zp2C
-        STX zp2D
+        stx zp2A
+        stx zp2B
+        stx zp2C
+        stx zp2D
     .endif
 LACC8:
-    LDA #$40
-    RTS
+    lda #$40
+    rts
 
     .if version >= 3
 ; =FALSE
 ; ======
 LACCD:
-        LDX #$00
-        BEQ LACC6
+        ldx #$00
+        beq LACC6
 
 XACA1:
-        JSR LA1DA
-        BEQ LACCD
-        BPL XACBF
-        BMI LACC4
+        jsr LA1DA
+        beq LACCD
+        bpl XACBF
+        bmi LACC4
      
 ; =SGN numeric
 ; ============
 XACAA:
-        JSR LADEC
-        BEQ XAC81
-        BMI XACA1
-        LDA zp2D
-        ORA zp2C
-        ORA zp2B
-        ORA zp2A
-        BEQ LACC8
-        LDA zp2D
-        BMI LACC4
+        jsr LADEC
+        beq XAC81
+        bmi XACA1
+        lda zp2D
+        ora zp2C
+        ora zp2B
+        ora zp2A
+        beq LACC8
+        lda zp2D
+        bmi LACC4
 XACBF:
-        LDA #$01
+        lda #$01
 XACC1:
-        JMP XAED3
+        jmp XAED3
 
 ; =POINT(numeric, numeric)
 ; ========================
 XAB41:
-        JSR L92DD
-        JSR LBD94
-        JSR L8AAE
-        JSR LAE56
-        JSR L92F0
-        LDA zp2A
-        PHA
-        LDX zp2B
-        JSR LBDEA
-        STX zp2D
-        PLA
-        STA zp2C
-        LDX #$2A
-        LDA #$09
-        JSR OSWORD
-        LDA zp2E
-        BMI LACC4
-        BPL XACC1
+        jsr L92DD
+        jsr LBD94
+        jsr L8AAE
+        jsr LAE56
+        jsr L92F0
+        lda zp2A
+        pha
+        ldx zp2B
+        jsr LBDEA
+        stx zp2D
+        pla
+        sta zp2C
+        ldx #$2A
+        lda #$09
+        jsr OSWORD
+        lda zp2E
+        bmi LACC4
+        bpl XACC1
     .endif
 
     .if version < 3
 ; =NOT numeric
 ; ============
 LACD1:
-        JSR L92E3
-        LDX #$03
+        jsr L92E3
+        ldx #$03
 LACD6:
-        LDA zp2A,X
-        EOR #$FF
-        STA zp2A,X
-        DEX
-        BPL LACD6
-        LDA #$40
-        RTS
+        lda zp2A,X
+        eor #$FF
+        sta zp2A,X
+        dex
+        bpl LACD6
+        lda #$40
+        rts
     .endif
 
 ; =INSTR(string$, string$ [, numeric])
 ; ====================================
 LACE2:
-    JSR L9B29
+    jsr L9B29
     .if version < 3
-        BNE LACE2-$47     ; dest=LAC9B
+        bne LACE2-$47     ; dest=LAC9B
     .elseif version >= 3
-        BNE XAC81
+        bne XAC81
     .endif
-    CPX #$2C
-    BNE LAD03
-    INC zp1B
-    JSR LBDB2
-    JSR L9B29
+    cpx #$2C
+    bne LAD03
+    inc zp1B
+    jsr LBDB2
+    jsr L9B29
     .if version < 3
-        BNE LACE2-$47     ; dest=LAC9B
+        bne LACE2-$47     ; dest=LAC9B
     .elseif version >= 3
-        BNE XAC81
+        bne XAC81
     .endif
-    LDA #$01
-    STA zp2A
-    INC zp1B
-    CPX #')'
-    BEQ LAD12
-    CPX #$2C
-    BEQ LAD06
+    lda #$01
+    sta zp2A
+    inc zp1B
+    cpx #')'
+    beq LAD12
+    cpx #$2C
+    beq LAD06
 LAD03:
     .if version < 3
-        JMP L8AA2
+        jmp L8AA2
     .elseif version >= 3
-        JMP X8AC8
+        jmp X8AC8
     .endif
 
 LAD06:
-    JSR LBDB2
-    JSR LAE56
-    JSR L92F0
-    JSR LBDCB
+    jsr LBDB2
+    jsr LAE56
+    jsr L92F0
+    jsr LBDCB
 LAD12:
-    LDY #$00
-    LDX zp2A
-    BNE LAD1A
-    LDX #$01
+    ldy #$00
+    ldx zp2A
+    bne LAD1A
+    ldx #$01
 LAD1A:
-    STX zp2A
-    TXA
-    DEX
-    STX zp2D
-    CLC
-    ADC zp04
-    STA zp37
-    TYA
-    ADC zp05
-    STA zp38
-    LDA (zp04),Y
-    SEC
-    SBC zp2D
-    BCC LAD52
-    SBC zp36
-    BCC LAD52
-    ADC #$00
-    STA zp2B
-    JSR LBDDC
+    stx zp2A
+    txa
+    dex
+    stx zp2D
+    clc
+    adc zp04
+    sta zp37
+    tya
+    adc zp05
+    sta zp38
+    lda (zp04),Y
+    sec
+    sbc zp2D
+    bcc LAD52
+    sbc zp36
+    bcc LAD52
+    adc #$00
+    sta zp2B
+    jsr LBDDC
 LAD3C:
-    LDY #$00
-    LDX zp36
-    BEQ LAD4D
+    ldy #$00
+    ldx zp36
+    beq LAD4D
 LAD42:
-    LDA (zp37),Y
-    CMP ws+$0600,Y
-    BNE LAD59
-    INY
-    DEX
-    BNE LAD42
+    lda (zp37),Y
+    cmp ws+$0600,Y
+    bne LAD59
+    iny
+    dex
+    bne LAD42
 LAD4D:
-    LDA zp2A
+    lda zp2A
 LAD4F:
     .if version < 3
-        JMP LAED8
+        jmp LAED8
     .elseif version >= 3
-        JMP XAED3
+        jmp XAED3
     .endif
 
 LAD52:
-    JSR LBDDC
+    jsr LBDDC
 LAD55:
-    LDA #$00
-    BEQ LAD4F
+    lda #$00
+    beq LAD4F
 
 LAD59:
-    INC zp2A
-    DEC zp2B
-    BEQ LAD55
-    INC zp37
-    BNE LAD3C
-    INC zp38
-    BNE LAD3C
+    inc zp2A
+    dec zp2B
+    beq LAD55
+    inc zp37
+    bne LAD3C
+    inc zp38
+    bne LAD3C
 LAD67:
-    JMP L8C0E
+    jmp L8C0E
 
 ; =ABS numeric
 ; ============
 LAD6A:
-    JSR LADEC
-    BEQ LAD67
-    BMI LAD77
+    jsr LADEC
+    beq LAD67
+    bmi LAD77
 LAD71:
-    BIT zp2D
-    BMI LAD93
-    BPL LADAA
+    bit zp2D
+    bmi LAD93
+    bpl LADAA
 LAD77:
-    JSR LA1DA
-    BPL LAD89
-    BMI LAD83
+    jsr LA1DA
+    bpl LAD89
+    bmi LAD83
 LAD7E:
-    JSR LA1DA
-    BEQ LAD89
+    jsr LA1DA
+    beq LAD89
 LAD83:
-    LDA zp2E
-    EOR #$80
-    STA zp2E
+    lda zp2E
+    eor #$80
+    sta zp2E
 LAD89:
-    LDA #$FF
-    RTS
+    lda #$FF
+    rts
 
 LAD8C:
-    JSR LAE02
+    jsr LAE02
 LAD8F:
-    BEQ LAD67
-    BMI LAD7E
+    beq LAD67
+    bmi LAD7E
 LAD93:
-    SEC
-    LDA #$00
-    TAY
-    SBC zp2A
-    STA zp2A
-    TYA
-    SBC zp2B
-    STA zp2B
-    TYA
-    SBC zp2C
-    STA zp2C
-    TYA
-    SBC zp2D
-    STA zp2D
+    sec
+    lda #$00
+    tay
+    sbc zp2A
+    sta zp2A
+    tya
+    sbc zp2B
+    sta zp2B
+    tya
+    sbc zp2C
+    sta zp2C
+    tya
+    sbc zp2D
+    sta zp2D
 LADAA:
-    LDA #$40
-    RTS
+    lda #$40
+    rts
 
 LADAD:
-    JSR L8A8C
-    CMP #$22
-    BEQ LADC9
-    LDX #$00
+    jsr L8A8C
+    cmp #$22
+    beq LADC9
+    ldx #$00
 LADB6:
-    LDA (zp19),Y
-    STA ws+$0600,X
-    INY
-    INX
-    CMP #$0D
-    BEQ LADC5
-    CMP #$2C
-    BNE LADB6
+    lda (zp19),Y
+    sta ws+$0600,X
+    iny
+    inx
+    cmp #$0D
+    beq LADC5
+    cmp #$2C
+    bne LADB6
 LADC5:
-    DEY
+    dey
     .if version < 3
-        JMP LADE1
+        jmp LADE1
     .elseif version >= 3
 LADC8:
-        DEX
-        STX zp36
-        STY zp1B
-        LDA #$00
-        RTS
+        dex
+        stx zp36
+        sty zp1B
+        lda #$00
+        rts
     .endif
 
 LADC9:
-    LDX #$00
+    ldx #$00
 LADCB:
-    INY
+    iny
 LADCC:
-    LDA (zp19),Y
-    CMP #$0D
-    BEQ LADE9
+    lda (zp19),Y
+    cmp #$0D
+    beq LADE9
     .if version < 3
-        INY
-        STA ws+$0600,X
+        iny
+        sta ws+$0600,X
     .elseif version >= 3
-        STA ws+$0600,X
-        INY
+        sta ws+$0600,X
+        iny
     .endif
-    INX
-    CMP #$22
-    BNE LADCC
-    LDA (zp19),Y
-    CMP #$22
-    BEQ LADCB
+    inx
+    cmp #$22
+    bne LADCC
+    lda (zp19),Y
+    cmp #$22
+    beq LADCB
     .if version < 3
 LADE1:
-        DEX
-        STX zp36
-        STY zp1B
-        LDA #$00
-        RTS
+        dex
+        stx zp36
+        sty zp1B
+        lda #$00
+        rts
     .elseif version >= 3
-        BNE LADC8
+        bne LADC8
     .endif
 
 LADE9:
-    JMP L8E98
+    jmp L8E98
 
 ; Evaluator Level 1, - + NOT function ( ) ? ! $ | "
 ; -------------------------------------------------
 LADEC:
-    LDY zp1B
-    INC zp1B
-    LDA (zp19),Y      ; Get next character
-    CMP #$20
-    BEQ LADEC         ; Loop to skip spaces
-    CMP #'-'
-    BEQ LAD8C         ; Jump with unary minus
-    CMP #'"'
-    BEQ LADC9         ; Jump with string
-    CMP #'+'
-    BNE LAE05         ; Jump with unary plus
+    ldy zp1B
+    inc zp1B
+    lda (zp19),Y      ; Get next character
+    cmp #$20
+    beq LADEC         ; Loop to skip spaces
+    cmp #'-'
+    beq LAD8C         ; Jump with unary minus
+    cmp #'"'
+    beq LADC9         ; Jump with string
+    cmp #'+'
+    bne LAE05         ; Jump with unary plus
 LAE02:
-    JSR L8A8C         ; Get current character
+    jsr L8A8C         ; Get current character
 LAE05:
-    CMP #$8E
-    BCC LAE10         ; Lowest function token, test for indirections
-    CMP #$C6
-    BCS LAE43         ; Highest function token, jump to error
-    JMP L8BB1         ; Jump via function dispatch table
+    cmp #$8E
+    bcc LAE10         ; Lowest function token, test for indirections
+    cmp #$C6
+    bcs LAE43         ; Highest function token, jump to error
+    jmp L8BB1         ; Jump via function dispatch table
 
 ; Indirection, hex, brackets
 ; --------------------------
 LAE10:
-    CMP #'?'
-    BCS LAE20         ; Jump with ?numeric or higher
-    CMP #'.'
-    BCS LAE2A         ; Jump with .numeric or higher
-    CMP #'&'
-    BEQ LAE6D         ; Jump with hex number
-    CMP #'('
-    BEQ LAE56         ; Jump with brackets
+    cmp #'?'
+    bcs LAE20         ; Jump with ?numeric or higher
+    cmp #'.'
+    bcs LAE2A         ; Jump with .numeric or higher
+    cmp #'&'
+    beq LAE6D         ; Jump with hex number
+    cmp #'('
+    beq LAE56         ; Jump with brackets
 LAE20:
-    DEC zp1B
-    JSR L95DD
-    BEQ LAE30         ; Jump with undefined variable or bad name
-    JMP LB32C
+    dec zp1B
+    jsr L95DD
+    beq LAE30         ; Jump with undefined variable or bad name
+    jmp LB32C
 
 LAE2A:
-    JSR LA07B
-    BCC LAE43
-    RTS
+    jsr LA07B
+    bcc LAE43
+    rts
 
 LAE30:
-    LDA zp28          ; Check assembler option
-    AND #$02          ; Is 'ignore undefiened variables' set?
-    BNE LAE43         ; b1=1, jump to give No such variable
-    BCS LAE43         ; Jump with bad variable name
-    STX zp1B
+    lda zp28          ; Check assembler option
+    and #$02          ; Is 'ignore undefiened variables' set?
+    bne LAE43         ; b1=1, jump to give No such variable
+    bcs LAE43         ; Jump with bad variable name
+    stx zp1B
 LAE3A:
-    LDA ws+$0440      ; Use P% for undefined variable
-    LDY ws+$0441
+    lda ws+$0440      ; Use P% for undefined variable
+    ldy ws+$0441
     .if version < 3
-        JMP LAEEA     ; Jump to return 16-bit integer
+        jmp LAEEA     ; Jump to return 16-bit integer
     .elseif version >= 3
-        JMP XAED5     ; Jump to return 16-bit integer
+        jmp XAED5     ; Jump to return 16-bit integer
     .endif
 
 LAE43:
-    BRK
+    brk
     dta $1A
     .if foldup == 1
         dta 'NO SUCH VARIABLE'
@@ -8183,7 +8183,7 @@ LAE43:
         dta 'No such variable'
     .endif
 LAE54:
-    BRK
+    brk
     .if version >= 3
         dta $1B
         .if foldup == 1
@@ -8192,707 +8192,707 @@ LAE54:
             dta 'Missing )'
         .endif
 LAE55:
-        BRK
+        brk
         dta $1C
         .if foldup == 1
             dta 'BAD HEX'
         .else
             dta 'Bad HEX'
         .endif
-        BRK
+        brk
     .endif
 
 LAE56:
-    JSR L9B29
-    INC zp1B
-    CPX #')'
+    jsr L9B29
+    inc zp1B
+    cpx #')'
     .if version < 3
-        BNE LAE61
+        bne LAE61
     .elseif version >= 3
-        BNE LAE54
+        bne LAE54
     .endif
-    TAY
-    RTS
+    tay
+    rts
 
     .if version < 3
 LAE61:
-        BRK
+        brk
         dta $1B
         .if foldup == 1
             dta 'MISSING )'
         .else
             dta 'Missing )'
         .endif
-        BRK
+        brk
     .endif
 LAE6D:
     .if version < 3
-        LDX #$00
-        STX zp2A
-        STX zp2B
-        STX zp2C
-        STX zp2D
-        LDY zp1B
+        ldx #$00
+        stx zp2A
+        stx zp2B
+        stx zp2C
+        stx zp2D
+        ldy zp1B
     .elseif version >= 3
-        JSR LACCD
-        INY
+        jsr LACCD
+        iny
     .endif
 LAE79:
-    LDA (zp19),Y
-    CMP #$30
-    BCC LAEA2
-    CMP #$3A
-    BCC LAE8D
-    SBC #$37
-    CMP #$0A
-    BCC LAEA2
-    CMP #$10
-    BCS LAEA2
+    lda (zp19),Y
+    cmp #$30
+    bcc LAEA2
+    cmp #$3A
+    bcc LAE8D
+    sbc #$37
+    cmp #$0A
+    bcc LAEA2
+    cmp #$10
+    bcs LAEA2
 LAE8D:
-    ASL
-    ASL
-    ASL
-    ASL
-    LDX #$03
+    asl
+    asl
+    asl
+    asl
+    ldx #$03
 LAE93:
-    ASL
-    ROL zp2A
-    ROL zp2B
-    ROL zp2C
-    ROL zp2D
-    DEX
-    BPL LAE93
-    INY
-    BNE LAE79
+    asl
+    rol zp2A
+    rol zp2B
+    rol zp2C
+    rol zp2D
+    dex
+    bpl LAE93
+    iny
+    bne LAE79
 LAEA2:
-    TXA
+    txa
     .if version < 3
-        BPL LAEAA
+        bpl LAEAA
     .elseif version >= 3
-        BPL LAE55
+        bpl LAE55
     .endif
-    STY zp1B
-    LDA #$40
-    RTS
+    sty zp1B
+    lda #$40
+    rts
 
     .if version >= 3
 ; =TOP - Return top of program
 ; ============================
 XAEA6:
-        INY
-        LDA (zp19),Y
-        CMP #'P'
-        BNE LAE43
-        INC zp1B
-        LDA zp12
-        LDY zp13
-        BCS XAED5
+        iny
+        lda (zp19),Y
+        cmp #'P'
+        bne LAE43
+        inc zp1B
+        lda zp12
+        ldy zp13
+        bcs XAED5
 
 ; =PAGE - Read PAGE
 ; =================
 XAEA7:
-        LDY zp18
-        LDA #$00
-        BEQ XAED5
+        ldy zp18
+        lda #$00
+        beq XAED5
 
 XAEC9:
-        JMP L8C0E
+        jmp L8C0E
 
 ; =LEN string$
 ; ============
 XAECC:
-        JSR LADEC
-        BNE XAEC9
-        LDA zp36
+        jsr LADEC
+        bne XAEC9
+        lda zp36
     
 ; Return 8-bit integer
 ; --------------------
 XAED3:
-        LDY #$00      ; Clear b8-b15, jump to return 16-bit int
+        ldy #$00      ; Clear b8-b15, jump to return 16-bit int
 
 ; Return 16-bit integer in AY
 ; ---------------------------
 XAED5:
-        STA zp2A
-        STY zp2B      ; Store AY in integer accumulator
-        LDA #$00
-        STA zp2C
-        STA zp2D      ; Set b16-b31 to 0
-        LDA #$40
-        RTS           ; Return 'integer'
+        sta zp2A
+        sty zp2B      ; Store AY in integer accumulator
+        lda #$00
+        sta zp2C
+        sta zp2D      ; Set b16-b31 to 0
+        lda #$40
+        rts           ; Return 'integer'
 
 ; =COUNT - Return COUNT
 ; =====================
 XAEF7:
-        LDA zp1E
-        BCC XAED3     ; Get COUNT, jump to return 8-bit integer
+        lda zp1E
+        bcc XAED3     ; Get COUNT, jump to return 8-bit integer
      
 ; =LOMEM - Start of BASIC heap
 ; ============================
 XAEFC:
-        LDA zp00
-        LDY zp01
-        BCC XAED5     ; Get LOMEM to AY, jump to return as integer
+        lda zp00
+        ldy zp01
+        bcc XAED5     ; Get LOMEM to AY, jump to return as integer
      
 ; =HIMEM - Top of BASIC memory
 ; ============================
 XAF03:
-        LDA zp06
-        LDY zp07
-        BCC XAED5     ; Get HIMEM to AY, jump to return as integer
+        lda zp06
+        ldy zp07
+        bcc XAED5     ; Get HIMEM to AY, jump to return as integer
 
 ; =ERL - Return error line number
 ; ===============================
 XAF9F:
-        LDY zp09
-        LDA zp08
-        BCC XAED5     ; Get ERL to AY, jump to return 16-bit integer
+        ldy zp09
+        lda zp08
+        bcc XAED5     ; Get ERL to AY, jump to return 16-bit integer
 
 ; =ERR - Return current error number
 ; ==================================
 XAFA6:
-        LDY #$00
-        LDA (FAULT),Y
-        BCC XAED5     ; Get error number, jump to return 16-bit integer
+        ldy #$00
+        lda (FAULT),Y
+        bcc XAED5     ; Get error number, jump to return 16-bit integer
     .endif
 
     .if version < 3
 LAEAA:
-        BRK
+        brk
         dta $1C
         .if foldup == 1
             dta 'BAD HEX'
         .else
             dta 'Bad HEX'
         .endif
-        BRK
+        brk
     .endif
 
 ; =TIME - Read system TIME
 ; ========================
 LAEB4:
-    LDX #$2A
-    LDY #$00          ; Point to integer accumulator
-    LDA #$01          ; Read TIME to IntA via OSWORD $01
+    ldx #$2A
+    ldy #$00          ; Point to integer accumulator
+    lda #$01          ; Read TIME to IntA via OSWORD $01
     .ifdef MOS_BBC
-        JSR OSWORD
+        jsr OSWORD
     .endif
-    LDA #$40
-    RTS               ; Return 'integer'
+    lda #$40
+    rts               ; Return 'integer'
 
     .if version < 3
 ; =PAGE - Read PAGE
 ; =================
 LAEC0:
-        LDA #$00
-        LDY zp18
-        JMP LAEEA
+        lda #$00
+        ldy zp18
+        jmp LAEEA
      
 LAEC7:
-        JMP LAE43
+        jmp LAE43
      
 ; =FALSE
 ; ======
 LAECA:
-        LDA #$00
-        BEQ LAED8     ; Jump to return $00 as 16-bit integer
+        lda #$00
+        beq LAED8     ; Jump to return $00 as 16-bit integer
 
 LAECE:
-        JMP L8C0E
+        jmp L8C0E
      
 ; =LEN string$
 ; ============
 LAED1:
-        JSR LADEC
-        BNE LAECE
-        LDA zp36
+        jsr LADEC
+        bne LAECE
+        lda zp36
 
 ; Return 8-bit integer
 ; --------------------
 LAED8:
-        LDY #$00
-        BEQ LAEEA     ; Clear b8-b15, jump to return 16-bit int
+        ldy #$00
+        beq LAEEA     ; Clear b8-b15, jump to return 16-bit int
 
 ; =TOP - Return top of program
 ; ============================
 LAEDC:
-        LDY zp1B
-        LDA (zp19),Y
-        CMP #$50
-        BNE LAEC7
-        INC zp1B
-        LDA zp12
-        LDY zp13
+        ldy zp1B
+        lda (zp19),Y
+        cmp #$50
+        bne LAEC7
+        inc zp1B
+        lda zp12
+        ldy zp13
 
 ; Return 16-bit integer in AY
 ; ---------------------------
 LAEEA:
-        STA zp2A
-        STY zp2B      ; Store AY in integer accumulator
-        LDA #$00
-        STA zp2C
-        STA zp2D      ; Set b16-b31 to 0
-        LDA #$40
-        RTS           ; Return 'integer'
+        sta zp2A
+        sty zp2B      ; Store AY in integer accumulator
+        lda #$00
+        sta zp2C
+        sta zp2D      ; Set b16-b31 to 0
+        lda #$40
+        rts           ; Return 'integer'
 
 ; =COUNT - Return COUNT
 ; =====================
 LAEF7:
-        LDA zp1E
-        JMP LAED8     ; Get COUNT, jump to return 8-bit integer
+        lda zp1E
+        jmp LAED8     ; Get COUNT, jump to return 8-bit integer
      
 ; =LOMEM - Start of BASIC heap
 ; ============================
 LAEFC:
-        LDA zp00
-        LDY zp01
-        JMP LAEEA     ; Get LOMEM to AY, jump to return as integer
+        lda zp00
+        ldy zp01
+        jmp LAEEA     ; Get LOMEM to AY, jump to return as integer
      
 ; =HIMEM - Top of BASIC memory
 ; ============================
 LAF03:
-        LDA zp06
-        LDY zp07
-    JMP LAEEA         ; Get HIMEM to AY, jump to return as integer
+        lda zp06
+        ldy zp07
+    jmp LAEEA         ; Get HIMEM to AY, jump to return as integer
     .endif
 
 ; =RND(numeric)
 ; -------------
 LAF0A:
-    INC zp1B
-    JSR LAE56
-    JSR L92F0
-    LDA zp2D
-    BMI LAF3F
-    ORA zp2C
-    ORA zp2B
-    BNE LAF24
-    LDA zp2A
-    BEQ LAF6C
-    CMP #$01
-    BEQ LAF69
+    inc zp1B
+    jsr LAE56
+    jsr L92F0
+    lda zp2D
+    bmi LAF3F
+    ora zp2C
+    ora zp2B
+    bne LAF24
+    lda zp2A
+    beq LAF6C
+    cmp #$01
+    beq LAF69
 LAF24:
-    JSR LA2BE
-    JSR LBD51
-    JSR LAF69
-    JSR LBD7E
-    JSR LA606
-    JSR LA303
-    JSR LA3E4
-    JSR L9222
-    LDA #$40
-    RTS
+    jsr LA2BE
+    jsr LBD51
+    jsr LAF69
+    jsr LBD7E
+    jsr LA606
+    jsr LA303
+    jsr LA3E4
+    jsr L9222
+    lda #$40
+    rts
 
 LAF3F:
-    LDX #$0D
-    JSR LBE44
-    LDA #$40
-    STA zp11
-    RTS
+    ldx #$0D
+    jsr LBE44
+    lda #$40
+    sta zp11
+    rts
 
 ; RND [(numeric)]
 ; ===============
 LAF49:
-    LDY zp1B
-    LDA (zp19),Y      ; Get current character
-    CMP #'('
-    BEQ LAF0A         ; Jump with RND(numeric)
-    JSR LAF87         ; Get random number
-    LDX #$0D
+    ldy zp1B
+    lda (zp19),Y      ; Get current character
+    cmp #'('
+    beq LAF0A         ; Jump with RND(numeric)
+    jsr LAF87         ; Get random number
+    ldx #$0D
 LAF56:
-    LDA zp+0,X
-    STA zp2A          ; Copy random number to IntA
-    LDA zp+1,X
-    STA zp2B
-    LDA zp+2,X
-    STA zp2C
-    LDA zp+3,X
-    STA zp2D
-    LDA #$40
-    RTS               ; Return Integer
+    lda zp+0,X
+    sta zp2A          ; Copy random number to IntA
+    lda zp+1,X
+    sta zp2B
+    lda zp+2,X
+    sta zp2C
+    lda zp+3,X
+    sta zp2D
+    lda #$40
+    rts               ; Return Integer
 
 LAF69:
-    JSR LAF87
+    jsr LAF87
 LAF6C:
-    LDX #$00
-    STX zp2E
-    STX zp2F
-    STX zp35
-    LDA #$80
-    STA zp30
+    ldx #$00
+    stx zp2E
+    stx zp2F
+    stx zp35
+    lda #$80
+    sta zp30
 LAF78:
-    LDA zp0D,X
-    STA zp31,X
-    INX
-    CPX #$04
-    BNE LAF78
-    JSR LA659
-    LDA #$FF
-    RTS
+    lda zp0D,X
+    sta zp31,X
+    inx
+    cpx #$04
+    bne LAF78
+    jsr LA659
+    lda #$FF
+    rts
 
 LAF87:
     .if version >= 3
-        LDY #$04      ; Rotate through four bytes, faster but bigger
+        ldy #$04      ; Rotate through four bytes, faster but bigger
 LAF89:
-        ROR zp11
-        LDA zp10
-        PHA
-        ROR
-        STA zp11
-        LDA zp0F
-        TAX
-        ASL
-        ASL
-        ASL
-        ASL
-        STA zp10
-        LDA zp0E
-        STA zp0F
-        LSR
-        LSR
-        LSR
-        LSR
-        ORA zp10
-        EOR zp11
-        STX zp10
-        LDX zp0D
-        STX zp0E
-        STA zp0D
-        PLA
-        STA zp11
+        ror zp11
+        lda zp10
+        pha
+        ror
+        sta zp11
+        lda zp0F
+        tax
+        asl
+        asl
+        asl
+        asl
+        sta zp10
+        lda zp0E
+        sta zp0F
+        lsr
+        lsr
+        lsr
+        lsr
+        ora zp10
+        eor zp11
+        stx zp10
+        ldx zp0D
+        stx zp0E
+        sta zp0D
+        pla
+        sta zp11
 LAFB1:
-        DEY
-        BNE LAF89
-        RTS
+        dey
+        bne LAF89
+        rts
     .elseif version < 3
-        LDY #$20      ; Rotate through 32 bits, shorter but slower
+        ldy #$20      ; Rotate through 32 bits, shorter but slower
 LAF89:
-        LDA zp0F
-        LSR
-        LSR
-        LSR
-        EOR zp11
-        ROR
-        ROL zp0D
-        ROL zp0E
-        ROL zp0F
-        ROL zp10
-        ROL zp11
-        DEY
-        BNE LAF89
-        RTS
+        lda zp0F
+        lsr
+        lsr
+        lsr
+        eor zp11
+        ror
+        rol zp0D
+        rol zp0E
+        rol zp0F
+        rol zp10
+        rol zp11
+        dey
+        bne LAF89
+        rts
  
 ; =ERL - Return error line number
 ; ===============================
 LAF9F:
-        LDY zp09
-        LDA zp08
-        JMP LAEEA     ; Get ERL to AY, jump to return 16-bit integer
+        ldy zp09
+        lda zp08
+        jmp LAEEA     ; Get ERL to AY, jump to return 16-bit integer
 
 ; =ERR - Return current error number
 ; ==================================
 LAFA6:
-        LDY #$00
-        LDA (FAULT),Y
-        JMP LAEEA     ; Get error number, jump to return 16-bit integer
+        ldy #$00
+        lda (FAULT),Y
+        jmp LAEEA     ; Get error number, jump to return 16-bit integer
     .endif
 
 ; INKEY
 ; =====
 LAFAD:
-    JSR L92E3         ; Evaluate <numeric>
+    jsr L92E3         ; Evaluate <numeric>
 
 ; Atom/System - Manually implement INKEY(num)
 ; -------------------------------------------
 LCF8D:
     .ifdef TARGET_ATOM
-        JSR $FE71
-        BCC LCFAB     ; Key pressed
+        jsr $FE71
+        bcc LCFAB     ; Key pressed
     .endif
     .ifdef TARGET_SYSTEM
-        LDA ESCFLG
-        BPL LCFAB     ; Key pressed
+        lda ESCFLG
+        bpl LCFAB     ; Key pressed
     .endif
     .ifdef MOS_ATOM
-        LDA zp2A
-        ORA zp2D
-        BEQ LCFB4     ; Timeout=0
-        LDY #$08      ; $0800 gives 1cs delay
+        lda zp2A
+        ora zp2D
+        beq LCFB4     ; Timeout=0
+        ldy #$08      ; $0800 gives 1cs delay
 LCF9A:
-        DEX
-        BNE LCF9A
-        DEY
-        BNE LCF9A     ; Wait 1cs
-        LDA zp2A
-        BNE LCFA6
-        DEC zp2D      ; Decrement timeout
+        dex
+        bne LCF9A
+        dey
+        bne LCF9A     ; Wait 1cs
+        lda zp2A
+        bne LCFA6
+        dec zp2D      ; Decrement timeout
 LCFA6:
-        DEC zp2A
-        JMP LCF8D     ; Loop to keep waiting
+        dec zp2A
+        jmp LCF8D     ; Loop to keep waiting
 LCFAB:
     .endif
     .ifdef TARGET_ATOM
-        JSR LCFB7     ; Convert keypress
+        jsr LCFB7     ; Convert keypress
     .endif
     .ifdef TARGET_SYSTEM
-        LDY ESCFLG
-        BPL LCFAB     ; Loop until key released
+        ldy ESCFLG
+        bpl LCFAB     ; Loop until key released
     .endif
     .ifdef MOS_ATOM
-        LDY #$00
-        TAX
-        RTS           ; Y=0, X=key, return
+        ldy #$00
+        tax
+        rts           ; Y=0, X=key, return
 LCFB4:
-        LDY #$FF
-        RTS           ; Y=$FF for no keypress
+        ldy #$FF
+        rts           ; Y=$FF for no keypress
     .endif
     .ifdef TARGET_ATOM
 LCFB7:
-        PHP
-        JMP $FEA4     ; Convert Atom keypress
+        php
+        jmp $FEA4     ; Convert Atom keypress
     .endif
 
 ; BBC - Call MOS to wait for keypress
 ; -----------------------------------
     .ifdef MOS_BBC
-        LDA #$81
+        lda #$81
 LAFB2:
-        LDX zp2A
-        LDY zp2B
-        JMP OSBYTE
+        ldx zp2A
+        ldy zp2B
+        jmp OSBYTE
     .endif
 
 ; =GET
 ; ====
 LAFB9:
-    JSR OSRDCH
+    jsr OSRDCH
     .if version < 3
-        JMP LAED8
+        jmp LAED8
     .elseif version >= 3
-        JMP XAED3
+        jmp XAED3
     .endif
 
 
 ; =GET$
 ; =====
 LAFBF:
-    JSR OSRDCH
+    jsr OSRDCH
 LAFC2:
-    STA ws+$0600
-    LDA #$01
-    STA zp36
-    LDA #$00
-    RTS
+    sta ws+$0600
+    lda #$01
+    sta zp36
+    lda #$00
+    rts
 
 ; =LEFT$(string$, numeric)
 ; ========================
 LAFCC:
-    JSR L9B29
-    BNE LB033
-    CPX #$2C
-    BNE LB036
-    INC zp1B
-    JSR LBDB2
-    JSR LAE56
-    JSR L92F0
-    JSR LBDCB
-    LDA zp2A
-    CMP zp36
-    BCS LAFEB
-    STA zp36
+    jsr L9B29
+    bne LB033
+    cpx #$2C
+    bne LB036
+    inc zp1B
+    jsr LBDB2
+    jsr LAE56
+    jsr L92F0
+    jsr LBDCB
+    lda zp2A
+    cmp zp36
+    bcs LAFEB
+    sta zp36
 LAFEB:
-    LDA #$00
-    RTS
+    lda #$00
+    rts
 
 ; =RIGHT$(string$, numeric)
 ; =========================
 LAFEE:
-    JSR L9B29
-    BNE LB033
-    CPX #$2C
-    BNE LB036
-    INC zp1B
-    JSR LBDB2
-    JSR LAE56
-    JSR L92F0
-    JSR LBDCB
-    LDA zp36
-    SEC
-    SBC zp2A
-    BCC LB023
-    BEQ LB025
-    TAX
-    LDA zp2A
-    STA zp36
-    BEQ LB025
-    LDY #$00
+    jsr L9B29
+    bne LB033
+    cpx #$2C
+    bne LB036
+    inc zp1B
+    jsr LBDB2
+    jsr LAE56
+    jsr L92F0
+    jsr LBDCB
+    lda zp36
+    sec
+    sbc zp2A
+    bcc LB023
+    beq LB025
+    tax
+    lda zp2A
+    sta zp36
+    beq LB025
+    ldy #$00
 LB017:
-    LDA ws+$0600,X
-    STA ws+$0600,Y
-    INX
-    INY
-    DEC zp2A
-    BNE LB017
+    lda ws+$0600,X
+    sta ws+$0600,Y
+    inx
+    iny
+    dec zp2A
+    bne LB017
 LB023:
-    LDA #$00
+    lda #$00
 LB025:
-    RTS
+    rts
 
 ; =INKEY$ numeric
 ; ===============
 LB026:
-    JSR LAFAD
-    TXA
-    CPY #$00
-    BEQ LAFC2
+    jsr LAFAD
+    txa
+    cpy #$00
+    beq LAFC2
 LB02E:
-    LDA #$00
-    STA zp36
-    RTS
+    lda #$00
+    sta zp36
+    rts
 
 LB033:
-    JMP L8C0E
+    jmp L8C0E
 
 LB036:
     .if version < 3
-        JMP L8AA2
+        jmp L8AA2
     .elseif version >= 3
-        JMP X8AC8
+        jmp X8AC8
     .endif
 
 
 ; =MID$(string$, numeric [, numeric] )
 ; ====================================
 LB039:
-    JSR L9B29
-    BNE LB033
-    CPX #$2C
-    BNE LB036
-    JSR LBDB2
-    INC zp1B
-    JSR L92DD
-    LDA zp2A
-    PHA
-    LDA #$FF
-    STA zp2A
-    INC zp1B
-    CPX #')'
-    BEQ LB061
-    CPX #$2C
-    BNE LB036
-    JSR LAE56
-    JSR L92F0
+    jsr L9B29
+    bne LB033
+    cpx #$2C
+    bne LB036
+    jsr LBDB2
+    inc zp1B
+    jsr L92DD
+    lda zp2A
+    pha
+    lda #$FF
+    sta zp2A
+    inc zp1B
+    cpx #')'
+    beq LB061
+    cpx #$2C
+    bne LB036
+    jsr LAE56
+    jsr L92F0
 LB061:
-    JSR LBDCB
-    PLA
-    TAY
-    CLC
-    BEQ LB06F
-    SBC zp36
-    BCS LB02E
-    DEY
-    TYA
+    jsr LBDCB
+    pla
+    tay
+    clc
+    beq LB06F
+    sbc zp36
+    bcs LB02E
+    dey
+    tya
 LB06F:
-    STA zp2C
-    TAX
-    LDY #$00
-    LDA zp36
-    SEC
-    SBC zp2C
-    CMP zp2A
-    BCS LB07F
-    STA zp2A
+    sta zp2C
+    tax
+    ldy #$00
+    lda zp36
+    sec
+    sbc zp2C
+    cmp zp2A
+    bcs LB07F
+    sta zp2A
 LB07F:
-    LDA zp2A
-    BEQ LB02E
+    lda zp2A
+    beq LB02E
 LB083:
-    LDA ws+$0600,X
-    STA ws+$0600,Y
-    INY
-    INX
-    CPY zp2A
-    BNE LB083
-    STY zp36
-    LDA #$00
-    RTS
+    lda ws+$0600,X
+    sta ws+$0600,Y
+    iny
+    inx
+    cpy zp2A
+    bne LB083
+    sty zp36
+    lda #$00
+    rts
 
 ; =STR$ [~] numeric
 ; =================
 LB094:
-    JSR L8A8C         ; Skip spaces
-    LDY #$FF          ; Y=$FF for decimal
-    CMP #'~'
-    BEQ LB0A1
-    LDY #$00
-    DEC zp1B          ; Y=$00 for hex, step past ~
+    jsr L8A8C         ; Skip spaces
+    ldy #$FF          ; Y=$FF for decimal
+    cmp #'~'
+    beq LB0A1
+    ldy #$00
+    dec zp1B          ; Y=$00 for hex, step past ~
 LB0A1:
-    TYA
-    PHA               ; Save format
-    JSR LADEC
-    BEQ LB0BF         ; Evaluate, error if not number
-    TAY
-    PLA
-    STA zp15          ; Get format back
-    LDA ws+$0403
-    BNE LB0B9         ; Top byte of @%, STR$ uses @%
-    STA zp37          ; Store 'General format'
-    JSR L9EF9         ; Convert using general format
-    LDA #$00
-    RTS               ; Return string
+    tya
+    pha               ; Save format
+    jsr LADEC
+    beq LB0BF         ; Evaluate, error if not number
+    tay
+    pla
+    sta zp15          ; Get format back
+    lda ws+$0403
+    bne LB0B9         ; Top byte of @%, STR$ uses @%
+    sta zp37          ; Store 'General format'
+    jsr L9EF9         ; Convert using general format
+    lda #$00
+    rts               ; Return string
 
 LB0B9:
-    JSR L9EDF         ; Convert using @% format
-    LDA #$00
-    RTS               ; Return string
+    jsr L9EDF         ; Convert using @% format
+    lda #$00
+    rts               ; Return string
 
 LB0BF:
-    JMP L8C0E         ; Jump to Type mismatch error
+    jmp L8C0E         ; Jump to Type mismatch error
 
 ; =STRING$(numeric, string$)
 ; ==========================
 LB0C2:
-    JSR L92DD
-    JSR LBD94
-    JSR L8AAE
-    JSR LAE56
-    BNE LB0BF
-    JSR LBDEA
-    LDY zp36
-    BEQ LB0F5
-    LDA zp2A
-    BEQ LB0F8
-    DEC zp2A
-    BEQ LB0F5
+    jsr L92DD
+    jsr LBD94
+    jsr L8AAE
+    jsr LAE56
+    bne LB0BF
+    jsr LBDEA
+    ldy zp36
+    beq LB0F5
+    lda zp2A
+    beq LB0F8
+    dec zp2A
+    beq LB0F5
 LB0DF:
-    LDX #$00
+    ldx #$00
 LB0E1:
-    LDA ws+$0600,X
-    STA ws+$0600,Y
-    INX
-    INY
-    BEQ LB0FB
-    CPX zp36
-    BCC LB0E1
-    DEC zp2A
-    BNE LB0DF
-    STY zp36
+    lda ws+$0600,X
+    sta ws+$0600,Y
+    inx
+    iny
+    beq LB0FB
+    cpx zp36
+    bcc LB0E1
+    dec zp2A
+    bne LB0DF
+    sty zp36
 LB0F5:
-    LDA #$00
-    RTS
+    lda #$00
+    rts
 
 LB0F8:
-    STA zp36
-    RTS
+    sta zp36
+    rts
 
 LB0FB:
-    JMP L9C03
+    jmp L9C03
 
 LB0FE:
-    PLA
-    STA zp0C
-    PLA
-    STA zp0B
-    BRK
+    pla
+    sta zp0C
+    pla
+    sta zp0B
+    brk
     dta $1D
     .if foldup == 1
         dta 'NO SUCH '
@@ -8900,97 +8900,97 @@ LB0FE:
         dta 'No such '
     .endif
     dta tknFN, '/', tknPROC
-    BRK
+    brk
 
 ; Look through program for FN/PROC
 ; --------------------------------
 LB112:
-    LDA zp18
-    STA zp0C          ; Start at PAGE
-    LDA #$00
-    STA zp0B
+    lda zp18
+    sta zp0C          ; Start at PAGE
+    lda #$00
+    sta zp0B
 LB11A:
-    LDY #$01
-    LDA (zp0B),Y      ; Get line number high byte
-    BMI LB0FE         ; End of program, jump to 'No such FN/PROC' error
-    LDY #$03
+    ldy #$01
+    lda (zp0B),Y      ; Get line number high byte
+    bmi LB0FE         ; End of program, jump to 'No such FN/PROC' error
+    ldy #$03
 LB122:
-    INY
-    LDA (zp0B),Y
-    CMP #$20
-    BEQ LB122         ; Skip past spaces
-    CMP #tknDEF
-    BEQ LB13C         ; Found DEF at start of line
+    iny
+    lda (zp0B),Y
+    cmp #$20
+    beq LB122         ; Skip past spaces
+    cmp #tknDEF
+    beq LB13C         ; Found DEF at start of line
 LB12D:
-    LDY #$03
-    LDA (zp0B),Y      ; Get line length
-    CLC
-    ADC zp0B
-    STA zp0B          ; Point to next line
-    BCC LB11A
-    INC zp0C
-    BCS LB11A         ; Loop back to check next line
+    ldy #$03
+    lda (zp0B),Y      ; Get line length
+    clc
+    adc zp0B
+    sta zp0B          ; Point to next line
+    bcc LB11A
+    inc zp0C
+    bcs LB11A         ; Loop back to check next line
 
 LB13C:
-    INY
-    STY zp0A
-    JSR L8A97
-    TYA
-    TAX
-    CLC
-    ADC zp0B
-    LDY zp0C
-    BCC LB14D
-    INY
-    CLC
+    iny
+    sty zp0A
+    jsr L8A97
+    tya
+    tax
+    clc
+    adc zp0B
+    ldy zp0C
+    bcc LB14D
+    iny
+    clc
 LB14D:
-    SBC #$00
-    STA zp3C
-    TYA
-    SBC #$00
-    STA zp3D
-    LDY #$00
+    sbc #$00
+    sta zp3C
+    tya
+    sbc #$00
+    sta zp3D
+    ldy #$00
 LB158:
-    INY
-    INX
-    LDA (zp3C),Y
-    CMP (zp37),Y
-    BNE LB12D
-    CPY zp39
-    BNE LB158
-    INY
-    LDA (zp3C),Y
-    JSR L8926
-    BCS LB12D
-    TXA
-    TAY
-    JSR L986D
-    JSR L94ED
-    LDX #$01
-    JSR L9531
-    LDY #$00
-    LDA zp0B
-    STA (zp02),Y
-    INY
-    LDA zp0C
-    STA (zp02),Y
-    JSR L9539
-    JMP LB1F4
+    iny
+    inx
+    lda (zp3C),Y
+    cmp (zp37),Y
+    bne LB12D
+    cpy zp39
+    bne LB158
+    iny
+    lda (zp3C),Y
+    jsr L8926
+    bcs LB12D
+    txa
+    tay
+    jsr L986D
+    jsr L94ED
+    ldx #$01
+    jsr L9531
+    ldy #$00
+    lda zp0B
+    sta (zp02),Y
+    iny
+    lda zp0C
+    sta (zp02),Y
+    jsr L9539
+    jmp LB1F4
 
 LB18A:
-    BRK
+    brk
     dta $1E
     .if foldup == 1
         dta 'BAD CALL'
     .else
         dta 'Bad call'
     .endif
-    BRK
+    brk
 
 ; =FNname [parameters]
 ; ====================
 LB195:
-    LDA #$A4          ; 'FN' token
+    lda #$A4          ; 'FN' token
 
 ; Call subroutine
 ; ---------------
@@ -8998,405 +8998,405 @@ LB195:
 ; PtrA=>start of FN/PROC name
 ;
 LB197:
-    STA zp27          ; Save PROC/FN token
-    TSX
-    TXA
-    CLC
-    ADC zp04          ; Drop BASIC stack by size of 6502 stack
-    JSR LBE2E         ; Store new BASIC stack pointer, check for No Room
-    LDY #$00
-    TXA
-    STA (zp04),Y      ; Store 6502 Stack Pointer on BASIC stack
+    sta zp27          ; Save PROC/FN token
+    tsx
+    txa
+    clc
+    adc zp04          ; Drop BASIC stack by size of 6502 stack
+    jsr LBE2E         ; Store new BASIC stack pointer, check for No Room
+    ldy #$00
+    txa
+    sta (zp04),Y      ; Store 6502 Stack Pointer on BASIC stack
 LB1A6:
-    INX
-    INY
-    LDA $0100,X
-    STA (zp04),Y      ; Copy 6502 stack onto BASIC stack
-    CPX #$FF
-    BNE LB1A6
-    TXS               ; Clear 6502 stack
-    LDA zp27
-    PHA               ; Push PROC/FN token
-    LDA zp0A
-    PHA
-    LDA zp0B
-    PHA               ; Push PtrA line pointer
-    LDA zp0C
-    PHA               ; Push PtrA line pointer offset
-    LDA zp1B
-    TAX
-    CLC
-    ADC zp19
-    LDY zp1A
-    BCC LB1CA
+    inx
+    iny
+    lda $0100,X
+    sta (zp04),Y      ; Copy 6502 stack onto BASIC stack
+    cpx #$FF
+    bne LB1A6
+    txs               ; Clear 6502 stack
+    lda zp27
+    pha               ; Push PROC/FN token
+    lda zp0A
+    pha
+    lda zp0B
+    pha               ; Push PtrA line pointer
+    lda zp0C
+    pha               ; Push PtrA line pointer offset
+    lda zp1B
+    tax
+    clc
+    adc zp19
+    ldy zp1A
+    bcc LB1CA
 LB1C8:
-    INY
-    CLC
+    iny
+    clc
 LB1CA:
-    SBC #$01
-    STA zp37
-    TYA
-    SBC #$00
-    STA zp38          ; $37/8=>PROC token
-    LDY #$02
-    JSR L955B         ; Check name is valid
-    CPY #$02
-    BEQ LB18A         ; No valid characters, jump to 'Bad call' error
-    STX zp1B          ; Line pointer offset => after valid FN/PROC name
-    DEY
-    STY zp39
-    JSR L945B
-    BNE LB1E9         ; Look for FN/PROC name in heap, if found, jump to it
-    JMP LB112         ; Not in heap, jump to look through program
+    sbc #$01
+    sta zp37
+    tya
+    sbc #$00
+    sta zp38          ; $37/8=>PROC token
+    ldy #$02
+    jsr L955B         ; Check name is valid
+    cpy #$02
+    beq LB18A         ; No valid characters, jump to 'Bad call' error
+    stx zp1B          ; Line pointer offset => after valid FN/PROC name
+    dey
+    sty zp39
+    jsr L945B
+    bne LB1E9         ; Look for FN/PROC name in heap, if found, jump to it
+    jmp LB112         ; Not in heap, jump to look through program
 
 ; FN/PROC destination found
 ; -------------------------
 LB1E9:
-    LDY #$00
-    LDA (zp2A),Y
-    STA zp0B          ; Set PtrA to address from FN/PROC infoblock
-    INY
-    LDA (zp2A),Y
-    STA zp0C
+    ldy #$00
+    lda (zp2A),Y
+    sta zp0B          ; Set PtrA to address from FN/PROC infoblock
+    iny
+    lda (zp2A),Y
+    sta zp0C
 LB1F4:
-    LDA #$00
-    PHA
-    STA zp0A          ; Push 'no parameters' (?)
-    JSR L8A97
-    CMP #'('
-    BEQ LB24D
-    DEC zp0A
+    lda #$00
+    pha
+    sta zp0A          ; Push 'no parameters' (?)
+    jsr L8A97
+    cmp #'('
+    beq LB24D
+    dec zp0A
 LB202:
-    LDA zp1B
-    PHA
-    LDA zp19
-    PHA
-    LDA zp1A
-    PHA
-    JSR L8BA3
-    PLA
-    STA zp1A
-    PLA
-    STA zp19
-    PLA
-    STA zp1B
-    PLA
-    BEQ LB226
-    STA zp3F
+    lda zp1B
+    pha
+    lda zp19
+    pha
+    lda zp1A
+    pha
+    jsr L8BA3
+    pla
+    sta zp1A
+    pla
+    sta zp19
+    pla
+    sta zp1B
+    pla
+    beq LB226
+    sta zp3F
 LB21C:
-    JSR LBE0B
-    JSR L8CC1
-    DEC zp3F
-    BNE LB21C
+    jsr LBE0B
+    jsr L8CC1
+    dec zp3F
+    bne LB21C
 LB226:
-    PLA
-    STA zp0C
-    PLA
-    STA zp0B
-    PLA
-    STA zp0A
-    PLA
-    LDY #$00
-    LDA (zp04),Y
-    TAX
-    TXS
+    pla
+    sta zp0C
+    pla
+    sta zp0B
+    pla
+    sta zp0A
+    pla
+    ldy #$00
+    lda (zp04),Y
+    tax
+    txs
 LB236:
-    INY
-    INX
-    LDA (zp04),Y
-    STA $0100,X       ; Copy stacked 6502 stack back onto 6502 stack
-    CPX #$FF
-    BNE LB236
-    TYA
-    ADC zp04
-    STA zp04          ; Adjust BASIC stack pointer
-    BCC LB24A
-    INC zp05
+    iny
+    inx
+    lda (zp04),Y
+    sta $0100,X       ; Copy stacked 6502 stack back onto 6502 stack
+    cpx #$FF
+    bne LB236
+    tya
+    adc zp04
+    sta zp04          ; Adjust BASIC stack pointer
+    bcc LB24A
+    inc zp05
 LB24A:
-    LDA zp27
-    RTS
+    lda zp27
+    rts
 
 LB24D:
-    LDA zp1B
-    PHA
-    LDA zp19
-    PHA
-    LDA zp1A
-    PHA
-    JSR L9582
-    BEQ LB2B5
-    LDA zp1B
-    STA zp0A
-    PLA
-    STA zp1A
-    PLA
-    STA zp19
-    PLA
-    STA zp1B
-    PLA
-    TAX
-    LDA zp2C
-    PHA
-    LDA zp2B
-    PHA
-    LDA zp2A
-    PHA
-    INX
-    TXA
-    PHA
-    JSR LB30D
-    JSR L8A97
-    CMP #','
-    BEQ LB24D
-    CMP #')'
-    BNE LB2B5
-    LDA #$00
-    PHA
-    JSR L8A8C
-    CMP #'('
-    BNE LB2B5
+    lda zp1B
+    pha
+    lda zp19
+    pha
+    lda zp1A
+    pha
+    jsr L9582
+    beq LB2B5
+    lda zp1B
+    sta zp0A
+    pla
+    sta zp1A
+    pla
+    sta zp19
+    pla
+    sta zp1B
+    pla
+    tax
+    lda zp2C
+    pha
+    lda zp2B
+    pha
+    lda zp2A
+    pha
+    inx
+    txa
+    pha
+    jsr LB30D
+    jsr L8A97
+    cmp #','
+    beq LB24D
+    cmp #')'
+    bne LB2B5
+    lda #$00
+    pha
+    jsr L8A8C
+    cmp #'('
+    bne LB2B5
 LB28E:
-    JSR L9B29
-    JSR LBD90
-    LDA zp27
-    STA zp2D
-    JSR LBD94
-    PLA
-    TAX
-    INX
-    TXA
-    PHA
-    JSR L8A8C
-    CMP #','
-    BEQ LB28E
-    CMP #')'
-    BNE LB2B5
-    PLA
-    PLA
-    STA zp4D
-    STA zp4E
-    CPX zp4D
-    BEQ LB2CA
+    jsr L9B29
+    jsr LBD90
+    lda zp27
+    sta zp2D
+    jsr LBD94
+    pla
+    tax
+    inx
+    txa
+    pha
+    jsr L8A8C
+    cmp #','
+    beq LB28E
+    cmp #')'
+    bne LB2B5
+    pla
+    pla
+    sta zp4D
+    sta zp4E
+    cpx zp4D
+    beq LB2CA
 LB2B5:
-    LDX #$FB
-    TXS
-    PLA
-    STA zp0C
-    PLA
-    STA zp0B
-    BRK
+    ldx #$FB
+    txs
+    pla
+    sta zp0C
+    pla
+    sta zp0B
+    brk
     dta $1F
     .if foldup == 1
         dta 'ARGUMENTS'
     .else
         dta 'Arguments'
     .endif
-    BRK
+    brk
 
 LB2CA:
-    JSR LBDEA
-    PLA
-    STA zp2A
-    PLA
-    STA zp2B
-    PLA
-    STA zp2C
-    BMI LB2F9
-    LDA zp2D
-    BEQ LB2B5
-    STA zp27
-    LDX #$37
-    JSR LBE44
-    LDA zp27
-    BPL LB2F0
-    JSR LBD7E
-    JSR LA3B5
-    JMP LB2F3
+    jsr LBDEA
+    pla
+    sta zp2A
+    pla
+    sta zp2B
+    pla
+    sta zp2C
+    bmi LB2F9
+    lda zp2D
+    beq LB2B5
+    sta zp27
+    ldx #$37
+    jsr LBE44
+    lda zp27
+    bpl LB2F0
+    jsr LBD7E
+    jsr LA3B5
+    jmp LB2F3
 
 LB2F0:
-    JSR LBDEA
+    jsr LBDEA
 LB2F3:
-    JSR LB4B7
-    JMP LB303
+    jsr LB4B7
+    jmp LB303
 
 LB2F9:
-    LDA zp2D
-    BNE LB2B5
-    JSR LBDCB
-    JSR L8C21
+    lda zp2D
+    bne LB2B5
+    jsr LBDCB
+    jsr L8C21
 LB303:
-    DEC zp4D
-    BNE LB2CA
-    LDA zp4E
-    PHA
-    JMP LB202
+    dec zp4D
+    bne LB2CA
+    lda zp4E
+    pha
+    jmp LB202
 
 ; Push a value onto the stack
 ; ---------------------------
 LB30D:
-    LDY zp2C
+    ldy zp2C
     .if version < 3
-        CPY #$04
-        BNE LB318
+        cpy #$04
+        bne LB318
     .elseif version >= 3
-        CPY #$05
-        BCS LB318
+        cpy #$05
+        bcs LB318
     .endif
-    LDX #$37
-    JSR LBE44
+    ldx #$37
+    jsr LBE44
 LB318:
-    JSR LB32C
-    PHP
-    JSR LBD90
-    PLP
-    BEQ LB329
-    BMI LB329
-    LDX #$37
-    JSR LAF56
+    jsr LB32C
+    php
+    jsr LBD90
+    plp
+    beq LB329
+    bmi LB329
+    ldx #$37
+    jsr LAF56
 LB329:
-    JMP LBD94
+    jmp LBD94
 
 LB32C:
-    LDY zp2C
-    BMI LB384
-    BEQ LB34F
-    CPY #$05
-    BEQ LB354
-    LDY #$03
-    LDA (zp2A),Y
-    STA zp2D
-    DEY
-    LDA (zp2A),Y
-    STA zp2C
-    DEY
-    LDA (zp2A),Y
-    TAX
-    DEY
-    LDA (zp2A),Y
-    STA zp2A
-    STX zp2B
-    LDA #$40
-    RTS
+    ldy zp2C
+    bmi LB384
+    beq LB34F
+    cpy #$05
+    beq LB354
+    ldy #$03
+    lda (zp2A),Y
+    sta zp2D
+    dey
+    lda (zp2A),Y
+    sta zp2C
+    dey
+    lda (zp2A),Y
+    tax
+    dey
+    lda (zp2A),Y
+    sta zp2A
+    stx zp2B
+    lda #$40
+    rts
 
 LB34F:
-    LDA (zp2A),Y
+    lda (zp2A),Y
     .if version < 3
-        JMP LAEEA
+        jmp LAEEA
     .elseif version >= 3
-        JMP XAED5
+        jmp XAED5
     .endif
 
 LB354:
-    DEY
-    LDA (zp2A),Y
-    STA zp34
-    DEY
-    LDA (zp2A),Y
-    STA zp33
-    DEY
-    LDA (zp2A),Y
-    STA zp32
-    DEY
-    LDA (zp2A),Y
-    STA zp2E
-    DEY
-    LDA (zp2A),Y
-    STA zp30
-    STY zp35
-    STY zp2F
-    ORA zp2E
-    ORA zp32
-    ORA zp33
-    ORA zp34
-    BEQ LB37F
-    LDA zp2E
-    ORA #$80
+    dey
+    lda (zp2A),Y
+    sta zp34
+    dey
+    lda (zp2A),Y
+    sta zp33
+    dey
+    lda (zp2A),Y
+    sta zp32
+    dey
+    lda (zp2A),Y
+    sta zp2E
+    dey
+    lda (zp2A),Y
+    sta zp30
+    sty zp35
+    sty zp2F
+    ora zp2E
+    ora zp32
+    ora zp33
+    ora zp34
+    beq LB37F
+    lda zp2E
+    ora #$80
 LB37F:
-    STA zp31
-    LDA #$FF
-    RTS
+    sta zp31
+    lda #$FF
+    rts
 
 LB384:
-    CPY #$80
-    BEQ LB3A7
-    LDY #$03
-    LDA (zp2A),Y
-    STA zp36
-    BEQ LB3A6
-    LDY #$01
-    LDA (zp2A),Y
-    STA zp38
-    DEY
-    LDA (zp2A),Y
-    STA zp37
-    LDY zp36
+    cpy #$80
+    beq LB3A7
+    ldy #$03
+    lda (zp2A),Y
+    sta zp36
+    beq LB3A6
+    ldy #$01
+    lda (zp2A),Y
+    sta zp38
+    dey
+    lda (zp2A),Y
+    sta zp37
+    ldy zp36
 LB39D:
-    DEY
-    LDA (zp37),Y
-    STA ws+$0600,Y
-    TYA
-    BNE LB39D
+    dey
+    lda (zp37),Y
+    sta ws+$0600,Y
+    tya
+    bne LB39D
 LB3A6:
-    RTS
+    rts
 
 LB3A7:
-    LDA zp2B
-    BEQ LB3C0
+    lda zp2B
+    beq LB3C0
 LB3AB:
-    LDY #$00
+    ldy #$00
 LB3AD:
-    LDA (zp2A),Y
-    STA ws+$0600,Y
-    EOR #$0D
-    BEQ LB3BA
-    INY
-    BNE LB3AD
-    TYA
+    lda (zp2A),Y
+    sta ws+$0600,Y
+    eor #$0D
+    beq LB3BA
+    iny
+    bne LB3AD
+    tya
 LB3BA:
-    STY zp36
-    RTS
+    sty zp36
+    rts
 
 ; =CHR$ numeric
 ; =============
 LB3BD:
-    JSR L92E3
+    jsr L92E3
 LB3C0:
-    LDA zp2A
-    JMP LAFC2
+    lda zp2A
+    jmp LAFC2
 
 LB3C5:
-    LDY #$00
-    STY zp08
-    STY zp09
-    LDX zp18
-    STX zp38
-    STY zp37
-    LDX zp0C
-    CPX #$07+(ws/256)
-    BEQ LB401
-    LDX zp0B
+    ldy #$00
+    sty zp08
+    sty zp09
+    ldx zp18
+    stx zp38
+    sty zp37
+    ldx zp0C
+    cpx #$07+(ws/256)
+    beq LB401
+    ldx zp0B
 LB3D9:
-    JSR L8942
-    CMP #$0D
-    BNE LB3F9
-    CPX zp37
-    LDA zp0C
-    SBC zp38
-    BCC LB401
-    JSR L8942
-    ORA #$00
-    BMI LB401
-    STA zp09
-    JSR L8942
-    STA zp08
-    JSR L8942
+    jsr L8942
+    cmp #$0D
+    bne LB3F9
+    cpx zp37
+    lda zp0C
+    sbc zp38
+    bcc LB401
+    jsr L8942
+    ora #$00
+    bmi LB401
+    sta zp09
+    jsr L8942
+    sta zp08
+    jsr L8942
 LB3F9:
-    CPX zp37
-    LDA zp0C
-    SBC zp38
-    BCS LB3D9
+    cpx zp37
+    lda zp0C
+    sbc zp38
+    bcs LB3D9
 LB401:
-    RTS
+    rts
 
 
 ; ERROR HANDLER
@@ -9407,65 +9407,65 @@ LB402:
 ; Atom/System - Process raw BRK to get FAULT pointer
 ; --------------------------------------------------
     .ifdef MOS_ATOM
-        PLA
-        CLD
-        CLI
-        PLA           ; Drop flags, pop return low byte
-        SEC
-        SBC #$01
-        STA FAULT+0       ; Point to error block
-        PLA
-        SBC #$00
-        STA FAULT+1
-        CMP #>L8000
-        BCC LD428     ; If outside BASIC, not a full error block
-        CMP #[>LC000]-1       ; syntax?
-        BCS LD428     ; So generate default error
+        pla
+        cld
+        cli
+        pla           ; Drop flags, pop return low byte
+        sec
+        sbc #$01
+        sta FAULT+0       ; Point to error block
+        pla
+        sbc #$00
+        sta FAULT+1
+        cmp #>L8000
+        bcc LD428     ; If outside BASIC, not a full error block
+        cmp #[>LC000]-1       ; syntax?
+        bcs LD428     ; So generate default error
     .endif
 
 
 ; FAULT set up, now process BRK error
 ; -----------------------------------
-    JSR LB3C5
-    STY zp20
-    LDA (FAULT),Y
-    BNE LB413         ; If ERR<>0, skip past ON ERROR OFF
-    LDA #<LB433
-    STA zp16          ; ON ERROR OFF
-    LDA #>LB433
-    STA zp17
+    jsr LB3C5
+    sty zp20
+    lda (FAULT),Y
+    bne LB413         ; If ERR<>0, skip past ON ERROR OFF
+    lda #<LB433
+    sta zp16          ; ON ERROR OFF
+    lda #>LB433
+    sta zp17
 LB413:
-    LDA zp16
-    STA zp0B          ; Point program point to ERROR program
-    LDA zp17
-    STA zp0C
-    JSR LBD3A         ; Clear DATA and stack
-    TAX
-    STX zp0A
+    lda zp16
+    sta zp0B          ; Point program point to ERROR program
+    lda zp17
+    sta zp0C
+    jsr LBD3A         ; Clear DATA and stack
+    tax
+    stx zp0A
     .ifdef MOS_BBC
-        LDA #$DA
-        JSR OSBYTE    ; Clear VDU queue
-        LDA #$7E
-        JSR OSBYTE    ; Acknowlege any Escape state
+        lda #$DA
+        jsr OSBYTE    ; Clear VDU queue
+        lda #$7E
+        jsr OSBYTE    ; Acknowlege any Escape state
     .endif
-    LDX #$FF
-    STX zp28
-    TXS               ; Clear system stack
-    JMP L8BA3         ; Jump to execution loop
+    ldx #$FF
+    stx zp28
+    txs               ; Clear system stack
+    jmp L8BA3         ; Jump to execution loop
 
 LD428:
     .ifdef MOS_ATOM
         .if foldup == 0
-            BRK
+            brk
             dta $FF
             dta 'External Error'
-            BRK
+            brk
         .endif
         .if foldup != 0
-            BRK
+            brk
             dta $FF
             dta tknEXT, 'ERNAL ', tknERROR
-            BRK
+            brk
         .endif
     .endif
 
@@ -9497,402 +9497,402 @@ LB433:
 ; SOUND numeric, numeric, numeric, numeric
 ; ========================================
 LB44C:
-    JSR L8821         ; Evaluate integer
-    LDX #$03          ; Three more to evaluate
+    jsr L8821         ; Evaluate integer
+    ldx #$03          ; Three more to evaluate
 LB451:
     .ifdef MOS_BBC
-        LDA zp2A
-        PHA
-        LDA zp2B
-        PHA           ; Stack current 16-bit integer
+        lda zp2A
+        pha
+        lda zp2B
+        pha           ; Stack current 16-bit integer
     .endif
-    TXA
-    PHA
-    JSR L92DA         ; Step past comma, evaluate next integer
-    PLA
-    TAX
-    DEX
-    BNE LB451         ; Loop to stack this one
+    txa
+    pha
+    jsr L92DA         ; Step past comma, evaluate next integer
+    pla
+    tax
+    dex
+    bne LB451         ; Loop to stack this one
     .ifdef MOS_BBC
-        JSR L9852     ; Check end of statement
-        LDA zp2A
-        STA zp3D      ; Copy current 16-bit integer to end of control block
-        LDA zp2B
-        STA zp3E
-        LDY #$07
-        LDX #$05      ; Prepare for OSWORD 7 and 6 more bytes
-        BNE LB48F     ; Jump to pop to control block and call OSWORD
+        jsr L9852     ; Check end of statement
+        lda zp2A
+        sta zp3D      ; Copy current 16-bit integer to end of control block
+        lda zp2B
+        sta zp3E
+        ldy #$07
+        ldx #$05      ; Prepare for OSWORD 7 and 6 more bytes
+        bne LB48F     ; Jump to pop to control block and call OSWORD
     .endif
     .ifdef MOS_ATOM
-        BEQ LB484     ; Check end of statement and return
+        beq LB484     ; Check end of statement and return
     .endif
 
 ; ENVELOPE a,b,c,d,e,f,g,h,i,j,k,l,m,n
 ; ====================================
 LB472:
-    JSR L8821         ; Evaluate integer
-    LDX #$0D          ; 13 more to evaluate
+    jsr L8821         ; Evaluate integer
+    ldx #$0D          ; 13 more to evaluate
 LB477:
     .ifdef MOS_BBC
-        LDA zp2A
-        PHA           ; Stack current 8-bit integer
+        lda zp2A
+        pha           ; Stack current 8-bit integer
     .endif
-    TXA
-    PHA
-    JSR L92DA         ; Step past comma, evaluate next integer
-    PLA
-    TAX
-    DEX
-    BNE LB477         ; Loop to stack this one
+    txa
+    pha
+    jsr L92DA         ; Step past comma, evaluate next integer
+    pla
+    tax
+    dex
+    bne LB477         ; Loop to stack this one
 LB484:
-    JSR L9852         ; Check end of statement
+    jsr L9852         ; Check end of statement
     .ifdef MOS_BBC
-        LDA zp2A
-        STA zp44      ; Copy current 8-bit integer to end of control block
-        LDX #$0C
-        LDY #$08      ; Prepare for 12 more bytes and OSWORD 8
+        lda zp2A
+        sta zp44      ; Copy current 8-bit integer to end of control block
+        ldx #$0C
+        ldy #$08      ; Prepare for 12 more bytes and OSWORD 8
     .endif
 
 
 LB48F:
     .ifdef MOS_BBC
-        PLA
-        STA zp37,X    ; Pop bytes into control block
-        DEX
-        BPL LB48F
-        TYA           ; Y=OSWORD number
-        LDX #$37
-        LDY #$00      ; XY=>control block
-        JSR OSWORD
+        pla
+        sta zp37,X    ; Pop bytes into control block
+        dex
+        bpl LB48F
+        tya           ; Y=OSWORD number
+        ldx #$37
+        ldy #$00      ; XY=>control block
+        jsr OSWORD
     .endif
-    JMP L8B9B         ; Return to execution loop
+    jmp L8B9B         ; Return to execution loop
 
 ; WIDTH numeric
 ; =============
 LB4A0:
-    JSR L8821
-    JSR L9852
-    LDY zp2A
-    DEY
-    STY zp23
-    JMP L8B9B
+    jsr L8821
+    jsr L9852
+    ldy zp2A
+    dey
+    sty zp23
+    jmp L8B9B
 
 LB4AE:
-    JMP L8C0E
+    jmp L8C0E
 
 ; Store byte or word integer
 ; ==========================
 LB4B1:
-    JSR L9B29         ; Evaluate expression
+    jsr L9B29         ; Evaluate expression
 LB4B4:
-    JSR LBE0B         ; Unstack integer (address of data)
+    jsr LBE0B         ; Unstack integer (address of data)
 LB4B7:
-    LDA zp39
-    CMP #$05
-    BEQ LB4E0         ; Size=5, jump to store float
-    LDA zp27
-    BEQ LB4AE         ; Type<>num, jump to error
-    BPL LB4C6         ; Type=int, jump to store it
-    JSR LA3E4         ; Convert float to integer
+    lda zp39
+    cmp #$05
+    beq LB4E0         ; Size=5, jump to store float
+    lda zp27
+    beq LB4AE         ; Type<>num, jump to error
+    bpl LB4C6         ; Type=int, jump to store it
+    jsr LA3E4         ; Convert float to integer
 LB4C6:
-    LDY #$00
-    LDA zp2A
-    STA (zp37),Y      ; Store byte 1
-    LDA zp39
-    BEQ LB4DF         ; Exit if size=0, byte
-    LDA zp2B
-    INY
-    STA (zp37),Y      ; Store byte 2
-    LDA zp2C
-    INY
-    STA (zp37),Y      ; Store byte 3
-    LDA zp2D
-    INY
-    STA (zp37),Y      ; Store byte 4
+    ldy #$00
+    lda zp2A
+    sta (zp37),Y      ; Store byte 1
+    lda zp39
+    beq LB4DF         ; Exit if size=0, byte
+    lda zp2B
+    iny
+    sta (zp37),Y      ; Store byte 2
+    lda zp2C
+    iny
+    sta (zp37),Y      ; Store byte 3
+    lda zp2D
+    iny
+    sta (zp37),Y      ; Store byte 4
 LB4DF:
-    RTS
+    rts
 
 ; Store float
 ; ===========
 LB4E0:
-    LDA zp27
-    BEQ LB4AE         ; Type<>num, jump to error
-    BMI LB4E9         ; Type=float, jump to store it
-    JSR LA2BE         ; Convert integer to float
+    lda zp27
+    beq LB4AE         ; Type<>num, jump to error
+    bmi LB4E9         ; Type=float, jump to store it
+    jsr LA2BE         ; Convert integer to float
 LB4E9:
-    LDY #$00          ; Store 5-byte float
-    LDA zp30
-    STA (zp37),Y
-    INY               ; exponent
-    LDA zp2E
-    AND #$80
-    STA zp2E          ; Unpack sign
-    LDA zp31
-    AND #$7F          ; Unpack mantissa 1
-    ORA zp2E
-    STA (zp37),Y      ; sign + mantissa 1
-    INY
-    LDA zp32
-    STA (zp37),Y      ; mantissa 2
-    INY
-    LDA zp33
-    STA (zp37),Y      ; mantissa 3
-    INY
-    LDA zp34
-    STA (zp37),Y      ; mantissa 4
-    RTS
+    ldy #$00          ; Store 5-byte float
+    lda zp30
+    sta (zp37),Y
+    iny               ; exponent
+    lda zp2E
+    and #$80
+    sta zp2E          ; Unpack sign
+    lda zp31
+    and #$7F          ; Unpack mantissa 1
+    ora zp2E
+    sta (zp37),Y      ; sign + mantissa 1
+    iny
+    lda zp32
+    sta (zp37),Y      ; mantissa 2
+    iny
+    lda zp33
+    sta (zp37),Y      ; mantissa 3
+    iny
+    lda zp34
+    sta (zp37),Y      ; mantissa 4
+    rts
 
 LB500:
 LB50E:
-    STA zp37
-    CMP #$80
-    BCC LB558
-    LDA #<L8071
-    STA zp38          ; Point to token table
-    LDA #>L8071
-    STA zp39
-    STY zp3A
+    sta zp37
+    cmp #$80
+    bcc LB558
+    lda #<L8071
+    sta zp38          ; Point to token table
+    lda #>L8071
+    sta zp39
+    sty zp3A
 LB51E:
-    LDY #$00
+    ldy #$00
 LB520:
-    INY
-    LDA (zp38),Y
-    BPL LB520
-    CMP zp37
-    BEQ LB536
-    INY
-    TYA
-    SEC
-    ADC zp38
-    STA zp38
-    BCC LB51E
-    INC zp39
-    BCS LB51E
+    iny
+    lda (zp38),Y
+    bpl LB520
+    cmp zp37
+    beq LB536
+    iny
+    tya
+    sec
+    adc zp38
+    sta zp38
+    bcc LB51E
+    inc zp39
+    bcs LB51E
 
 LB536:
-    LDY #$00
+    ldy #$00
 LB538:
-    LDA (zp38),Y
-    BMI LB542
-    JSR LB558
-    INY
-    BNE LB538
+    lda (zp38),Y
+    bmi LB542
+    jsr LB558
+    iny
+    bne LB538
 LB542:
-    LDY zp3A
-    RTS
+    ldy zp3A
+    rts
 
 LB545:
-    PHA
-    LSR
-    LSR
-    LSR
-    LSR
-    JSR LB550
-    PLA
-    AND #$0F
+    pha
+    lsr
+    lsr
+    lsr
+    lsr
+    jsr LB550
+    pla
+    and #$0F
 LB550:
-    CMP #$0A
-    BCC LB556
-    ADC #$06
+    cmp #$0A
+    bcc LB556
+    adc #$06
 LB556:
-    ADC #$30
+    adc #$30
 LB558:
-    CMP #$0D
-    BNE LB567
-    JSR OSWRCH
-    JMP LBC28         ; Set COUNT to zero
+    cmp #$0D
+    bne LB567
+    jsr OSWRCH
+    jmp LBC28         ; Set COUNT to zero
 
 LB562:
-    JSR LB545
+    jsr LB545
 LB565:
-    LDA #$20
+    lda #$20
 LB567:
-    PHA
-    LDA zp23
-    CMP zp1E
-    BCS LB571
-    JSR LBC25
+    pha
+    lda zp23
+    cmp zp1E
+    bcs LB571
+    jsr LBC25
 LB571:
-    PLA
-    INC zp1E
+    pla
+    inc zp1E
     .if WRCHV != 0
-        JMP (WRCHV)
+        jmp (WRCHV)
     .endif
     .if WRCHV == 0
-        JMP OSWRCH 
+        jmp OSWRCH 
     .endif
 
 LB577:
-    AND zp1F
-    BEQ LB589
-    TXA
-    BEQ LB589
-    BMI LB565
+    and zp1F
+    beq LB589
+    txa
+    beq LB589
+    bmi LB565
     .if version >= 3
-        ASL
-        TAX
+        asl
+        tax
     .endif
 LB580:
-    JSR LB565
+    jsr LB565
     .if version < 3
-        JSR LB558
+        jsr LB558
     .endif
-    DEX
-    BNE LB580
+    dex
+    bne LB580
 LB589:
-    RTS
+    rts
 
 LB58A:
-    INC zp0A
-    JSR L9B1D
-    JSR L984C
-    JSR L92EE
-    LDA zp2A
-    STA zp1F
-    JMP L8AF6
+    inc zp0A
+    jsr L9B1D
+    jsr L984C
+    jsr L92EE
+    lda zp2A
+    sta zp1F
+    jmp L8AF6
 
 ; LIST [linenum [,linenum]]
 ; =========================
 LB59C:
-    INY
-    LDA (zp0B),Y
-    CMP #'O'
-    BEQ LB58A
-    LDA #$00
-    STA zp3B
-    STA zp3C
+    iny
+    lda (zp0B),Y
+    cmp #'O'
+    beq LB58A
+    lda #$00
+    sta zp3B
+    sta zp3C
     .if version < 3
-        JSR LAED8
+        jsr LAED8
     .elseif version >= 3
-        JSR XAED3
+        jsr XAED3
     .endif
-    JSR L97DF
-    PHP
-    JSR LBD94
-    LDA #$FF
-    STA zp2A
-    LDA #$7F
-    STA zp2B
-    PLP
-    BCC LB5CF
-    JSR L8A97
-    CMP #','
-    BEQ LB5D8
-    JSR LBDEA
-    JSR LBD94
-    DEC zp0A
-    BPL LB5DB
+    jsr L97DF
+    php
+    jsr LBD94
+    lda #$FF
+    sta zp2A
+    lda #$7F
+    sta zp2B
+    plp
+    bcc LB5CF
+    jsr L8A97
+    cmp #','
+    beq LB5D8
+    jsr LBDEA
+    jsr LBD94
+    dec zp0A
+    bpl LB5DB
 LB5CF:
-    JSR L8A97
-    CMP #','
-    BEQ LB5D8
-    DEC zp0A
+    jsr L8A97
+    cmp #','
+    beq LB5D8
+    dec zp0A
 LB5D8:
-    JSR L97DF
+    jsr L97DF
 LB5DB:
-    LDA zp2A
-    STA zp31
-    LDA zp2B
-    STA zp32
-    JSR L9857
-    JSR LBE6F
-    JSR LBDEA
-    JSR L9970
-    LDA zp3D
-    STA zp0B
-    LDA zp3E
-    STA zp0C
-    BCC LB60F
-    DEY
-    BCS LB602
+    lda zp2A
+    sta zp31
+    lda zp2B
+    sta zp32
+    jsr L9857
+    jsr LBE6F
+    jsr LBDEA
+    jsr L9970
+    lda zp3D
+    sta zp0B
+    lda zp3E
+    sta zp0C
+    bcc LB60F
+    dey
+    bcs LB602
 
 LB5FC:
-    JSR LBC25
-    JSR L986D
+    jsr LBC25
+    jsr L986D
 LB602:
-    LDA (zp0B),Y
-    STA zp2B
-    INY
-    LDA (zp0B),Y
-    STA zp2A
-    INY
-    INY
-    STY zp0A
+    lda (zp0B),Y
+    sta zp2B
+    iny
+    lda (zp0B),Y
+    sta zp2A
+    iny
+    iny
+    sty zp0A
 LB60F:
-    LDA zp2A
-    CLC
-    SBC zp31
-    LDA zp2B
-    SBC zp32
-    BCC LB61D
-    JMP L8AF6
+    lda zp2A
+    clc
+    sbc zp31
+    lda zp2B
+    sbc zp32
+    bcc LB61D
+    jmp L8AF6
 
 LB61D:
-    JSR L9923
-    LDX #$FF
-    STX zp4D
-    LDA #$01
-    JSR LB577
-    LDX zp3B
-    LDA #$02
-    JSR LB577
-    LDX zp3C
-    LDA #$04
-    JSR LB577
+    jsr L9923
+    ldx #$FF
+    stx zp4D
+    lda #$01
+    jsr LB577
+    ldx zp3B
+    lda #$02
+    jsr LB577
+    ldx zp3C
+    lda #$04
+    jsr LB577
 LB637:
-    LDY zp0A
+    ldy zp0A
 LB639:
-    LDA (zp0B),Y
-    CMP #$0D
-    BEQ LB5FC
-    CMP #$22
-    BNE LB651
-    LDA #$FF
-    EOR zp4D
-    STA zp4D
-    LDA #$22
+    lda (zp0B),Y
+    cmp #$0D
+    beq LB5FC
+    cmp #$22
+    bne LB651
+    lda #$FF
+    eor zp4D
+    sta zp4D
+    lda #$22
 LB64B:
-    JSR LB558
-    INY
-    BNE LB639
+    jsr LB558
+    iny
+    bne LB639
 LB651:
-    BIT zp4D
-    BPL LB64B
-    CMP #$8D
-    BNE LB668
-    JSR L97EB
-    STY zp0A
-    LDA #$00
-    STA zp14
-    JSR L991F
-    JMP LB637
+    bit zp4D
+    bpl LB64B
+    cmp #$8D
+    bne LB668
+    jsr L97EB
+    sty zp0A
+    lda #$00
+    sta zp14
+    jsr L991F
+    jmp LB637
 
 LB668:
-    CMP #$E3
-    BNE LB66E
-    INC zp3B
+    cmp #$E3
+    bne LB66E
+    inc zp3B
 LB66E:
-    CMP #$ED
-    BNE LB678
-    LDX zp3B
-    BEQ LB678
-    DEC zp3B
+    cmp #$ED
+    bne LB678
+    ldx zp3B
+    beq LB678
+    dec zp3B
 LB678:
-    CMP #$F5
-    BNE LB67E
-    INC zp3C
+    cmp #$F5
+    bne LB67E
+    inc zp3C
 LB67E:
-    CMP #$FD
-    BNE LB688
-    LDX zp3C
-    BEQ LB688
-    DEC zp3C
+    cmp #$FD
+    bne LB688
+    ldx zp3C
+    beq LB688
+    dec zp3C
 LB688:
-    JSR LB50E
-    INY
-    BNE LB639
+    jsr LB50E
+    iny
+    bne LB639
 LB68E:
-    BRK
+    brk
     dta $20
     .if foldup == 1
         dta 'NO '
@@ -9900,41 +9900,41 @@ LB68E:
         dta 'No '
     .endif
     dta tknFOR
-    BRK
+    brk
 
 ; NEXT [variable [,...]]
 ; ======================
 LB695:
-    JSR L95C9
-    BNE LB6A3
-    LDX zp26
-    BEQ LB68E
-    BCS LB6D7
+    jsr L95C9
+    bne LB6A3
+    ldx zp26
+    beq LB68E
+    bcs LB6D7
 LB6A0:
-    JMP L982A
+    jmp L982A
 
 LB6A3:
-    BCS LB6A0
-    LDX zp26
-    BEQ LB68E
+    bcs LB6A0
+    ldx zp26
+    beq LB68E
 LB6A9:
-    LDA zp2A
-    CMP ws+$04F1,X
-    BNE LB6BE
-    LDA zp2B
-    CMP ws+$04F2,X
-    BNE LB6BE
-    LDA zp2C
-    CMP ws+$04F3,X
-    BEQ LB6D7
+    lda zp2A
+    cmp ws+$04F1,X
+    bne LB6BE
+    lda zp2B
+    cmp ws+$04F2,X
+    bne LB6BE
+    lda zp2C
+    cmp ws+$04F3,X
+    beq LB6D7
 LB6BE:
-    TXA
-    SEC
-    SBC #$0F
-    TAX
-    STX zp26
-    BNE LB6A9
-    BRK
+    txa
+    sec
+    sbc #$0F
+    tax
+    stx zp26
+    bne LB6A9
+    brk
     dta $21
     .if .def TARGET_BBC
         dta 'Can', 0x27, 't Match ', tknFOR
@@ -9943,115 +9943,115 @@ LB6BE:
     .elseif .def TARGET_ATOM
         dta 'CAN', 0x27, 'T MATCH ', tknFOR
     .endif
-    BRK
+    brk
 
 LB6D7:
-    LDA ws+$04F1,X
-    STA zp2A
-    LDA ws+$04F2,X
-    STA zp2B
-    LDY ws+$04F3,X
-    CPY #$05
-    BEQ LB766
-    LDY #$00
-    LDA (zp2A),Y
-    ADC ws+$04F4,X
-    STA (zp2A),Y
-    STA zp37
-    INY
-    LDA (zp2A),Y
-    ADC ws+$04F5,X
-    STA (zp2A),Y
-    STA zp38
-    INY
-    LDA (zp2A),Y
-    ADC ws+$04F6,X
-    STA (zp2A),Y
-    STA zp39
-    INY
-    LDA (zp2A),Y
-    ADC ws+$04F7,X
-    STA (zp2A),Y
-    TAY
-    LDA zp37
-    SEC
-    SBC ws+$04F9,X
-    STA zp37
-    LDA zp38
-    SBC ws+$04FA,X
-    STA zp38
-    LDA zp39
-    SBC ws+$04FB,X
-    STA zp39
-    TYA
-    SBC ws+$04FC,X
-    ORA zp37
-    ORA zp38
-    ORA zp39
-    BEQ LB741
-    TYA
-    EOR ws+$04F7,X
-    EOR ws+$04FC,X
-    BPL LB73F
-    BCS LB741
-    BCC LB751
+    lda ws+$04F1,X
+    sta zp2A
+    lda ws+$04F2,X
+    sta zp2B
+    ldy ws+$04F3,X
+    cpy #$05
+    beq LB766
+    ldy #$00
+    lda (zp2A),Y
+    adc ws+$04F4,X
+    sta (zp2A),Y
+    sta zp37
+    iny
+    lda (zp2A),Y
+    adc ws+$04F5,X
+    sta (zp2A),Y
+    sta zp38
+    iny
+    lda (zp2A),Y
+    adc ws+$04F6,X
+    sta (zp2A),Y
+    sta zp39
+    iny
+    lda (zp2A),Y
+    adc ws+$04F7,X
+    sta (zp2A),Y
+    tay
+    lda zp37
+    sec
+    sbc ws+$04F9,X
+    sta zp37
+    lda zp38
+    sbc ws+$04FA,X
+    sta zp38
+    lda zp39
+    sbc ws+$04FB,X
+    sta zp39
+    tya
+    sbc ws+$04FC,X
+    ora zp37
+    ora zp38
+    ora zp39
+    beq LB741
+    tya
+    eor ws+$04F7,X
+    eor ws+$04FC,X
+    bpl LB73F
+    bcs LB741
+    bcc LB751
 LB73F:
-    BCS LB751
+    bcs LB751
 LB741:
-    LDY ws+$04FE,X
-    LDA ws+$04FF,X
-    STY zp0B
-    STA zp0C
-    JSR L9877
-    JMP L8BA3
+    ldy ws+$04FE,X
+    lda ws+$04FF,X
+    sty zp0B
+    sta zp0C
+    jsr L9877
+    jmp L8BA3
 
 LB751:
-    LDA zp26
-    SEC
-    SBC #$0F
-    STA zp26
-    LDY zp1B
-    STY zp0A
-    JSR L8A97
-    CMP #','
-    BNE LB7A1
-    JMP LB695
+    lda zp26
+    sec
+    sbc #$0F
+    sta zp26
+    ldy zp1B
+    sty zp0A
+    jsr L8A97
+    cmp #','
+    bne LB7A1
+    jmp LB695
 
 LB766:
-    JSR LB354
-    LDA zp26
-    CLC
-    ADC #$F4
-    STA zp4B
-    LDA #$05+(ws/256)
-    STA zp4C
-    JSR LA500
-    LDA zp2A
-    STA zp37
-    LDA zp2B
-    STA zp38
-    JSR LB4E9
-    LDA zp26
-    STA zp27
-    CLC
-    ADC #$F9
-    STA zp4B
-    LDA #$05+(ws/256)
-    STA zp4C
-    JSR L9A5F
-    BEQ LB741
-    LDA ws+$04F5,X
-    BMI LB79D
-    BCS LB741
-    BCC LB751
+    jsr LB354
+    lda zp26
+    clc
+    adc #$F4
+    sta zp4B
+    lda #$05+(ws/256)
+    sta zp4C
+    jsr LA500
+    lda zp2A
+    sta zp37
+    lda zp2B
+    sta zp38
+    jsr LB4E9
+    lda zp26
+    sta zp27
+    clc
+    adc #$F9
+    sta zp4B
+    lda #$05+(ws/256)
+    sta zp4C
+    jsr L9A5F
+    beq LB741
+    lda ws+$04F5,X
+    bmi LB79D
+    bcs LB741
+    bcc LB751
 LB79D:
-    BCC LB741
-    BCS LB751
+    bcc LB741
+    bcs LB751
 LB7A1:
-    JMP L8B96
+    jmp L8B96
 
 LB7A4:
-    BRK
+    brk
     dta $22
     dta tknFOR
     .if foldup == 1
@@ -10060,7 +10060,7 @@ LB7A4:
         dta ' variable'
     .endif
 LB7B0:
-    BRK
+    brk
     dta $23
     .if foldup == 1
         dta 'TOO MANY ', tknFOR, 'S'
@@ -10068,7 +10068,7 @@ LB7B0:
         dta 'Too many ', tknFOR, 's'
     .endif
 LB7BD:
-    BRK
+    brk
     dta $24
     .if foldup == 1
         dta 'NO '
@@ -10076,123 +10076,123 @@ LB7BD:
         dta 'No '
     .endif
     dta tknTO
-    BRK
+    brk
 
 ; FOR numvar = numeric TO numeric [STEP numeric]
 ; ==============================================
 LB7C4:
-    JSR L9582
-    BEQ LB7A4
-    BCS LB7A4
-    JSR LBD94
-    JSR L9841
-    JSR LB4B1
-    LDY zp26
-    CPY #$96
-    BCS LB7B0
-    LDA zp37
-    STA ws+$0500,Y
-    LDA zp38
-    STA ws+$0501,Y
-    LDA zp39
-    STA ws+$0502,Y
-    TAX
-    JSR L8A8C
-    CMP #$B8
-    BNE LB7BD
-    CPX #$05
-    BEQ LB84F
-    JSR L92DD
-    LDY zp26
-    LDA zp2A
-    STA ws+$0508,Y
-    LDA zp2B
-    STA ws+$0509,Y
-    LDA zp2C
-    STA ws+$050A,Y
-    LDA zp2D
-    STA ws+$050B,Y
-    LDA #$01
+    jsr L9582
+    beq LB7A4
+    bcs LB7A4
+    jsr LBD94
+    jsr L9841
+    jsr LB4B1
+    ldy zp26
+    cpy #$96
+    bcs LB7B0
+    lda zp37
+    sta ws+$0500,Y
+    lda zp38
+    sta ws+$0501,Y
+    lda zp39
+    sta ws+$0502,Y
+    tax
+    jsr L8A8C
+    cmp #$B8
+    bne LB7BD
+    cpx #$05
+    beq LB84F
+    jsr L92DD
+    ldy zp26
+    lda zp2A
+    sta ws+$0508,Y
+    lda zp2B
+    sta ws+$0509,Y
+    lda zp2C
+    sta ws+$050A,Y
+    lda zp2D
+    sta ws+$050B,Y
+    lda #$01
     .if version < 3
-        JSR LAED8
+        jsr LAED8
     .elseif version >= 3
-        JSR XAED3
+        jsr XAED3
     .endif
-    JSR L8A8C
-    CMP #tknSTEP
-    BNE LB81F
-    JSR L92DD
-    LDY zp1B
+    jsr L8A8C
+    cmp #tknSTEP
+    bne LB81F
+    jsr L92DD
+    ldy zp1B
 LB81F:
-    STY zp0A
-    LDY zp26
-    LDA zp2A
-    STA ws+$0503,Y
-    LDA zp2B
-    STA ws+$0504,Y
-    LDA zp2C
-    STA ws+$0505,Y
-    LDA zp2D
-    STA ws+$0506,Y
+    sty zp0A
+    ldy zp26
+    lda zp2A
+    sta ws+$0503,Y
+    lda zp2B
+    sta ws+$0504,Y
+    lda zp2C
+    sta ws+$0505,Y
+    lda zp2D
+    sta ws+$0506,Y
 LB837:
-    JSR L9880
-    LDY zp26
-    LDA zp0B
-    STA ws+$050D,Y
-    LDA zp0C
-    STA ws+$050E,Y
-    CLC
-    TYA
-    ADC #$0F
-    STA zp26
-    JMP L8BA3
+    jsr L9880
+    ldy zp26
+    lda zp0B
+    sta ws+$050D,Y
+    lda zp0C
+    sta ws+$050E,Y
+    clc
+    tya
+    adc #$0F
+    sta zp26
+    jmp L8BA3
 
 LB84F:
-    JSR L9B29
-    JSR L92FD
-    LDA zp26
-    CLC
-    ADC #$08
-    STA zp4B
-    LDA #$05+(ws/256)
-    STA zp4C
-    JSR LA38D
-    JSR LA699
-    JSR L8A8C
-    CMP #$88
-    BNE LB875
-    JSR L9B29
-    JSR L92FD
-    LDY zp1B
+    jsr L9B29
+    jsr L92FD
+    lda zp26
+    clc
+    adc #$08
+    sta zp4B
+    lda #$05+(ws/256)
+    sta zp4C
+    jsr LA38D
+    jsr LA699
+    jsr L8A8C
+    cmp #$88
+    bne LB875
+    jsr L9B29
+    jsr L92FD
+    ldy zp1B
 LB875:
-    STY zp0A
-    LDA zp26
-    CLC
-    ADC #$03
-    STA zp4B
-    LDA #$05+(ws/256)
-    STA zp4C
-    JSR LA38D
-    JMP LB837
+    sty zp0A
+    lda zp26
+    clc
+    adc #$03
+    sta zp4B
+    lda #$05+(ws/256)
+    sta zp4C
+    jsr LA38D
+    jmp LB837
 
 ; GOSUB numeric
 ; =============
 LB888:
-    JSR LB99A
+    jsr LB99A
 LB88B:
-    JSR L9857
-    LDY zp25
-    CPY #$1A
-    BCS LB8A2
-    LDA zp0B
-    STA ws+$05CC,Y
-    LDA zp0C
-    STA ws+$05E6,Y
-    INC zp25
-    BCC LB8D2
+    jsr L9857
+    ldy zp25
+    cpy #$1A
+    bcs LB8A2
+    lda zp0B
+    sta ws+$05CC,Y
+    lda zp0C
+    sta ws+$05E6,Y
+    inc zp25
+    bcc LB8D2
 
 LB8A2:
-    BRK
+    brk
     dta $25
     .if foldup == 1
         dta 'TOO MANY ', tknGOSUB, 'S'
@@ -10200,7 +10200,7 @@ LB8A2:
         dta 'Too many ', tknGOSUB, 's'
     .endif
 LB8AF:
-    BRK
+    brk
     dta $26
     .if foldup == 1
         dta 'NO '
@@ -10208,65 +10208,65 @@ LB8AF:
         dta 'No '
     .endif
     dta tknGOSUB
-    BRK
+    brk
 
 ; RETURN
 ; ======
 LB8B6:
-    JSR L9857         ; Check for end of statement
-    LDX zp25
-    BEQ LB8AF         ; If GOSUB stack empty, error
-    DEC zp25          ; Decrement GOSUB stack
-    LDY ws+$05CB,X    ; Get stacked line pointer
-    LDA ws+$05E5,X
-    STY zp0B
-    STA zp0C          ; Set line pointer
-    JMP L8B9B         ; Jump back to execution loop
+    jsr L9857         ; Check for end of statement
+    ldx zp25
+    beq LB8AF         ; If GOSUB stack empty, error
+    dec zp25          ; Decrement GOSUB stack
+    ldy ws+$05CB,X    ; Get stacked line pointer
+    lda ws+$05E5,X
+    sty zp0B
+    sta zp0C          ; Set line pointer
+    jmp L8B9B         ; Jump back to execution loop
 
 ; GOTO numeric
 ; ============
 LB8CC:
-    JSR LB99A
-    JSR L9857         ; Find destination line, check for end of statement
+    jsr LB99A
+    jsr L9857         ; Find destination line, check for end of statement
 LB8D2:
-    LDA zp20
-    BEQ LB8D9
-    JSR L9905; If TRACE ON, print current line number
+    lda zp20
+    beq LB8D9
+    jsr L9905; If TRACE ON, print current line number
 LB8D9:
-    LDY zp3D
-    LDA zp3E          ; Get destination line address
+    ldy zp3D
+    lda zp3E          ; Get destination line address
 LB8DD:
-    STY zp0B
-    STA zp0C          ; Set line pointer
-    JMP L8BA3         ; Jump back to execution loop
+    sty zp0B
+    sta zp0C          ; Set line pointer
+    jmp L8BA3         ; Jump back to execution loop
 
 ; ON ERROR OFF
 ; ------------
 LB8E4:
-    JSR L9857         ; Check end of statement
-    LDA #<LB433
-    STA zp16          ; ON ERROR OFF
-    LDA #>LB433
-    STA zp17
-    JMP L8B9B         ; Jump to execution loop
+    jsr L9857         ; Check end of statement
+    lda #<LB433
+    sta zp16          ; ON ERROR OFF
+    lda #>LB433
+    sta zp17
+    jmp L8B9B         ; Jump to execution loop
 
 ; ON ERROR [OFF | program ]
 ; -------------------------
 LB8F2:
-    JSR L8A97
-    CMP #tknOFF
-    BEQ LB8E4         ; ON ERROR OFF
-    LDY zp0A
-    DEY
-    JSR L986D
-    LDA zp0B
-    STA zp16          ; Point ON ERROR pointer to here
-    LDA zp0C
-    STA zp17
-    JMP L8B7D         ; Skip past end of line
+    jsr L8A97
+    cmp #tknOFF
+    beq LB8E4         ; ON ERROR OFF
+    ldy zp0A
+    dey
+    jsr L986D
+    lda zp0B
+    sta zp16          ; Point ON ERROR pointer to here
+    lda zp0C
+    sta zp17
+    jmp L8B7D         ; Skip past end of line
 
 LB90A:
-    BRK
+    brk
     dta $27
     dta tknON
     .if foldup == 1
@@ -10274,87 +10274,87 @@ LB90A:
     .else
         dta ' syntax'
     .endif
-    BRK
+    brk
 
 ; ON [ERROR] [numeric]
 ; ====================
 LB915:
-    JSR L8A97         ; Skip spaces and get next character
-    CMP #tknERROR
-    BEQ LB8F2         ; Jump with ON ERROR
-    DEC zp0A
-    JSR L9B1D
-    JSR L92F0
-    LDY zp1B
-    INY
-    STY zp0A
-    CPX #tknGOTO
-    BEQ LB931
-    CPX #tknGOSUB
-    BNE LB90A
+    jsr L8A97         ; Skip spaces and get next character
+    cmp #tknERROR
+    beq LB8F2         ; Jump with ON ERROR
+    dec zp0A
+    jsr L9B1D
+    jsr L92F0
+    ldy zp1B
+    iny
+    sty zp0A
+    cpx #tknGOTO
+    beq LB931
+    cpx #tknGOSUB
+    bne LB90A
 LB931:
-    TXA
-    PHA               ; Save GOTO/GOSUB token
-    LDA zp2B
-    ORA zp2C          ; Get IntA
-    ORA zp2D
-    BNE LB97D         ; ON >255 - out of range, look for an ELSE
-    LDX zp2A
-    BEQ LB97D         ; ON zero - out of range, look for an ELSE
-    DEX
-    BEQ LB95C         ; Dec. counter, if zero use first destination
-    LDY zp0A          ; Get line index
+    txa
+    pha               ; Save GOTO/GOSUB token
+    lda zp2B
+    ora zp2C          ; Get IntA
+    ora zp2D
+    bne LB97D         ; ON >255 - out of range, look for an ELSE
+    ldx zp2A
+    beq LB97D         ; ON zero - out of range, look for an ELSE
+    dex
+    beq LB95C         ; Dec. counter, if zero use first destination
+    ldy zp0A          ; Get line index
 LB944:
-    LDA (zp0B),Y
-    INY
-    CMP #$0D
-    BEQ LB97D         ; End of line - error
-    CMP #':'
-    BEQ LB97D         ; End of statement - error
-    CMP #tknELSE
-    BEQ LB97D         ; ELSE - drop everything else to here
-    CMP #','
-    BNE LB944         ; No comma, keep looking
-    DEX
-    BNE LB944         ; Comma found, loop until count decremented to zero
-    STY zp0A          ; Store line index
+    lda (zp0B),Y
+    iny
+    cmp #$0D
+    beq LB97D         ; End of line - error
+    cmp #':'
+    beq LB97D         ; End of statement - error
+    cmp #tknELSE
+    beq LB97D         ; ELSE - drop everything else to here
+    cmp #','
+    bne LB944         ; No comma, keep looking
+    dex
+    bne LB944         ; Comma found, loop until count decremented to zero
+    sty zp0A          ; Store line index
 LB95C:
-    JSR LB99A         ; Read line number
-    PLA               ; Get stacked token back
-    CMP #tknGOSUB
-    BEQ LB96A         ; Jump to do GOSUB
-    JSR L9877         ; Update line index and check Escape
-    JMP LB8D2         ; Jump to do GOTO
+    jsr LB99A         ; Read line number
+    pla               ; Get stacked token back
+    cmp #tknGOSUB
+    beq LB96A         ; Jump to do GOSUB
+    jsr L9877         ; Update line index and check Escape
+    jmp LB8D2         ; Jump to do GOTO
 
 ; Update line pointer so RETURN comes back to next statement
 ; ----------------------------------------------------------
 LB96A:
-    LDY zp0A          ; Get line pointer
+    ldy zp0A          ; Get line pointer
 LB96C:
-    LDA (zp0B),Y
-    INY               ; Get character from line
-    CMP #$0D
-    BEQ LB977         ; End of line, RETURN to here
-    CMP #':'
-    BNE LB96C         ; <colon>, return to here
+    lda (zp0B),Y
+    iny               ; Get character from line
+    cmp #$0D
+    beq LB977         ; End of line, RETURN to here
+    cmp #':'
+    bne LB96C         ; <colon>, return to here
 LB977:
-    DEY
-    STY zp0A          ; Update line index to RETURN point
-    JMP LB88B         ; Jump to do the GOSUB
+    dey
+    sty zp0A          ; Update line index to RETURN point
+    jmp LB88B         ; Jump to do the GOSUB
 
 ; ON num out of range - check for an ELSE clause
 ; ----------------------------------------------
 LB97D:
-    LDY zp0A          ; Get line index
-    PLA               ; Drop GOTO/GOSUB token
+    ldy zp0A          ; Get line index
+    pla               ; Drop GOTO/GOSUB token
 LB980:
-    LDA (zp0B),Y
-    INY               ; Get character from line
-    CMP #tknELSE
-    BEQ LB995         ; Found ELSE, jump to use it
-    CMP #$0D
-    BNE LB980         ; Loop until end of line
-    BRK
+    lda (zp0B),Y
+    iny               ; Get character from line
+    cmp #tknELSE
+    beq LB995         ; Found ELSE, jump to use it
+    cmp #$0D
+    bne LB980         ; Loop until end of line
+    brk
     dta $28
     dta tknON
     .if foldup == 1
@@ -10362,319 +10362,319 @@ LB980:
     .else
         dta ' range'
     .endif
-    BRK
+    brk
 
 LB995:
-    STY zp0A
-    JMP L98E3         ; Store line index and jump to GOSUB
+    sty zp0A
+    jmp L98E3         ; Store line index and jump to GOSUB
 
 LB99A:
-    JSR L97DF
-    BCS LB9AF         ; Embedded line number found
-    JSR L9B1D
-    JSR L92F0         ; Evaluate expression, ensure integer
-    LDA zp1B
-    STA zp0A          ; Line number low byte
-    LDA zp2B
-    AND #$7F
-    STA zp2B          ; Line number high byte
+    jsr L97DF
+    bcs LB9AF         ; Embedded line number found
+    jsr L9B1D
+    jsr L92F0         ; Evaluate expression, ensure integer
+    lda zp1B
+    sta zp0A          ; Line number low byte
+    lda zp2B
+    and #$7F
+    sta zp2B          ; Line number high byte
                       ; Note - this makes goto $8000+10 the same as goto 10
 LB9AF:
-    JSR L9970
-    BCS LB9B5
-    RTS               ; Look for line, error if not found
+    jsr L9970
+    bcs LB9B5
+    rts               ; Look for line, error if not found
 
 LB9B5:
-    BRK
+    brk
     dta $29
     .if foldup == 1
         dta 'NO SUCH LINE'
     .else
         dta 'No such line'
     .endif
-    BRK
+    brk
 
 LB9C4:
-    JMP L8C0E
+    jmp L8C0E
 
 LB9C7:
-    JMP L982A
+    jmp L982A
 
 LB9CA:
-    STY zp0A
-    JMP L8B98
+    sty zp0A
+    jmp L8B98
 
 ; INPUT#channel, ...
 ; ------------------
 LB9CF:
-    DEC zp0A
-    JSR LBFA9
-    LDA zp1B
-    STA zp0A
-    STY zp4D
+    dec zp0A
+    jsr LBFA9
+    lda zp1B
+    sta zp0A
+    sty zp4D
 LB9DA:
-    JSR L8A97
-    CMP #','
-    BNE LB9CA
-    LDA zp4D
-    PHA
-    JSR L9582
-    BEQ LB9C7
-    LDA zp1B
-    STA zp0A
-    PLA
-    STA zp4D
-    PHP
-    JSR LBD94
-    LDY zp4D
-    JSR OSBGET
-    STA zp27
-    PLP
-    BCC LBA19
-    LDA zp27
-    BNE LB9C4
-    JSR OSBGET
-    STA zp36
-    TAX
-    BEQ LBA13
+    jsr L8A97
+    cmp #','
+    bne LB9CA
+    lda zp4D
+    pha
+    jsr L9582
+    beq LB9C7
+    lda zp1B
+    sta zp0A
+    pla
+    sta zp4D
+    php
+    jsr LBD94
+    ldy zp4D
+    jsr OSBGET
+    sta zp27
+    plp
+    bcc LBA19
+    lda zp27
+    bne LB9C4
+    jsr OSBGET
+    sta zp36
+    tax
+    beq LBA13
 LBA0A:
-    JSR OSBGET
-    STA ws+$05FF,X
-    DEX
-    BNE LBA0A
+    jsr OSBGET
+    sta ws+$05FF,X
+    dex
+    bne LBA0A
 LBA13:
-    JSR L8C1E
-    JMP LB9DA
+    jsr L8C1E
+    jmp LB9DA
 
 LBA19:
-    LDA zp27
-    BEQ LB9C4
-    BMI LBA2B
-    LDX #$03
+    lda zp27
+    beq LB9C4
+    bmi LBA2B
+    ldx #$03
 LBA21:
-    JSR OSBGET
-    STA zp2A,X
-    DEX
-    BPL LBA21
-    BMI LBA39
+    jsr OSBGET
+    sta zp2A,X
+    dex
+    bpl LBA21
+    bmi LBA39
 LBA2B:
-    LDX #$04
+    ldx #$04
 LBA2D:
-    JSR OSBGET
-    STA ws+$046C,X
-    DEX
-    BPL LBA2D
-    JSR LA3B2
+    jsr OSBGET
+    sta ws+$046C,X
+    dex
+    bpl LBA2D
+    jsr LA3B2
 LBA39:
-    JSR LB4B4
-    JMP LB9DA
+    jsr LB4B4
+    jmp LB9DA
 
 LBA3F:
-    PLA
-    PLA
-    JMP L8B98
+    pla
+    pla
+    jmp L8B98
 
 ; INPUT [LINE] [print items][variables]
 ; =====================================
 LBA44:
-    JSR L8A97         ; Get next non-space char
-    CMP #'#'
-    BEQ LB9CF         ; If '#' jump to do INPUT#
-    CMP #tknLINE
-    BEQ LBA52         ; If 'LINE', skip next with CS
-    DEC zp0A
-    CLC               ; Step back to non-LINE char, set CC
+    jsr L8A97         ; Get next non-space char
+    cmp #'#'
+    beq LB9CF         ; If '#' jump to do INPUT#
+    cmp #tknLINE
+    beq LBA52         ; If 'LINE', skip next with CS
+    dec zp0A
+    clc               ; Step back to non-LINE char, set CC
 LBA52:
-    ROR zp4D
-    LSR zp4D          ; bit7=0, bit6=notLINE/LINE
-    LDA #$FF
-    STA zp4E
+    ror zp4D
+    lsr zp4D          ; bit7=0, bit6=notLINE/LINE
+    lda #$FF
+    sta zp4E
 LBA5A:
-    JSR L8E8A
-    BCS LBA69         ; Process ' " TAB SPC, jump if none found
+    jsr L8E8A
+    bcs LBA69         ; Process ' " TAB SPC, jump if none found
 LBA5F:
-    JSR L8E8A
-    BCC LBA5F         ; Keep processing any print items
-    LDX #$FF
-    STX zp4E
-    CLC
+    jsr L8E8A
+    bcc LBA5F         ; Keep processing any print items
+    ldx #$FF
+    stx zp4E
+    clc
 LBA69:
-    PHP
-    ASL zp4D
-    PLP
-    ROR zp4D
-    CMP #','
-    BEQ LBA5A         ; ',' - jump to do next item
-    CMP #';'
-    BEQ LBA5A         ; ';' - jump to do next item
-    DEC zp0A
-    LDA zp4D
-    PHA
-    LDA zp4E
-    PHA
-    JSR L9582
-    BEQ LBA3F
-    PLA
-    STA zp4E
-    PLA
-    STA zp4D
-    LDA zp1B
-    STA zp0A
-    PHP
-    BIT zp4D
-    BVS LBA99
-    LDA zp4E
-    CMP #$FF
-    BNE LBAB0
+    php
+    asl zp4D
+    plp
+    ror zp4D
+    cmp #','
+    beq LBA5A         ; ',' - jump to do next item
+    cmp #';'
+    beq LBA5A         ; ';' - jump to do next item
+    dec zp0A
+    lda zp4D
+    pha
+    lda zp4E
+    pha
+    jsr L9582
+    beq LBA3F
+    pla
+    sta zp4E
+    pla
+    sta zp4D
+    lda zp1B
+    sta zp0A
+    php
+    bit zp4D
+    bvs LBA99
+    lda zp4E
+    cmp #$FF
+    bne LBAB0
 LBA99:
-    BIT zp4D
-    BPL LBAA2
-    LDA #'?'
-    JSR LB558
+    bit zp4D
+    bpl LBAA2
+    lda #'?'
+    jsr LB558
 LBAA2:
-    JSR LBBFC         ; Call MOS to input line, set COUNT=0
-    STY zp36
-    ASL zp4D
-    CLC
-    ROR zp4D
-    BIT zp4D
-    BVS LBACD
+    jsr LBBFC         ; Call MOS to input line, set COUNT=0
+    sty zp36
+    asl zp4D
+    clc
+    ror zp4D
+    bit zp4D
+    bvs LBACD
 LBAB0:
-    STA zp1B
-    LDA #$00
-    STA zp19
-    LDA #$06+(ws/256)
-    STA zp1A
-    JSR LADAD
+    sta zp1B
+    lda #$00
+    sta zp19
+    lda #$06+(ws/256)
+    sta zp1A
+    jsr LADAD
 LBABD:
-    JSR L8A8C
-    CMP #','
-    BEQ LBACA
-    CMP #$0D
-    BNE LBABD
-    LDY #$FE
+    jsr L8A8C
+    cmp #','
+    beq LBACA
+    cmp #$0D
+    bne LBABD
+    ldy #$FE
 LBACA:
-    INY
-    STY zp4E
+    iny
+    sty zp4E
 LBACD:
-    PLP
-    BCS LBADC
-    JSR LBD94
-    JSR LAC34
-    JSR LB4B4
-    JMP LBA5A
+    plp
+    bcs LBADC
+    jsr LBD94
+    jsr LAC34
+    jsr LB4B4
+    jmp LBA5A
 
 LBADC:
-    LDA #$00
-    STA zp27
-    JSR L8C21
-    JMP LBA5A
+    lda #$00
+    sta zp27
+    jsr L8C21
+    jmp LBA5A
 
 ; RESTORE [linenum]
 ; =================
 LBAE6:
-    LDY #$00
-    STY zp3D          ; Set DATA pointer to PAGE
-    LDY zp18
-    STY zp3E
-    JSR L8A97
-    DEC zp0A
-    CMP #':'
-    BEQ LBB07
-    CMP #$0D
-    BEQ LBB07
-    CMP #tknELSE
-    BEQ LBB07
-    JSR LB99A
-    LDY #$01
-    JSR LBE55
+    ldy #$00
+    sty zp3D          ; Set DATA pointer to PAGE
+    ldy zp18
+    sty zp3E
+    jsr L8A97
+    dec zp0A
+    cmp #':'
+    beq LBB07
+    cmp #$0D
+    beq LBB07
+    cmp #tknELSE
+    beq LBB07
+    jsr LB99A
+    ldy #$01
+    jsr LBE55
 LBB07:
-    JSR L9857
-    LDA zp3D
-    STA zp1C
-    LDA zp3E
-    STA zp1D
-    JMP L8B9B
+    jsr L9857
+    lda zp3D
+    sta zp1C
+    lda zp3E
+    sta zp1D
+    jmp L8B9B
 
 LBB15:
-    JSR L8A97
-    CMP #','
-    BEQ LBB1F
-    JMP L8B96
+    jsr L8A97
+    cmp #','
+    beq LBB1F
+    jmp L8B96
 
 ; READ varname [,...]
 ; ===================
 LBB1F:
-    JSR L9582
-    BEQ LBB15
-    BCS LBB32
-    JSR LBB50
-    JSR LBD94
-    JSR LB4B1
-    JMP LBB40
+    jsr L9582
+    beq LBB15
+    bcs LBB32
+    jsr LBB50
+    jsr LBD94
+    jsr LB4B1
+    jmp LBB40
 
 LBB32:
-    JSR LBB50
-    JSR LBD94
-    JSR LADAD
-    STA zp27
-    JSR L8C1E
+    jsr LBB50
+    jsr LBD94
+    jsr LADAD
+    sta zp27
+    jsr L8C1E
 LBB40:
-    CLC
-    LDA zp1B
-    ADC zp19
-    STA zp1C
-    LDA zp1A
-    ADC #$00
-    STA zp1D
-    JMP LBB15
+    clc
+    lda zp1B
+    adc zp19
+    sta zp1C
+    lda zp1A
+    adc #$00
+    sta zp1D
+    jmp LBB15
 
 LBB50:
-    LDA zp1B
-    STA zp0A
-    LDA zp1C
-    STA zp19
-    LDA zp1D
-    STA zp1A
-    LDY #$00
-    STY zp1B
-    JSR L8A8C
-    CMP #','
-    BEQ LBBB0
-    CMP #tknDATA
-    BEQ LBBB0
-    CMP #$0D
-    BEQ LBB7A
+    lda zp1B
+    sta zp0A
+    lda zp1C
+    sta zp19
+    lda zp1D
+    sta zp1A
+    ldy #$00
+    sty zp1B
+    jsr L8A8C
+    cmp #','
+    beq LBBB0
+    cmp #tknDATA
+    beq LBBB0
+    cmp #$0D
+    beq LBB7A
 LBB6F:
-    JSR L8A8C
-    CMP #','
-    BEQ LBBB0
-    CMP #$0D
-    BNE LBB6F
+    jsr L8A8C
+    cmp #','
+    beq LBBB0
+    cmp #$0D
+    bne LBB6F
 LBB7A:
-    LDY zp1B
-    LDA (zp19),Y
-    BMI LBB9C
-    INY
-    INY
-    LDA (zp19),Y
-    TAX
+    ldy zp1B
+    lda (zp19),Y
+    bmi LBB9C
+    iny
+    iny
+    lda (zp19),Y
+    tax
 LBB85:
-    INY
-    LDA (zp19),Y
-    CMP #$20
-    BEQ LBB85
-    CMP #tknDATA
-    BEQ LBBAD
-    TXA
-    CLC
-    ADC zp19
-    STA zp19
-    BCC LBB7A
-    INC zp1A
-    BCS LBB7A
+    iny
+    lda (zp19),Y
+    cmp #$20
+    beq LBB85
+    cmp #tknDATA
+    beq LBBAD
+    txa
+    clc
+    adc zp19
+    sta zp19
+    bcc LBB7A
+    inc zp1A
+    bcs LBB7A
 LBB9C:
-    BRK
+    brk
     dta $2A
     .if foldup == 1
         dta 'OUT OF '
@@ -10683,7 +10683,7 @@ LBB9C:
     .endif
     dta tknDATA
 LBBA6:
-    BRK
+    brk
     dta $2B
     .if foldup == 1
         dta 'NO '
@@ -10691,37 +10691,37 @@ LBBA6:
         dta 'No '
     .endif
     dta tknREPEAT
-    BRK
+    brk
 
 LBBAD:
-    INY
-    STY zp1B
+    iny
+    sty zp1B
 LBBB0:
-    RTS
+    rts
 
 ; UNTIL numeric
 ; =============
 LBBB1:
-    JSR L9B1D
-    JSR L984C
-    JSR L92EE
-    LDX zp24
-    BEQ LBBA6
-    LDA zp2A
-    ORA zp2B
-    ORA zp2C
-    ORA zp2D
-    BEQ LBBCD
-    DEC zp24
-    JMP L8B9B
+    jsr L9B1D
+    jsr L984C
+    jsr L92EE
+    ldx zp24
+    beq LBBA6
+    lda zp2A
+    ora zp2B
+    ora zp2C
+    ora zp2D
+    beq LBBCD
+    dec zp24
+    jmp L8B9B
 
 LBBCD:
-    LDY ws+$05A3,X
-    LDA ws+$05B7,X
-    JMP LB8DD
+    ldy ws+$05A3,X
+    lda ws+$05B7,X
+    jmp LB8DD
 
 LBBD6:
-    BRK
+    brk
     dta $2C
     .if foldup == 1
         dta 'TOO MANY '
@@ -10730,205 +10730,205 @@ LBBD6:
         dta 'Too many '
         dta tknREPEAT, 's'
     .endif
-    BRK
+    brk
 
 ; REPEAT
 ; ======
 LBBE4:
-    LDX zp24
-    CPX #$14
-    BCS LBBD6
-    JSR L986D
-    LDA zp0B
-    STA ws+$05A4,X
-    LDA zp0C
-    STA ws+$05B8,X
-    INC zp24
-    JMP L8BA3
+    ldx zp24
+    cpx #$14
+    bcs LBBD6
+    jsr L986D
+    lda zp0B
+    sta ws+$05A4,X
+    lda zp0C
+    sta ws+$05B8,X
+    inc zp24
+    jmp L8BA3
 
 ; Input string to string buffer
 ; -----------------------------
 LBBFC:
-    LDY #$00
-    LDA #$06+(ws/256)     ; String buffer at $0600
-    BNE LBC09
+    ldy #$00
+    lda #$06+(ws/256)     ; String buffer at $0600
+    bne LBC09
 
 ; Print character, read input line
 ; --------------------------------
 LBC02:
-    JSR LB558         ; Print character
-    LDY #$00
-    LDA #$07+(ws/256)     ; $AAYY=input buffer at $0700
+    jsr LB558         ; Print character
+    ldy #$00
+    lda #$07+(ws/256)     ; $AAYY=input buffer at $0700
 
 LBC09:
-    STY zp37
-    STA zp38          ; $37/8=>input buffer
+    sty zp37
+    sta zp38          ; $37/8=>input buffer
 
 ; Manually implement RDLINE (OSWORD 0)
 ; ------------------------------------
     .ifdef MOS_ATOM
 LDBE4:
-        JSR OSRDCH    ; Wait for character
-        CMP #$1B
-        BEQ LDC21     ; Escape
-        CMP #$7F
-        BNE LDBFA     ; Not Delete
-        CPY #$00
-        BEQ LDBE4     ; Nothing to delete
-        JSR OSWRCH    ; VDU 127
-        DEY
-        JMP LDBE4     ; Dec. counter, loop back
+        jsr OSRDCH    ; Wait for character
+        cmp #$1B
+        beq LDC21     ; Escape
+        cmp #$7F
+        bne LDBFA     ; Not Delete
+        cpy #$00
+        beq LDBE4     ; Nothing to delete
+        jsr OSWRCH    ; VDU 127
+        dey
+        jmp LDBE4     ; Dec. counter, loop back
      
 LDBFA:
-        CMP #$15
-        BNE LDC0B     ; Not Ctrl-U
-        TYA
-        BEQ LDBE4
-        LDA #$7F
+        cmp #$15
+        bne LDC0B     ; Not Ctrl-U
+        tya
+        beq LDBE4
+        lda #$7F
 LDC03:
-        JSR OSWRCH
-        DEY
-        BNE LDC03
-        BEQ LDBE4
+        jsr OSWRCH
+        dey
+        bne LDC03
+        beq LDBE4
      
 LDC0B:
-        STA (zp37),Y      ; Store character
-        CMP #$0D
-        BEQ LBC25     ; Return - finish
-        CPY #$EE
-        BCS LDC1E     ; Maximum length
-        CMP #$20
-        BCS LDC1A     ; Control character
-        DEY
+        sta (zp37),Y      ; Store character
+        cmp #$0D
+        beq LBC25     ; Return - finish
+        cpy #$EE
+        bcs LDC1E     ; Maximum length
+        cmp #$20
+        bcs LDC1A     ; Control character
+        dey
 LDC1A:
-        INY
-        JSR OSWRCH    ; Inc. counter, print character
+        iny
+        jsr OSWRCH    ; Inc. counter, print character
 LDC1E:
-        JMP LDBE4     ; Loop for more
+        jmp LDBE4     ; Loop for more
 LDC21:
     .endif
 
 ; BBC - Call MOS to read a line
 ; -----------------------------
     .ifdef MOS_BBC
-        LDA #$EE
-        STA zp39      ; Maximum length
-        LDA #$20
-        STA zp3A      ; Lowest acceptable character
-        LDY #$FF
-        STY zp3B      ; Highest acceptable character
-        INY
-        LDX #$37      ; XY=>control block at $0037
-        TYA
-        JSR OSWORD    ; Call OSWORD 0 to read line of text
-        BCC LBC28     ; CC, Escape not pressed, exit and set COUNT=0
+        lda #$EE
+        sta zp39      ; Maximum length
+        lda #$20
+        sta zp3A      ; Lowest acceptable character
+        ldy #$FF
+        sty zp3B      ; Highest acceptable character
+        iny
+        ldx #$37      ; XY=>control block at $0037
+        tya
+        jsr OSWORD    ; Call OSWORD 0 to read line of text
+        bcc LBC28     ; CC, Escape not pressed, exit and set COUNT=0
     .endif
-    JMP L9838         ; Escape
+    jmp L9838         ; Escape
 
 LBC25:
-    JSR OSNEWL
+    jsr OSNEWL
 LBC28:
-    LDA #$00
-    STA zp1E          ; Set COUNT to zero
-    RTS
+    lda #$00
+    sta zp1E          ; Set COUNT to zero
+    rts
 
 LBC2D:
-    JSR L9970
-    BCS LBC80
-    LDA zp3D
-    SBC #$02
-    STA zp37
-    STA zp3D
-    STA zp12
-    LDA zp3E
-    SBC #$00
-    STA zp38
-    STA zp13
-    STA zp3E
-    LDY #$03
-    LDA (zp37),Y
-    CLC
-    ADC zp37
-    STA zp37
-    BCC LBC53
-    INC zp38
+    jsr L9970
+    bcs LBC80
+    lda zp3D
+    sbc #$02
+    sta zp37
+    sta zp3D
+    sta zp12
+    lda zp3E
+    sbc #$00
+    sta zp38
+    sta zp13
+    sta zp3E
+    ldy #$03
+    lda (zp37),Y
+    clc
+    adc zp37
+    sta zp37
+    bcc LBC53
+    inc zp38
 LBC53:
-    LDY #$00
+    ldy #$00
 LBC55:
-    LDA (zp37),Y
-    STA (zp12),Y
-    CMP #$0D
-    BEQ LBC66
+    lda (zp37),Y
+    sta (zp12),Y
+    cmp #$0D
+    beq LBC66
 LBC5D:
-    INY
-    BNE LBC55
-    INC zp38
-    INC zp13
-    BNE LBC55
+    iny
+    bne LBC55
+    inc zp38
+    inc zp13
+    bne LBC55
 LBC66:
-    INY
-    BNE LBC6D
-    INC zp38
-    INC zp13
+    iny
+    bne LBC6D
+    inc zp38
+    inc zp13
 LBC6D:
-    LDA (zp37),Y
-    STA (zp12),Y
-    BMI LBC7C
-    JSR LBC81
-    JSR LBC81
-    JMP LBC5D
+    lda (zp37),Y
+    sta (zp12),Y
+    bmi LBC7C
+    jsr LBC81
+    jsr LBC81
+    jmp LBC5D
 
 LBC7C:
-    JSR LBE92
-    CLC
+    jsr LBE92
+    clc
 LBC80:
-    RTS
+    rts
 
 LBC81:
-    INY
-    BNE LBC88
-    INC zp13
-    INC zp38
+    iny
+    bne LBC88
+    inc zp13
+    inc zp38
 LBC88:
-    LDA (zp37),Y
-    STA (zp12),Y
-    RTS
+    lda (zp37),Y
+    sta (zp12),Y
+    rts
 
 LBC8D:
-    STY zp3B
-    JSR LBC2D
-    LDY #$07+(ws/256)
-    STY zp3C
-    LDY #$00
-    LDA #$0D
-    CMP (zp3B),Y
-    BEQ LBD10
+    sty zp3B
+    jsr LBC2D
+    ldy #$07+(ws/256)
+    sty zp3C
+    ldy #$00
+    lda #$0D
+    cmp (zp3B),Y
+    beq LBD10
 LBC9E:
-    INY
-    CMP (zp3B),Y
-    BNE LBC9E
-    INY
-    INY
-    INY
-    STY zp3F
-    INC zp3F
-    LDA zp12
-    STA zp39
-    LDA zp13
-    STA zp3A
-    JSR LBE92
-    STA zp37
-    LDA zp13
-    STA zp38
-    DEY
-    LDA zp06
-    CMP zp12
-    LDA zp07
-    SBC zp13
-    BCS LBCD6
-    JSR LBE6F
-    JSR LBD20
-    BRK
+    iny
+    cmp (zp3B),Y
+    bne LBC9E
+    iny
+    iny
+    iny
+    sty zp3F
+    inc zp3F
+    lda zp12
+    sta zp39
+    lda zp13
+    sta zp3A
+    jsr LBE92
+    sta zp37
+    lda zp13
+    sta zp38
+    dey
+    lda zp06
+    cmp zp12
+    lda zp07
+    sbc zp13
+    bcs LBCD6
+    jsr LBE6F
+    jsr LBD20
+    brk
     dta 0
     dta tknLINE
     .if foldup == 1
@@ -10936,350 +10936,350 @@ LBC9E:
     .else
         dta ' space'
     .endif
-    BRK
+    brk
 
 LBCD6:
-    LDA (zp39),Y
-    STA (zp37),Y
-    TYA
-    BNE LBCE1
-    DEC zp3A
-    DEC zp38
+    lda (zp39),Y
+    sta (zp37),Y
+    tya
+    bne LBCE1
+    dec zp3A
+    dec zp38
 LBCE1:
-    DEY
-    TYA
-    ADC zp39
-    LDX zp3A
-    BCC LBCEA
-    INX
+    dey
+    tya
+    adc zp39
+    ldx zp3A
+    bcc LBCEA
+    inx
 LBCEA:
-    CMP zp3D
-    TXA
-    SBC zp3E
-    BCS LBCD6
-    SEC
-    LDY #$01
-    LDA zp2B
-    STA (zp3D),Y
-    INY
-    LDA zp2A
-    STA (zp3D),Y
-    INY
-    LDA zp3F
-    STA (zp3D),Y
-    JSR LBE56
-    LDY #$FF
+    cmp zp3D
+    txa
+    sbc zp3E
+    bcs LBCD6
+    sec
+    ldy #$01
+    lda zp2B
+    sta (zp3D),Y
+    iny
+    lda zp2A
+    sta (zp3D),Y
+    iny
+    lda zp3F
+    sta (zp3D),Y
+    jsr LBE56
+    ldy #$FF
 LBD07:
-    INY
-    LDA (zp3B),Y
-    STA (zp3D),Y
-    CMP #$0D
-    BNE LBD07
+    iny
+    lda (zp3B),Y
+    sta (zp3D),Y
+    cmp #$0D
+    bne LBD07
 LBD10:
-    RTS
+    rts
 
 ; RUN
 ; ===
 LBD11:
-    JSR L9857
+    jsr L9857
 LBD14:
-    JSR LBD20
-    LDA zp18
-    STA zp0C          ; Point PtrA to PAGE
-    STX zp0B
-    JMP L8B0B
+    jsr LBD20
+    lda zp18
+    sta zp0C          ; Point PtrA to PAGE
+    stx zp0B
+    jmp L8B0B
 
 ; Clear BASIC heap, stack and DATA pointer
 ; ========================================
 LBD20:
-    LDA zp12
-    STA zp00
-    STA zp02          ; LOMEM=TOP, VAREND=TOP
-    LDA zp13
-    STA zp01
-    STA zp03
-    JSR LBD3A         ; Clear DATA and stack
+    lda zp12
+    sta zp00
+    sta zp02          ; LOMEM=TOP, VAREND=TOP
+    lda zp13
+    sta zp01
+    sta zp03
+    jsr LBD3A         ; Clear DATA and stack
 LBD2F:
-    LDX #$80
-    LDA #$00
+    ldx #$80
+    lda #$00
 LBD33:
-    STA ws+$047F,X
-    DEX
-    BNE LBD33
-    RTS               ; Clear dynamic variables list
+    sta ws+$047F,X
+    dex
+    bne LBD33
+    rts               ; Clear dynamic variables list
 
 ; Clear DATA pointer and BASIC stack
 ; ==================================
 LBD3A:
-    LDA zp18
-    STA zp1D          ; DATA pointer hi=PAGE hi
-    LDA zp06
-    STA zp04
-    LDA zp07
-    STA zp05          ; STACK=HIMEM
-    LDA #$00
-    STA zp24
-    STA zp26
-    STA zp25; Clear REPEAT, FOR, GOSUB stacks
-    STA zp1C
-    RTS               ; DATA pointer=PAGE
+    lda zp18
+    sta zp1D          ; DATA pointer hi=PAGE hi
+    lda zp06
+    sta zp04
+    lda zp07
+    sta zp05          ; STACK=HIMEM
+    lda #$00
+    sta zp24
+    sta zp26
+    sta zp25; Clear REPEAT, FOR, GOSUB stacks
+    sta zp1C
+    rts               ; DATA pointer=PAGE
 
 LBD51:
-    LDA zp04
-    SEC
-    SBC #$05
-    JSR LBE2E
-    LDY #$00
-    LDA zp30
-    STA (zp04),Y
-    INY
-    LDA zp2E
-    AND #$80
-    STA zp2E
-    LDA zp31
-    AND #$7F
-    ORA zp2E
-    STA (zp04),Y
-    INY
-    LDA zp32
-    STA (zp04),Y
-    INY
-    LDA zp33
-    STA (zp04),Y
-    INY
-    LDA zp34
-    STA (zp04),Y
-    RTS
+    lda zp04
+    sec
+    sbc #$05
+    jsr LBE2E
+    ldy #$00
+    lda zp30
+    sta (zp04),Y
+    iny
+    lda zp2E
+    and #$80
+    sta zp2E
+    lda zp31
+    and #$7F
+    ora zp2E
+    sta (zp04),Y
+    iny
+    lda zp32
+    sta (zp04),Y
+    iny
+    lda zp33
+    sta (zp04),Y
+    iny
+    lda zp34
+    sta (zp04),Y
+    rts
 
 LBD7E:
-    LDA zp04
-    CLC
-    STA zp4B
-    ADC #$05
-    STA zp04
-    LDA zp05
-    STA zp4C
-    ADC #$00
-    STA zp05
-    RTS
+    lda zp04
+    clc
+    sta zp4B
+    adc #$05
+    sta zp04
+    lda zp05
+    sta zp4C
+    adc #$00
+    sta zp05
+    rts
 
 LBD90:
-    BEQ LBDB2
-    BMI LBD51
+    beq LBDB2
+    bmi LBD51
 LBD94:
-    LDA zp04
-    SEC
-    SBC #$04
+    lda zp04
+    sec
+    sbc #$04
 LBD99:
-    JSR LBE2E
-    LDY #$03
-    LDA zp2D
-    STA (zp04),Y
-    DEY
-    LDA zp2C
-    STA (zp04),Y
-    DEY
-    LDA zp2B
-    STA (zp04),Y
-    DEY
-    LDA zp2A
-    STA (zp04),Y
-    RTS
+    jsr LBE2E
+    ldy #$03
+    lda zp2D
+    sta (zp04),Y
+    dey
+    lda zp2C
+    sta (zp04),Y
+    dey
+    lda zp2B
+    sta (zp04),Y
+    dey
+    lda zp2A
+    sta (zp04),Y
+    rts
 
 ; Stack the current string
 ; ========================
 LBDB2:
-    CLC
-    LDA zp04
-    SBC zp36          ; stackbot=stackbot-length-1
-    JSR LBE2E         ; Check enough space
-    LDY zp36
-    BEQ LBDC6         ; Zero length, just stack length
+    clc
+    lda zp04
+    sbc zp36          ; stackbot=stackbot-length-1
+    jsr LBE2E         ; Check enough space
+    ldy zp36
+    beq LBDC6         ; Zero length, just stack length
 LBDBE:
-    LDA ws+$05FF,Y
-    STA (zp04),Y      ; Copy string to stack
-    DEY
-    BNE LBDBE         ; Loop for all characters
+    lda ws+$05FF,Y
+    sta (zp04),Y      ; Copy string to stack
+    dey
+    bne LBDBE         ; Loop for all characters
 LBDC6:
-    LDA zp36
-    STA (zp04),Y      ; Copy string length
-    RTS
+    lda zp36
+    sta (zp04),Y      ; Copy string length
+    rts
 
 ; Unstack a string
 ; ================
 LBDCB:
-    LDY #$00
-    LDA (zp04),Y      ; Get stacked string length
-    STA zp36
-    BEQ LBDDC
-    TAY               ; If zero length, just unstack length
+    ldy #$00
+    lda (zp04),Y      ; Get stacked string length
+    sta zp36
+    beq LBDDC
+    tay               ; If zero length, just unstack length
 LBDD4:
-    LDA (zp04),Y
-    STA ws+$05FF,Y    ; Copy string to string buffer
-    DEY
-    BNE LBDD4         ; Loop for all characters
+    lda (zp04),Y
+    sta ws+$05FF,Y    ; Copy string to string buffer
+    dey
+    bne LBDD4         ; Loop for all characters
 LBDDC:
-    LDY #$00
-    LDA (zp04),Y      ; Get string length again
-    SEC
+    ldy #$00
+    lda (zp04),Y      ; Get string length again
+    sec
 LBDE1:
-    ADC zp04
-    STA zp04          ; Update stack pointer
-    BCC LBE0A
-    INC zp05
-    RTS
+    adc zp04
+    sta zp04          ; Update stack pointer
+    bcc LBE0A
+    inc zp05
+    rts
 
 ; Unstack an integer to IntA
 ; --------------------------
 LBDEA:
-    LDY #$03
-    LDA (zp04),Y
-    STA zp2D
-    DEY               ; Copy to IntA
-    LDA (zp04),Y
-    STA zp2C
-    DEY
-    LDA (zp04),Y
-    STA zp2B
-    DEY
-    LDA (zp04),Y
-    STA zp2A
+    ldy #$03
+    lda (zp04),Y
+    sta zp2D
+    dey               ; Copy to IntA
+    lda (zp04),Y
+    sta zp2C
+    dey
+    lda (zp04),Y
+    sta zp2B
+    dey
+    lda (zp04),Y
+    sta zp2A
 LBDFF:
-    CLC
-    LDA zp04
-    ADC #$04
-    STA zp04          ; Drop 4 bytes from stack
-    BCC LBE0A
-    INC zp05
+    clc
+    lda zp04
+    adc #$04
+    sta zp04          ; Drop 4 bytes from stack
+    bcc LBE0A
+    inc zp05
 LBE0A:
-    RTS
+    rts
 
 ; Unstack an integer to zero page
 ; -------------------------------
 LBE0B:
-    LDX #$37
+    ldx #$37
 LBE0D:
-    LDY #$03
-    LDA (zp04),Y
-    STA zp+3,X
-    DEY
-    LDA (zp04),Y
-    STA zp+2,X
-    DEY
-    LDA (zp04),Y
-    STA zp+1,X
-    DEY
-    LDA (zp04),Y
-    STA zp+0,X
-    CLC
-    LDA zp04
-    ADC #$04
-    STA zp04          ; Drop 4 bytes from stack
-    BCC LBE0A
-    INC zp05
-    RTS
+    ldy #$03
+    lda (zp04),Y
+    sta zp+3,X
+    dey
+    lda (zp04),Y
+    sta zp+2,X
+    dey
+    lda (zp04),Y
+    sta zp+1,X
+    dey
+    lda (zp04),Y
+    sta zp+0,X
+    clc
+    lda zp04
+    adc #$04
+    sta zp04          ; Drop 4 bytes from stack
+    bcc LBE0A
+    inc zp05
+    rts
 
 LBE2E:
-    STA zp04
-    BCS LBE34
-    DEC zp05
+    sta zp04
+    bcs LBE34
+    dec zp05
 LBE34:
-    LDY zp05
-    CPY zp03
-    BCC LBE41
-    BNE LBE40
-    CMP zp02
-    BCC LBE41
+    ldy zp05
+    cpy zp03
+    bcc LBE41
+    bne LBE40
+    cmp zp02
+    bcc LBE41
 LBE40:
-    RTS
+    rts
 
 LBE41:
-    JMP L8CB7
+    jmp L8CB7
 
 LBE44:
-    LDA zp2A
-    STA zp+0,X
-    LDA zp2B
-    STA zp+1,X
-    LDA zp2C
-    STA zp+2,X
-    LDA zp2D
-    STA zp+3,X
-    RTS
+    lda zp2A
+    sta zp+0,X
+    lda zp2B
+    sta zp+1,X
+    lda zp2C
+    sta zp+2,X
+    lda zp2D
+    sta zp+3,X
+    rts
 
 LBE55:
-    CLC
+    clc
 LBE56:
-    TYA
-    ADC zp3D
-    STA zp3D
-    BCC LBE5F
-    INC zp3E
+    tya
+    adc zp3D
+    sta zp3D
+    bcc LBE5F
+    inc zp3E
 LBE5F:
-    LDY #$01
-    RTS
+    ldy #$01
+    rts
 
 LBE62:
-    JSR LBEDD
-    TAY
-    LDA #$FF          ; FILE.LOAD=PAGE
+    jsr LBEDD
+    tay
+    lda #$FF          ; FILE.LOAD=PAGE
 
     .ifdef MOS_ATOM
-        STA F_EXEC+0
-        LDX #$37      ; FILE.EXEC=$FF, load to specified address
-        SEC
-        JSR OSLOAD
+        sta F_EXEC+0
+        ldx #$37      ; FILE.EXEC=$FF, load to specified address
+        sec
+        jsr OSLOAD
     .endif
 
     .ifdef MOS_BBC
-        STY F_EXEC+0
-        LDX #$37      ; FILE.EXEC=0, load to specified address
-        JSR OSFILE
+        sty F_EXEC+0
+        ldx #$37      ; FILE.EXEC=0, load to specified address
+        jsr OSFILE
     .endif
 
 ; Scan program to check consistancy and find TOP
 ; ----------------------------------------------
 LBE6F:
-    LDA zp18
-    STA zp13
-    LDY #$00
-    STY zp12
-    INY               ; Point TOP to PAGE
+    lda zp18
+    sta zp13
+    ldy #$00
+    sty zp12
+    iny               ; Point TOP to PAGE
 LBE78:
-    DEY
-    LDA (zp12),Y      ; Get byte preceding line
-    CMP #$0D
-    BNE LBE9E         ; Not <cr>, jump to 'Bad program'
-    INY               ; Step to line number/terminator
-    LDA (zp12),Y
-    BMI LBE90         ; b7 set, end of program
-    LDY #$03          ; Point to line length
-    LDA (zp12),Y
-    BEQ LBE9E         ; Zero length, jump to 'Bad program'
-    CLC
-    JSR LBE93         ; Update TOP to point to next line
-    BNE LBE78         ; Loop to check next line
+    dey
+    lda (zp12),Y      ; Get byte preceding line
+    cmp #$0D
+    bne LBE9E         ; Not <cr>, jump to 'Bad program'
+    iny               ; Step to line number/terminator
+    lda (zp12),Y
+    bmi LBE90         ; b7 set, end of program
+    ldy #$03          ; Point to line length
+    lda (zp12),Y
+    beq LBE9E         ; Zero length, jump to 'Bad program'
+    clc
+    jsr LBE93         ; Update TOP to point to next line
+    bne LBE78         ; Loop to check next line
 
 ; End of program found, set TOP
 ; -----------------------------
 LBE90:
-    INY
-    CLC
+    iny
+    clc
 LBE92:
-    TYA
+    tya
 LBE93:
-    ADC zp12
-    STA zp12          ; TOP=TOP+A
-    BCC LBE9B
-    INC zp13
+    adc zp12
+    sta zp12          ; TOP=TOP+A
+    bcc LBE9B
+    inc zp13
 LBE9B:
-    LDY #$01
-    RTS               ; Return Y=1, NE
+    ldy #$01
+    rts               ; Return Y=1, NE
 
 ; Report 'Bad program' and jump to immediate mode
 ; -----------------------------------------------
 LBE9E:
-    JSR LBFCF         ; Print inline text
+    jsr LBFCF         ; Print inline text
     dta 13
     .if foldup == 1
         dta 'BAD PROGRAM'
@@ -11287,89 +11287,89 @@ LBE9E:
         dta 'Bad program'
     .endif
     dta 13
-    NOP
-    JMP L8AF6         ; Jump to immediate mode
+    nop
+    jmp L8AF6         ; Jump to immediate mode
 
 ; Point $37/8 to <cr>-terminated string in string buffer
 ; ------------------------------------------------------
 LBEB2:
-    LDA #$00
-    STA zp37
-    LDA #$06+(ws/256)
-    STA zp38
+    lda #$00
+    sta zp37
+    lda #$06+(ws/256)
+    sta zp38
 LBEBA:
-    LDY zp36
-    LDA #$0D
-    STA ws+$0600,Y
-    RTS
+    ldy zp36
+    lda #$0D
+    sta ws+$0600,Y
+    rts
 
 ; OSCLI string$ - Pass string to OSCLI to execute
 ; ===============================================
 LBEC2:
-    JSR LBED2         ; $37/8=>cr-string
+    jsr LBED2         ; $37/8=>cr-string
 
 
     .ifdef MOS_ATOM
-        JSR cmdStar1
-        JMP L8B9B     ; Call Atom OSCLI and return to execution loop
+        jsr cmdStar1
+        jmp L8B9B     ; Call Atom OSCLI and return to execution loop
      
 
 ; Embedded star command
 ; ---------------------
 cmdStar:
-        STX zp37
-        STY zp38      ; $37/8=>cr-string
+        stx zp37
+        sty zp38      ; $37/8=>cr-string
 cmdStar1:
-        LDY #$FF
+        ldy #$FF
 cmdStarLp1:
-        INY
-        LDA (zp37),Y
-        CMP #'*'
-        BEQ cmdStarLp1    ; Skip leading stars
-        LDX #0
+        iny
+        lda (zp37),Y
+        cmp #'*'
+        beq cmdStarLp1    ; Skip leading stars
+        ldx #0
 cmdStarLp2:
-        LDA (zp37),Y
-        STA $0100,X       ; Copy string onto stack
-        INY
-        INX
-        CMP #$0D
-        BNE cmdStarLp2    ; Atom OSCLI passed string at $100
-        JMP OS_CLI
+        lda (zp37),Y
+        sta $0100,X       ; Copy string onto stack
+        iny
+        inx
+        cmp #$0D
+        bne cmdStarLp2    ; Atom OSCLI passed string at $100
+        jmp OS_CLI
     .endif
 
     .ifdef MOS_BBC
-        LDX #$00
-        LDY #>(ws+$0600)
-        JSR OS_CLI
-        JMP L8B9B     ; Call OSCLI and return to execution loop
+        ldx #$00
+        ldy #>(ws+$0600)
+        jsr OS_CLI
+        jmp L8B9B     ; Call OSCLI and return to execution loop
     .endif
 
 LBECF:
-    JMP L8C0E
+    jmp L8C0E
 
 LBED2:
-    JSR L9B1D
-    BNE LBECF         ; Evaluate expression, error if not string
-    JSR LBEB2
-    JMP L984C         ; Convert to <cr>-string, check end of statement
+    jsr L9B1D
+    bne LBECF         ; Evaluate expression, error if not string
+    jsr LBEB2
+    jmp L984C         ; Convert to <cr>-string, check end of statement
 
 ; Set FILE.LOAD to MEMHI.PAGE
 ; ---------------------------
 LBEDD:
-    JSR LBED2
-    DEY
-    STY F_LOAD+0      ; LOAD.lo=$00
-    LDA zp18
-    STA F_LOAD+1      ; LOAD.hi=PAGEhi
+    jsr LBED2
+    dey
+    sty F_LOAD+0      ; LOAD.lo=$00
+    lda zp18
+    sta F_LOAD+1      ; LOAD.hi=PAGEhi
 LBEE7:
     .ifdef MOS_BBC
-        LDA #$82
-        JSR OSBYTE    ; Get memory base high word
-        STX F_LOAD+2
-        STY F_LOAD+3      ; Set LOAD high word
-        LDA #$00
+        lda #$82
+        jsr OSBYTE    ; Get memory base high word
+        stx F_LOAD+2
+        sty F_LOAD+3      ; Set LOAD high word
+        lda #$00
     .endif
-    RTS
+    rts
 
 ; BBC At/Sy
 ; 37   37   FNAME
@@ -11394,323 +11394,323 @@ LBEE7:
 ;  SAVE string$
 ; =============
 LBEF3:
-    JSR LBE6F         ; Check program, set TOP
+    jsr LBE6F         ; Check program, set TOP
 
     .if version < 3
-        LDA zp12
-        STA F_END+0       ; Set FILE.END to TOP
-        LDA zp13
-        STA F_END+1
-        LDA #<L8023
-        STA F_EXEC+0      ; Set FILE.EXEC to STARTUP
-        LDA #>L8023
-        STA F_EXEC+1
-        LDA zp18
-        STA F_START+1     ; Set FILE.START to PAGE
-        JSR LBEDD     ; Set FILE.LOAD to PAGE
+        lda zp12
+        sta F_END+0       ; Set FILE.END to TOP
+        lda zp13
+        sta F_END+1
+        lda #<L8023
+        sta F_EXEC+0      ; Set FILE.EXEC to STARTUP
+        lda #>L8023
+        sta F_EXEC+1
+        lda zp18
+        sta F_START+1     ; Set FILE.START to PAGE
+        jsr LBEDD     ; Set FILE.LOAD to PAGE
     .endif
     .if version < 3
         .ifdef MOS_BBC
-            STX F_EXEC+2 
-            STY F_EXEC+3      ; Set address high words
-            STX F_START+2
-            STY F_START+3
-            STX F_END+2  
-            STY F_END+3
+            stx F_EXEC+2 
+            sty F_EXEC+3      ; Set address high words
+            stx F_START+2
+            sty F_START+3
+            stx F_END+2  
+            sty F_END+3
         .endif
         .ifdef MOS_ATOM
-            STY F_START+0    ; Low byte of FILE.START
+            sty F_START+0    ; Low byte of FILE.START
         .endif
         .ifdef MOS_BBC
-            STA F_START+0    ; Low byte of FILE.START
+            sta F_START+0    ; Low byte of FILE.START
         .endif
     .endif
 
     .if version >= 3
-        JSR LBEDD     ; Set FILE.LOAD to PAGE
+        jsr LBEDD     ; Set FILE.LOAD to PAGE
     .endif
     .if version >= 3
         .ifdef MOS_BBC
-            STX F_EXEC+2 
-            STY F_EXEC+3      ; Set address high words
-            STX F_START+2
-            STY F_START+3
-            STX F_END+2  
-            STY F_END+3
+            stx F_EXEC+2 
+            sty F_EXEC+3      ; Set address high words
+            stx F_START+2
+            sty F_START+3
+            stx F_END+2  
+            sty F_END+3
         .endif
         .ifdef MOS_ATOM
-            STY F_START+0    ; Low byte of FILE.START
+            sty F_START+0    ; Low byte of FILE.START
         .endif
         .ifdef MOS_BBC
-            STA F_START+0    ; Low byte of FILE.START
+            sta F_START+0    ; Low byte of FILE.START
         .endif
     .endif
     .if version >= 3
-        LDX zp12
-        STX F_END+0       ; Set FILE.END to TOP
-        LDX zp13
-        STX F_END+1
-        LDX #<L8023
-        STX F_EXEC+0      ; Set FILE.EXEC to STARTUP
-        LDX #>L8023
-        STX F_EXEC+1
-        LDX zp18
-        STX F_START+1     ; High byte of FILE.START=PAGE
+        ldx zp12
+        stx F_END+0       ; Set FILE.END to TOP
+        ldx zp13
+        stx F_END+1
+        ldx #<L8023
+        stx F_EXEC+0      ; Set FILE.EXEC to STARTUP
+        ldx #>L8023
+        stx F_EXEC+1
+        ldx zp18
+        stx F_START+1     ; High byte of FILE.START=PAGE
     .endif
-    TAY
-    LDX #$37
+    tay
+    ldx #$37
     .ifdef MOS_ATOM
-        SEC
-        JSR OSSAVE
+        sec
+        jsr OSSAVE
     .endif
     .ifdef MOS_BBC
-        JSR OSFILE    
+        jsr OSFILE    
     .endif
-    JMP L8B9B
+    jmp L8B9B
 
 ; LOAD string$
 ; ============
 LBF24:
-    JSR LBE62
-    JMP L8AF3         ; Do LOAD, jump to immediate mode
+    jsr LBE62
+    jmp L8AF3         ; Do LOAD, jump to immediate mode
 
 ; CHAIN string$
 ; =============
 LBF2A:
-    JSR LBE62
-    JMP LBD14         ; Do LOAD, jump to execution loop
+    jsr LBE62
+    jmp LBD14         ; Do LOAD, jump to execution loop
 
 ; PTR#numeric=numeric
 ; ===================
 LBF30:
-    JSR LBFA9
-    PHA               ; Evaluate #handle
-    JSR L9813
-    JSR L92EE         ; Step past '=', evaluate integer
-    PLA
-    TAY
-    LDX #$2A          ; Get handle, point to IntA
+    jsr LBFA9
+    pha               ; Evaluate #handle
+    jsr L9813
+    jsr L92EE         ; Step past '=', evaluate integer
+    pla
+    tay
+    ldx #$2A          ; Get handle, point to IntA
     .ifdef MOS_ATOM
-        JSR OSSTAR         
+        jsr OSSTAR         
     .endif
     .ifdef MOS_BBC
-        LDA #$01
-        JSR OSARGS
+        lda #$01
+        jsr OSARGS
     .endif
-    JMP L8B9B         ; Jump to execution loop
+    jmp L8B9B         ; Jump to execution loop
 
 ; =EXT#numeric - Read file pointer via OSARGS
 ; ===========================================
 LBF46:
-    SEC               ; Flag to do =EXT
+    sec               ; Flag to do =EXT
 
 ; =PTR#numeric - Read file pointer via OSARGS
 ; ===========================================
 LBF47:
-    LDA #$00
-    ROL               ; A=0 or 1 for =PTR or =EXT
+    lda #$00
+    rol               ; A=0 or 1 for =PTR or =EXT
     .ifdef MOS_BBC
-        ROL
+        rol
     .endif
-    PHA               ; Atom - A=0/1, BBC - A=0/2
-    JSR LBFB5
-    LDX #$2A
-    PLA               ; Evaluate #handle, point to IntA
+    pha               ; Atom - A=0/1, BBC - A=0/2
+    jsr LBFB5
+    ldx #$2A
+    pla               ; Evaluate #handle, point to IntA
     .ifdef MOS_ATOM
-        JSR OSRDAR
+        jsr OSRDAR
     .endif
     .ifdef MOS_BBC
-        JSR OSARGS
+        jsr OSARGS
     .endif
-    LDA #$40
-    RTS               ; Return integer
+    lda #$40
+    rts               ; Return integer
 
 ; BPUT#numeric, numeric
 ; =====================
 LBF58:
-    JSR LBFA9
-    PHA               ; Evaluate #handle
-    JSR L8AAE
-    JSR L9849
-    JSR L92EE
-    PLA
-    TAY
-    LDA zp2A
-    JSR OSBPUT
-    JMP L8B9B         ; Call OSBPUT, jump to execution loop
+    jsr LBFA9
+    pha               ; Evaluate #handle
+    jsr L8AAE
+    jsr L9849
+    jsr L92EE
+    pla
+    tay
+    lda zp2A
+    jsr OSBPUT
+    jmp L8B9B         ; Call OSBPUT, jump to execution loop
 
 ; =BGET#numeric
 ; =============
 LBF6F:
-    JSR LBFB5
-    JSR OSBGET        ; Evaluate #handle
+    jsr LBFB5
+    jsr OSBGET        ; Evaluate #handle
     .if version < 3
-        JMP LAED8     ; Jump to return 8-bit integer
+        jmp LAED8     ; Jump to return 8-bit integer
     .elseif version >= 3
-        JMP XAED3     ; Jump to return 8-bit integer
+        jmp XAED3     ; Jump to return 8-bit integer
     .endif
 
 ; OPENIN f$ - Call OSFIND to open file for input
 ; ==============================================
 LBF78:
     .ifdef MOS_ATOM
-        SEC           ; SEC=OPENUP
-        BCS LBF82     
+        sec           ; SEC=OPENUP
+        bcs LBF82     
     .endif
     .ifdef MOS_BBC
-        LDA #$40      ; $40=OPENUP
-        BNE LBF82
+        lda #$40      ; $40=OPENUP
+        bne LBF82
     .endif
 
 ; OPENOUT f$ - Call OSFIND to open file for output
 ; ================================================
 LBF7C:
     .ifdef MOS_ATOM
-        CLC           ; CLC=OPENOUT
-        BCC LBF82     
+        clc           ; CLC=OPENOUT
+        bcc LBF82     
     .endif
     .ifdef MOS_BBC
-        LDA #$80      ; 80=OPENOUT
-        BNE LBF82
+        lda #$80      ; 80=OPENOUT
+        bne LBF82
     .endif
 
 ; OPENUP f$ - Call OSFIND to open file for update
 ; ===============================================
 LBF80:
     .ifdef MOS_ATOM
-        SEC           ; SEC=OPENUP
+        sec           ; SEC=OPENUP
     .endif
     .ifdef MOS_BBC
-        LDA #$C0      ; C0=OPENUP
+        lda #$C0      ; C0=OPENUP
     .endif
 LBF82:
     .ifdef MOS_ATOM
-        PHP       
+        php       
     .endif
     .ifdef MOS_BBC
-        PHA       
+        pha       
     .endif
-    JSR LADEC
-    BNE LBF96         ; Evaluate, if not string, jump to error
+    jsr LADEC
+    bne LBF96         ; Evaluate, if not string, jump to error
 
     .ifdef MOS_ATOM
-        JSR LBEB2     ; Terminate string with <cr>, point $37/8=>string
-        LDX #$37
-        PLP           ; Point to string pointer, get action back
+        jsr LBEB2     ; Terminate string with <cr>, point $37/8=>string
+        ldx #$37
+        plp           ; Point to string pointer, get action back
     .endif
 
     .ifdef MOS_BBC
-        JSR LBEBA     ; Terminate string with <cr>
-        LDX #$00
-        LDY #$06
-        PLA           ; Point to string buffer, get action back
+        jsr LBEBA     ; Terminate string with <cr>
+        ldx #$00
+        ldy #$06
+        pla           ; Point to string buffer, get action back
     .endif
 
-    JSR OSFIND        ; Pass to OSFIND, jump to return integer from A
+    jsr OSFIND        ; Pass to OSFIND, jump to return integer from A
     .if version < 3
-        JMP LAED8
+        jmp LAED8
     .elseif version >= 3
-        JMP XAED3
+        jmp XAED3
     .endif
 
 LBF96:
-    JMP L8C0E         ; Jump to 'Type mismatch' error
+    jmp L8C0E         ; Jump to 'Type mismatch' error
 
 ; CLOSE#numeric
 ; =============
 LBF99:
-    JSR LBFA9
-    JSR L9852         ; Evaluate #handle, check end of statement
-    LDY zp2A          ; Get handle from IntA
+    jsr LBFA9
+    jsr L9852         ; Evaluate #handle, check end of statement
+    ldy zp2A          ; Get handle from IntA
     .ifdef MOS_ATOM
-        JSR OSSHUT         
+        jsr OSSHUT         
     .endif
     .ifdef MOS_BBC
-        LDA #$00
-        JSR OSFIND
+        lda #$00
+        jsr OSFIND
     .endif
-    JMP L8B9B         ; Jump back to execution loop
+    jmp L8B9B         ; Jump back to execution loop
 
 ; Copy PtrA to PtrB, then get handle
 ; ==================================
 LBFA9:
-    LDA zp0A
-    STA zp1B          ; Set PtrB to program pointer in PtrA
-    LDA zp0B
-    STA zp19
-    LDA zp0C
-    STA zp1A
+    lda zp0A
+    sta zp1B          ; Set PtrB to program pointer in PtrA
+    lda zp0B
+    sta zp19
+    lda zp0C
+    sta zp1A
 
 ; Check for '#', evaluate channel
 ; ===============================
 LBFB5:
-    JSR L8A8C         ; Skip spaces
-    CMP #'#'          ; If not '#', jump to give error
+    jsr L8A8C         ; Skip spaces
+    cmp #'#'          ; If not '#', jump to give error
     .if version < 3
-        BNE LBFC3
+        bne LBFC3
     .elseif version >= 3
-        BNE LBFF4
+        bne LBFF4
     .endif
-    JSR L92E3         ; Evaluate as integer
+    jsr L92E3         ; Evaluate as integer
 LBFBF:
-    LDY zp2A
-    TYA               ; Get low byte and return
+    ldy zp2A
+    tya               ; Get low byte and return
 NULLRET:
-    RTS
+    rts
 
     .if version < 3
 LBFC3:
-        BRK
+        brk
         dta $2D
         .if foldup == 1
             dta 'MISSING #'
         .else
             dta 'Missing #'
         .endif
-        BRK
+        brk
     .endif
 
 ; Print inline text
 ; =================
 LBFCF:
-    PLA
-    STA zp37
-    PLA
-    STA zp38          ; Pop return address to pointer
-    LDY #$00
-    BEQ LBFDC         ; Jump into loop
+    pla
+    sta zp37
+    pla
+    sta zp38          ; Pop return address to pointer
+    ldy #$00
+    beq LBFDC         ; Jump into loop
 LBFD9:
-    JSR OSASCI        ; Print character
+    jsr OSASCI        ; Print character
 LBFDC:
-    JSR L894B
-    BPL LBFD9         ; Update pointer, get character, loop if b7=0
-    JMP (zp37)        ; Jump back to program
+    jsr L894B
+    bpl LBFD9         ; Update pointer, get character, loop if b7=0
+    jmp (zp37)        ; Jump back to program
 
 ; REPORT
 ; ======
 LBFE4:
-    JSR L9857
-    JSR LBC25         ; Check end of statement, print newline, clear COUNT
-    LDY #$01
+    jsr L9857
+    jsr LBC25         ; Check end of statement, print newline, clear COUNT
+    ldy #$01
 LBFEC:
-    LDA (FAULT),Y
-    BEQ LBFF6         ; Get byte, exit if $00 terminator
-    JSR LB500
-    INY
-    BNE LBFEC         ; Print character or token, loop for next
+    lda (FAULT),Y
+    beq LBFF6         ; Get byte, exit if $00 terminator
+    jsr LB500
+    iny
+    bne LBFEC         ; Print character or token, loop for next
 LBFF6:
-    JMP L8B9B         ; Jump to main execution loop
+    jmp L8B9B         ; Jump to main execution loop
 
     .if version >= 3
 LBFF4:
-        BRK
+        brk
         dta $2D
         .if foldup == 1
             dta 'MISSING #'
         .else
             dta 'Missing #'
         .endif
-        BRK
+        brk
     .endif
 
     .if * > [load + $4000]
@@ -11718,7 +11718,7 @@ LBFF4:
     .endif
 
     .if version < 3 && [[*+6]&$ff] > 6
-        BRK
+        brk
         dta 'Roger'
         brk
     .endif
