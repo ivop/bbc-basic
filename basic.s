@@ -1730,7 +1730,7 @@ L8A86:
 L8A8C:
     ldy zp1B
     inc zp1B          ; Get offset, increment it
-    lda (zp19),Y      ; Get current character
+    lda (zpAELINE),Y      ; Get current character
     cmp #' '
     beq L8A8C         ; Loop until not space
 L8A96:
@@ -2010,9 +2010,9 @@ L8BB1:
 ; -------------------------------------------------------
 L8BBF:
     ldx zpLINE
-    stx zp19          ; Copy PtrA to PtrB
+    stx zpAELINE          ; Copy PtrA to PtrB
     ldx zpLINE+1
-    stx zp1A
+    stx zpAELINE+1
     sty zp1B
     jsr L95DD         ; Check if variable or indirection
     bne L8BE9         ; NE - jump for existing variable or indirection assignment
@@ -2509,9 +2509,9 @@ L8E6A:
 
 L8E70:
     ldx zpLINE
-    stx zp19
+    stx zpAELINE
     ldx zpLINE+1
-    stx zp1A
+    stx zpAELINE+1
     ldx zpCURSOR
     stx zp1B
     cmp #$27
@@ -2548,14 +2548,14 @@ L8EA4:
     jsr LB558
 L8EA7:
     iny
-    lda (zp19),Y
+    lda (zpAELINE),Y
     cmp #$0D
     beq L8E98
     cmp #$22
     bne L8EA4
     iny
     sty zp1B
-    lda (zp19),Y
+    lda (zpAELINE),Y
     cmp #$22
     bne L8E6A
     beq L8EA4
@@ -2764,9 +2764,9 @@ L8FE7:
 ; =======================
 X9304:
         lda zpLINE
-        sta zp19      ; PtrB=PtrA=>after 'PROC' token
+        sta zpAELINE      ; PtrB=PtrA=>after 'PROC' token
         lda zpLINE+1
-        sta zp1A
+        sta zpAELINE+1
         lda zpCURSOR
         sta zp1B
         lda #$F2
@@ -3322,9 +3322,9 @@ L92FD:
 ; =======================
 L9304:
         lda zpLINE
-        sta zp19      ; PtrB=PtrA=>after 'PROC' token
+        sta zpAELINE      ; PtrB=PtrA=>after 'PROC' token
         lda zpLINE+1
-        sta zp1A
+        sta zpAELINE+1
         lda zpCURSOR
         sta zp1B
         lda #$F2
@@ -3848,16 +3848,16 @@ L95BF:
     brk
 L95C9:
     lda zpLINE
-    sta zp19
+    sta zpAELINE
     lda zpLINE+1
-    sta zp1A
+    sta zpAELINE+1
     ldy zpCURSOR
     dey
 L95D4:
     iny
 L95D5:
     sty zp1B
-    lda (zp19),Y
+    lda (zpAELINE),Y
     cmp #$20
     beq L95D4
 L95DD:
@@ -3871,13 +3871,13 @@ L95DD:
     lda #$04+(ws/256)
     sta zp2B
     iny
-    lda (zp19),Y
+    lda (zpAELINE),Y
     iny
     cmp #$25
     bne L95FF
     ldx #$04
     stx zp2C
-    lda (zp19),Y
+    lda (zpAELINE),Y
     cmp #'('
     bne L9665
 L95FF:
@@ -3885,8 +3885,8 @@ L95FF:
     stx zp2C
     lda zp1B
     clc
-    adc zp19
-    ldx zp1A
+    adc zpAELINE
+    ldx zpAELINE+1
     bcc L960E
     inx
     clc
@@ -3946,7 +3946,7 @@ L9654:
     stx zp1B
 L9661:
     ldy zp1B
-    lda (zp19),Y
+    lda (zpAELINE),Y
 L9665:
     cmp #$21
     beq L967F
@@ -4224,15 +4224,15 @@ L9805:
 
 L9807:
     lda zpLINE
-    sta zp19
+    sta zpAELINE
     lda zpLINE+1
-    sta zp1A
+    sta zpAELINE+1
     lda zpCURSOR
     sta zp1B
 L9813:
     ldy zp1B
     inc zp1B
-    lda (zp19),Y
+    lda (zpAELINE),Y
     cmp #$20
     beq L9813
     cmp #$3D
@@ -4825,9 +4825,9 @@ L9B15:
 ; ---------------------------
 L9B1D:
     lda zpLINE
-    sta zp19          ; Copy PtrA to PtrB
+    sta zpAELINE          ; Copy PtrA to PtrB
     lda zpLINE+1
-    sta zp1A
+    sta zpAELINE+1
     lda zpCURSOR
     sta zp1B
 
@@ -4957,7 +4957,7 @@ L9BB5:
 L9BC0:
     tax
     ldy zp1B
-    lda (zp19),Y      ; Get next char from PtrB
+    lda (zpAELINE),Y      ; Get next char from PtrB
     cmp #'='
     beq L9BD4         ; Jump for <=
     cmp #'>'
@@ -4991,7 +4991,7 @@ L9BDF:
 L9BE8:
     tax
     ldy zp1B
-    lda (zp19),Y      ; Get next char from PtrB
+    lda (zpAELINE),Y      ; Get next char from PtrB
     cmp #'='
     beq L9BFA         ; Jump for >=
 
@@ -5380,7 +5380,7 @@ L9E23:
 L9E24:
     ldy zp1B
     inc zp1B
-    lda (zp19),Y      ; Get character
+    lda (zpAELINE),Y      ; Get character
     cmp #$20
     beq L9E24         ; Skip spaces
     tax
@@ -5789,7 +5789,7 @@ LA07B:
     sta zp35          ; Store digit
 LA099:
     iny
-    lda (zp19),Y      ; Get next character
+    lda (zpAELINE),Y      ; Get next character
     cmp #'.'
     bne LA0A8         ; Not decimal point
 LA0A0:
@@ -5898,14 +5898,14 @@ LA139:
 ; -----------------------------------------------------------
 LA140:
     iny
-    lda (zp19),Y      ; Get next character
+    lda (zpAELINE),Y      ; Get next character
     cmp #'-'
     beq LA139         ; If '-', jump to scan and negate
     cmp #'+'
     bne LA14E         ; If '+', just step past
 LA14B:
     iny
-    lda (zp19),Y      ; Get next character
+    lda (zpAELINE),Y      ; Get next character
 LA14E:
     cmp #'9'+1
     bcs LA174         ; Not a digit, exit with CC and A=0
@@ -5913,7 +5913,7 @@ LA14E:
     bcc LA174         ; Not a digit, exit with CC and A=0
     sta zp4A          ; Store exponent digit
     iny
-    lda (zp19),Y      ; Get next character
+    lda (zpAELINE),Y      ; Get next character
     cmp #'9'+1
     bcs LA170         ; Not a digit, exit with CC and A=exp
     sbc #'0'-1
@@ -7689,21 +7689,21 @@ LABE9:
                       ; String has to be stacked as otherwise would
                       ;  be overwritten by any string operations
                       ;  called by Evaluator
-    lda zp19
+    lda zpAELINE
     pha               ; Save PTRB
-    lda zp1A
+    lda zpAELINE+1
     pha
     lda zp1B
     pha
     ldy zpAESTKP
     ldx zpAESTKP+1          ; YX=>stackbottom (wrong way around)
     iny               ; Step over length byte
-    sty zp19          ; PTRB=>stacked string
+    sty zpAELINE          ; PTRB=>stacked string
     sty zp37          ; GPTR=>stacked string
     bne LAC0F
     inx               ; Inc high byte if next page
 LAC0F:
-    stx zp1A
+    stx zpAELINE+1
     stx zp38          ; PTRB and GPTR high bytes
     ldy #$FF
     sty zp3B
@@ -7716,9 +7716,9 @@ LAC23:
     pla
     sta zp1B          ; Restore PTRB
     pla
-    sta zp1A
+    sta zpAELINE+1
     pla
-    sta zp19
+    sta zpAELINE
     lda zp27          ; Get expression return value
     rts               ; And return
 
@@ -7740,9 +7740,9 @@ LAC34:
     ldy zp36
     lda #$00
     sta ws+$0600,Y
-    lda zp19
+    lda zpAELINE
     pha
-    lda zp1A
+    lda zpAELINE+1
     pha
     lda zp1B
     pha
@@ -7751,9 +7751,9 @@ LAC34:
     .if version < 3
         lda #$00
     .endif
-    sta zp19
+    sta zpAELINE
     lda #$06+(ws/256)
-    sta zp1A
+    sta zpAELINE+1
     jsr L8A8C
     cmp #$2D
     beq LAC66
@@ -8113,7 +8113,7 @@ LADAD:
     beq LADC9
     ldx #$00
 LADB6:
-    lda (zp19),Y
+    lda (zpAELINE),Y
     sta ws+$0600,X
     iny
     inx
@@ -8139,7 +8139,7 @@ LADC9:
 LADCB:
     iny
 LADCC:
-    lda (zp19),Y
+    lda (zpAELINE),Y
     cmp #$0D
     beq LADE9
     .if version < 3
@@ -8152,7 +8152,7 @@ LADCC:
     inx
     cmp #$22
     bne LADCC
-    lda (zp19),Y
+    lda (zpAELINE),Y
     cmp #$22
     beq LADCB
     .if version < 3
@@ -8174,7 +8174,7 @@ LADE9:
 LADEC:
     ldy zp1B
     inc zp1B
-    lda (zp19),Y      ; Get next character
+    lda (zpAELINE),Y      ; Get next character
     cmp #$20
     beq LADEC         ; Loop to skip spaces
     cmp #'-'
@@ -8293,7 +8293,7 @@ LAE6D:
         iny
     .endif
 LAE79:
-    lda (zp19),Y
+    lda (zpAELINE),Y
     cmp #$30
     bcc LAEA2
     cmp #$3A
@@ -8335,7 +8335,7 @@ LAEA2:
 ; ============================
 XAEA6:
         iny
-        lda (zp19),Y
+        lda (zpAELINE),Y
         cmp #'P'
         bne LAE43
         inc zp1B
@@ -8472,7 +8472,7 @@ LAED8:
 ; ============================
 LAEDC:
         ldy zp1B
-        lda (zp19),Y
+        lda (zpAELINE),Y
         cmp #$50
         bne LAEC7
         inc zp1B
@@ -8549,7 +8549,7 @@ LAF3F:
 ; ===============
 LAF49:
     ldy zp1B
-    lda (zp19),Y      ; Get current character
+    lda (zpAELINE),Y      ; Get current character
     cmp #'('
     beq LAF0A         ; Jump with RND(numeric)
     jsr LAF87         ; Get random number
@@ -9081,8 +9081,8 @@ LB1A6:
     lda zp1B
     tax
     clc
-    adc zp19
-    ldy zp1A
+    adc zpAELINE
+    ldy zpAELINE+1
     bcc LB1CA
 LB1C8:
     iny
@@ -9124,15 +9124,15 @@ LB1F4:
 LB202:
     lda zp1B
     pha
-    lda zp19
+    lda zpAELINE
     pha
-    lda zp1A
+    lda zpAELINE+1
     pha
     jsr L8BA3
     pla
-    sta zp1A
+    sta zpAELINE+1
     pla
-    sta zp19
+    sta zpAELINE
     pla
     sta zp1B
     pla
@@ -9174,18 +9174,18 @@ LB24A:
 LB24D:
     lda zp1B
     pha
-    lda zp19
+    lda zpAELINE
     pha
-    lda zp1A
+    lda zpAELINE+1
     pha
     jsr L9582
     beq LB2B5
     lda zp1B
     sta zpCURSOR
     pla
-    sta zp1A
+    sta zpAELINE+1
     pla
-    sta zp19
+    sta zpAELINE
     pla
     sta zp1B
     pla
@@ -10597,9 +10597,9 @@ LBAA2:
 LBAB0:
     sta zp1B
     lda #$00
-    sta zp19
+    sta zpAELINE
     lda #$06+(ws/256)
-    sta zp1A
+    sta zpAELINE+1
     jsr LADAD
 LBABD:
     jsr L8A8C
@@ -10677,9 +10677,9 @@ LBB32:
 LBB40:
     clc
     lda zp1B
-    adc zp19
+    adc zpAELINE
     sta zp1C
-    lda zp1A
+    lda zpAELINE+1
     adc #$00
     sta zp1D
     jmp LBB15
@@ -10688,9 +10688,9 @@ LBB50:
     lda zp1B
     sta zpCURSOR
     lda zp1C
-    sta zp19
+    sta zpAELINE
     lda zp1D
-    sta zp1A
+    sta zpAELINE+1
     ldy #$00
     sty zp1B
     jsr L8A8C
@@ -10708,25 +10708,25 @@ LBB6F:
     bne LBB6F
 LBB7A:
     ldy zp1B
-    lda (zp19),Y
+    lda (zpAELINE),Y
     bmi LBB9C
     iny
     iny
-    lda (zp19),Y
+    lda (zpAELINE),Y
     tax
 LBB85:
     iny
-    lda (zp19),Y
+    lda (zpAELINE),Y
     cmp #$20
     beq LBB85
     cmp #tknDATA
     beq LBBAD
     txa
     clc
-    adc zp19
-    sta zp19
+    adc zpAELINE
+    sta zpAELINE
     bcc LBB7A
-    inc zp1A
+    inc zpAELINE+1
     bcs LBB7A
 LBB9C:
     brk
@@ -11692,9 +11692,9 @@ LBFA9:
     lda zpCURSOR
     sta zp1B          ; Set PtrB to program pointer in PtrA
     lda zpLINE
-    sta zp19
+    sta zpAELINE
     lda zpLINE+1
-    sta zp1A
+    sta zpAELINE+1
 
 ; Check for '#', evaluate channel
 ; ===============================
