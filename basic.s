@@ -10646,9 +10646,9 @@ LBAE6:
 LBB07:
     jsr DONE
     lda zp3D
-    sta zp1C
+    sta zpDATAP
     lda zp3E
-    sta zp1D
+    sta zpDATAP+1
     jmp L8B9B
 
 LBB15:
@@ -10678,18 +10678,18 @@ LBB40:
     clc
     lda zpAECUR
     adc zpAELINE
-    sta zp1C
+    sta zpDATAP
     lda zpAELINE+1
     adc #$00
-    sta zp1D
+    sta zpDATAP+1
     jmp LBB15
 
 LBB50:
     lda zpAECUR
     sta zpCURSOR
-    lda zp1C
+    lda zpDATAP
     sta zpAELINE
-    lda zp1D
+    lda zpDATAP+1
     sta zpAELINE+1
     ldy #$00
     sty zpAECUR
@@ -11067,7 +11067,7 @@ LBD33:
 ; ==================================
 LBD3A:
     lda zpTXTP
-    sta zp1D          ; DATA pointer hi=PAGE hi
+    sta zpDATAP+1          ; DATA pointer hi=PAGE hi
     lda zpHIMEM
     sta zpAESTKP
     lda zpHIMEM+1
@@ -11076,7 +11076,7 @@ LBD3A:
     sta zp24
     sta zp26
     sta zp25; Clear REPEAT, FOR, GOSUB stacks
-    sta zp1C
+    sta zpDATAP
     rts               ; DATA pointer=PAGE
 
 LBD51:
