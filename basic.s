@@ -7038,22 +7038,22 @@ LA82C:
     LDA #$FF
     RTS
 
-LA869:
     .if version < 3
-        dta $7F, $5E, $5B, $D8, $AA
+RPLN10:
+        dta $7f, $5e, $5b, $d8, $aa     ; 0.43429448 = LOG10(e)
     .endif
 
 LOGTWO:
-    dta $80, $31, $72, $17, $F8         ; LN(2.0)
+    dta $80, $31, $72, $17, $f8         ; LN(2.0)
 
 FLOGTC:
     dta $06                             ; Length - 1
-    dta $7A, $12, $38, $A5, $0B         ; 0.00892464
-    dta $88, $79, $0E, $9F, $F3         ; 249.05712813
-    dta $7C, $2A, $AC, $3F, $B5         ; 0.04166818
+    dta $7a, $12, $38, $a5, $0B         ; 0.00892464
+    dta $88, $79, $0E, $9f, $f3         ; 249.05712813
+    dta $7c, $2a, $ac, $3f, $b5         ; 0.04166818
     dta $86, $34, $01, $a2, $7a         ; 45.00159636
-    dta $7F, $63, $8E, $37, $EC         ; 0.44444442
-    dta $82, $3F, $ff, $ff, $c1         ; 2.99999994
+    dta $7f, $63, $8e, $37, $ec         ; 0.44444442
+    dta $82, $3f, $ff, $ff, $c1         ; 2.99999994
     dta $7f ,$ff, $ff, $ff, $ff         ; -0.50000000
 
 LA897:
@@ -7555,11 +7555,9 @@ LABA5:
 ; ============
 LABA8:
     JSR LA7FE
+    LDY #<RPLN10
     .if version < 3
-        LDY #<LA869
-        LDA #>LA869
-    .elseif version >= 3
-        LDY #<RPLN10
+        LDA #>RPLN10
     .endif
     BNE LABB8
 
