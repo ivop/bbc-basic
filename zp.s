@@ -3,7 +3,7 @@
 .endif
 zp02 = zp + $02
 zp03 = zp + $03
-AESTKP = zp + $04       ; ptr
+zpAESTKP = zp + $04     ; ptr
 zpHIMEM = zp + $06      ; ptr
 zpERL = zp + $08        ; ptr
 zpCURSOR = zp + $0a

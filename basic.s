@@ -2112,9 +2112,9 @@ L8C5F:
     tay
     lda zp03
     adc #$00
-    cpy AESTKP
+    cpy zpAESTKP
     tax
-    sbc AESTKP+1
+    sbc zpAESTKP+1
     bcs L8CB7
     sty zp02
     stx zp03
@@ -2179,7 +2179,7 @@ L8CC1:
     beq L8CEE
     bcc L8D03
     ldy #$00
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     tax
     beq L8CE5
     lda (zp37),Y
@@ -2190,13 +2190,13 @@ L8CC1:
     sbc #$00
     sta zp3A
 L8CDD:
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sta (zp39),Y
     iny
     dex
     bne L8CDD
 L8CE5:
-    lda (AESTKP,X)
+    lda (zpAESTKP,X)
     ldy #$03
 L8CE9:
     sta (zp37),Y
@@ -2204,12 +2204,12 @@ L8CE9:
 
 L8CEE:
     ldy #$00
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     tax
     beq L8CFF
 L8CF5:
     iny
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     dey
     sta (zp37),Y
     iny
@@ -2220,7 +2220,7 @@ L8CFF:
     bne L8CE9
 L8D03:
     ldy #$00
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sta (zp37),Y
     .if version < 3
         iny
@@ -2232,18 +2232,18 @@ L8D03:
         beq L8D26
         ldy #$01
     .endif
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sta (zp37),Y
     iny
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sta (zp37),Y
     iny
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sta (zp37),Y
     iny
     cpy zp39
     bcs L8D26
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sta (zp37),Y
     iny
 L8D26:
@@ -2957,8 +2957,8 @@ L90DF:
     lda zp2B
     adc zp03
     tax
-    cpy AESTKP
-    sbc AESTKP+1
+    cpy zpAESTKP
+    sbc zpAESTKP+1
     bcs L90DC
     lda zp02
     sta zp2A
@@ -3096,8 +3096,8 @@ L91D2:
     adc zp03
     bcs L9218
     tax
-    cpy AESTKP
-    sbc AESTKP+1
+    cpy zpAESTKP
+    sbc zpAESTKP+1
     bcs L9218
     sty zp02
     stx zp03
@@ -3186,10 +3186,10 @@ L925D:
     jsr L92EB         ; Set past '=', evaluate integer
     lda zp2A
     sta zpHIMEM
-    sta AESTKP          ; Set HIMEM and STACK
+    sta zpAESTKP          ; Set HIMEM and STACK
     lda zp2B
     sta zpHIMEM+1
-    sta AESTKP+1
+    sta zpAESTKP+1
     jmp L8B9B         ; Jump back to execution loop
 
 ; LOMEM=numeric
@@ -3458,10 +3458,10 @@ L939A:
         bne L93D7     ; Not $FFFFxxxx, skip memory test
 
                       ; MODE change in I/O processor, must check memory limits
-        lda AESTKP
+        lda zpAESTKP
         cmp zpHIMEM
         bne L9372     ; STACK<>HIMEM, stack not empty, give 'Bad MODE' error
-        lda AESTKP+1
+        lda zpAESTKP+1
         cmp zpHIMEM+1
         bne L9372
         ldx zp2A
@@ -3478,9 +3478,9 @@ L939A:
 
                       ; BASIC stack is empty, screen would not hit heap or program
         stx zpHIMEM
-        stx AESTKP      ; Set STACK and HIMEM to new address
+        stx zpAESTKP      ; Set STACK and HIMEM to new address
         sty zpHIMEM+1
-        sty AESTKP+1
+        sty zpAESTKP+1
     .endif
 
 ; Change MODE
@@ -3747,10 +3747,10 @@ L9539:
     inc zp03
 L9541:
     ldy zp03
-    cpy AESTKP+1
+    cpy zpAESTKP+1
     bcc L9556
     bne L954D
-    cmp AESTKP
+    cmp zpAESTKP
     bcc L9556
 L954D:
     lda #$00
@@ -4746,19 +4746,19 @@ L9A9E:
     sta zp2D
     sec
     ldy #$00
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sbc zp2A
     sta zp2A
     iny
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sbc zp2B
     sta zp2B
     iny
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sbc zp2C
     sta zp2C
     iny
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     ldy #$00
     eor #$80
     sbc zp2D
@@ -4768,10 +4768,10 @@ L9A9E:
     php
     clc
     lda #$04
-    adc AESTKP          ; Drop integer from stack
-    sta AESTKP
+    adc zpAESTKP          ; Drop integer from stack
+    sta zpAESTKP
     bcc L9AE5
-    inc AESTKP+1
+    inc zpAESTKP+1
 L9AE5:
     plp
     rts
@@ -4788,7 +4788,7 @@ L9AE7:
     .if version < 3 || (version == 3 && minorversion < 10)
         ldy #$00
     .endif
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sta zp39
     cmp zp36
     bcs L9AFF
@@ -4803,7 +4803,7 @@ L9B03:
     cpy zp3A
     beq L9B11
     iny
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     cmp ws+$05FF,Y
     beq L9B03
     bne L9B15
@@ -4858,7 +4858,7 @@ L9B3A:
     jsr L92F0
     ldy #$03          ; If float, convert to integer
 L9B43:
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     ora zp2A,Y        ; OR IntA with top of stack    ; abs,y (!)
     sta zp2A,Y              ; abs,y (!)
     dey
@@ -4876,7 +4876,7 @@ L9B55:
     jsr L92F0
     ldy #$03          ; If float, convert to integer
 L9B5E:
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     eor zp2A,Y        ; EOR IntA with top of stack       ; abs,y (!)
     sta zp2A,Y                  ; abs,y (!)
     dey
@@ -4910,7 +4910,7 @@ L9B7A:
     jsr L92F0
     ldy #$03          ; If float, convert to integer
 L9B8A:
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     and zp2A,Y        ; AND IntA with top of stack   ; abs,y (!)
     sta zp2A,Y              ; abs,y (!)
     dey
@@ -5030,7 +5030,7 @@ L9C15:
     clc
     stx zp37
     ldy #$00
-    lda (AESTKP),Y      ; Get stacked string length
+    lda (zpAESTKP),Y      ; Get stacked string length
     adc zp36
     bcs L9C03         ; If added string length >255, jump to error
     tax
@@ -5075,29 +5075,29 @@ L9C4E:
     bmi L9CA7         ; If int + float, jump ...
     ldy #$00
     clc
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     adc zp2A
     sta zp2A          ; Add top of stack to IntA
     iny
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     adc zp2B
     sta zp2B          ; Store result in IntA
     iny
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     adc zp2C
     sta zp2C
     iny
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     adc zp2D
 L9C77:
     sta zp2D
     clc
-    lda AESTKP
+    lda zpAESTKP
     adc #$04
-    sta AESTKP          ; Drop integer from stack
+    sta zpAESTKP          ; Drop integer from stack
     lda #$40
     bcc L9C45         ; Set result=integer, jump to check for more + or -
-    inc AESTKP+1
+    inc zpAESTKP+1
     bcs L9C45         ; Jump to check for more + or -
 
 L9C88:
@@ -5145,19 +5145,19 @@ L9CB5:
     bmi L9CFA         ; int + float, jump to convert and do real subtraction
     sec
     ldy #$00
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sbc zp2A
     sta zp2A
     iny
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sbc zp2B
     sta zp2B          ; Subtract IntA from top of stack
     iny
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sbc zp2C
     sta zp2C          ; Store in IntA
     iny
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sbc zp2D
     jmp L9C77         ; Jump to pop stack and loop for more + or -
 
@@ -5410,9 +5410,9 @@ L9E35:
 
 L9E59:
     jsr LA381
-    lda AESTKP
+    lda zpAESTKP
     sta zp4B
-    lda AESTKP+1
+    lda zpAESTKP+1
     sta zp4C
     jsr LA3B5
     lda zp4A
@@ -7666,8 +7666,8 @@ LABE9:
     pha
     lda zp1B
     pha
-    ldy AESTKP
-    ldx AESTKP+1          ; YX=>stackbottom (wrong way around)
+    ldy zpAESTKP
+    ldx zpAESTKP+1          ; YX=>stackbottom (wrong way around)
     iny               ; Step over length byte
     sty zp19          ; PTRB=>stacked string
     sty zp37          ; GPTR=>stacked string
@@ -7978,12 +7978,12 @@ LAD1A:
     dex
     stx zp2D
     clc
-    adc AESTKP
+    adc zpAESTKP
     sta zp37
     tya
-    adc AESTKP+1
+    adc zpAESTKP+1
     sta zp38
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sec
     sbc zp2D
     bcc LAD52
@@ -9028,16 +9028,16 @@ LB197:
     tsx
     txa
     clc
-    adc AESTKP          ; Drop BASIC stack by size of 6502 stack
+    adc zpAESTKP          ; Drop BASIC stack by size of 6502 stack
     jsr LBE2E         ; Store new BASIC stack pointer, check for No Room
     ldy #$00
     txa
-    sta (AESTKP),Y      ; Store 6502 Stack Pointer on BASIC stack
+    sta (zpAESTKP),Y      ; Store 6502 Stack Pointer on BASIC stack
 LB1A6:
     inx
     iny
     lda $0100,X
-    sta (AESTKP),Y      ; Copy 6502 stack onto BASIC stack
+    sta (zpAESTKP),Y      ; Copy 6502 stack onto BASIC stack
     cpx #$FF
     bne LB1A6
     txs               ; Clear 6502 stack
@@ -9123,21 +9123,21 @@ LB226:
     sta zpCURSOR
     pla
     ldy #$00
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     tax
     txs
 LB236:
     iny
     inx
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sta $0100,X       ; Copy stacked 6502 stack back onto 6502 stack
     cpx #$FF
     bne LB236
     tya
-    adc AESTKP
-    sta AESTKP          ; Adjust BASIC stack pointer
+    adc zpAESTKP
+    sta zpAESTKP          ; Adjust BASIC stack pointer
     bcc LB24A
-    inc AESTKP+1
+    inc zpAESTKP+1
 LB24A:
     lda zp27
     rts
@@ -11040,9 +11040,9 @@ LBD3A:
     lda zpTXTP
     sta zp1D          ; DATA pointer hi=PAGE hi
     lda zpHIMEM
-    sta AESTKP
+    sta zpAESTKP
     lda zpHIMEM+1
-    sta AESTKP+1          ; STACK=HIMEM
+    sta zpAESTKP+1          ; STACK=HIMEM
     lda #$00
     sta zp24
     sta zp26
@@ -11051,13 +11051,13 @@ LBD3A:
     rts               ; DATA pointer=PAGE
 
 LBD51:
-    lda AESTKP
+    lda zpAESTKP
     sec
     sbc #$05
     jsr LBE2E
     ldy #$00
     lda zp30
-    sta (AESTKP),Y
+    sta (zpAESTKP),Y
     iny
     lda zp2E
     and #$80
@@ -11065,118 +11065,118 @@ LBD51:
     lda zp31
     and #$7F
     ora zp2E
-    sta (AESTKP),Y
+    sta (zpAESTKP),Y
     iny
     lda zp32
-    sta (AESTKP),Y
+    sta (zpAESTKP),Y
     iny
     lda zp33
-    sta (AESTKP),Y
+    sta (zpAESTKP),Y
     iny
     lda zp34
-    sta (AESTKP),Y
+    sta (zpAESTKP),Y
     rts
 
 LBD7E:
-    lda AESTKP
+    lda zpAESTKP
     clc
     sta zp4B
     adc #$05
-    sta AESTKP
-    lda AESTKP+1
+    sta zpAESTKP
+    lda zpAESTKP+1
     sta zp4C
     adc #$00
-    sta AESTKP+1
+    sta zpAESTKP+1
     rts
 
 LBD90:
     beq LBDB2
     bmi LBD51
 LBD94:
-    lda AESTKP
+    lda zpAESTKP
     sec
     sbc #$04
 LBD99:
     jsr LBE2E
     ldy #$03
     lda zp2D
-    sta (AESTKP),Y
+    sta (zpAESTKP),Y
     dey
     lda zp2C
-    sta (AESTKP),Y
+    sta (zpAESTKP),Y
     dey
     lda zp2B
-    sta (AESTKP),Y
+    sta (zpAESTKP),Y
     dey
     lda zp2A
-    sta (AESTKP),Y
+    sta (zpAESTKP),Y
     rts
 
 ; Stack the current string
 ; ========================
 LBDB2:
     clc
-    lda AESTKP
+    lda zpAESTKP
     sbc zp36          ; stackbot=stackbot-length-1
     jsr LBE2E         ; Check enough space
     ldy zp36
     beq LBDC6         ; Zero length, just stack length
 LBDBE:
     lda ws+$05FF,Y
-    sta (AESTKP),Y      ; Copy string to stack
+    sta (zpAESTKP),Y      ; Copy string to stack
     dey
     bne LBDBE         ; Loop for all characters
 LBDC6:
     lda zp36
-    sta (AESTKP),Y      ; Copy string length
+    sta (zpAESTKP),Y      ; Copy string length
     rts
 
 ; Unstack a string
 ; ================
 LBDCB:
     ldy #$00
-    lda (AESTKP),Y      ; Get stacked string length
+    lda (zpAESTKP),Y      ; Get stacked string length
     sta zp36
     beq LBDDC
     tay               ; If zero length, just unstack length
 LBDD4:
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sta ws+$05FF,Y    ; Copy string to string buffer
     dey
     bne LBDD4         ; Loop for all characters
 LBDDC:
     ldy #$00
-    lda (AESTKP),Y      ; Get string length again
+    lda (zpAESTKP),Y      ; Get string length again
     sec
 LBDE1:
-    adc AESTKP
-    sta AESTKP          ; Update stack pointer
+    adc zpAESTKP
+    sta zpAESTKP          ; Update stack pointer
     bcc LBE0A
-    inc AESTKP+1
+    inc zpAESTKP+1
     rts
 
 ; Unstack an integer to IntA
 ; --------------------------
 LBDEA:
     ldy #$03
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sta zp2D
     dey               ; Copy to IntA
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sta zp2C
     dey
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sta zp2B
     dey
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sta zp2A
 LBDFF:
     clc
-    lda AESTKP
+    lda zpAESTKP
     adc #$04
-    sta AESTKP          ; Drop 4 bytes from stack
+    sta zpAESTKP          ; Drop 4 bytes from stack
     bcc LBE0A
-    inc AESTKP+1
+    inc zpAESTKP+1
 LBE0A:
     rts
 
@@ -11186,31 +11186,31 @@ LBE0B:
     ldx #$37
 LBE0D:
     ldy #$03
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sta zp+3,X
     dey
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sta zp+2,X
     dey
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sta zp+1,X
     dey
-    lda (AESTKP),Y
+    lda (zpAESTKP),Y
     sta zp+0,X
     clc
-    lda AESTKP
+    lda zpAESTKP
     adc #$04
-    sta AESTKP          ; Drop 4 bytes from stack
+    sta zpAESTKP          ; Drop 4 bytes from stack
     bcc LBE0A
-    inc AESTKP+1
+    inc zpAESTKP+1
     rts
 
 LBE2E:
-    sta AESTKP
+    sta zpAESTKP
     bcs LBE34
-    dec AESTKP+1
+    dec zpAESTKP+1
 LBE34:
-    ldy AESTKP+1
+    ldy zpAESTKP+1
     cpy zp03
     bcc LBE41
     bne LBE40
