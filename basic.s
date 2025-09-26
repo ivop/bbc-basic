@@ -4588,99 +4588,99 @@ L99B9:
     dta 0, 0, 0, >1000, >10000
 
 L99BE:
-    tay               ; 99BE= A8           (
-    jsr L92F0         ; 99BF= 20 F0 92     p.
-    lda zp2D          ; 99C2= A5 2D       %-
-    pha               ; 99C4= 48          H
-    jsr LAD71         ; 99C5= 20 71 AD     q-
-    jsr L9E1D         ; 99C8= 20 1D 9E     ..
-    stx zp27          ; 99CB= 86 27       .'
-    tay               ; 99CD= A8          (
-    jsr L92F0         ; 99CE= 20 F0 92     p.
-    pla               ; 99D1= 68          h
-    sta zp38          ; 99D2= 85 38       .8
-    eor zp2D          ; 99D4= 45 2D       E-
-    sta zp37          ; 99D6= 85 37       .7
-    jsr LAD71         ; 99D8= 20 71 AD     q-
-    ldx #$39          ; 99DB= A2 39       "9
-    jsr LBE0D         ; 99DD= 20 0D BE     .>
-    sty zp3D          ; 99E0= 84 3D       .=
-    sty zp3E          ; 99E2= 84 3E       .>
-    sty zp3F          ; 99E4= 84 3F       .?
-    sty zp40          ; 99E6= 84 40       .@
-    lda zp2D          ; 99E8= A5 2D       %-
-    ora zp2A          ; 99EA= 05 2A       .*
-    ora zp2B          ; 99EC= 05 2B       .+
-    ora zp2C          ; 99EE= 05 2C       .,
-    beq L99A7         ; 99F0= F0 B5       p5
-    ldy #$20          ; 99F2= A0 20
+    tay
+    jsr L92F0
+    lda zp2D
+    pha
+    jsr LAD71
+    jsr L9E1D
+    stx zp27
+    tay
+    jsr L92F0
+    pla
+    sta zp38
+    eor zp2D
+    sta zp37
+    jsr LAD71
+    ldx #$39
+    jsr LBE0D
+    sty zp3D
+    sty zp3E
+    sty zp3F
+    sty zp40
+    lda zp2D
+    ora zp2A
+    ora zp2B
+    ora zp2C
+    beq L99A7
+    ldy #$20
 L99F4:
-    dey               ; 99F4= 88          .
-    beq L9A38         ; 99F5= F0 41       pA
-    asl zp39          ; 99F7= 06 39       .9
-    rol zp3A          ; 99F9= 26 3A       $
+    dey
+    beq L9A38
+    asl zp39
+    rol zp3A
 
-    rol zp3B          ; 99FB= 26 3B       $;
-    rol zp3C          ; 99FD= 26 3C       $<
-    bpl L99F4         ; 99FF= 10 F3       .s
+    rol zp3B
+    rol zp3C
+    bpl L99F4
 L9A01:
-    rol zp39          ; 9A01= 26 39       $9
-    rol zp3A          ; 9A03= 26 3A       $
+    rol zp39
+    rol zp3A
 
-    rol zp3B          ; 9A05= 26 3B       $;
-    rol zp3C          ; 9A07= 26 3C       $<
-    rol zp3D          ; 9A09= 26 3D       $=
-    rol zp3E          ; 9A0B= 26 3E       $>
-    rol zp3F          ; 9A0D= 26 3F       $?
-    rol zp40          ; 9A0F= 26 40       $@
-    sec               ; 9A11= 38          8
-    lda zp3D          ; 9A12= A5 3D       %=
-    sbc zp2A          ; 9A14= E5 2A       e*
-    pha               ; 9A16= 48          H
-    lda zp3E          ; 9A17= A5 3E       %>
-    sbc zp2B          ; 9A19= E5 2B       e+
-    pha               ; 9A1B= 48          H
-    lda zp3F          ; 9A1C= A5 3F       %?
-    sbc zp2C          ; 9A1E= E5 2C       e,
-    tax               ; 9A20= AA          *
-    lda zp40          ; 9A21= A5 40       %@
-    sbc zp2D          ; 9A23= E5 2D       e-
-    bcc L9A33         ; 9A25= 90 0C       ..
-    sta zp40          ; 9A27= 85 40       .@
-    stx zp3F          ; 9A29= 86 3F       .?
-    pla               ; 9A2B= 68          h
-    sta zp3E          ; 9A2C= 85 3E       .>
-    pla               ; 9A2E= 68          h
-    sta zp3D          ; 9A2F= 85 3D       .=
-    bcs L9A35         ; 9A31= B0 02       0.
+    rol zp3B
+    rol zp3C
+    rol zp3D
+    rol zp3E
+    rol zp3F
+    rol zp40
+    sec
+    lda zp3D
+    sbc zp2A
+    pha
+    lda zp3E
+    sbc zp2B
+    pha
+    lda zp3F
+    sbc zp2C
+    tax
+    lda zp40
+    sbc zp2D
+    bcc L9A33
+    sta zp40
+    stx zp3F
+    pla
+    sta zp3E
+    pla
+    sta zp3D
+    bcs L9A35
 L9A33:
-    pla               ; 9A33= 68          h
-    pla               ; 9A34= 68          h
+    pla
+    pla
 L9A35:
-    dey               ; 9A35= 88          .
-    bne L9A01         ; 9A36= D0 C9       PI
+    dey
+    bne L9A01
 L9A38:
-    rts               ; 9A38= 60          `
+    rts
 
 L9A39:
-    stx zp27          ; 9A39= 86 27       .'
-    jsr LBDEA         ; 9A3B= 20 EA BD     j=
-    jsr LBD51         ; 9A3E= 20 51 BD     Q=
-    jsr LA2BE         ; 9A41= 20 BE A2     >"
-    jsr LA21E         ; 9A44= 20 1E A2     ."
-    jsr LBD7E         ; 9A47= 20 7E BD     ~=
-    jsr LA3B5         ; 9A4A= 20 B5 A3     5#
-    jmp L9A62         ; 9A4D= 4C 62 9A    Lb.
+    stx zp27
+    jsr LBDEA
+    jsr LBD51
+    jsr LA2BE
+    jsr LA21E
+    jsr LBD7E
+    jsr LA3B5
+    jmp L9A62
 
 L9A50:
-    jsr LBD51         ; 9A50= 20 51 BD     Q=
-    jsr L9C42         ; 9A53= 20 42 9C     B.
-    stx zp27          ; 9A56= 86 27       .'
-    tay               ; 9A58= A8          (
-    jsr L92FD         ; 9A59= 20 FD 92     }.
-    jsr LBD7E         ; 9A5C= 20 7E BD     ~=
+    jsr LBD51
+    jsr L9C42
+    stx zp27
+    tay
+    jsr L92FD
+    jsr LBD7E
 L9A5F:
-    jsr LA34E         ; 9A5F= 20 4E A3     N#
+    jsr LA34E
 
 ; Compare FPA = FPB
 ; -----------------
@@ -4776,44 +4776,43 @@ L9AE5:
 ; Compare string with next expression
 ; -----------------------------------
 L9AE7:
-    jsr LBDB2         ; 9AE7= 20 B2 BD     2=
-    jsr L9C42         ; 9AEA= 20 42 9C     B.
-    tay               ; 9AED= A8          (
-    bne L9A9A         ; 9AEE= D0 AA       P*
-    stx zp37          ; 9AF0= 86 37       .7
-    ldx zp36          ; 9AF2= A6 36       $6
+    jsr LBDB2
+    jsr L9C42
+    tay
+    bne L9A9A
+    stx zp37
+    ldx zp36
     .if version < 3 || (version == 3 && minorversion < 10)
         ldy #$00
     .endif
-    lda (zp04),Y      ; 9AF6= B1 04       1.
-    sta zp39          ; 9AF8= 85 39       .9
-    cmp zp36          ; 9AFA= C5 36       E6
-    bcs L9AFF         ; 9AFC= B0 01       0.
-    tax               ; 9AFE= AA          *
+    lda (zp04),Y
+    sta zp39
+    cmp zp36
+    bcs L9AFF
+    tax
 L9AFF:
-    stx zp3A          ; 9AFF= 86 3A       .
+    stx zp3A
 
     .if version < 3 || (version == 3 && minorversion < 10)
         ldy #$00
     .endif
 L9B03:
-    cpy zp3A          ; 9B03= C4 3A       D
-
-    beq L9B11         ; 9B05= F0 0A       p.
-    iny               ; 9B07= C8          H
-    lda (zp04),Y      ; 9B08= B1 04       1.
-    cmp ws+$05FF,Y    ; 9B0A= D9 FF 05    Y..
-    beq L9B03         ; 9B0D= F0 F4       pt
-    bne L9B15         ; 9B0F= D0 04       P.
+    cpy zp3A
+    beq L9B11
+    iny
+    lda (zp04),Y
+    cmp ws+$05FF,Y
+    beq L9B03
+    bne L9B15
 L9B11:
-    lda zp39          ; 9B11= A5 39       %9
-    cmp zp36          ; 9B13= C5 36       E6
+    lda zp39
+    cmp zp36
 L9B15:
-    php               ; 9B15= 08          .
-    jsr LBDDC         ; 9B16= 20 DC BD     \=
-    ldx zp37          ; 9B19= A6 37       $7
-    plp               ; 9B1B= 28          (
-    rts               ; 9B1C= 60          `
+    php
+    jsr LBDDC
+    ldx zp37
+    plp
+    rts
 
 
 ; EXPRESSION EVALUATOR
@@ -5186,30 +5185,30 @@ L9CFA:
     jmp L9CA1         ; Jump to set result and loop for more + or -
 
 L9D0E:
-    jsr LA2BE         ; 9D0E= 20 BE A2     >"
+    jsr LA2BE
 L9D11:
-    jsr LBDEA         ; 9D11= 20 EA BD     j=
-    jsr LBD51         ; 9D14= 20 51 BD     Q=
-    jsr LA2BE         ; 9D17= 20 BE A2     >"
-    jmp L9D2C         ; 9D1A= 4C 2C 9D    L,.
+    jsr LBDEA
+    jsr LBD51
+    jsr LA2BE
+    jmp L9D2C
 
 L9D1D:
-    jsr LA2BE         ; 9D1D= 20 BE A2     >"
+    jsr LA2BE
 L9D20:
-    jsr LBD51         ; 9D20= 20 51 BD     Q=
-    jsr L9E20         ; 9D23= 20 20 9E      .
-    stx zp27          ; 9D26= 86 27       .'
-    tay               ; 9D28= A8          (
-    jsr L92FD         ; 9D29= 20 FD 92     }.
+    jsr LBD51
+    jsr L9E20
+    stx zp27
+    tay
+    jsr L92FD
 L9D2C:
-    jsr LBD7E         ; 9D2C= 20 7E BD     ~=
-    jsr LA656         ; 9D2F= 20 56 A6     V$
-    lda #$FF          ; 9D32= A9 FF       ).
-    ldx zp27          ; 9D34= A6 27       $'
-    jmp L9DD4         ; 9D36= 4C D4 9D    LT.
+    jsr LBD7E
+    jsr LA656
+    lda #$FF
+    ldx zp27
+    jmp L9DD4
 
 L9D39:
-    jmp L8C0E         ; 9D39= 4C 0E 8C    L..
+    jmp L8C0E
 
 ; * <value>
 ; ---------
@@ -5226,79 +5225,79 @@ L9D3C:
     bne L9D1D
 
 L9D4E:
-    eor zp2B          ; 9D4E= 45 2B       E+
-    bmi L9D1D         ; 9D50= 30 CB       0K
-    jsr L9E1D         ; 9D52= 20 1D 9E     ..
-    stx zp27          ; 9D55= 86 27       .'
-    tay               ; 9D57= A8          (
-    beq L9D39         ; 9D58= F0 DF       p_
-    bmi L9D11         ; 9D5A= 30 B5       05
-    lda zp2D          ; 9D5C= A5 2D       %-
-    cmp zp2C          ; 9D5E= C5 2C       E,
-    bne L9D0E         ; 9D60= D0 AC       P,
-    tay               ; 9D62= A8          (
-    beq L9D69         ; 9D63= F0 04       p.
-    cmp #$FF          ; 9D65= C9 FF       I.
-    bne L9D0E         ; 9D67= D0 A5       P%
+    eor zp2B
+    bmi L9D1D
+    jsr L9E1D
+    stx zp27
+    tay
+    beq L9D39
+    bmi L9D11
+    lda zp2D
+    cmp zp2C
+    bne L9D0E
+    tay
+    beq L9D69
+    cmp #$FF
+    bne L9D0E
 L9D69:
-    eor zp2B          ; 9D69= 45 2B       E+
-    bmi L9D0E         ; 9D6B= 30 A1       0!
-    lda zp2D          ; 9D6D= A5 2D       %-
-    pha               ; 9D6F= 48          H
-    jsr LAD71         ; 9D70= 20 71 AD     q-
-    ldx #$39          ; 9D73= A2 39       "9
-    jsr LBE44         ; 9D75= 20 44 BE     D>
-    jsr LBDEA         ; 9D78= 20 EA BD     j=
-    pla               ; 9D7B= 68          h
-    eor zp2D          ; 9D7C= 45 2D       E-
-    sta zp37          ; 9D7E= 85 37       .7
-    jsr LAD71         ; 9D80= 20 71 AD     q-
-    ldy #$00          ; 9D83= A0 00        .
-    ldx #$00          ; 9D85= A2 00       ".
-    sty zp3F          ; 9D87= 84 3F       .?
-    sty zp40          ; 9D89= 84 40       .@
+    eor zp2B
+    bmi L9D0E
+    lda zp2D
+    pha
+    jsr LAD71
+    ldx #$39
+    jsr LBE44
+    jsr LBDEA
+    pla
+    eor zp2D
+    sta zp37
+    jsr LAD71
+    ldy #$00
+    ldx #$00
+    sty zp3F
+    sty zp40
 L9D8B:
-    lsr zp3A          ; 9D8B= 46 3A       F
+    lsr zp3A
 
-    ror zp39          ; 9D8D= 66 39       f9
-    bcc L9DA6         ; 9D8F= 90 15       ..
-    clc               ; 9D91= 18          .
-    tya               ; 9D92= 98          .
-    adc zp2A          ; 9D93= 65 2A       e*
-    tay               ; 9D95= A8          (
-    txa               ; 9D96= 8A          .
-    adc zp2B          ; 9D97= 65 2B       e+
-    tax               ; 9D99= AA          *
-    lda zp3F          ; 9D9A= A5 3F       %?
-    adc zp2C          ; 9D9C= 65 2C       e,
-    sta zp3F          ; 9D9E= 85 3F       .?
-    lda zp40          ; 9DA0= A5 40       %@
-    adc zp2D          ; 9DA2= 65 2D       e-
-    sta zp40          ; 9DA4= 85 40       .@
+    ror zp39
+    bcc L9DA6
+    clc
+    tya
+    adc zp2A
+    tay
+    txa
+    adc zp2B
+    tax
+    lda zp3F
+    adc zp2C
+    sta zp3F
+    lda zp40
+    adc zp2D
+    sta zp40
 L9DA6:
-    asl zp2A          ; 9DA6= 06 2A       .*
-    rol zp2B          ; 9DA8= 26 2B       $+
-    rol zp2C          ; 9DAA= 26 2C       $,
-    rol zp2D          ; 9DAC= 26 2D       $-
-    lda zp39          ; 9DAE= A5 39       %9
-    ora zp3A          ; 9DB0= 05 3A       .
+    asl zp2A
+    rol zp2B
+    rol zp2C
+    rol zp2D
+    lda zp39
+    ora zp3A
 
-    bne L9D8B         ; 9DB2= D0 D7       PW
-    sty zp3D          ; 9DB4= 84 3D       .=
-    stx zp3E          ; 9DB6= 86 3E       .>
-    lda zp37          ; 9DB8= A5 37       %7
-    php               ; 9DBA= 08          .
+    bne L9D8B
+    sty zp3D
+    stx zp3E
+    lda zp37
+    php
 
 L9DBB:
-    ldx #$3D          ; 9DBB= A2 3D       "=
+    ldx #$3D
 L9DBD:
-    jsr LAF56         ; 9DBD= 20 56 AF     V/
-    plp               ; 9DC0= 28          (
-    bpl L9DC6         ; 9DC1= 10 03       ..
-    jsr LAD93         ; 9DC3= 20 93 AD     .-
+    jsr LAF56
+    plp
+    bpl L9DC6
+    jsr LAD93
 L9DC6:
-    ldx zp27          ; 9DC6= A6 27       $'
-    jmp L9DD4         ; 9DC8= 4C D4 9D    LT.
+    ldx zp27
+    jmp L9DD4
 
 ; * <value>
 ; ---------
@@ -5579,25 +5578,25 @@ L9F39:
     sta zp38
     cmp #$0B
     bcc L9F5C
-    lda #$0A          ; 9F54= A9 0A       ).
-    sta zp38          ; 9F56= 85 38       .8
+    lda #$0A
+    sta zp38
     lda #$00
-    sta zp37          ; 9F5A= 85 37       .7
+    sta zp37
 L9F5C:
-    jsr LA686; Clear FloatA
-    lda #$A0          ; 9F5F= A9 A0       )
-    sta zp31          ; 9F61= 85 31       .1
-    lda #$83          ; 9F63= A9 83       ).
-    sta zp30          ; 9F65= 85 30       .0
-    ldx zp38          ; 9F67= A6 38       $8
-    beq L9F71         ; 9F69= F0 06       p.
+    jsr LA686         ; Clear FloatA
+    lda #$A0
+    sta zp31
+    lda #$83
+    sta zp30
+    ldx zp38
+    beq L9F71
 L9F6B:
-    jsr LA24D; FloatA=FloatA/10
+    jsr LA24D         ; FloatA=FloatA/10
     dex
     bne L9F6B
 L9F71:
-    jsr LA7F5; Point to $46C
-    jsr LA34E; Unpack to FloatB
+    jsr LA7F5         ; Point to $46C
+    jsr LA34E         ; Unpack to FloatB
     lda zp27
     sta zp42
     jsr LA50B; Add
@@ -5605,96 +5604,96 @@ L9F7E:
     lda zp30
     cmp #$84
     bcs L9F92
-    ror zp31          ; 9F84= 66 31       f1
-    ror zp32          ; 9F86= 66 32       f2
-    ror zp33          ; 9F88= 66 33       f3
-    ror zp34          ; 9F8A= 66 34       f4
-    ror zp35          ; 9F8C= 66 35       f5
-    inc zp30          ; 9F8E= E6 30       f0
-    bne L9F7E         ; 9F90= D0 EC       Pl
+    ror zp31
+    ror zp32
+    ror zp33
+    ror zp34
+    ror zp35
+    inc zp30
+    bne L9F7E
 L9F92:
-    lda zp31          ; 9F92= A5 31       %1
+    lda zp31
     cmp #$A0
-    bcs L9F20         ; 9F96= B0 88       0.
-    lda zp38          ; 9F98= A5 38       %8
-    bne L9FAD         ; 9F9A= D0 11       P.
+    bcs L9F20
+    lda zp38
+    bne L9FAD
 
 ; Output zero in Exponent or Fixed format
 ; ---------------------------------------
 L9F9C:
     cmp #$01
-    beq L9FE6         ; 9F9E= F0 46       pF
+    beq L9FE6
 L9FA0:
-    jsr LA686; Clear FloatA
+    jsr LA686         ; Clear FloatA
     lda #$00
-    sta zp49          ; 9FA5= 85 49       .I
-    lda zp4E          ; 9FA7= A5 4E       %N
-    sta zp38          ; 9FA9= 85 38       .8
-    inc zp38          ; 9FAB= E6 38       f8
+    sta zp49
+    lda zp4E
+    sta zp38
+    inc zp38
 L9FAD:
-    lda #$01          ; 9FAD= A9 01       ).
+    lda #$01
     cmp zp37
-    beq L9FE6         ; 9FB1= F0 33       p3
+    beq L9FE6
     ldy zp49
-    bmi L9FC3         ; 9FB5= 30 0C       0.
+    bmi L9FC3
     cpy zp38
-    bcs L9FE6         ; 9FB9= B0 2B       0+
+    bcs L9FE6
     lda #$00
-    sta zp49          ; 9FBD= 85 49       .I
-    iny               ; 9FBF= C8          H
-    tya               ; 9FC0= 98          .
-    bne L9FE6         ; 9FC1= D0 23       P#
+    sta zp49
+    iny
+    tya
+    bne L9FE6
 L9FC3:
-    lda zp37          ; 9FC3= A5 37       %7
+    lda zp37
     cmp #$02
-    beq L9FCF         ; 9FC7= F0 06       p.
-    lda #$01          ; 9FC9= A9 01       ).
+    beq L9FCF
+    lda #$01
     cpy #$FF
-    bne L9FE6         ; 9FCD= D0 17       P.
+    bne L9FE6
 L9FCF:
     lda #'0'
-    jsr LA066; Output '0'
+    jsr LA066         ; Output '0'
     lda #'.'
-    jsr LA066; Output '.'
+    jsr LA066         ; Output '.'
     lda #'0'          ; Prepare '0'
 L9FDB:
     inc zp49
     beq L9FE4
-    jsr LA066; Output
+    jsr LA066         ; Output
     bne L9FDB
 
 L9FE4:
-    lda #$80          ; 9FE4= A9 80       ).
+    lda #$80
 L9FE6:
-    sta zp4E          ; 9FE6= 85 4E       .N
+    sta zp4E
 L9FE8:
-    jsr LA040         ; 9FE8= 20 40 A0     @
-    dec zp4E          ; 9FEB= C6 4E       FN
-    bne L9FF4         ; 9FED= D0 05       P.
-    lda #$2E          ; 9FEF= A9 2E       ).
-    jsr LA066         ; 9FF1= 20 66 A0     f
+    jsr LA040
+    dec zp4E
+    bne L9FF4
+    lda #$2E
+    jsr LA066
 L9FF4:
-    dec zp38          ; 9FF4= C6 38       F8
-    bne L9FE8         ; 9FF6= D0 F0       Pp
-    ldy zp37          ; 9FF8= A4 37       $7
-    dey               ; 9FFA= 88          .
-    beq LA015         ; 9FFB= F0 18       p.
-    dey               ; 9FFD= 88          .
-    beq LA011         ; 9FFE= F0 11       p.
-    ldy zp36          ; A000= A4 36       $6
+    dec zp38
+    bne L9FE8
+    ldy zp37
+    dey
+    beq LA015
+    dey
+    beq LA011
+    ldy zp36
 LA002:
-    dey               ; A002= 88          .
-    lda ws+$0600,Y    ; A003= B9 00 06    9..
+    dey
+    lda ws+$0600,Y
     cmp #'0'
-    beq LA002         ; A008= F0 F8       px
+    beq LA002
     cmp #'.'
-    beq LA00F         ; A00C= F0 01       p.
-    iny               ; A00E= C8          H
+    beq LA00F
+    iny
 LA00F:
-    sty zp36          ; A00F= 84 36       .6
+    sty zp36
 LA011:
-    lda zp49          ; A011= A5 49       %I
-    beq LA03F         ; A013= F0 2A       p*
+    lda zp49
+    beq LA03F
 LA015:
     lda #'E'
     jsr LA066         ; Output 'E'
@@ -5706,49 +5705,49 @@ LA015:
     lda #$00
     sbc zp49          ; Negate
 LA028:
-    jsr LA052         ; A028= 20 52 A0     R
-    lda zp37          ; A02B= A5 37       %7
-    beq LA03F         ; A02D= F0 10       p.
-    lda #$20          ; A02F= A9 20       )
-    ldy zp49          ; A031= A4 49       $I
-    bmi LA038         ; A033= 30 03       0.
-    jsr LA066         ; A035= 20 66 A0     f
+    jsr LA052
+    lda zp37
+    beq LA03F
+    lda #$20
+    ldy zp49
+    bmi LA038
+    jsr LA066
 LA038:
-    cpx #$00          ; A038= E0 00       `.
-    bne LA03F         ; A03A= D0 03       P.
-    jmp LA066         ; A03C= 4C 66 A0    Lf
+    cpx #$00
+    bne LA03F
+    jmp LA066
 
 LA03F:
-    rts               ; A03F= 60          `
+    rts
 
 LA040:
-    lda zp31          ; A040= A5 31       %1
-    lsr               ; A042= 4A          J
-    lsr               ; A043= 4A          J
-    lsr               ; A044= 4A          J
-    lsr               ; A045= 4A          J
-    jsr LA064         ; A046= 20 64 A0     d
-    lda zp31          ; A049= A5 31       %1
-    and #$0F          ; A04B= 29 0F       ).
-    sta zp31          ; A04D= 85 31       .1
-    jmp LA197         ; A04F= 4C 97 A1    L.!
+    lda zp31
+    lsr
+    lsr
+    lsr
+    lsr
+    jsr LA064
+    lda zp31
+    and #$0F
+    sta zp31
+    jmp LA197
 
 LA052:
-    ldx #$FF          ; A052= A2 FF       ".
-    sec               ; A054= 38          8
+    ldx #$FF
+    sec
 LA055:
-    inx               ; A055= E8          h
-    sbc #$0A          ; A056= E9 0A       i.
-    bcs LA055         ; A058= B0 FB       0{
-    adc #$0A          ; A05A= 69 0A       i.
-    pha               ; A05C= 48          H
-    txa               ; A05D= 8A          .
-    beq LA063         ; A05E= F0 03       p.
-    jsr LA064         ; A060= 20 64 A0     d
+    inx
+    sbc #$0A
+    bcs LA055
+    adc #$0A
+    pha
+    txa
+    beq LA063
+    jsr LA064
 LA063:
-    pla               ; A063= 68          h
+    pla
 LA064:
-    ora #'0'          ; A064= 09 30       .0
+    ora #'0'
 
 ; Store character in string buffer
 ; --------------------------------
@@ -5772,7 +5771,7 @@ LA072:
 LA07B:
     ldx #$00
     stx zp31
-    stx zp32; Clear FloatA
+    stx zp32          ; Clear FloatA
     stx zp33
     stx zp34
     stx zp35
@@ -5842,33 +5841,33 @@ LA0E8:
     lda zp49
     ora zp48          ; Check exponent and 'decimal point' flag
     beq LA11F         ; No exponent, no decimal point, return integer
-    jsr LA1DA         ; A0F0= 20 DA A1     Z!
-    beq LA11B         ; A0F3= F0 26       p$
+    jsr LA1DA
+    beq LA11B
 LA0F5:
-    lda #$A8          ; A0F5= A9 A8       )(
-    sta zp30          ; A0F7= 85 30       .0
-    lda #$00          ; A0F9= A9 00       ).
-    sta zp2F          ; A0FB= 85 2F       ./
-    sta zp2E          ; A0FD= 85 2E       ..
-    jsr LA303         ; A0FF= 20 03 A3     .#
-    lda zp49          ; A102= A5 49       %I
-    bmi LA111         ; A104= 30 0B       0.
-    beq LA118         ; A106= F0 10       p.
+    lda #$A8
+    sta zp30
+    lda #$00
+    sta zp2F
+    sta zp2E
+    jsr LA303
+    lda zp49
+    bmi LA111
+    beq LA118
 LA108:
-    jsr LA1F4         ; A108= 20 F4 A1     t!
-    dec zp49          ; A10B= C6 49       FI
-    bne LA108         ; A10D= D0 F9       Py
-    beq LA118         ; A10F= F0 07       p.
+    jsr LA1F4
+    dec zp49
+    bne LA108
+    beq LA118
 LA111:
-    jsr LA24D         ; A111= 20 4D A2     M"
-    inc zp49          ; A114= E6 49       fI
-    bne LA111         ; A116= D0 F9       Py
+    jsr LA24D
+    inc zp49
+    bne LA111
 LA118:
-    jsr LA65C         ; A118= 20 5C A6     \$
+    jsr LA65C
 LA11B:
-    sec               ; A11B= 38          8
-    lda #$FF          ; A11C= A9 FF       ).
-    rts               ; A11E= 60          `
+    sec
+    lda #$FF
+    rts
 
 LA11F:
     lda zp32
@@ -5965,81 +5964,81 @@ LA197:
     pha
     lda zp35
     asl
-    rol zp34          ; A1A6= 26 34       $4
-    rol zp33          ; A1A8= 26 33       $3
-    rol zp32          ; A1AA= 26 32       $2
-    rol zp31          ; A1AC= 26 31       $1
-    asl               ; A1AE= 0A          .
-    rol zp34          ; A1AF= 26 34       $4
-    rol zp33          ; A1B1= 26 33       $3
-    rol zp32          ; A1B3= 26 32       $2
-    rol zp31          ; A1B5= 26 31       $1
-    adc zp35          ; A1B7= 65 35       e5
-    sta zp35          ; A1B9= 85 35       .5
-    txa               ; A1BB= 8A          .
-    adc zp34          ; A1BC= 65 34       e4
-    sta zp34          ; A1BE= 85 34       .4
-    pla               ; A1C0= 68          h
-    adc zp33          ; A1C1= 65 33       e3
-    sta zp33          ; A1C3= 85 33       .3
-    pla               ; A1C5= 68          h
-    adc zp32          ; A1C6= 65 32       e2
-    sta zp32          ; A1C8= 85 32       .2
-    pla               ; A1CA= 68          h
-    adc zp31          ; A1CB= 65 31       e1
-    asl zp35          ; A1CD= 06 35       .5
-    rol zp34          ; A1CF= 26 34       $4
-    rol zp33          ; A1D1= 26 33       $3
-    rol zp32          ; A1D3= 26 32       $2
-    rol               ; A1D5= 2A          *
-    sta zp31          ; A1D6= 85 31       .1
-    pla               ; A1D8= 68          h
-    rts               ; A1D9= 60          `
+    rol zp34
+    rol zp33
+    rol zp32
+    rol zp31
+    asl
+    rol zp34
+    rol zp33
+    rol zp32
+    rol zp31
+    adc zp35
+    sta zp35
+    txa
+    adc zp34
+    sta zp34
+    pla
+    adc zp33
+    sta zp33
+    pla
+    adc zp32
+    sta zp32
+    pla
+    adc zp31
+    asl zp35
+    rol zp34
+    rol zp33
+    rol zp32
+    rol
+    sta zp31
+    pla
+    rts
 
 LA1DA:
-    lda zp31          ; A1DA= A5 31       %1
-    ora zp32          ; A1DC= 05 32       .2
-    ora zp33          ; A1DE= 05 33       .3
-    ora zp34          ; A1E0= 05 34       .4
-    ora zp35          ; A1E2= 05 35       .5
-    beq LA1ED         ; A1E4= F0 07       p.
-    lda zp2E          ; A1E6= A5 2E       %.
-    bne LA1F3         ; A1E8= D0 09       P.
-    lda #$01          ; A1EA= A9 01       ).
-    rts               ; A1EC= 60          `
+    lda zp31
+    ora zp32
+    ora zp33
+    ora zp34
+    ora zp35
+    beq LA1ED
+    lda zp2E
+    bne LA1F3
+    lda #$01
+    rts
 
 LA1ED:
-    sta zp2E          ; A1ED= 85 2E       ..
-    sta zp30          ; A1EF= 85 30       .0
-    sta zp2F          ; A1F1= 85 2F       ./
+    sta zp2E
+    sta zp30
+    sta zp2F
 LA1F3:
-    rts               ; A1F3= 60          `
+    rts
 
 LA1F4:
-    clc               ; A1F4= 18          .
-    lda zp30          ; A1F5= A5 30       %0
-    adc #$03          ; A1F7= 69 03       i.
-    sta zp30          ; A1F9= 85 30       .0
-    bcc LA1FF         ; A1FB= 90 02       ..
-    inc zp2F          ; A1FD= E6 2F       f/
+    clc
+    lda zp30
+    adc #$03
+    sta zp30
+    bcc LA1FF
+    inc zp2F
 LA1FF:
-    jsr LA21E         ; A1FF= 20 1E A2     ."
-    jsr LA242         ; A202= 20 42 A2     B"
-    jsr LA242         ; A205= 20 42 A2     B"
+    jsr LA21E
+    jsr LA242
+    jsr LA242
 LA208:
-    jsr LA178         ; A208= 20 78 A1     x!
+    jsr LA178
 LA20B:
-    bcc LA21D         ; A20B= 90 10       ..
-    ror zp31          ; A20D= 66 31       f1
-    ror zp32          ; A20F= 66 32       f2
-    ror zp33          ; A211= 66 33       f3
-    ror zp34          ; A213= 66 34       f4
-    ror zp35          ; A215= 66 35       f5
-    inc zp30          ; A217= E6 30       f0
-    bne LA21D         ; A219= D0 02       P.
-    inc zp2F          ; A21B= E6 2F       f/
+    bcc LA21D
+    ror zp31
+    ror zp32
+    ror zp33
+    ror zp34
+    ror zp35
+    inc zp30
+    bne LA21D
+    inc zp2F
 LA21D:
-    rts               ; A21D= 60          `
+    rts
 
 LA21E:
     lda zp2E
@@ -6062,30 +6061,30 @@ LA220:
     rts
 
 LA23F:
-    jsr LA21E         ; A23F= 20 1E A2     ."
+    jsr LA21E
 LA242:
-    lsr zp3E          ; A242= 46 3E       F>
-    ror zp3F          ; A244= 66 3F       f?
-    ror zp40          ; A246= 66 40       f@
-    ror zp41          ; A248= 66 41       fA
-    ror zp42          ; A24A= 66 42       fB
-    rts               ; A24C= 60          `
+    lsr zp3E
+    ror zp3F
+    ror zp40
+    ror zp41
+    ror zp42
+    rts
 
 LA24D:
-    sec               ; A24D= 38          8
-    lda zp30          ; A24E= A5 30       %0
-    sbc #$04          ; A250= E9 04       i.
-    sta zp30          ; A252= 85 30       .0
-    bcs LA258         ; A254= B0 02       0.
-    dec zp2F          ; A256= C6 2F       F/
+    sec
+    lda zp30
+    sbc #$04
+    sta zp30
+    bcs LA258
+    dec zp2F
 LA258:
-    jsr LA23F         ; A258= 20 3F A2     ?"
-    jsr LA208         ; A25B= 20 08 A2     ."
-    jsr LA23F         ; A25E= 20 3F A2     ?"
-    jsr LA242         ; A261= 20 42 A2     B"
-    jsr LA242         ; A264= 20 42 A2     B"
-    jsr LA242         ; A267= 20 42 A2     B"
-    jsr LA208         ; A26A= 20 08 A2     ."
+    jsr LA23F
+    jsr LA208
+    jsr LA23F
+    jsr LA242
+    jsr LA242
+    jsr LA242
+    jsr LA208
     lda #$00
     sta zp3E
     lda zp31
@@ -6132,184 +6131,184 @@ LA2BD:
     rts
 
 LA2BE:
-    ldx #$00          ; A2BE= A2 00       ".
-    stx zp35          ; A2C0= 86 35       .5
-    stx zp2F          ; A2C2= 86 2F       ./
-    lda zp2D          ; A2C4= A5 2D       %-
-    bpl LA2CD         ; A2C6= 10 05       ..
-    jsr LAD93         ; A2C8= 20 93 AD     .-
-    ldx #$FF          ; A2CB= A2 FF       ".
+    ldx #$00
+    stx zp35
+    stx zp2F
+    lda zp2D
+    bpl LA2CD
+    jsr LAD93
+    ldx #$FF
 LA2CD:
-    stx zp2E          ; A2CD= 86 2E       ..
-    lda zp2A          ; A2CF= A5 2A       %*
-    sta zp34          ; A2D1= 85 34       .4
-    lda zp2B          ; A2D3= A5 2B       %+
-    sta zp33          ; A2D5= 85 33       .3
-    lda zp2C          ; A2D7= A5 2C       %,
-    sta zp32          ; A2D9= 85 32       .2
-    lda zp2D          ; A2DB= A5 2D       %-
-    sta zp31          ; A2DD= 85 31       .1
-    lda #$A0          ; A2DF= A9 A0       )
-    sta zp30          ; A2E1= 85 30       .0
-    jmp LA303         ; A2E3= 4C 03 A3    L.#
+    stx zp2E
+    lda zp2A
+    sta zp34
+    lda zp2B
+    sta zp33
+    lda zp2C
+    sta zp32
+    lda zp2D
+    sta zp31
+    lda #$A0
+    sta zp30
+    jmp LA303
 
 LA2E6:
-    sta zp2E          ; A2E6= 85 2E       ..
-    sta zp30          ; A2E8= 85 30       .0
-    sta zp2F          ; A2EA= 85 2F       ./
+    sta zp2E
+    sta zp30
+    sta zp2F
 LA2EC:
-    rts               ; A2EC= 60          `
+    rts
 
 LA2ED:
-    pha               ; A2ED= 48          H
-    jsr LA686         ; A2EE= 20 86 A6     .$
-    pla               ; A2F1= 68          h
-    beq LA2EC         ; A2F2= F0 F8       px
-    bpl LA2FD         ; A2F4= 10 07       ..
-    sta zp2E          ; A2F6= 85 2E       ..
-    lda #$00          ; A2F8= A9 00       ).
-    sec               ; A2FA= 38          8
-    sbc zp2E          ; A2FB= E5 2E       e.
+    pha
+    jsr LA686
+    pla
+    beq LA2EC
+    bpl LA2FD
+    sta zp2E
+    lda #$00
+    sec
+    sbc zp2E
 LA2FD:
-    sta zp31          ; A2FD= 85 31       .1
-    lda #$88          ; A2FF= A9 88       ).
-    sta zp30          ; A301= 85 30       .0
+    sta zp31
+    lda #$88
+    sta zp30
 LA303:
-    lda zp31          ; A303= A5 31       %1
-    bmi LA2EC         ; A305= 30 E5       0e
-    ora zp32          ; A307= 05 32       .2
-    ora zp33          ; A309= 05 33       .3
-    ora zp34          ; A30B= 05 34       .4
-    ora zp35          ; A30D= 05 35       .5
-    beq LA2E6         ; A30F= F0 D5       pU
-    lda zp30          ; A311= A5 30       %0
+    lda zp31
+    bmi LA2EC
+    ora zp32
+    ora zp33
+    ora zp34
+    ora zp35
+    beq LA2E6
+    lda zp30
 LA313:
-    ldy zp31          ; A313= A4 31       $1
-    bmi LA2EC         ; A315= 30 D5       0U
-    bne LA33A         ; A317= D0 21       P!
-    ldx zp32          ; A319= A6 32       $2
-    stx zp31          ; A31B= 86 31       .1
-    ldx zp33          ; A31D= A6 33       $3
-    stx zp32          ; A31F= 86 32       .2
-    ldx zp34          ; A321= A6 34       $4
-    stx zp33          ; A323= 86 33       .3
-    ldx zp35          ; A325= A6 35       $5
-    stx zp34          ; A327= 86 34       .4
-    sty zp35          ; A329= 84 35       .5
-    sec               ; A32B= 38          8
-    sbc #$08          ; A32C= E9 08       i.
-    sta zp30          ; A32E= 85 30       .0
-    bcs LA313         ; A330= B0 E1       0a
-    dec zp2F          ; A332= C6 2F       F/
-    bcc LA313         ; A334= 90 DD       .]
+    ldy zp31
+    bmi LA2EC
+    bne LA33A
+    ldx zp32
+    stx zp31
+    ldx zp33
+    stx zp32
+    ldx zp34
+    stx zp33
+    ldx zp35
+    stx zp34
+    sty zp35
+    sec
+    sbc #$08
+    sta zp30
+    bcs LA313
+    dec zp2F
+    bcc LA313
 LA336:
-    ldy zp31          ; A336= A4 31       $1
-    bmi LA2EC         ; A338= 30 B2       02
+    ldy zp31
+    bmi LA2EC
 LA33A:
-    asl zp35          ; A33A= 06 35       .5
-    rol zp34          ; A33C= 26 34       $4
-    rol zp33          ; A33E= 26 33       $3
-    rol zp32          ; A340= 26 32       $2
-    rol zp31          ; A342= 26 31       $1
-    sbc #$00          ; A344= E9 00       i.
-    sta zp30          ; A346= 85 30       .0
-    bcs LA336         ; A348= B0 EC       0l
-    dec zp2F          ; A34A= C6 2F       F/
-    bcc LA336         ; A34C= 90 E8       .h
+    asl zp35
+    rol zp34
+    rol zp33
+    rol zp32
+    rol zp31
+    sbc #$00
+    sta zp30
+    bcs LA336
+    dec zp2F
+    bcc LA336
 LA34E:
-    ldy #$04          ; A34E= A0 04        .
-    lda (zp4B),Y      ; A350= B1 4B       1K
-    sta zp41          ; A352= 85 41       .A
-    dey               ; A354= 88          .
-    lda (zp4B),Y      ; A355= B1 4B       1K
-    sta zp40          ; A357= 85 40       .@
-    dey               ; A359= 88          .
-    lda (zp4B),Y      ; A35A= B1 4B       1K
-    sta zp3F          ; A35C= 85 3F       .?
-    dey               ; A35E= 88          .
-    lda (zp4B),Y      ; A35F= B1 4B       1K
-    sta zp3B          ; A361= 85 3B       .;
-    dey               ; A363= 88          .
-    sty zp42          ; A364= 84 42       .B
-    sty zp3C          ; A366= 84 3C       .<
-    lda (zp4B),Y      ; A368= B1 4B       1K
-    sta zp3D          ; A36A= 85 3D       .=
-    ora zp3B          ; A36C= 05 3B       .;
-    ora zp3F          ; A36E= 05 3F       .?
-    ora zp40          ; A370= 05 40       .@
-    ora zp41          ; A372= 05 41       .A
-    beq LA37A         ; A374= F0 04       p.
-    lda zp3B          ; A376= A5 3B       %;
-    ora #$80          ; A378= 09 80       ..
+    ldy #$04
+    lda (zp4B),Y
+    sta zp41
+    dey
+    lda (zp4B),Y
+    sta zp40
+    dey
+    lda (zp4B),Y
+    sta zp3F
+    dey
+    lda (zp4B),Y
+    sta zp3B
+    dey
+    sty zp42
+    sty zp3C
+    lda (zp4B),Y
+    sta zp3D
+    ora zp3B
+    ora zp3F
+    ora zp40
+    ora zp41
+    beq LA37A
+    lda zp3B
+    ora #$80
 LA37A:
-    sta zp3E          ; A37A= 85 3E       .>
-    rts               ; A37C= 60          `
+    sta zp3E
+    rts
 
 LA37D:
-    lda #$71          ; A37D= A9 71       )q
-    bne LA387         ; A37F= D0 06       P.
+    lda #$71
+    bne LA387
 LA381:
-    lda #$76          ; A381= A9 76       )v
-    bne LA387         ; A383= D0 02       P.
+    lda #$76
+    bne LA387
 LA385:
-    lda #$6C          ; A385= A9 6C       )l
+    lda #$6C
 LA387:
-    sta zp4B          ; A387= 85 4B       .K
-    lda #$04+(ws/256) ; A389= A9 04       ).
-    sta zp4C          ; A38B= 85 4C       .L
+    sta zp4B
+    lda #$04+(ws/256)
+    sta zp4C
 LA38D:
-    ldy #$00          ; A38D= A0 00        .
-    lda zp30          ; A38F= A5 30       %0
-    sta (zp4B),Y      ; A391= 91 4B       .K
-    iny               ; A393= C8          H
-    lda zp2E          ; A394= A5 2E       %.
-    and #$80          ; A396= 29 80       ).
-    sta zp2E          ; A398= 85 2E       ..
-    lda zp31          ; A39A= A5 31       %1
-    and #$7F          ; A39C= 29 7F       ).
-    ora zp2E          ; A39E= 05 2E       ..
-    sta (zp4B),Y      ; A3A0= 91 4B       .K
-    lda zp32          ; A3A2= A5 32       %2
-    iny               ; A3A4= C8          H
-    sta (zp4B),Y      ; A3A5= 91 4B       .K
-    lda zp33          ; A3A7= A5 33       %3
-    iny               ; A3A9= C8          H
-    sta (zp4B),Y      ; A3AA= 91 4B       .K
-    lda zp34          ; A3AC= A5 34       %4
-    iny               ; A3AE= C8          H
-    sta (zp4B),Y      ; A3AF= 91 4B       .K
-    rts               ; A3B1= 60          `
+    ldy #$00
+    lda zp30
+    sta (zp4B),Y
+    iny
+    lda zp2E
+    and #$80
+    sta zp2E
+    lda zp31
+    and #$7F
+    ora zp2E
+    sta (zp4B),Y
+    lda zp32
+    iny
+    sta (zp4B),Y
+    lda zp33
+    iny
+    sta (zp4B),Y
+    lda zp34
+    iny
+    sta (zp4B),Y
+    rts
 
 LA3B2:
-    jsr LA7F5         ; A3B2= 20 F5 A7     u'
+    jsr LA7F5
 LA3B5:
-    ldy #$04          ; A3B5= A0 04        .
-    lda (zp4B),Y      ; A3B7= B1 4B       1K
-    sta zp34          ; A3B9= 85 34       .4
-    dey               ; A3BB= 88          .
-    lda (zp4B),Y      ; A3BC= B1 4B       1K
-    sta zp33          ; A3BE= 85 33       .3
-    dey               ; A3C0= 88          .
-    lda (zp4B),Y      ; A3C1= B1 4B       1K
-    sta zp32          ; A3C3= 85 32       .2
-    dey               ; A3C5= 88          .
-    lda (zp4B),Y      ; A3C6= B1 4B       1K
-    sta zp2E          ; A3C8= 85 2E       ..
-    dey               ; A3CA= 88          .
-    lda (zp4B),Y      ; A3CB= B1 4B       1K
-    sta zp30          ; A3CD= 85 30       .0
-    sty zp35          ; A3CF= 84 35       .5
-    sty zp2F          ; A3D1= 84 2F       ./
-    ora zp2E          ; A3D3= 05 2E       ..
-    ora zp32          ; A3D5= 05 32       .2
-    ora zp33          ; A3D7= 05 33       .3
-    ora zp34          ; A3D9= 05 34       .4
-    beq LA3E1         ; A3DB= F0 04       p.
-    lda zp2E          ; A3DD= A5 2E       %.
-    ora #$80          ; A3DF= 09 80       ..
+    ldy #$04
+    lda (zp4B),Y
+    sta zp34
+    dey
+    lda (zp4B),Y
+    sta zp33
+    dey
+    lda (zp4B),Y
+    sta zp32
+    dey
+    lda (zp4B),Y
+    sta zp2E
+    dey
+    lda (zp4B),Y
+    sta zp30
+    sty zp35
+    sty zp2F
+    ora zp2E
+    ora zp32
+    ora zp33
+    ora zp34
+    beq LA3E1
+    lda zp2E
+    ora #$80
 LA3E1:
-    sta zp31          ; A3E1= 85 31       .1
-    rts               ; A3E3= 60          `
+    sta zp31
+    rts
 
 ; Convert real to integer
 ; =======================
