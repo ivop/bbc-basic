@@ -347,19 +347,19 @@ ENTRY:
     stx ws+$0401      ; Set @% to $0000090A
 
     lda #$01
-    and zp11
-    ora zp0D          ; Check RND seed
-    ora zp0E
-    ora zp0F
-    ora zp10
+    and zpSEED+4
+    ora zpSEED          ; Check RND seed
+    ora zpSEED+1
+    ora zpSEED+2
+    ora zpSEED+3
     bne L8063         ; If nonzero, skip past
 
-    lda #$41          ; Set RND seed to $575241
-    sta zp0D
-    lda #$52
-    sta zp0E
-    lda #$57
-    sta zp0F          ; "ARW" - Acorn Roger Wilson?
+    lda #'A'          ; Set RND seed to $575241
+    sta zpSEED
+    lda #'R'
+    sta zpSEED+1
+    lda #'W'
+    sta zpSEED+2          ; "ARW" - Acorn Roger Wilson?
 
 L8063:
     lda #<LB402
@@ -8511,7 +8511,7 @@ LAF3F:
     ldx #$0D
     jsr LBE44
     lda #$40
-    sta zp11
+    sta zpSEED+4
     rts
 
 ; RND [(numeric)]
@@ -8545,7 +8545,7 @@ LAF6C:
     lda #$80
     sta zp30
 LAF78:
-    lda zp0D,X
+    lda zpSEED,X
     sta zp31,X
     inx
     cpx #$04
@@ -8558,32 +8558,32 @@ LAF87:
     .if version >= 3
         ldy #$04      ; Rotate through four bytes, faster but bigger
 LAF89:
-        ror zp11
-        lda zp10
+        ror zpSEED+4
+        lda zpSEED+3
         pha
         ror
-        sta zp11
-        lda zp0F
+        sta zpSEED+4
+        lda zpSEED+2
         tax
         asl
         asl
         asl
         asl
-        sta zp10
-        lda zp0E
-        sta zp0F
+        sta zpSEED+3
+        lda zpSEED+1
+        sta zpSEED+2
         lsr
         lsr
         lsr
         lsr
-        ora zp10
-        eor zp11
-        stx zp10
-        ldx zp0D
-        stx zp0E
-        sta zp0D
+        ora zpSEED+3
+        eor zpSEED+4
+        stx zpSEED+3
+        ldx zpSEED
+        stx zpSEED+1
+        sta zpSEED
         pla
-        sta zp11
+        sta zpSEED+4
 LAFB1:
         dey
         bne LAF89
@@ -8591,17 +8591,17 @@ LAFB1:
     .elseif version < 3
         ldy #$20      ; Rotate through 32 bits, shorter but slower
 LAF89:
-        lda zp0F
+        lda zpSEED+2
         lsr
         lsr
         lsr
-        eor zp11
+        eor zpSEED+4
         ror
-        rol zp0D
-        rol zp0E
-        rol zp0F
-        rol zp10
-        rol zp11
+        rol zpSEED
+        rol zpSEED+1
+        rol zpSEED+2
+        rol zpSEED+3
+        rol zpSEED+4
         dey
         bne LAF89
         rts
