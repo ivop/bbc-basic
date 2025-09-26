@@ -1852,9 +1852,9 @@ L8AF6:
     ldy #$00
     sty zpLINE
     lda #<LB433
-    sta zp16          ; ON ERROR OFF
+    sta zpERRORL          ; ON ERROR OFF
     lda #>LB433
-    sta zp17
+    sta zpERRORH
     lda #'>'
     jsr LBC02         ; Print '>' prompt, read input to buffer at PtrA
 
@@ -1862,9 +1862,9 @@ L8AF6:
 ; ----------------------------------------
 L8B0B:
     lda #<LB433
-    sta zp16          ; ON ERROR OFF again
+    sta zpERRORL          ; ON ERROR OFF again
     lda #>LB433
-    sta zp17
+    sta zpERRORH
     ldx #$FF
     stx zp28          ; OPT=$FF - not within assembler
     stx zp3C
@@ -9486,13 +9486,13 @@ LB402:
     lda (FAULT),Y
     bne LB413         ; If ERR<>0, skip past ON ERROR OFF
     lda #<LB433
-    sta zp16          ; ON ERROR OFF
+    sta zpERRORL          ; ON ERROR OFF
     lda #>LB433
-    sta zp17
-LB413:
-    lda zp16
+    sta zpERRORH
+LB413:          ; BREKA
+    lda zpERRORL
     sta zpLINE          ; Point program point to ERROR program
-    lda zp17
+    lda zpERRORH
     sta zpLINE+1
     jsr LBD3A         ; Clear DATA and stack
     tax
@@ -10300,9 +10300,9 @@ LB8DD:
 LB8E4:
     jsr DONE         ; Check end of statement
     lda #<LB433
-    sta zp16          ; ON ERROR OFF
+    sta zpERRORL          ; ON ERROR OFF
     lda #>LB433
-    sta zp17
+    sta zpERRORH
     jmp L8B9B         ; Jump to execution loop
 
 ; ON ERROR [OFF | program ]
@@ -10315,9 +10315,9 @@ LB8F2:
     dey
     jsr CLYADP
     lda zpLINE
-    sta zp16          ; Point ON ERROR pointer to here
+    sta zpERRORL          ; Point ON ERROR pointer to here
     lda zpLINE+1
-    sta zp17
+    sta zpERRORH
     jmp L8B7D         ; Skip past end of line
 
 LB90A:
