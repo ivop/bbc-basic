@@ -2310,8 +2310,8 @@ L8D80:
 
 L8D83:
     lda #$00
-    sta zp14
-    sta zp15          ; Set current field to zero, hex/dec flag to decimal
+    sta zpPRINTS
+    sta zpPRINTF          ; Set current field to zero, hex/dec flag to decimal
     jsr L8A97         ; Get next non-space character
     cmp #':'
     beq L8D80         ; <colon> found, finish printing
@@ -2349,9 +2349,9 @@ L8DB5:
 L8DBB:
     clc               ; Prepare to print decimal
     lda ws+$0400
-    sta zp14          ; Set current field width from @%
+    sta zpPRINTS          ; Set current field width from @%
 L8DC1:
-    ror zp15          ; Set hex/dec flag from Carry
+    ror zpPRINTF          ; Set hex/dec flag from Carry
 L8DC3:
     jsr L8A97         ; Get next non-space character
     cmp #':'
@@ -2373,23 +2373,23 @@ L8DD2:
 
 ; All print formatting have been checked, so it now must be an expression
 ; -----------------------------------------------------------------------
-    lda zp14
+    lda zpPRINTS
     pha
-    lda zp15
+    lda zpPRINTF
     pha               ; Save field width and flags, as evaluator
                       ;  may call PRINT (eg FN, STR$, etc.)
     dec zp1B
     jsr L9B29         ; Evaluate expression
     pla
-    sta zp15
+    sta zpPRINTF
     pla
-    sta zp14          ; Restore field width and flags
+    sta zpPRINTS          ; Restore field width and flags
     lda zp1B
     sta zpCURSOR          ; Update program pointer
     tya
     beq L8E0E         ; If type=0, jump to print string
     jsr FCON         ; Convert numeric value to string
-    lda zp14          ; Get current field width
+    lda zpPRINTS          ; Get current field width
     sec
     sbc zp36          ; A=width-stringlength
     bcc L8E0E         ; length>width - print it
@@ -3071,14 +3071,14 @@ L9185:
 
 L91B7:
     pla
-    sta zp15
+    sta zpPRINTF
     pla
     sta zp3F
     lda #$00
     sta zp40
     jsr L9236
     ldy #$00
-    lda zp15
+    lda zpPRINTF
     sta (zpFSA),Y
     adc zp2A
     sta zp2A
@@ -3102,7 +3102,7 @@ L91D2:
     sty zpFSA
     stx zpFSA+1
     lda zp37
-    adc zp15
+    adc zpPRINTF
     tay
     lda #$00
     sta zp37
@@ -4484,7 +4484,7 @@ L991F:
 L9923:
     lda #$05          ; Pad to five characters
 L9925:
-    sta zp14
+    sta zpPRINTS
     ldx #$04
 L9929:
     lda #$00
@@ -4513,7 +4513,7 @@ L9948:
     beq L9948
 L994F:
     stx zp37
-    lda zp14
+    lda zpPRINTS
     beq L9960
     sbc zp37
     beq L9960
@@ -5531,7 +5531,7 @@ L9EFB:
     lda #$00
     sta zp36
     sta zp49          ; Set initial output length to 0, initial exponent to 0
-    bit zp15
+    bit zpPRINTF
     bmi FCONHX         ; Jump for hex conversion if $15.b7 set
     tya
     bmi L9F0F
@@ -8887,7 +8887,7 @@ LB0A1:
     beq LB0BF         ; Evaluate, error if not number
     tay
     pla
-    sta zp15          ; Get format back
+    sta zpPRINTF          ; Get format back
     lda ws+$0403
     bne LB0B9         ; Top byte of @%, STR$ uses @%
     sta zp37          ; Store 'General format'
@@ -9918,7 +9918,7 @@ LB651:
     jsr L97EB
     sty zpCURSOR
     lda #$00
-    sta zp14
+    sta zpPRINTS
     jsr L991F
     jmp LB637
 
