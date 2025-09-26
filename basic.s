@@ -755,12 +755,12 @@ L84C5:
 L84FD:
     lda #$FF          ; Set OPT to 'BASIC'
 L84FF:
-    sta zp28
+    sta zpBYTESM
     jmp L8BA3         ; Set OPT, return to execution loop
 
 L8504:
     lda #$03
-    sta zp28          ; Set OPT 3, default on entry to '['
+    sta zpBYTESM          ; Set OPT 3, default on entry to '['
 L8508
     jsr L8A97         ; Skip spaces
     cmp #']'
@@ -772,7 +772,7 @@ L8512:
     jsr L85BA
 
     dec zpCURSOR
-    lda zp28
+    lda zpBYTESM
     lsr
     bcc L857E
 
@@ -911,7 +911,7 @@ L85A5:
     bcs L8604
     jsr LBD94
     jsr LAE3A         ; Find P%
-    sta zp27
+    sta zpTYPE
     jsr LB4B4
     jsr L8827
 
@@ -992,7 +992,7 @@ L8607:
 
 L8620:
     lda L84C5-1,X
-    sta zp29          ; Get base opcode
+    sta zpOPCODE          ; Get base opcode
     ldy #$01          ; Y=1 for one byte
     cpx #$1A
     bcs L8673         ; Opcode $1A+ have arguments
@@ -1000,7 +1000,7 @@ L862B:
     lda ws+$0440
     sta zp37          ; Get P% low byte
     sty zp39
-    ldx zp28
+    ldx zpBYTESM
     cpx #$04          ; Offset assembly (opt>3)
     ldx ws+$0441
     stx zp38          ; Get P% high byte
@@ -1017,7 +1017,7 @@ L8643:
     beq L8672
 L8650:
     dey
-    lda zp29,Y        ; Get opcode byte   (lda abs,y (!))
+    lda zpOPCODE,Y        ; Get opcode byte   (lda abs,y (!))
     bit zp39
     bpl L865B         ; Opcode - jump to store it
     lda ws+$0600,Y    ; Get EQU byte
@@ -1055,7 +1055,7 @@ L8673:
     beq L86AD
 
 L8691:
-    lda zp28
+    lda zpBYTESM
     .if version < 3
         lsr
     .elseif version >= 3
@@ -1303,7 +1303,7 @@ L8813:
     bne L883A
     jsr L8821
     lda zp2A
-    sta zp28
+    sta zpBYTESM
     ldy #$00
     jmp L862B
 
@@ -1320,10 +1320,10 @@ L882C:
 L882F:
     jsr L8832
 L8832:
-    lda zp29
+    lda zpOPCODE
     clc
     adc #$04
-    sta zp29
+    sta zpOPCODE
     rts
 
 L883A:
@@ -1358,12 +1358,12 @@ L8867:
     jmp L8C0E
 
 L886A:
-    lda zp28
+    lda zpBYTESM
     pha
     jsr L9B1D
     bne L8867
     pla
-    sta zp28
+    sta zpBYTESM
     jsr L8827
     ldy #$FF
     bne L8864
@@ -1866,7 +1866,7 @@ L8B0B:
     lda #>LB433
     sta zpERRORLH+1
     ldx #$FF
-    stx zp28          ; OPT=$FF - not within assembler
+    stx zpBYTESM          ; OPT=$FF - not within assembler
     stx zp3C
     txs               ; Clear machine stack
     jsr LBD3A
@@ -2040,7 +2040,7 @@ L8BE9:
     bcc L8BFB
     jsr LBD94         ; Stack integer (address of data)
     jsr L9813         ; Check for end of statement
-    lda zp27          ; Get evaluation type
+    lda zpTYPE          ; Get evaluation type
     bne L8C0E         ; If not string, error
     jsr L8C1E         ; Assign the string
     jmp L8B9B         ; Return to execution loop
@@ -2048,7 +2048,7 @@ L8BE9:
 L8BFB:
     jsr LBD94         ; Stack integer (address of data)
     jsr L9813         ; Check for end of statement
-    lda zp27          ; Get evaluation type
+    lda zpTYPE          ; Get evaluation type
     beq L8C0E         ; If not number, error
     jsr LB4B4         ; Assign the number
     jmp L8B9B         ; Return to execution loop
@@ -2265,7 +2265,7 @@ L8D30:
     jsr LA385
     pla
     tay
-    lda zp27
+    lda zpTYPE
     jsr OSBPUT
     tax
     beq L8D64
@@ -2970,7 +2970,7 @@ L90DF:
     sta zp2C
     sta zp2D
     lda #$40
-    sta zp27
+    sta zpTYPE
     jsr LB4B4
     jsr L8827
     jmp L920B
@@ -3295,7 +3295,7 @@ L92EA:
 L92EB:
     jsr L9807         ; Check for equals, evaluate numeric
 L92EE:
-    lda zp27          ; Get result type
+    lda zpTYPE          ; Get result type
 L92F0:
     beq L92F7         ; String, jump to 'Type mismatch'
     bpl L92EA         ; Integer, return
@@ -3360,7 +3360,7 @@ L9323:
     .elseif version >= 3
         jsr XAED3
     .endif
-    sta zp27
+    sta zpTYPE
     jsr LB4B4         ; Set current variable to IntA (zero)
 
 ; Next LOCAL item
@@ -4597,7 +4597,7 @@ L99BE:
     pha
     jsr LAD71
     jsr L9E1D
-    stx zp27
+    stx zpTYPE
     tay
     jsr L92F0
     pla
@@ -4666,7 +4666,7 @@ L9A38:
     rts
 
 L9A39:
-    stx zp27
+    stx zpTYPE
     jsr LBDEA
     jsr LBD51
     jsr LA2BE
@@ -4678,7 +4678,7 @@ L9A39:
 L9A50:
     jsr LBD51
     jsr L9C42
-    stx zp27
+    stx zpTYPE
     tay
     jsr L92FD
     jsr LBD7E
@@ -4688,7 +4688,7 @@ L9A5F:
 ; Compare FPA = FPB
 ; -----------------
 L9A62:
-    ldx zp27
+    ldx zpTYPE
     ldy #$00
     lda zp3B
     and #$80
@@ -4847,7 +4847,7 @@ L9B2C:
     beq L9B55         ; Jump if next char is EOR
     dec zpAECUR          ; Step PtrB back to last char
     tay
-    sta zp27
+    sta zpTYPE
     rts               ; Set flags from type, store type in $27 and return
 
 ; OR numeric
@@ -5110,21 +5110,21 @@ L9C8B:
     jsr L9DD1         ; Stack float, call Evaluator Level 3
     tay
     beq L9C88         ; float + string, jump to 'Type mismatch' error
-    stx zp27
+    stx zpTYPE
     bmi L9C9B         ; float + float, skip conversion
     jsr LA2BE         ; float + int, convert int to float
 L9C9B:
     jsr LBD7E         ; Pop float from stack, point FPTR to it
     jsr LA500         ; Unstack float to FPA2 and add to FPA1
 L9CA1:
-    ldx zp27          ; Get nextchar back
+    ldx zpTYPE          ; Get nextchar back
     lda #$FF
     bne L9C45         ; Set result=float, loop to check for more + or -
 
 ; int + float
 ; -----------
 L9CA7:
-    stx zp27
+    stx zpTYPE
     jsr LBDEA         ; Unstack integer to IntA
     jsr LBD51
     jsr LA2BE         ; Stack float, convert integer in IntA to float in FPA1
@@ -5168,7 +5168,7 @@ L9CE1:
     jsr L9DD1         ; Stack float, call Evaluator Level 3
     tay
     beq L9C88         ; float - string, jump to 'Type mismatch' error
-    stx zp27
+    stx zpTYPE
     bmi L9CF1         ; float - float, skip conversion
     jsr LA2BE         ; float - int, convert int to float
 L9CF1:
@@ -5179,7 +5179,7 @@ L9CF1:
 ; int - float
 ; -----------
 L9CFA:
-    stx zp27
+    stx zpTYPE
     jsr LBDEA         ; Unstack integer to IntA
     jsr LBD51
     jsr LA2BE         ; Stack float, convert integer in IntA to float in FPA1
@@ -5200,14 +5200,14 @@ L9D1D:
 L9D20:
     jsr LBD51
     jsr L9E20
-    stx zp27
+    stx zpTYPE
     tay
     jsr L92FD
 L9D2C:
     jsr LBD7E
     jsr FMUL
     lda #$FF
-    ldx zp27
+    ldx zpTYPE
     jmp L9DD4
 
 L9D39:
@@ -5231,7 +5231,7 @@ L9D4E:
     eor zp2B
     bmi L9D1D
     jsr L9E1D
-    stx zp27
+    stx zpTYPE
     tay
     beq L9D39
     bmi L9D11
@@ -5299,7 +5299,7 @@ L9DBD:
     bpl L9DC6
     jsr LAD93
 L9DC6:
-    ldx zp27
+    ldx zpTYPE
     jmp L9DD4
 
 ; * <value>
@@ -5335,12 +5335,12 @@ L9DE5:
     jsr L92FD         ; Ensure current value is real
     jsr LBD51
     jsr L9E20         ; Stack float, call Evaluator Level 2
-    stx zp27
+    stx zpTYPE
     tay
     jsr L92FD         ; Ensure current value is real
     jsr LBD7E
     jsr FXDIV         ; Unstack to FPTR, call divide routine
-    ldx zp27
+    ldx zpTYPE
     lda #$FF
     bne L9DD4; Set result, loop for more * / MOD DIV
 
@@ -5569,7 +5569,7 @@ L9F34:
 ; ---------------------------------------
 L9F39:
     lda zp35
-    sta zp27
+    sta zpTYPE
     jsr LA385         ; Copy FloatA to FloatTemp at $27/$046C
     lda zpFDIGS
     sta zp38          ; Get number of digits
@@ -5600,7 +5600,7 @@ L9F6B:
 L9F71:
     jsr LA7F5         ; Point to $46C
     jsr LA34E         ; Unpack to FloatB
-    lda zp27
+    lda zpTYPE
     sta zp42
     jsr LA50B; Add
 L9F7E:
@@ -7719,7 +7719,7 @@ LAC23:
     sta zpAELINE+1
     pla
     sta zpAELINE
-    lda zp27          ; Get expression return value
+    lda zpTYPE          ; Get expression return value type
     rts               ; And return
 
     .if version >= 3
@@ -7772,7 +7772,7 @@ LAC66:
     bcc LAC73
     jsr LAD8F
 LAC73:
-    sta zp27
+    sta zpTYPE
     jmp LAC23
 
 ; =INT numeric
@@ -8215,7 +8215,7 @@ LAE2A:
     rts
 
 LAE30:
-    lda zp28          ; Check assembler option
+    lda zpBYTESM          ; Check assembler option
     and #$02          ; Is 'ignore undefiened variables' set?
     bne LAE43         ; b1=1, jump to give No such variable
     bcs LAE43         ; Jump with bad variable name
@@ -9053,7 +9053,7 @@ LB195:
 ; PtrA=>start of FN/PROC name
 ;
 LB197:
-    sta zp27          ; Save PROC/FN token
+    sta zpTYPE          ; Save PROC/FN token
     tsx
     txa
     clc
@@ -9070,7 +9070,7 @@ LB1A6:
     cpx #$FF
     bne LB1A6
     txs               ; Clear 6502 stack
-    lda zp27
+    lda zpTYPE
     pha               ; Push PROC/FN token
     lda zpCURSOR
     pha
@@ -9168,7 +9168,7 @@ LB236:
     bcc LB24A
     inc zpAESTKP+1
 LB24A:
-    lda zp27
+    lda zpTYPE
     rts
 
 LB24D:
@@ -9213,7 +9213,7 @@ LB24D:
 LB28E:
     jsr L9B29
     jsr LBD90
-    lda zp27
+    lda zpTYPE
     sta zp2D
     jsr LBD94
     pla
@@ -9259,10 +9259,10 @@ LB2CA:
     bmi LB2F9
     lda zp2D
     beq LB2B5
-    sta zp27
+    sta zpTYPE
     ldx #$37
     jsr LBE44
-    lda zp27
+    lda zpTYPE
     bpl LB2F0
     jsr LBD7E
     jsr LA3B5
@@ -9504,7 +9504,7 @@ LB413:          ; BREKA
         jsr OSBYTE    ; Acknowlege any Escape state
     .endif
     ldx #$FF
-    stx zp28
+    stx zpBYTESM
     txs               ; Clear system stack
     jmp L8BA3         ; Jump to execution loop
 
@@ -9645,7 +9645,7 @@ LB4B7:
     lda zp39
     cmp #$05
     beq LB4E0         ; Size=5, jump to store float
-    lda zp27
+    lda zpTYPE
     beq LB4AE         ; Type<>num, jump to error
     bpl LB4C6         ; Type=int, jump to store it
     jsr LA3E4         ; Convert float to integer
@@ -9670,7 +9670,7 @@ LB4DF:
 ; Store float
 ; ===========
 LB4E0:
-    lda zp27
+    lda zpTYPE
     beq LB4AE         ; Type<>num, jump to error
     bmi LB4E9         ; Type=float, jump to store it
     jsr LA2BE         ; Convert integer to float
@@ -10087,7 +10087,7 @@ LB766:
     sta zp38
     jsr LB4E9
     lda zpFORSTP
-    sta zp27
+    sta zpTYPE
     clc
     adc #$F9
     sta zp4B
@@ -10483,10 +10483,10 @@ LB9DA:
     jsr LBD94
     ldy zpCOEFP
     jsr OSBGET
-    sta zp27
+    sta zpTYPE
     plp
     bcc LBA19
-    lda zp27
+    lda zpTYPE
     bne LB9C4
     jsr OSBGET
     sta zp36
@@ -10502,7 +10502,7 @@ LBA13:
     jmp LB9DA
 
 LBA19:
-    lda zp27
+    lda zpTYPE
     beq LB9C4
     bmi LBA2B
     ldx #$03
@@ -10621,7 +10621,7 @@ LBACD:
 
 LBADC:
     lda #$00
-    sta zp27
+    sta zpTYPE
     jsr L8C21
     jmp LBA5A
 
@@ -10672,7 +10672,7 @@ LBB32:
     jsr LBB50
     jsr LBD94
     jsr LADAD
-    sta zp27
+    sta zpTYPE
     jsr L8C1E
 LBB40:
     clc
