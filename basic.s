@@ -8370,8 +8370,8 @@ XAF03:
 ; =ERL - Return error line number
 ; ===============================
 XAF9F:
-        ldy zp09
-        lda zp08
+        ldy zpERL+1
+        lda zpERL
         bcc XAED5     ; Get ERL to AY, jump to return 16-bit integer
 
 ; =ERR - Return current error number
@@ -8611,8 +8611,8 @@ LAF89:
 ; =ERL - Return error line number
 ; ===============================
 LAF9F:
-        ldy zp09
-        lda zp08
+        ldy zpERL+1
+        lda zpERL
         jmp LAEEA     ; Get ERL to AY, jump to return 16-bit integer
 
 ; =ERR - Return current error number
@@ -9392,8 +9392,8 @@ LB3C0:
 
 LB3C5:
     ldy #$00
-    sty zp08
-    sty zp09
+    sty zpERL
+    sty zpERL+1
     ldx zpTXTP
     stx zp38
     sty zp37
@@ -9412,9 +9412,9 @@ LB3D9:
     jsr L8942
     ora #$00
     bmi LB401
-    sta zp09
+    sta zpERL+1
     jsr L8942
-    sta zp08
+    sta zpERL
     jsr L8942
 LB3F9:
     cpx zp37
