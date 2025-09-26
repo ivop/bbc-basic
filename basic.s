@@ -2388,7 +2388,7 @@ L8DD2:
     sta zpCURSOR          ; Update program pointer
     tya
     beq L8E0E         ; If type=0, jump to print string
-    jsr L9EDF         ; Convert numeric value to string
+    jsr FCON         ; Convert numeric value to string
     lda zp14          ; Get current field width
     sec
     sbc zp36          ; A=width-stringlength
@@ -5437,7 +5437,7 @@ L9E88:
 
 ; Convert number to hex string
 ; ----------------------------
-L9E90:
+FCONHX:
     tya
     bpl L9E96
     jsr LA3E4         ; Convert real to integer
@@ -5505,7 +5505,7 @@ L9ED1:
 ; On exit,  StrA contains string version of number
 ;           $36=string length
 ;
-L9EDF:
+FCON:
     ldx ws+$0402      ; Get format byte
     cpx #$03
     bcc L9EE8         ; If <3, ok - use it
@@ -5527,12 +5527,12 @@ L9EF9:
     lda #$0A          ; Otherwise, default to ten digits
 L9EFB:
     sta zp38
-    sta zp4E          ; Store digit length
+    sta zpFDIGS          ; Store digit length
     lda #$00
     sta zp36
     sta zp49          ; Set initial output length to 0, initial exponent to 0
     bit zp15
-    bmi L9E90         ; Jump for hex conversion if $15.b7 set
+    bmi FCONHX         ; Jump for hex conversion if $15.b7 set
     tya
     bmi L9F0F
     jsr LA2BE         ; Convert integer to real
@@ -5571,7 +5571,7 @@ L9F39:
     lda zp35
     sta zp27
     jsr LA385         ; Copy FloatA to FloatTemp at $27/$046C
-    lda zp4E
+    lda zpFDIGS
     sta zp38          ; Get number of digits
     ldx zp37          ; Get print format
     cpx #$02
@@ -5630,7 +5630,7 @@ L9FA0:
     jsr LA686         ; Clear FloatA
     lda #$00
     sta zp49
-    lda zp4E
+    lda zpFDIGS
     sta zp38
     inc zp38
 L9FAD:
@@ -5668,10 +5668,10 @@ L9FDB:
 L9FE4:
     lda #$80
 L9FE6:
-    sta zp4E
+    sta zpFPRTWN
 L9FE8:
     jsr LA040
-    dec zp4E
+    dec zpFPRTWN
     bne L9FF4
     lda #$2E
     jsr LA066
@@ -8896,7 +8896,7 @@ LB0A1:
     rts               ; Return string
 
 LB0B9:
-    jsr L9EDF         ; Convert using @% format
+    jsr FCON         ; Convert using @% format
     lda #$00
     rts               ; Return string
 

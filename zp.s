@@ -68,4 +68,6 @@ zp4B = zp + $4b
 zp4C = zp + $4c
 zp4D = zp + $4d
 zp4E = zp + $4e
+zpFDIGS = zp4E        ; alternative usage
+zpFPRTWN = zp4E       ; another alternative usage
 zp4F = zp + $4f
