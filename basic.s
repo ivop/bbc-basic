@@ -3237,10 +3237,10 @@ L9295:
 L92A5:
     jsr DONE         ; Check end of statement
     lda zp2A
-    sta zp21          ; Set trace limit low byte
+    sta zpTRNUM          ; Set trace limit low byte
     lda zp2B
 L92AE:
-    sta zp22
+    sta zpTRNUM+1
     lda #$FF          ; Set trace limit high byte, set TRACE ON
 L92B2:
     sta zpTRFLAG
@@ -4464,9 +4464,9 @@ L9902:
 
 L9905:
     lda zp2A
-    cmp zp21
+    cmp zpTRNUM
     lda zp2B
-    sbc zp22
+    sbc zpTRNUM+1
     bcs NOTRDE
     lda #$5B
 L9911:
@@ -9962,7 +9962,7 @@ LB68E:
 LB695:
     jsr L95C9
     bne LB6A3
-    ldx zp26
+    ldx zpFORSTP
     beq LB68E
     bcs LB6D7
 LB6A0:
@@ -9970,7 +9970,7 @@ LB6A0:
 
 LB6A3:
     bcs LB6A0
-    ldx zp26
+    ldx zpFORSTP
     beq LB68E
 LB6A9:
     lda zp2A
@@ -9987,7 +9987,7 @@ LB6BE:
     sec
     sbc #$0F
     tax
-    stx zp26
+    stx zpFORSTP
     bne LB6A9
     brk
     dta $21
@@ -10061,10 +10061,10 @@ LB741:
     jmp L8BA3
 
 LB751:
-    lda zp26
+    lda zpFORSTP
     sec
     sbc #$0F
-    sta zp26
+    sta zpFORSTP
     ldy zpAECUR
     sty zpCURSOR
     jsr L8A97
@@ -10074,7 +10074,7 @@ LB751:
 
 LB766:
     jsr LB354
-    lda zp26
+    lda zpFORSTP
     clc
     adc #$F4
     sta zp4B
@@ -10086,7 +10086,7 @@ LB766:
     lda zp2B
     sta zp38
     jsr LB4E9
-    lda zp26
+    lda zpFORSTP
     sta zp27
     clc
     adc #$F9
@@ -10142,7 +10142,7 @@ LB7C4:
     jsr LBD94
     jsr L9841
     jsr LB4B1
-    ldy zp26
+    ldy zpFORSTP
     cpy #$96
     bcs LB7B0
     lda zp37
@@ -10158,7 +10158,7 @@ LB7C4:
     cpx #$05
     beq LB84F
     jsr L92DD
-    ldy zp26
+    ldy zpFORSTP
     lda zp2A
     sta ws+$0508,Y
     lda zp2B
@@ -10180,7 +10180,7 @@ LB7C4:
     ldy zpAECUR
 LB81F:
     sty zpCURSOR
-    ldy zp26
+    ldy zpFORSTP
     lda zp2A
     sta ws+$0503,Y
     lda zp2B
@@ -10191,7 +10191,7 @@ LB81F:
     sta ws+$0506,Y
 LB837:
     jsr FORR
-    ldy zp26
+    ldy zpFORSTP
     lda zpLINE
     sta ws+$050D,Y
     lda zpLINE+1
@@ -10199,13 +10199,13 @@ LB837:
     clc
     tya
     adc #$0F
-    sta zp26
+    sta zpFORSTP
     jmp L8BA3
 
 LB84F:
     jsr L9B29
     jsr L92FD
-    lda zp26
+    lda zpFORSTP
     clc
     adc #$08
     sta zp4B
@@ -10221,7 +10221,7 @@ LB84F:
     ldy zpAECUR
 LB875:
     sty zpCURSOR
-    lda zp26
+    lda zpFORSTP
     clc
     adc #$03
     sta zp4B
@@ -10236,14 +10236,14 @@ LB888:
     jsr LB99A
 LB88B:
     jsr DONE
-    ldy zp25
+    ldy zpSUBSTP
     cpy #$1A
     bcs LB8A2
     lda zpLINE
     sta ws+$05CC,Y
     lda zpLINE+1
     sta ws+$05E6,Y
-    inc zp25
+    inc zpSUBSTP
     bcc LB8D2
 
 LB8A2:
@@ -10269,9 +10269,9 @@ LB8AF:
 ; ======
 LB8B6:
     jsr DONE         ; Check for end of statement
-    ldx zp25
+    ldx zpSUBSTP
     beq LB8AF         ; If GOSUB stack empty, error
-    dec zp25          ; Decrement GOSUB stack
+    dec zpSUBSTP          ; Decrement GOSUB stack
     ldy ws+$05CB,X    ; Get stacked line pointer
     lda ws+$05E5,X
     sty zpLINE
@@ -10760,14 +10760,14 @@ LBBB1:
     jsr L9B1D
     jsr L984C
     jsr L92EE
-    ldx zp24
+    ldx zpDOSTKP
     beq LBBA6
     lda zp2A
     ora zp2B
     ora zp2C
     ora zp2D
     beq LBBCD
-    dec zp24
+    dec zpDOSTKP
     jmp L8B9B
 
 LBBCD:
@@ -10790,7 +10790,7 @@ LBBD6:
 ; REPEAT
 ; ======
 LBBE4:
-    ldx zp24
+    ldx zpDOSTKP
     cpx #$14
     bcs LBBD6
     jsr CLYADP
@@ -10798,7 +10798,7 @@ LBBE4:
     sta ws+$05A4,X
     lda zpLINE+1
     sta ws+$05B8,X
-    inc zp24
+    inc zpDOSTKP
     jmp L8BA3
 
 ; Input string to string buffer
@@ -11073,9 +11073,9 @@ LBD3A:
     lda zpHIMEM+1
     sta zpAESTKP+1          ; STACK=HIMEM
     lda #$00
-    sta zp24
-    sta zp26
-    sta zp25; Clear REPEAT, FOR, GOSUB stacks
+    sta zpDOSTKP
+    sta zpFORSTP
+    sta zpSUBSTP; Clear REPEAT, FOR, GOSUB stacks
     sta zpDATAP
     rts               ; DATA pointer=PAGE
 
