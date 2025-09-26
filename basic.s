@@ -803,8 +803,8 @@ L853C:
 
     ldx zp3F
 
-L8544:
     .if version < 3
+L8544:
         jsr LB565     ; Print a space
         dex
         bne L8544     ; Loop to print spaces
@@ -4574,7 +4574,7 @@ L99A4:
     ldy #$02
     rts
 
-L99A7:
+ZDIVOR:
     brk
     dta $12
     .if foldup == 1
@@ -4582,6 +4582,7 @@ L99A7:
     .else
         dta 'Division by zero'
     .endif
+    ; ending zero overlaps with VALM
 
 ; High byte of powers of ten
 L99B9:
@@ -4612,7 +4613,7 @@ L99BE:
     ora zp2A
     ora zp2B
     ora zp2C
-    beq L99A7
+    beq ZDIVOR      ; Divide by 0 error
     ldy #$20
 L99F4:
     dey
@@ -5202,7 +5203,7 @@ L9D20:
     jsr L92FD
 L9D2C:
     jsr LBD7E
-    jsr LA656
+    jsr FMUL
     lda #$FF
     ldx zp27
     jmp L9DD4
@@ -5336,7 +5337,7 @@ L9DE5:
     tay
     jsr L92FD         ; Ensure current value is real
     jsr LBD7E
-    jsr LA6AD         ; Unstack to FPTR, call divide routine
+    jsr FXDIV         ; Unstack to FPTR, call divide routine
     ldx zp27
     lda #$FF
     bne L9DD4; Set result, loop for more * / MOD DIV
@@ -5401,7 +5402,7 @@ L9E35:
     jsr LBD7E
     jsr LA3B5
     lda zp4A
-    jsr LAB12
+    jsr FIPOW
     lda #$FF
     bne L9E23         ; Set result=real, loop to check for more ^
 
@@ -5413,7 +5414,7 @@ L9E59:
     sta zp4C
     jsr LA3B5
     lda zp4A
-    jsr LAB12
+    jsr FIPOW
 L9E6C:
     jsr LA37D
     jsr LBD7E
@@ -5422,13 +5423,13 @@ L9E6C:
     jsr LAAD1
     jsr LAA94
     jsr LA7ED
-    jsr LA656
+    jsr FMUL
     lda #$FF
     bne L9E23         ; Set result=real, loop to check for more ^
 
 L9E88:
     jsr LA381
-    jsr LA699
+    jsr FONE
     bne L9E6C
 
 
@@ -5544,7 +5545,7 @@ L9F1D:
     jmp L9F9C         ; Jump to output zero in fixed or exponential format
 
 L9F20:
-    jsr LA699
+    jsr FONE
     bne L9F34         ; FloatA=1.0
 
 ; FloatA now is >=1, check that it is <10
@@ -5567,7 +5568,7 @@ L9F34:
 L9F39:
     lda zp35
     sta zp27
-    jsr LA385; Copy FloatA to FloatTemp at $27/$046C
+    jsr LA385         ; Copy FloatA to FloatTemp at $27/$046C
     lda zp4E
     sta zp38          ; Get number of digits
     ldx zp37          ; Get print format
@@ -6244,24 +6245,30 @@ LA37A:
     sta zp3E
     rts
 
+; ----------------------------------------------------------------------------
+
 LA37D:
-    lda #$71
+    lda #$71            ; LSB of FWSB = VARL ($0400) + $71, FP TEMP2
     bne LA387
+
 LA381:
-    lda #$76
+    lda #$76            ; LSB of FWSC = VARL ($0400) + $76, FP TEMP3
     bne LA387
+
 LA385:
-    lda #$6C
+    lda #$6C            ; LSB of FWSA = VARL ($0400) + $6c, FP TEMP1
+
 LA387:
     sta zp4B
-    lda #$04+(ws/256)
+    lda #$04+(ws/256)   ; MSB of all FWS / FP TEMP variables
     sta zp4C
+
 LA38D:
     ldy #$00
     lda zp30
     sta (zp4B),Y
     iny
-    lda zp2E
+    lda zp2E            ; tidy up sign bit
     and #$80
     sta zp2E
     lda zp31
@@ -6707,18 +6714,18 @@ LA652:
     bne LA63A
     rts
 
-LA656:
-    jsr LA606
+FMUL:
+    jsr LA606       ; IFMUL
 LA659:
-    jsr LA303
+    jsr LA303       ; FNRM
 LA65C:
     lda zp35
     cmp #$80
     bcc LA67C
     beq LA676
     lda #$FF
-    jsr LA2A4
-    jmp LA67C
+    jsr LA2A4       ; FPLNF
+    jmp LA67C       ; FTRNDZ
 
 LA66C:
     brk
@@ -6752,30 +6759,42 @@ LA686:
 LA698:
     rts
 
-LA699:
-    jsr LA686
+; ----------------------------------------------------------------------------
+
+.proc FONE
+    jsr LA686           ; FCLR
     ldy #$80
     sty zp31
     iny
     sty zp30
     tya
-    rts
+    rts                 ; always return with !Z
+.endp
 
-LA6A5:
+; ----------------------------------------------------------------------------
+
+.proc FRECIP
     jsr LA385
-    jsr LA699
-    bne LA6E7
+    jsr FONE
+    bne LA6E7           ; branch always, FONE returns with !Z
+.endp
 
-LA6AD:
+; ----------------------------------------------------------------------------
+
+.proc FXDIV
     jsr LA1DA
-    beq LA6BB
+    beq FDIVZ
     jsr LA21E
     jsr LA3B5
     bne LA6F1
     rts
+.endp
 
-LA6BB:
-    jmp L99A7
+.proc FDIVZ
+    jmp ZDIVOR      ; Divide by zero error
+.endp
+
+; ----------------------------------------------------------------------------
 
 ; =TAN numeric
 ; ============
@@ -6802,7 +6821,7 @@ LA6E7:
     jsr LA1DA
     beq LA698
     jsr LA34E
-    beq LA6BB
+    beq FDIVZ
 LA6F1:
     lda zp2E
     eor zp3B
@@ -6940,7 +6959,7 @@ LA7CF:
     jsr LA38D
     lda #$6C
     sta zp4B
-    jsr LA6AD
+    jsr FXDIV
     lda #$71
     sta zp4B
     jsr LA500
@@ -7019,8 +7038,8 @@ LA82C:
     ldy #>FLOGTC
     jsr LA897
     jsr LA7E9
-    jsr LA656
-    jsr LA656
+    jsr FMUL
+    jsr FMUL
     jsr LA500
     jsr LA385
     pla
@@ -7031,7 +7050,7 @@ LA82C:
     sta zp4B
     lda #>LOGTWO
     sta zp4C
-    jsr LA656
+    jsr FMUL
     jsr LA7F5
     jsr LA500
     lda #$FF
@@ -7073,7 +7092,7 @@ LA8AA:
     jsr LA3B5
 LA8B5:
     jsr LA7F5
-    jsr LA6AD
+    jsr FXDIV
     clc
     lda zp4D
     adc #$05
@@ -7110,7 +7129,7 @@ LA8EA:
     jsr LA1DA
     beq LA8FE
     jsr LA7F1
-    jsr LA6AD
+    jsr FXDIV
     jmp LA90A
 
 LA8FE:
@@ -7139,7 +7158,7 @@ LA91B:
     lda zp30
     cmp #$81
     bcc LA936
-    jsr LA6A5
+    jsr FRECIP
     jsr LA936
 LA927:
     jsr LAA48
@@ -7207,15 +7226,15 @@ LA9AA:
     jsr LA9C3
 LA9B1:
     jsr LA385
-    jsr LA656
+    jsr FMUL
     jsr LA38D
-    jsr LA699
+    jsr FONE
     jsr LA4D0
     jmp LA7B7
 
 LA9C3:
     jsr LA381
-    jsr LA656
+    jsr FMUL
     lda #<FSINC
     ldy #>FSINC
     jsr LA897
@@ -7252,14 +7271,14 @@ LAA0E:
     jsr LA303
     jsr LA37D
     jsr LAA48
-    jsr LA656
+    jsr FMUL
     jsr LA7F5
     jsr LA500
     jsr LA38D
     jsr LA7ED
     jsr LA3B5
     jsr LAA4C
-    jsr LA656
+    jsr FMUL
     jsr LA7F5
     jmp LA500
 
@@ -7367,10 +7386,10 @@ LAAB8:
     sta zp4C
     jsr LA3B5
     lda zp4A
-    jsr LAB12
+    jsr FIPOW
 LAAD1:
     jsr LA7F1
-    jsr LA656
+    jsr FMUL
     lda #$FF
     rts
 
@@ -7397,30 +7416,36 @@ FEXPCO:
 
 ; ----------------------------------------------------------------------------
 
-LAB12:
+; FIPOW - Computes X**N where X is passed in FP Accu, N is a one byte
+;         signed integer passed in A
+
+.proc FIPOW
     tax
-    bpl LAB1E
+    bpl FIPOWA
     dex
     txa
-    eor #$FF
+    eor #$FF        ; complement
     pha
-    jsr LA6A5
-    pla
-LAB1E:
+    jsr FRECIP
+    pla             ; recover exponent
+FIPOWA:
     pha
-    jsr LA385
-    jsr LA699
-LAB25:
+    jsr LA385       ; STARGA
+    jsr FONE
+FIPOWB:
     pla
-    beq LAB32
+    beq FIPOWZ      ; exit condition
     sec
     sbc #$01
     pha
-    jsr LA656
-    jmp LAB25
+    jsr FMUL
+    jmp FIPOWB
 
-LAB32:
+FIPOWZ:
     rts
+.endp
+
+; ----------------------------------------------------------------------------
 
 ; =ADVAL numeric - Call OSBYTE to read buffer/device
 ; ==================================================
@@ -7574,7 +7599,7 @@ LABB8:
     .endif
     sty zp4B
     sta zp4C
-    jsr LA656
+    jsr FMUL
     lda #$FF
     rts
 
@@ -10156,7 +10181,7 @@ LB84F:
     lda #$05+(ws/256)
     sta zp4C
     jsr LA38D
-    jsr LA699
+    jsr FONE
     jsr L8A8C
     cmp #$88
     bne LB875

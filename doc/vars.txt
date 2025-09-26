@@ -1,0 +1,135 @@
+        1984 CmosBasic      Advanced BASIC ROM USer Guide
+        --------------
+$00     LOMEM * &0000       LOMEM [ptr]
+
+$02     FSA * LOMEM+2       VARTOP, end of BASIC variables [ptr]
+
+$04     AESTKP * FSA+2A     BASIC STACK POINTER [ptr]
+
+$06     HIMEM * AESTKP+2    HIMEM [ptr]
+
+$08     LOLINO * HIMEM+2    ERL, address of instruction which errored [ptr]
+
+$0a     CURSOR * LOLINO+2   BASIC TEXT POINTER OFFSET, relative to $b/$c
+$0b     LINE * CURSOR+1     BASIC TEXT POINTER [ptr]
+
+$0d     SEED * LINE+2       RND WORK AREA [5 bytes]
+
+$12     TOP * SEED+5        TOP, end of BASIC program, excl. variables [ptr]
+
+$14     PRINTS * TOP+2      PRINT BYTES, # of bytes in a print output field
+$15     PRINTF * PRINTS+1   PRINT FLAG
+$16     ERRORH * PRINTF+1   ERROR ROUTINE VECTOR [ptr]
+
+$18     TXTP * ERRORH+2     _PAGE_ number where BASIC program starts
+$19     AELINE * TXTP+1     SECONDARY BASIC TEXT POINTER, secondary $b/$c
+
+$1b     AECUR * AELINE+2    SECONDARY BASIC TEXT OFFSET, secondary $a (CURSOR)
+$1c     DATAP * AECUR+1     BASIC PROGRAM START, ptr to start of BASIC prog.
+
+$1e     TALLY * DATAP+2     COUNT, # of bytes printed since last NL
+$1f     LISTOP * TALLY+1    LISTO FLAG
+$20     TRFLAG * LISTOP+1   TRACE FLAG
+$21     TRNUM * TRFLAG+1    MAXIMUM TRACE LINE NUMBER
+$23     WIDTHV * TRNUM+2    WIDTH, as set by WIDTH command
+$24     DOSTKP * WIDTHV+1   REPEAT LEVEL [DO STACK PTR]
+$25     SUBSTP * DOSTKP+1   GOSUB LEVEL [GOSUB STACK PTR]
+$26     FORSTP * SUBSTP+1   FOR LEVEL [FOR STACK PTR] (*15???)
+$27     TYPE * FORSTP+1     VARIABLE TYPE
+$28     BYTESM * TYPE+1     OPT FLAG (bit 0=list, bit 1=errors, bit 2=relocate)
+$29     OPCODE * BYTESM+1   "not used", [not true, index in opcode table]
+
+$2a     IACCL * OPCODE+1    INTEGER WORK AREA, 4 bytes
+($2b)   IACCM * IACCL+1
+($2c)   IACCN * IACCL+2
+($2d)   IACCH * IACCL+3
+
+$2e     FACCS * IACCL+4     FLOATING POINT WORK AREA A, 8 bytes
+($2f)   FACCXH * FACCS+1
+($30)   FACCX * FACCXH+1
+($31)   FACCMA * FACCX+1
+($32)   FACCMB * FACCMA+1
+($33)   FACCMC * FACCMB+1
+($34)   FACCMD * FACCMC+1
+($35)   FACCMG * FACCMD+1
+
+$36     CLEN * FACCMG+1     LENGTH OF STRING BUFFER
+$37     WORK * CLEN+1       GENERAL AREAS, 4 bytes
+
+--------
+$3b
+
+from here Cmos/Dmos/Basic128 are different, sources show multiple
+usages up to WORK+9, and (clear?) up WORK+17 ($48)
+
+MODE * WORK+4       
+CONSTA * MODE+1
+FWRKS * WORK+4
+FWRKX * FWRKS+1
+FWRKMA * FWRKX+1
+FWRKMB * FWRKMA+1
+FWRKMC * FWRKMB+1
+FWRKMD * FWRKMC+1
+FWRKMG * FWRKMD+1
+FTMPMA * FWRKMG+1
+FTMPMB * FTMPMA+1
+FTMPMC * FTMPMB+1
+FTMPMD * FTMPMC+1
+FTMPMG * FTMPMD+1
+FRDDDP * FTMPMG+1
+FRDDDX * FRDDDP+1
+FPRTDX * FRDDDX
+FRDDW * FRDDDX+1
+FQUAD * FRDDW
+ARGP * FQUAD+1          ; def. zp4B/zp4C
+FPRTWY * ARGP+2
+FPRTWN * FPRTWY+1
+FDIGS * FPRTWN
+COEFP * ARGP+2
+NEWVAR * COEFP+2
+--------
+
+------------------------------------------------------------------------------
+
+WORKSPACE:
+
+VARL    = $0400         ; VARiable List of resident integer variables
+                        ; 4 bytes each [$0400-$046b] [@A-Z]
+
+PC      = VARL+$40      ; P%, doubles as "Program Counter"
+
+FWSA    = VARL+$6C      ; FP TEMP 1, 5 bytes
+FWSB    = VARL+$71      ; FP TEMP 2, 5 bytes
+FWSC    = VARL+$76      ; FP TEMP 3, 5 bytes
+FWSD    = VARL+$7B      ; FP TEMP 4, 5 bytes
+
+VARPTR  = $0480         ; Variable Pointer Table
+
+; REPEAT/FOR/GOSUB STACKS
+
+DOADL * &0500
+DOADH * DOADL+&14
+
+FORINL * DOADH+&14
+FORINH * FORINL+1
+FORINT * FORINH+1
+FORSPL * FORINT+1
+FORSPM * FORSPL+1
+FORSPN * FORSPM+1
+FORSPH * FORSPN+1
+FORSPE * FORSPH+1
+FORLML * FORSPE+1
+FORLMM * FORLML+1
+FORLMN * FORLMM+1
+FORLMH * FORLMN+1
+FORLME * FORLMH+1
+FORADL * FORLME+1
+FORADH * FORADL+1
+
+SUBADL * FORADH+&96
+SUBADH * SUBADL+&1A
+
+STRACC = $0600          ; STRING WORK AREA
+
+BUFFER = $0700          ; BASIC LINE INPUT BUFFER
+
