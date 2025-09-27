@@ -58,6 +58,26 @@ zp47 = zp + $47
 zp48 = zp + $48
 zp49 = zp + $49
 zp4A = zp + $4a
+
+; zp3B onwards are also used as zpWORK+4 etc..., need manual replace!
+
+zpFWRKS   = zp + $3b    ; WorkSpace Floating Point Accumulator, SIGN
+zpFWRKXH  = zp + $3c    ; WorkSpace Floating Point Accumulator, OVER/UNDERFLOW
+zpFWRKX   = zp + $3d    ; WorkSpace Floating Point Accumulator, EXPONENT
+zpFWRKMA  = zp + $3e    ; WorkSpace Floating Point Accumulator, MANTISSA
+zpFWRKMB  = zp + $3f    ; WorkSpace Floating Point Accumulator, MANTISSA
+zpFWRKMC  = zp + $40    ; WorkSpace Floating Point Accumulator, MANTISSA
+zpFWRKMD  = zp + $41    ; WorkSpace Floating Point Accumulator, MANTISSA
+zpFWRKMG  = zp + $42    ; WorkSpace Floating Point Accumulator, ROUNDING
+
+; ...
+
+zpFRDDDP  = zp + $48    ; Decimal Point flag
+zpFRDDDX  = zp + $49    ; Exponent
+zpFPRTDX  = zpFRDDDX    ; Alt.
+zpFRDDW   = zp + $4a
+zpFQUAD   = zpFRDDW     ; Alt.
+
 zpARGP = zp + $4b
 zpCOEFP = zp + $4d      ; ptr
 zpFDIGS = zpCOEFP+1     ; alternative usage
