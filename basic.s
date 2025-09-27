@@ -3696,15 +3696,16 @@ L94E1:
     sta zpIACC+1
     rts
 
-L94ED:
+LOOKFN:
     ldy #$01
     lda (zpWORK),Y
     tax
     lda #$F6
-    cpx #$F2
+    cpx #tknPROC
     beq L9501
     lda #$F8
     bne L9501
+
 L94FC:
     ldy #$01
     lda (zpWORK),Y
@@ -9030,7 +9031,7 @@ LB158:
     txa
     tay
     jsr CLYADP
-    jsr L94ED
+    jsr LOOKFN
     ldx #$01
     jsr L9531
     ldy #$00
