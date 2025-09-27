@@ -540,57 +540,37 @@ L8071:
 ; ======================================
 
 func_table .macro operator
-    dta :1LBF78       ; $8E - OPENIN
-    dta :1LBF47       ; $8F - PTR
-    .if version < 3
-        dta :1LAEC0       ; $90 - PAGE
-        dta :1LAEB4       ; $91 - TIME
-        dta :1LAEFC       ; $92 - LOMEM
-        dta :1LAF03       ; $93 - HIMEM
-    .elseif version >= 3
-        dta :1XAEA7       ; $90 - PAGE
-        dta :1LAEB4       ; $91 - TIME
-        dta :1XAEFC       ; $92 - LOMEM
-        dta :1XAF03       ; $93 - HIMEM
-    .endif
-    dta :1LAD6A       ; $94 - ABS
-    dta :1LA8D4       ; $95 - ACS
-    dta :1LAB33       ; $96 - ADVAL
-    dta :1LAC9E       ; $97 - ASC
-    dta :1LA8DA       ; $98 - ASN
-    dta :1LA907       ; $99 - ATN
-    dta :1LBF6F       ; $9A - BGET
-    dta :1LA98D       ; $9B - COS
-    .if version < 3
-        dta :1LAEF7       ; $9C - COUNT
-    .elseif version >= 3
-        dta :1XAEF7       ; $9C - COUNT
-    .endif
-    dta :1LABC2       ; $9D - DEG
-    .if version < 3
-        dta :1LAF9F       ; $9E - ERL
-        dta :1LAFA6       ; $9F - ERR
-    .elseif version >= 3
-        dta :1XAF9F       ; $9E - ERL
-        dta :1XAFA6       ; $9F - ERR
-    .endif
+    dta :1OPENIN      ; $8E - OPENIN
+    dta :1RPTR        ; $8F - PTR
+    dta :1RPAGE       ; $90 - PAGE
+    dta :1RTIME       ; $91 - TIME
+    dta :1RLOMEM      ; $92 - LOMEM
+    dta :1RHIMEM      ; $93 - HIMEM
+    dta :1ABS         ; $94 - ABS
+    dta :1ACS         ; $95 - ACS
+    dta :1ADVAL       ; $96 - ADVAL
+    dta :1ASC         ; $97 - ASC
+    dta :1ASN         ; $98 - ASN
+    dta :1ATN         ; $99 - ATN
+    dta :1BGET        ; $9A - BGET
+    dta :1COS         ; $9B - COS
+    dta :1COUNT       ; $9C - COUNT
+    dta :1DEG         ; $9D - DEG
+    dta :1ERL         ; $9E - ERL
+    dta :1ERR         ; $9F - ERR
     dta :1LABE9       ; $A0 - EVAL
     dta :1LAA91       ; $A1 - EXP
     dta :1LBF46       ; $A2 - EXT
-    .if version < 3
-        dta :1LAECA       ; $A3 - FALSE
-    .elseif version >= 3
-        dta :1LACCD       ; $A3 - FALSE
-    .endif
+    dta :1FALSE       ; $A3 - FALSE
     dta :1LB195       ; $A4 - FN
     dta :1LAFB9       ; $A5 - GET
     dta :1LACAD       ; $A6 - INKEY
     dta :1LACE2       ; $A7 - INSTR(
     dta :1LAC78       ; $A8 - INT
     .if version < 3
-        dta :1LAED1       ; $A9 - LEN
+        dta :1LEN       ; $A9 - LEN
     .elseif version >= 3
-        dta :1XAECC       ; $A9 - LEN
+        dta :1LEN       ; $A9 - LEN
     .endif
     dta :1LA7FE       ; $AA - LN
     dta :1LABA8       ; $AB - LOG
@@ -1366,7 +1346,7 @@ L8864:
     jmp L862B
 
 L8867:
-    jmp L8C0E
+    jmp LETM
 
 L886A:
     lda zpBYTESM
@@ -2058,7 +2038,7 @@ L8BE9:
     jsr LBD94         ; Stack integer (address of data)
     jsr L9813         ; Check for end of statement
     lda zpTYPE          ; Get evaluation type
-    bne L8C0E         ; If not string, error
+    bne LETM         ; If not string, error
     jsr L8C1E         ; Assign the string
     jmp L8B9B         ; Return to execution loop
 
@@ -2066,14 +2046,14 @@ L8BFB:
     jsr LBD94         ; Stack integer (address of data)
     jsr L9813         ; Check for end of statement
     lda zpTYPE          ; Get evaluation type
-    beq L8C0E         ; If not number, error
+    beq LETM         ; If not number, error
     jsr LB4B4         ; Assign the number
     jmp L8B9B         ; Return to execution loop
 
 L8C0B:
     jmp L982A
 
-L8C0E:
+LETM:
     brk
     dta 6
     .if foldup == 1
@@ -3320,7 +3300,7 @@ L92F4:
     jmp LA3E4         ; Real, jump to convert to integer
 
 L92F7:
-    jmp L8C0E         ; Jump to 'Type mismatch' error
+    jmp LETM         ; Jump to 'Type mismatch' error
 
 ; Evaluate <real>
 ; ===============
@@ -4438,7 +4418,7 @@ LEAVER:
 ; IF numeric
 ; ==========
 L98BF:
-    jmp L8C0E
+    jmp LETM
 
 L98C2:
     jsr AEEXPR
@@ -4742,7 +4722,7 @@ L9A93:
     rts
 
 L9A9A:
-    jmp L8C0E         ; Jump to 'Type mismatch' error
+    jmp LETM         ; Jump to 'Type mismatch' error
 
 
 ; Evaluate next expression and compare with previous
@@ -5120,7 +5100,7 @@ L9C77:
     bcs L9C45         ; Jump to check for more + or -
 
 L9C88:
-    jmp L8C0E         ; Jump to 'Type mismatch' error
+    jmp LETM         ; Jump to 'Type mismatch' error
 
 ; Real addition
 ; -------------
@@ -5230,7 +5210,7 @@ L9D2C:
     jmp L9DD4
 
 L9D39:
-    jmp L8C0E
+    jmp LETM
 
 ; * <value>
 ; ---------
@@ -7140,15 +7120,19 @@ LA8B5:
     bne LA8B5
     rts
 
+; ----------------------------------------------------------------------------
+
 ; =ACS numeric
 ; ============
-LA8D4:
-    jsr LA8DA
+ACS:
+    jsr ASN
     jmp LA927
+
+; ----------------------------------------------------------------------------
 
 ; =ASN numeric
 ; ============
-LA8DA:
+ASN:
     jsr L92FA
     jsr LA1DA
     bpl LA8EA
@@ -7172,9 +7156,11 @@ LA904:
     lda #$FF
     rts
 
+; ----------------------------------------------------------------------------
+
 ; =ATN numeric
 ; ============
-LA907:
+ATN:
     jsr L92FA
 LA90A:
     jsr LA1DA
@@ -7239,7 +7225,7 @@ FATANC:
 
 ; =COS numeric
 ; ============
-LA98D:
+COS:
     jsr L92FA         ; Evaluate float
     jsr LA9D3
     inc zp4A
@@ -7499,19 +7485,12 @@ FIPOWZ:
 
 ; =ADVAL numeric - Call OSBYTE to read buffer/device
 ; ==================================================
-LAB33:
+ADVAL:
     jsr L92E3         ; Evaluate integer
     ldx zpIACC
     lda #$80          ; X=low byte, A=$80 for ADVAL
-; 
-; WRONG in original disassembly
-;    .if 0            ; FALSE
-;        JSR OSBYTE
-;    .endif
-;    .ifdef MOS_BBC
-;        JSR LAFB2
-;    .endif
-    .ifdef MOS_BBC
+
+    .if .def MOS_BBC
         .if .def TARGET_C64
             jsr LAFB2
         .else
@@ -7653,15 +7632,23 @@ LABB8:
     lda #$FF
     rts
 
+; ----------------------------------------------------------------------------
+
 ; =DEG numeric
 ; ============
-LABC2:
+DEG:
     jsr L92FA
     ldy #<F180sP
+    .if version >= 3
+        .error  <F180sP == 0
+    .endif
     .if version < 3
         lda #>F180sP
+        .error >F180sP == 0
     .endif
-    bne LABB8
+    bne LABB8               ; branch always
+
+; ----------------------------------------------------------------------------
 
 ; =PI
 ; ===
@@ -7670,6 +7657,8 @@ LABCB:
     inc zpFACCX
     tay
     rts
+
+; ----------------------------------------------------------------------------
 
 ; =USR numeric
 ; ============
@@ -7688,7 +7677,7 @@ LABD2:
 
     .if version < 3
 LABE6:
-        jmp L8C0E
+        jmp LETM
     .endif
 
 ; =EVAL string$ - Tokenise and evaluate expression
@@ -7743,7 +7732,7 @@ LAC23:
 
     .if version >= 3
 LAC2C:
-        jmp L8C0E
+        jmp LETM
     .endif
 
 ; =VAL numeric
@@ -7823,12 +7812,14 @@ LAC9A:
 
     .if version < 3
 LAC9B:
-        jmp L8C0E
+        jmp LETM
     .endif
+
+; ----------------------------------------------------------------------------
 
 ; =ASC string$
 ; ============
-LAC9E:
+ASC:
     jsr LADEC
     .if version < 3
         bne LAC9B
@@ -7844,6 +7835,8 @@ LACAA:
     .elseif version >= 3
         jmp XAED3
     .endif
+
+; ----------------------------------------------------------------------------
 
 ; =INKEY numeric
 ; ==============
@@ -7864,13 +7857,13 @@ LACAD:
 
     .if version >= 3
 XAC81:
-        jmp L8C0E
+        jmp LETM
     .endif
 
 ; =EOF#numeric
 ; ============
 LACB8:
-    jsr LBFB5
+    jsr CHANN
     tax
     lda #$7F
     .ifdef MOS_BBC
@@ -7907,19 +7900,23 @@ LACC8:
     lda #$40
     rts
 
+; ----------------------------------------------------------------------------
+
     .if version >= 3
 ; =FALSE
 ; ======
-LACCD:
+FALSE:
         ldx #$00
-        beq LACC6
+        beq LACC6       ; branch always
 
 XACA1:
         jsr LA1DA
-        beq LACCD
+        beq FALSE
         bpl XACBF
         bmi LACC4
-     
+
+; ----------------------------------------------------------------------------
+
 ; =SGN numeric
 ; ============
 XACAA:
@@ -7937,6 +7934,8 @@ XACBF:
         lda #$01
 XACC1:
         jmp XAED3
+
+; ----------------------------------------------------------------------------
 
 ; =POINT(numeric, numeric)
 ; ========================
@@ -7959,7 +7958,10 @@ XAB41:
         lda zpFACCS
         bmi LACC4
         bpl XACC1
-    .endif
+
+    .endif              ; version >= 3
+
+; ----------------------------------------------------------------------------
 
     .if version < 3
 ; =NOT numeric
@@ -7976,6 +7978,8 @@ LACD6:
         lda #$40
         rts
     .endif
+
+; ----------------------------------------------------------------------------
 
 ; =INSTR(string$, string$ [, numeric])
 ; ====================================
@@ -8075,12 +8079,14 @@ LAD59:
     inc zpWORK+1
     bne LAD3C
 LAD67:
-    jmp L8C0E
+    jmp LETM
+
+; ----------------------------------------------------------------------------
 
 ; =ABS numeric
 ; ============
-LAD6A:
-    jsr LADEC
+ABS:
+    jsr LADEC       ; FACTOR
     beq LAD67
     bmi LAD77
 LAD71:
@@ -8308,7 +8314,7 @@ LAE6D:
         stx zpIACC+3
         ldy zpAECUR
     .elseif version >= 3
-        jsr LACCD
+        jsr FALSE
         iny
     .endif
 LAE79:
@@ -8349,7 +8355,10 @@ LAEA2:
     lda #$40
     rts
 
+; ----------------------------------------------------------------------------
+
     .if version >= 3
+
 ; =TOP - Return top of program
 ; ============================
 XAEA6:
@@ -8362,21 +8371,25 @@ XAEA6:
         ldy zpTOP+1
         bcs XAED5
 
+; ----------------------------------------------------------------------------
+
 ; =PAGE - Read PAGE
 ; =================
-XAEA7:
+RPAGE:
         ldy zpTXTP
         lda #$00
-        beq XAED5
+        beq XAED5       ; branch always
 
-XAEC9:
-        jmp L8C0E
+LENB:
+        jmp LETM
+
+; ----------------------------------------------------------------------------
 
 ; =LEN string$
 ; ============
-XAECC:
+LEN:
         jsr LADEC
-        bne XAEC9
+        bne LENB
         lda zpCLEN
     
 ; Return 8-bit integer
@@ -8395,40 +8408,53 @@ XAED5:
         lda #$40
         rts           ; Return 'integer'
 
+; ----------------------------------------------------------------------------
+
 ; =COUNT - Return COUNT
 ; =====================
-XAEF7:
+COUNT:
         lda zpTALLY
         bcc XAED3     ; Get COUNT, jump to return 8-bit integer
      
+; ----------------------------------------------------------------------------
+
 ; =LOMEM - Start of BASIC heap
 ; ============================
-XAEFC:
+RLOMEM:
         lda zpLOMEM
         ldy zpLOMEM+1
         bcc XAED5     ; Get LOMEM to AY, jump to return as integer
      
+; ----------------------------------------------------------------------------
+
 ; =HIMEM - Top of BASIC memory
 ; ============================
-XAF03:
+RHIMEM:
         lda zpHIMEM
         ldy zpHIMEM+1
         bcc XAED5     ; Get HIMEM to AY, jump to return as integer
 
+; ----------------------------------------------------------------------------
+
 ; =ERL - Return error line number
 ; ===============================
-XAF9F:
+ERL:
         ldy zpERL+1
         lda zpERL
         bcc XAED5     ; Get ERL to AY, jump to return 16-bit integer
 
+; ----------------------------------------------------------------------------
+
 ; =ERR - Return current error number
 ; ==================================
-XAFA6:
+ERR:
         ldy #$00
         lda (FAULT),Y
         bcc XAED5     ; Get error number, jump to return 16-bit integer
-    .endif
+
+    .endif      ; version > 3
+
+; ----------------------------------------------------------------------------
 
     .if version < 3
 LAEAA:
@@ -8444,7 +8470,7 @@ LAEAA:
 
 ; =TIME - Read system TIME
 ; ========================
-LAEB4:
+RTIME:
     ldx #$2A
     ldy #$00          ; Point to integer accumulator
     lda #$01          ; Read TIME to IntA via OSWORD $01
@@ -8454,10 +8480,13 @@ LAEB4:
     lda #$40
     rts               ; Return 'integer'
 
+; ----------------------------------------------------------------------------
+
     .if version < 3
+
 ; =PAGE - Read PAGE
 ; =================
-LAEC0:
+RPAGE:
         lda #$00
         ldy zpTXTP
         jmp LAEEA
@@ -8465,20 +8494,24 @@ LAEC0:
 LAEC7:
         jmp LAE43
      
+; ----------------------------------------------------------------------------
+
 ; =FALSE
 ; ======
-LAECA:
+FALSE:
         lda #$00
         beq LAED8     ; Jump to return $00 as 16-bit integer
 
-LAECE:
-        jmp L8C0E
+LENB:
+        jmp LETM
      
+; ----------------------------------------------------------------------------
+
 ; =LEN string$
 ; ============
-LAED1:
+LEN:
         jsr LADEC
-        bne LAECE
+        bne LENB
         lda zpCLEN
 
 ; Return 8-bit integer
@@ -8509,26 +8542,35 @@ LAEEA:
         lda #$40
         rts           ; Return 'integer'
 
+; ----------------------------------------------------------------------------
+
 ; =COUNT - Return COUNT
 ; =====================
-LAEF7:
+COUNT:
         lda zpTALLY
         jmp LAED8     ; Get COUNT, jump to return 8-bit integer
      
+; ----------------------------------------------------------------------------
+
 ; =LOMEM - Start of BASIC heap
 ; ============================
-LAEFC:
+RLOMEM:
         lda zpLOMEM
         ldy zpLOMEM+1
         jmp LAEEA     ; Get LOMEM to AY, jump to return as integer
      
+; ----------------------------------------------------------------------------
+
 ; =HIMEM - Top of BASIC memory
 ; ============================
-LAF03:
+RHIMEM:
         lda zpHIMEM
         ldy zpHIMEM+1
-    jmp LAEEA         ; Get HIMEM to AY, jump to return as integer
-    .endif
+        jmp LAEEA     ; Get HIMEM to AY, jump to return as integer
+
+    .endif      ; version < 3
+
+; ----------------------------------------------------------------------------
 
 ; =RND(numeric)
 ; -------------
@@ -8604,7 +8646,10 @@ LAF78:
     lda #$FF
     rts
 
+; ----------------------------------------------------------------------------
+
 LAF87:
+
     .if version >= 3
         ldy #$04      ; Rotate through four bytes, faster but bigger
 LAF89:
@@ -8656,20 +8701,27 @@ LAF89:
         bne LAF89
         rts
  
+; ----------------------------------------------------------------------------
+
 ; =ERL - Return error line number
 ; ===============================
-LAF9F:
+ERL:
         ldy zpERL+1
         lda zpERL
         jmp LAEEA     ; Get ERL to AY, jump to return 16-bit integer
 
+; ----------------------------------------------------------------------------
+
 ; =ERR - Return current error number
 ; ==================================
-LAFA6:
+ERR:
         ldy #$00
         lda (FAULT),Y
         jmp LAEEA     ; Get error number, jump to return 16-bit integer
-    .endif
+
+    .endif          ; version < 3
+
+; ----------------------------------------------------------------------------
 
 ; INKEY
 ; =====
@@ -8825,7 +8877,7 @@ LB02E:
     rts
 
 LB033:
-    jmp L8C0E
+    jmp LETM
 
 LB036:
     .if version < 3
@@ -8920,7 +8972,7 @@ LB0B9:
     rts               ; Return string
 
 LB0BF:
-    jmp L8C0E         ; Jump to Type mismatch error
+    jmp LETM         ; Jump to Type mismatch error
 
 ; =STRING$(numeric, string$)
 ; ==========================
@@ -9652,7 +9704,7 @@ LB4A0:
     jmp L8B9B
 
 LB4AE:
-    jmp L8C0E
+    jmp LETM
 
 ; Store byte or word integer
 ; ==========================
@@ -10473,7 +10525,7 @@ LB9B5:
     brk
 
 LB9C4:
-    jmp L8C0E
+    jmp LETM
 
 LB9C7:
     jmp L982A
@@ -11429,7 +11481,7 @@ cmdStarLp2:
     .endif
 
 LBECF:
-    jmp L8C0E
+    jmp LETM
 
 LBED2:
     jsr AEEXPR
@@ -11583,6 +11635,8 @@ LBF30:
     .endif
     jmp L8B9B         ; Jump to execution loop
 
+; ----------------------------------------------------------------------------
+
 ; =EXT#numeric - Read file pointer via OSARGS
 ; ===========================================
 LBF46:
@@ -11590,14 +11644,14 @@ LBF46:
 
 ; =PTR#numeric - Read file pointer via OSARGS
 ; ===========================================
-LBF47:
+RPTR:
     lda #$00
     rol               ; A=0 or 1 for =PTR or =EXT
     .ifdef MOS_BBC
         rol
     .endif
     pha               ; Atom - A=0/1, BBC - A=0/2
-    jsr LBFB5
+    jsr CHANN
     ldx #$2A
     pla               ; Evaluate #handle, point to IntA
     .ifdef MOS_ATOM
@@ -11608,6 +11662,8 @@ LBF47:
     .endif
     lda #$40
     rts               ; Return integer
+
+; ----------------------------------------------------------------------------
 
 ; BPUT#numeric, numeric
 ; =====================
@@ -11623,10 +11679,12 @@ LBF58:
     jsr OSBPUT
     jmp L8B9B         ; Call OSBPUT, jump to execution loop
 
+; ----------------------------------------------------------------------------
+
 ; =BGET#numeric
 ; =============
-LBF6F:
-    jsr LBFB5
+BGET:
+    jsr CHANN
     jsr OSBGET        ; Evaluate #handle
     .if version < 3
         jmp LAED8     ; Jump to return 8-bit integer
@@ -11634,9 +11692,11 @@ LBF6F:
         jmp XAED3     ; Jump to return 8-bit integer
     .endif
 
+; ----------------------------------------------------------------------------
+
 ; OPENIN f$ - Call OSFIND to open file for input
 ; ==============================================
-LBF78:
+OPENIN:
     .ifdef MOS_ATOM
         sec           ; SEC=OPENUP
         bcs LBF82     
@@ -11645,6 +11705,8 @@ LBF78:
         lda #$40      ; $40=OPENUP
         bne LBF82
     .endif
+
+; ----------------------------------------------------------------------------
 
 ; OPENOUT f$ - Call OSFIND to open file for output
 ; ================================================
@@ -11657,6 +11719,8 @@ LBF7C:
         lda #$80      ; 80=OPENOUT
         bne LBF82
     .endif
+
+; ----------------------------------------------------------------------------
 
 ; OPENUP f$ - Call OSFIND to open file for update
 ; ===============================================
@@ -11698,7 +11762,7 @@ LBF82:
     .endif
 
 LBF96:
-    jmp L8C0E         ; Jump to 'Type mismatch' error
+    jmp LETM         ; Jump to 'Type mismatch' error
 
 ; CLOSE#numeric
 ; =============
@@ -11727,7 +11791,7 @@ LBFA9:
 
 ; Check for '#', evaluate channel
 ; ===============================
-LBFB5:
+CHANN:
     jsr L8A8C         ; Skip spaces
     cmp #'#'          ; If not '#', jump to give error
     .if version < 3
@@ -11736,7 +11800,6 @@ LBFB5:
         bne LBFF4
     .endif
     jsr L92E3         ; Evaluate as integer
-LBFBF:
     ldy zpIACC
     tya               ; Get low byte and return
 NULLRET:
