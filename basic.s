@@ -775,9 +775,9 @@ CASM:
     jsr L8A97         ; Skip spaces
     cmp #']'
     beq STOPASM         ; ']' - exit assembler
+
     jsr CLYADP
 
-L8512:
     dec zpCURSOR
     jsr L85BA
 
