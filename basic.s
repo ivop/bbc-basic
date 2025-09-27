@@ -5421,9 +5421,9 @@ L9E35:
 L9E59:
     jsr LA381
     lda zpAESTKP
-    sta zp4B
+    sta zpARGP
     lda zpAESTKP+1
-    sta zp4C
+    sta zpARGP+1
     jsr LA3B5
     lda zp4A
     jsr FIPOW
@@ -6230,21 +6230,21 @@ LA33A:
     bcc LA336
 LA34E:
     ldy #$04
-    lda (zp4B),Y
+    lda (zpARGP),Y
     sta zp41
     dey
-    lda (zp4B),Y
+    lda (zpARGP),Y
     sta zp40
     dey
-    lda (zp4B),Y
+    lda (zpARGP),Y
     sta zp3F
     dey
-    lda (zp4B),Y
+    lda (zpARGP),Y
     sta zp3B
     dey
     sty zp42
     sty zp3C
-    lda (zp4B),Y
+    lda (zpARGP),Y
     sta zp3D
     ora zp3B
     ora zp3F
@@ -6271,14 +6271,14 @@ LA385:
     lda #<FWSA
 
 LA387:
-    sta zp4B
+    sta zpARGP
     lda #$04+(ws/256)   ; MSB of all FWS / FP TEMP variables
-    sta zp4C
+    sta zpARGP+1
 
 LA38D:
     ldy #$00
     lda zp30
-    sta (zp4B),Y
+    sta (zpARGP),Y
     iny
     lda zp2E            ; tidy up sign bit
     and #$80
@@ -6286,35 +6286,35 @@ LA38D:
     lda zp31
     and #$7F
     ora zp2E
-    sta (zp4B),Y
+    sta (zpARGP),Y
     lda zp32
     iny
-    sta (zp4B),Y
+    sta (zpARGP),Y
     lda zp33
     iny
-    sta (zp4B),Y
+    sta (zpARGP),Y
     lda zp34
     iny
-    sta (zp4B),Y
+    sta (zpARGP),Y
     rts
 
 LA3B2:
     jsr LA7F5
 LA3B5:
     ldy #$04
-    lda (zp4B),Y
+    lda (zpARGP),Y
     sta zp34
     dey
-    lda (zp4B),Y
+    lda (zpARGP),Y
     sta zp33
     dey
-    lda (zp4B),Y
+    lda (zpARGP),Y
     sta zp32
     dey
-    lda (zp4B),Y
+    lda (zpARGP),Y
     sta zp2E
     dey
-    lda (zp4B),Y
+    lda (zpARGP),Y
     sta zp30
     sty zp35
     sty zp2F
@@ -6970,10 +6970,10 @@ LA7B7:
 LA7CF:
     jsr LA38D
     lda #<FWSA
-    sta zp4B
+    sta zpARGP
     jsr FXDIV
     lda #<FWSB
-    sta zp4B
+    sta zpARGP
     jsr LA500
     dec zp30
     dec zp4A
@@ -6998,9 +6998,9 @@ LA7F5:
 
 
 LA7F7:
-    sta zp4B
+    sta zpARGP
     lda #>FWSA          ; MSB the same for all four temp registers
-    sta zp4C
+    sta zpARGP+1
     rts
 
 ; =LN numeric
@@ -7059,9 +7059,9 @@ LA82C:
     sbc #$81
     jsr LA2ED
     lda #<LOGTWO
-    sta zp4B
+    sta zpARGP
     lda #>LOGTWO
-    sta zp4C
+    sta zpARGP+1
     jsr FMUL
     jsr LA7F5
     jsr LA500
@@ -7110,9 +7110,9 @@ FCF:
     inc zpCOEFP+1
 LA8AA:
     lda zpCOEFP
-    sta zp4B
+    sta zpARGP
     lda zpCOEFP+1
-    sta zp4C
+    sta zpARGP+1
     jsr LA3B5
 LA8B5:
     jsr LA7F5
@@ -7121,11 +7121,11 @@ LA8B5:
     lda zpCOEFP
     adc #$05
     sta zpCOEFP
-    sta zp4B
+    sta zpARGP
     lda zpCOEFP+1
     adc #$00
     sta zpCOEFP+1
-    sta zp4C
+    sta zpARGP+1
     jsr LA500
     dec zp48
     bne LA8B5
@@ -7331,9 +7331,9 @@ LAA48:
 LAA4C:
     lda #<HPILO
 LAA4E:
-    sta zp4B
+    sta zpARGP
     lda #>HPIHI
-    sta zp4C
+    sta zpARGP+1
     rts
 
 LAA55:
@@ -7417,9 +7417,9 @@ LAAB8:
     jsr LAADA
     jsr LA381
     lda #<FNUME
-    sta zp4B
+    sta zpARGP
     lda #>FNUME
-    sta zp4C
+    sta zpARGP+1
     jsr LA3B5
     lda zp4A
     jsr FIPOW
@@ -7638,8 +7638,8 @@ LABB8:
     .if version >= 3
         lda #>FPIs18       ; identical to version < 3
     .endif
-    sty zp4B
-    sta zp4C
+    sty zpARGP
+    sta zpARGP+1
     jsr FMUL
     lda #$FF
     rts
@@ -10087,9 +10087,9 @@ LB766:
     lda zpFORSTP
     clc
     adc #$F4
-    sta zp4B
+    sta zpARGP
     lda #$05+(ws/256)
-    sta zp4C
+    sta zpARGP+1
     jsr LA500
     lda zpIACC
     sta zp37
@@ -10100,9 +10100,9 @@ LB766:
     sta zpTYPE
     clc
     adc #$F9
-    sta zp4B
+    sta zpARGP
     lda #$05+(ws/256)
-    sta zp4C
+    sta zpARGP+1
     jsr L9A5F
     beq LB741
     lda FORSPM-$f,X
@@ -10218,9 +10218,9 @@ LB84F:
     lda zpFORSTP
     clc
     adc #$08
-    sta zp4B
+    sta zpARGP
     lda #$05+(ws/256)
-    sta zp4C
+    sta zpARGP+1
     jsr LA38D
     jsr FONE
     jsr L8A8C
@@ -10234,9 +10234,9 @@ LB875:
     lda zpFORSTP
     clc
     adc #$03
-    sta zp4B
+    sta zpARGP
     lda #$05+(ws/256)
-    sta zp4C
+    sta zpARGP+1
     jsr LA38D
     jmp LB837
 
@@ -11119,11 +11119,11 @@ LBD51:
 LBD7E:
     lda zpAESTKP
     clc
-    sta zp4B
+    sta zpARGP
     adc #$05
     sta zpAESTKP
     lda zpAESTKP+1
-    sta zp4C
+    sta zpARGP+1
     adc #$00
     sta zpAESTKP+1
     rts
