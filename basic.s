@@ -2290,7 +2290,7 @@ L8D4D:
 L8D57:
     ldx #$04
 L8D59:
-    lda ws+$046C,X
+    lda FWSA,X
     jsr OSBPUT
     dex
     bpl L8D59
@@ -6260,15 +6260,15 @@ LA37A:
 ; ----------------------------------------------------------------------------
 
 LA37D:
-    lda #$71            ; LSB of FWSB = VARL ($0400) + $71, FP TEMP2
+    lda #<FWSB
     bne LA387
 
 LA381:
-    lda #$76            ; LSB of FWSC = VARL ($0400) + $76, FP TEMP3
+    lda #<FWSC
     bne LA387
 
 LA385:
-    lda #$6C            ; LSB of FWSA = VARL ($0400) + $6c, FP TEMP1
+    lda #<FWSA
 
 LA387:
     sta zp4B
@@ -6969,10 +6969,10 @@ LA7B7:
     jsr LA7ED
 LA7CF:
     jsr LA38D
-    lda #$6C
+    lda #<FWSA
     sta zp4B
     jsr FXDIV
-    lda #$71
+    lda #<FWSB
     sta zp4B
     jsr LA500
     dec zp30
@@ -6985,16 +6985,16 @@ LA7E6:
 ; Point $4B/C to a floating point temp
 ; ------------------------------------
 LA7E9:
-    lda #$7B
-    bne LA7F7         ; ws+$047B-7F FPTEMP4
+    lda #<FWSD
+    bne LA7F7
 LA7ED:
-    lda #$71
-    bne LA7F7         ; ws+$0471-75 FPTEMP2
+    lda #<FWSB
+    bne LA7F7
 LA7F1:
-    lda #$76
-    bne LA7F7         ; ws+$0476-7A FPTEMP3
+    lda #<FWSC
+    bne LA7F7
 LA7F5:
-    lda #$6C          ; ws+$046C-70 FPTEMP1
+    lda #<FWSA
 
 
 LA7F7:
@@ -7044,7 +7044,7 @@ LA82C:
     pha
     sty zp30
     jsr LA505
-    lda #$7B
+    lda #<FWSD
     jsr LA387
     lda #<FLOGTC
     ldy #>FLOGTC

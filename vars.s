@@ -81,7 +81,7 @@ VARL_Y  = VARL + $64    ; Y%
 
 PC      = VARL_P        ; Program Counter
 
-FWSA    = VARL + $69    ; FP WorkSpace temporary A, 5 bytes
+FWSA    = VARL + $6c    ; FP WorkSpace temporary A, 5 bytes
 FWSB    = VARL + $71    ; FP WorkSpace temporary B, 5 bytes
 FWSC    = VARL + $76    ; FP WorkSpace temporary C, 5 bytes
 FWSD    = VARL + $7b    ; FP WorkSpace temporary D, 5 bytes
