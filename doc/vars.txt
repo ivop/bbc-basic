@@ -114,7 +114,7 @@ VARPTR  = $0480         ; Variable Pointer Table
 
 ; REPEAT/FOR/GOSUB STACKS
 
-; (this might be completely different for BASIC II/III)
+; (this ~might be~ _IS_ completely different for BASIC II/III)
 
 DOADL * &0500
 DOADH * DOADL+&14

@@ -10156,11 +10156,11 @@ LB7C4:
     cpy #$96
     bcs LB7B0
     lda zp37
-    sta ws+$0500,Y
+    sta FORINL,Y
     lda zp38
-    sta ws+$0501,Y
+    sta FORINH,Y
     lda zp39
-    sta ws+$0502,Y
+    sta FORINT,Y
     tax
     jsr L8A8C
     cmp #$B8
@@ -10170,13 +10170,13 @@ LB7C4:
     jsr L92DD
     ldy zpFORSTP
     lda zpIACC
-    sta ws+$0508,Y
+    sta FORLML,Y
     lda zpIACC+1
-    sta ws+$0509,Y
+    sta FORLMM,Y
     lda zpIACC+2
-    sta ws+$050A,Y
+    sta FORLMN,Y
     lda zpIACC+3
-    sta ws+$050B,Y
+    sta FORLMH,Y
     lda #$01
     .if version < 3
         jsr LAED8
@@ -10192,20 +10192,20 @@ LB81F:
     sty zpCURSOR
     ldy zpFORSTP
     lda zpIACC
-    sta ws+$0503,Y
+    sta FORSPL,Y
     lda zpIACC+1
-    sta ws+$0504,Y
+    sta FORSPM,Y
     lda zpIACC+2
-    sta ws+$0505,Y
+    sta FORSPN,Y
     lda zpIACC+3
-    sta ws+$0506,Y
+    sta FORSPH,Y
 LB837:
     jsr FORR
     ldy zpFORSTP
     lda zpLINE
-    sta ws+$050D,Y
+    sta FORADL,Y
     lda zpLINE+1
-    sta ws+$050E,Y
+    sta FORADH,Y
     clc
     tya
     adc #$0F
