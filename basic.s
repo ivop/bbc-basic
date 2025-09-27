@@ -213,9 +213,9 @@
 
 ; ----------------------------------------------------------------------------
 
-; ZP definition of 00-5f, relative to 'zp'
+; Include ZP definitions of 00-4f, relative to 'zp', and Workspace Variables
 
-    icl 'zp.s'
+    icl 'vars.s'
 
 ; ----------------------------------------------------------------------------
 

@@ -1,3 +1,5 @@
+; Zero Page
+
 .ifndef zpLOMEM
     zpLOMEM = zp + $00  ; ptr
 .endif
@@ -63,3 +65,48 @@ zpCOEFP = zp + $4d      ; ptr
 zpFDIGS = zpCOEFP+1     ; alternative usage
 zpFPRTWN = zpCOEFP+1    ; another alternative usage
 zp4F = zp + $4f
+
+; Workspace (for now, relative to ws)
+
+VARL    = ws + $0400    ; VARiable List of resident integer variables
+                        ; 4 bytes each [$0400-$046b] [@A-Z]
+
+PC      = VARL + $40    ; P%, program counter
+
+FWSA    = VARL + $69    ; FP WorkSpace temporary A, 5 bytes
+FWSB    = VARL + $71    ; FP WorkSpace temporary B, 5 bytes
+FWSC    = VARL + $76    ; FP WorkSpace temporary C, 5 bytes
+FWSD    = VARL + $7b    ; FP WorkSpace temporary D, 5 bytes
+
+; Stacks
+
+;CmosBasic, might be different for BASIC II/III
+;DOADL   = ws + $0500
+;DOADH   = DOADL + $14
+;
+;FORINL  = ws + $0528
+;FORINH  = FORINL + 1
+;FORINT  = FORINH + 1
+;FORSPL  = FORINT + 1
+;FORSPM  = FORSPL + 1
+;FORSPN  = FORSPM + 1
+;FORSPH  = FORSPN + 1
+;FORSPE  = FORSPH + 1
+;FORLML  = FORSPE + 1
+;FORLMM  = FORLML + 1
+;FORLMN  = FORLMM + 1
+;FORLMH  = FORLMN + 1
+;FORLME  = FORLMH + 1
+;FORADL  = FORLME + 1
+;FORADH  = FORADL + 1
+;
+;SUBADL  = ws + $05cc
+;SUBADH  = SUBADL + $1a
+
+; String Work Area
+
+STRACC  = ws + $0600
+
+; BASIC Line Input Buffer
+
+BUFFER  = $0700
