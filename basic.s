@@ -779,7 +779,7 @@ CASM:
     jsr CLYADP
 
     dec zpCURSOR
-    jsr L85BA
+    jsr MNEENT
 
     dec zpCURSOR
     lda zpBYTESM
@@ -788,15 +788,15 @@ CASM:
 
     lda zpTALLY
     adc #$04
-    sta zp3F
+    sta zpWORK+8
     lda zpWORK+1
-    jsr LB545
+    jsr HEXOUT
 
     lda zpWORK
     jsr LB562
 
     ldx #$FC
-    ldy zp39
+    ldy zpWORK+2
     bpl L8536
 
     ldy zpCLEN
@@ -809,7 +809,7 @@ L853C:
     inx
     bne L854C
 
-    jsr LBC25         ; Print newline
+    jsr NLINE         ; Print newline
 
     ldx zp3F
 
@@ -884,12 +884,13 @@ L8567:
 L8571:
     jsr LB50E         ; Print character or token
     iny:BNE L8567
-L8577
+L8577:
     cpy zpCURSOR
     bcc L8571
 L857B:
-    jsr LBC25         ; Print newline
-L857E
+    jsr NLINE         ; Print newline
+
+L857E:
     ldy zpCURSOR
     dey
 L8581:
@@ -929,7 +930,7 @@ L85A5:
         sty zp4F
     .endif
 
-L85BA:
+MNEENT:
     ldx #$03          ; Prepare to fetch three characters
     jsr L8A97         ; Skip spaces
     ldy #$00
@@ -2320,7 +2321,7 @@ L8D77:
 ; End of PRINT statement
 ; ----------------------
 L8D7D:
-    jsr LBC25         ; Output new line and set COUNT to zero
+    jsr NLINE         ; Output new line and set COUNT to zero
 L8D80:
     jmp SUNK         ; Check end of statement, return to execution loop
 
@@ -2495,7 +2496,7 @@ L8E40:
         tax
     .endif
     bcs L8E5F
-    jsr LBC25
+    jsr NLINE
     beq L8E5B
 L8E58:
     jsr L92E3
@@ -2516,7 +2517,7 @@ L8E5F:
     .endif
     beq L8E6A
 L8E67:
-    jsr LBC25
+    jsr NLINE
 L8E6A:
     clc
     ldy zpAECUR
@@ -2587,7 +2588,7 @@ L8EBD:
 ; ===
 L8EC4:
     jsr DONE         ; Check end of statement
-    jsr LBC28         ; Set COUNT to zero
+    jsr BUFEND         ; Set COUNT to zero
     lda #$0C          ; Do VDU 12
 L8ECC:
     jsr OSWRCH
@@ -2912,7 +2913,7 @@ L9082:
     lda (zpLINE),Y
     sta zpIACC
     jsr L991F         ; Print in decimal
-    jsr LBC25         ; Print newline
+    jsr NLINE         ; Print newline
     beq L906D
 L909F:
     iny
@@ -3501,7 +3502,7 @@ L939A:
 
 ; Change MODE
 L93D7:
-    jsr LBC28         ; Set COUNT to zero
+    jsr BUFEND         ; Set COUNT to zero
 
 ; Send two bytes to OSWRCH, stacked byte, then IntA
 ; -------------------------------------------------
@@ -9754,29 +9755,33 @@ LB542:
     ldy zp3A
     rts
 
-LB545:
+; ----------------------------------------------------------------------------
+
+; Print byte in A as %02x hexadecimal
+
+HEXOUT:
     pha
     lsr
     lsr
     lsr
     lsr
-    jsr LB550
+    jsr DIG
     pla
     and #$0F
-LB550:
+DIG:
     cmp #$0A
-    bcc LB556
+    bcc DIGR
     adc #$06
-LB556:
+DIGR:
     adc #$30
 LB558:
     cmp #$0D
     bne LB567
     jsr OSWRCH
-    jmp LBC28         ; Set COUNT to zero
+    jmp BUFEND         ; Set COUNT to zero
 
 LB562:
-    jsr LB545
+    jsr HEXOUT
 LB565:
     lda #$20
 LB567:
@@ -9784,7 +9789,7 @@ LB567:
     lda zpWIDTHV
     cmp zpTALLY
     bcs LB571
-    jsr LBC25
+    jsr NLINE
 LB571:
     pla
     inc zpTALLY
@@ -9880,7 +9885,7 @@ LB5DB:
     bcs LB602
 
 LB5FC:
-    jsr LBC25
+    jsr NLINE
     jsr CLYADP
 LB602:
     lda (zpLINE),Y
@@ -10867,7 +10872,7 @@ LDC03:
 LDC0B:
         sta (zpWORK),Y      ; Store character
         cmp #$0D
-        beq LBC25     ; Return - finish
+        beq NLINE     ; Return - finish
         cpy #$EE
         bcs LDC1E     ; Maximum length
         cmp #$20
@@ -10894,13 +10899,15 @@ LDC21:
         ldx #$37      ; XY=>control block at $0037
         tya
         jsr OSWORD    ; Call OSWORD 0 to read line of text
-        bcc LBC28     ; CC, Escape not pressed, exit and set COUNT=0
+        bcc BUFEND     ; CC, Escape not pressed, exit and set COUNT=0
     .endif
     jmp L9838         ; Escape
 
-LBC25:
+; ----------------------------------------------------------------------------
+
+NLINE:
     jsr OSNEWL
-LBC28:
+BUFEND:
     lda #$00
     sta zpTALLY          ; Set COUNT to zero
     rts
@@ -10968,28 +10975,28 @@ LBC88:
     rts
 
 LBC8D:
-    sty zp3B
+    sty zpWORK+4
     jsr LBC2D
     ldy #>BUFFER
-    sty zp3C
+    sty zpWORK+5
     ldy #$00
     lda #$0D
-    cmp (zp3B),Y
+    cmp (zpWORK+4),Y
     beq LBD10
 LBC9E:
     iny
-    cmp (zp3B),Y
+    cmp (zpWORK+4),Y
     bne LBC9E
     iny
     iny
     iny
-    sty zp3F
-    inc zp3F
+    sty zpWORK+8
+    inc zpWORK+8
     lda zpTOP
-    sta zp39
+    sta zpWORK+2
     lda zpTOP+1
-    sta zp3A
-    jsr LBE92
+    sta zpWORK+3
+    jsr LBE92       ; CLYADT
     sta zpWORK
     lda zpTOP+1
     sta zpWORK+1
@@ -10998,9 +11005,10 @@ LBC9E:
     cmp zpTOP
     lda zpHIMEM+1
     sbc zpTOP+1
-    bcs LBCD6
+    bcs MOVEUP
     jsr LBE6F
     jsr LBD20
+
     brk
     dta 0
     dta tknLINE
@@ -11010,46 +11018,49 @@ LBC9E:
         dta ' space'
     .endif
     brk
+; ----------------------------------------------------------------------------
 
-LBCD6:
-    lda (zp39),Y
+MOVEUP:
+    lda (zpWORK+2),Y
     sta (zpWORK),Y
     tya
-    bne LBCE1
-    dec zp3A
+    bne LOW
+    dec zpWORK+3
     dec zpWORK+1
-LBCE1:
+LOW:
     dey
     tya
-    adc zp39
-    ldx zp3A
-    bcc LBCEA
+    adc zpWORK+2
+    ldx zpWORK+3
+    bcc LOWW
     inx
-LBCEA:
-    cmp zp3D
+LOWW:
+    cmp zpWORK+6
     txa
-    sbc zp3E
-    bcs LBCD6
+    sbc zpWORK+7
+    bcs MOVEUP
     sec
     ldy #$01
     lda zpIACC+1
-    sta (zp3D),Y
+    sta (zpWORK+6),Y
     iny
     lda zpIACC
-    sta (zp3D),Y
+    sta (zpWORK+6),Y
     iny
-    lda zp3F
-    sta (zp3D),Y
+    lda zpWORK+8
+    sta (zpWORK+6),Y
     jsr LBE56
     ldy #$FF
-LBD07:
+INSLOP:
     iny
-    lda (zp3B),Y
-    sta (zp3D),Y
+    lda (zpWORK+4),Y
+    sta (zpWORK+6),Y
     cmp #$0D
-    bne LBD07
+    bne INSLOP
 LBD10:
     rts
+
+; ----------------------------------------------------------------------------
 
 ; RUN
 ; ===
@@ -11763,7 +11774,7 @@ LBFDC:
 ; ======
 LBFE4:
     jsr DONE
-    jsr LBC25         ; Check end of statement, print newline, clear COUNT
+    jsr NLINE         ; Check end of statement, print newline, clear COUNT
     ldy #$01
 LBFEC:
     lda (FAULT),Y

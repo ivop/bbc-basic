@@ -40,15 +40,18 @@ zpFACCMD  = zp + $34    ; Floating Point Accumulator, MANTISSA
 zpFACCMG  = zp + $35    ; Floating Point Accumulator, ROUNDING
 zpCLEN    = zp + $36    ; Length of string buffer
 zpWORK    = zp + $37    ; General work area, 2 bytes for now, probably 4
-zp39 = zp + $39
-zp3A = zp + $3a
-zp3B = zp + $3b
-zp3C = zp + $3c
-zp3D = zp + $3d
-zp3E = zp + $3e
-zp3F = zp + $3f
-zp40 = zp + $40
-zp41 = zp + $41
+
+; WORK+x seem to match Cmos, not Basic128 (is one off (!))
+zp38 = zp + $38 ; WORK+1    ok.
+zp39 = zp + $39 ; WORK+2
+zp3A = zp + $3a ; WORK+3
+zp3B = zp + $3b ; WORK+4
+zp3C = zp + $3c ; WORK+5
+zp3D = zp + $3d ; WORK+6    ok.
+zp3E = zp + $3e ; WORK+7    ok.
+zp3F = zp + $3f ; WORK+8    ok.
+zp40 = zp + $40 ; WORK+9
+zp41 = zp + $41 ; WORK+10
 zp42 = zp + $42
 zp43 = zp + $43
 zp44 = zp + $44
