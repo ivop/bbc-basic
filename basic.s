@@ -906,7 +906,7 @@ L858C:
     cmp #$3A
     beq L85A2
     lda zpLINE+1
-    cmp #$07+(ws/256)
+    cmp #>BUFFER
     bne L859F
     jmp L8AF6
 
@@ -1857,9 +1857,9 @@ L8AF3:
 ; IMMEDIATE LOOP
 ; ==============
 L8AF6:
-    ldy #$07+(ws/256)
+    ldy #>BUFFER
     sty zpLINE+1          ; PtrA=$0700 - input buffer
-    ldy #$00
+    ldy #<BUFFER
     sty zpLINE
     lda #<LB433
     sta zpERRORLH          ; ON ERROR OFF
@@ -1979,8 +1979,8 @@ L8B87:
     cmp #tknELSE
     beq L8B7D         ; If 'ELSE', jump to skip to end of line
     lda zpLINE+1
-    cmp #(ws+$0700)/256
-    beq L8B41; Program in command buffer, jump back to immediate loop
+    cmp #>BUFFER
+    beq L8B41       ; Program in command buffer, jump back to immediate loop
     jsr LINO
     bne L8BA3         ; Check for end of program, step past <cr>
 
@@ -4383,7 +4383,7 @@ FORR:
     beq SECEND
 
     lda zpLINE+1
-    cmp #$07+(ws/256)
+    cmp #>BUFFER
     beq LEAVER
 
 LINO:
@@ -9437,7 +9437,7 @@ LB3C5:
     stx zp38
     sty zp37
     ldx zpLINE+1
-    cpx #$07+(ws/256)
+    cpx #>BUFFER
     beq LB401
     ldx zpLINE
 LB3D9:
@@ -10822,8 +10822,8 @@ LBBFC:
 ; --------------------------------
 LBC02:
     jsr LB558         ; Print character
-    ldy #$00
-    lda #$07+(ws/256)     ; $AAYY=input buffer at $0700
+    ldy #<BUFFER
+    lda #>BUFFER
 
 LBC09:
     sty zp37
@@ -10962,7 +10962,7 @@ LBC88:
 LBC8D:
     sty zp3B
     jsr LBC2D
-    ldy #$07+(ws/256)
+    ldy #>BUFFER
     sty zp3C
     ldy #$00
     lda #$0D

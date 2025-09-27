@@ -122,4 +122,4 @@ STRACC  = ws + $0600
 
 ; BASIC Line Input Buffer
 
-BUFFER  = $0700
+BUFFER  = ws + $0700
