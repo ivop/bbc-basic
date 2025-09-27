@@ -10526,7 +10526,7 @@ LBA2B:
     ldx #$04
 LBA2D:
     jsr OSBGET
-    sta ws+$046C,X
+    sta FWSA,X
     dex
     bpl LBA2D
     jsr LA3B2
