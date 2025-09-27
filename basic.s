@@ -1007,16 +1007,16 @@ L8620:
     cpx #$1A
     bcs L8673         ; Opcode $1A+ have arguments
 L862B:
-    lda ws+$0440
+    lda PC
     sta zp37          ; Get P% low byte
     sty zp39
     ldx zpBYTESM
     cpx #$04          ; Offset assembly (opt>3)
-    ldx ws+$0441
+    ldx PC+1
     stx zp38          ; Get P% high byte
     bcc L8643         ; No offset assembly
-    lda ws+$043C
-    ldx ws+$043D      ; Get O%
+    lda VARL_O
+    ldx VARL_O+1      ; Get O%
 L8643:
     sta zp3A
     stx zp3B          ; Store destination pointer
@@ -1033,14 +1033,14 @@ L8650:
     lda ws+$0600,Y    ; Get EQU byte
 L865B:
     sta (zp3A),Y      ; Store byte
-    inc ws+$0440
+    inc PC
     bne L8665         ; Increment P%
-    inc ws+$0441
+    inc PC+1
 L8665:
     bcc L866F
-    inc ws+$043C
+    inc VARL_O
     bne L866F         ; Increment O%
-    inc ws+$043D
+    inc VARL_O+1
 L866F:
     tya
     bne L8650
@@ -1053,10 +1053,10 @@ L8673:
     jsr L8821
     clc
     lda zpIACC
-    sbc ws+$0440
+    sbc PC
     tay
     lda zpIACC+1
-    sbc ws+$0441
+    sbc PC+1
     cpy #$01
     dey
     sbc #$00
@@ -8231,8 +8231,8 @@ LAE30:
     bcs LAE43         ; Jump with bad variable name
     stx zpAECUR
 LAE3A:
-    lda ws+$0440      ; Use P% for undefined variable
-    ldy ws+$0441
+    lda PC      ; Use P% for undefined variable
+    ldy PC+1
     .if version < 3
         jmp LAEEA     ; Jump to return 16-bit integer
     .elseif version >= 3

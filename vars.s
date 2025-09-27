@@ -74,8 +74,10 @@ VARL    = ws + $0400    ; VARiable List of resident integer variables
 VARL_AT = VARL          ; @%
 VARL_A  = VARL + $04    ; A%
 VARL_C  = VARL + $0c    ; C%
+VARL_O  = VARL + $3c    ; O%
+VARL_P  = VARL + $40    ; P%
 
-PC      = VARL + $40    ; P%, program counter
+PC      = VARL_P        ; Program Counter
 
 FWSA    = VARL + $69    ; FP WorkSpace temporary A, 5 bytes
 FWSB    = VARL + $71    ; FP WorkSpace temporary B, 5 bytes
