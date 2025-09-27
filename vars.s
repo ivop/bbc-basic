@@ -86,27 +86,31 @@ FWSB    = VARL + $71    ; FP WorkSpace temporary B, 5 bytes
 FWSC    = VARL + $76    ; FP WorkSpace temporary C, 5 bytes
 FWSD    = VARL + $7b    ; FP WorkSpace temporary D, 5 bytes
 
+VARPTR  = ws + $0480    ; Variable Pointer Table
+
 ; Stacks
+
+FORINL  = ws + $0500
+FORINH  = FORINL + 1
+FORINT  = FORINH + 1
+FORSPL  = FORINT + 1
+FORSPM  = FORSPL + 1
+FORSPN  = FORSPM + 1
+FORSPH  = FORSPN + 1
+FORSPE  = FORSPH + 1
+FORLML  = FORSPE + 1
+FORLMM  = FORLML + 1
+FORLMN  = FORLMM + 1
+FORLMH  = FORLMN + 1
+FORLME  = FORLMH + 1
+FORADL  = FORLME + 1
+FORADH  = FORADL + 1
 
 ;CmosBasic, might be different for BASIC II/III
 ;DOADL   = ws + $0500
 ;DOADH   = DOADL + $14
 ;
 ;FORINL  = ws + $0528
-;FORINH  = FORINL + 1
-;FORINT  = FORINH + 1
-;FORSPL  = FORINT + 1
-;FORSPM  = FORSPL + 1
-;FORSPN  = FORSPM + 1
-;FORSPH  = FORSPN + 1
-;FORSPE  = FORSPH + 1
-;FORLML  = FORSPE + 1
-;FORLMM  = FORLML + 1
-;FORLMN  = FORLMM + 1
-;FORLMH  = FORLMN + 1
-;FORLME  = FORLMH + 1
-;FORADL  = FORLME + 1
-;FORADH  = FORADL + 1
 ;
 ;SUBADL  = ws + $05cc
 ;SUBADH  = SUBADL + $1a

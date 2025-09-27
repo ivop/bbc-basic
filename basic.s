@@ -11068,7 +11068,7 @@ LBD2F:
     ldx #$80
     lda #$00
 LBD33:
-    sta ws+$047F,X
+    sta VARPTR-1,X
     dex
     bne LBD33
     rts               ; Clear dynamic variables list
