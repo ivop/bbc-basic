@@ -789,19 +789,19 @@ L8512:
     lda zpTALLY
     adc #$04
     sta zp3F
-    lda zp38
+    lda zpWORK+1
     jsr LB545
 
-    lda zp37
+    lda zpWORK
     jsr LB562
 
     ldx #$FC
     ldy zp39
     bpl L8536
 
-    ldy zp36
+    ldy zpCLEN
 L8536:
-    sty zp38
+    sty zpWORK+1
     beq L8556
 
     ldy #$00
@@ -828,7 +828,7 @@ L854C:
     jsr LB562
 
     iny
-    dec zp38
+    dec zpWORK+1
     bne L853C
 
 L8556:
@@ -1008,12 +1008,12 @@ L8620:
     bcs L8673         ; Opcode $1A+ have arguments
 L862B:
     lda PC
-    sta zp37          ; Get P% low byte
+    sta zpWORK          ; Get P% low byte
     sty zp39
     ldx zpBYTESM
     cpx #$04          ; Offset assembly (opt>3)
     ldx PC+1
-    stx zp38          ; Get P% high byte
+    stx zpWORK+1          ; Get P% high byte
     bcc L8643         ; No offset assembly
     lda VARL_O
     ldx VARL_O+1      ; Get O%
@@ -1023,7 +1023,7 @@ L8643:
     tya
     beq L8672
     bpl L8650
-    ldy zp36
+    ldy zpCLEN
     beq L8672
 L8650:
     dey
@@ -1273,7 +1273,7 @@ L87CC:
     dec zpCURSOR
     jsr L8821
     pla
-    sta zp37
+    sta zpWORK
     jsr L8A97         ; Skip spaces
     cmp #','
     beq L87DE
@@ -1282,7 +1282,7 @@ L87CC:
 L87DE:
     jsr L8A97         ; Skip spaces
     and #$1F
-    cmp zp37
+    cmp zpWORK
     bne L87ED
     jsr L882C
     jmp L8735
@@ -1293,13 +1293,13 @@ L87ED:
 L87F0:
     jsr L8821
     pla
-    sta zp37
+    sta zpWORK
     jsr L8A97         ; Skip spaces
     cmp #','
     bne L8810
     jsr L8A97         ; Skip spaces
     and #$1F
-    cmp zp37
+    cmp zpWORK
     bne L87ED
     jsr L882C
     lda zpIACC+1
@@ -1382,18 +1382,18 @@ L887C:
     pha
     clc
     tya
-    adc zp37
+    adc zpWORK
     sta zp39
     ldy #$00
     tya
-    adc zp38
+    adc zpWORK+1
     sta zp3A
     pla
-    sta (zp37),Y
+    sta (zpWORK),Y
 L888D:
     iny
     lda (zp39),Y
-    sta (zp37),Y
+    sta (zpWORK),Y
     cmp #$0D
     bne L888D
     rts
@@ -1404,7 +1404,7 @@ L8897:
     sty zp3E
 L889D:
     iny
-    lda (zp37),Y
+    lda (zpWORK),Y
     .if version < 3
         cmp #'9'+1
         bcs L88DA
@@ -1449,14 +1449,14 @@ L88DA:
     dey
     lda #$8D
     jsr L887C
-    lda zp37
+    lda zpWORK
     adc #$02
     sta zp39
-    lda zp38
+    lda zpWORK+1
     adc #$00
     sta zp3A
 L88EC:
-    lda (zp37),Y
+    lda (zpWORK),Y
     sta (zp39),Y
     dey
     bne L88EC
@@ -1464,12 +1464,12 @@ L88EC:
 L88F5:
     lda zp3E
     ora #$40
-    sta (zp37),Y
+    sta (zpWORK),Y
     dey
     lda zp3D
     and #$3F
     ora #$40
-    sta (zp37),Y
+    sta (zpWORK),Y
     dey
     lda zp3D
     and #$C0
@@ -1482,7 +1482,7 @@ L88F5:
     lsr
     lsr
     eor #$54
-    sta (zp37),Y
+    sta (zpWORK),Y
     jsr L8944         ; Increment $37/8
     jsr L8944         ; Increment $37/8
     jsr L8944         ; Increment $37/8
@@ -1513,17 +1513,17 @@ L893D:
     rts
 
 L8942:
-    lda (zp37),Y
+    lda (zpWORK),Y
 L8944:
-    inc zp37
+    inc zpWORK
     bne L894A
-    inc zp38
+    inc zpWORK+1
 L894A:
     rts
 
 L894B:
     jsr L8944         ; Increment $37/8
-    lda (zp37),Y
+    lda (zpWORK),Y
     rts
 
 ; Tokenise line at $37/8
@@ -1534,7 +1534,7 @@ L8951:
 L8955:
     sty zp3C
 L8957:
-    lda (zp37),Y      ; Get current character
+    lda (zpWORK),Y      ; Get current character
     cmp #$0D
     beq L894A         ; Exit with <cr>
     cmp #$20
@@ -1591,7 +1591,7 @@ L89A3:
     jsr L8897
     bcc L89E9
 L89B5:
-    lda (zp37),Y
+    lda (zpWORK),Y
     jsr L893D
     bcc L89C2
     jsr L8944
@@ -1609,7 +1609,7 @@ L89CB:
 L89D0:
     ldy #$00
 L89D2:
-    lda (zp37),Y
+    lda (zpWORK),Y
     jsr L8926
     bcc L89C2
     jsr L8944
@@ -1640,9 +1640,9 @@ L89FE:
     iny
     lda (zp39),Y
     bmi L8A37
-    cmp (zp37),Y
+    cmp (zpWORK),Y
     beq L89FE
-    lda (zp37),Y
+    lda (zpWORK),Y
     cmp #'.'
     beq L8A18
 L8A0D:
@@ -1671,7 +1671,7 @@ L8A25:
     inc zp3A
 L8A30:
     ldy #$00
-    lda (zp37),Y
+    lda (zpWORK),Y
     jmp L89F8
 
 L8A37:
@@ -1682,7 +1682,7 @@ L8A37:
     dey
     lsr
     bcc L8A48
-    lda (zp37),Y
+    lda (zpWORK),Y
     jsr L8926
     bcs L89D0
 L8A48:
@@ -1717,7 +1717,7 @@ L8A6D:
     pha
     iny
 L8A72:
-    lda (zp37),Y
+    lda (zpWORK),Y
     jsr L8926
     bcc L8A7F
     jsr L8944
@@ -1794,10 +1794,10 @@ X8AC8:
 L8AB6:
     jsr DONE         ; Check end of statement
     lda zpTXTP
-    sta zp38          ; Point $37/8 to PAGE
+    sta zpWORK+1          ; Point $37/8 to PAGE
     lda #$00
-    sta zp37
-    sta (zp37),Y      ; Remove end marker
+    sta zpWORK
+    sta (zpWORK),Y      ; Remove end marker
     jsr LBE6F         ; Check program and set TOP
     bne L8AF3         ; Jump to clear heap and go to immediate mode
 
@@ -1882,9 +1882,9 @@ L8B0B:
     jsr LBD3A
     tay               ; Clear DATA and stacks
     lda zpLINE
-    sta zp37          ; Point $37/8 to program line
+    sta zpWORK          ; Point $37/8 to program line
     lda zpLINE+1
-    sta zp38
+    sta zpWORK+1
     sty zp3B
     sty zpCURSOR
     jsr L8957
@@ -2011,10 +2011,10 @@ L8BA3:
 L8BB1:
     tax               ; Index into dispatch table
     lda L836D-$8E,X
-    sta zp37          ; Get routine address from table
+    sta zpWORK          ; Get routine address from table
     lda L83DF-$8E,X
-    sta zp38
-    jmp (zp37)        ; Jump to routine
+    sta zpWORK+1
+    jmp (zpWORK)        ; Jump to routine
 
 ; Not a command byte, try variable assignment, or =, *, [
 ; -------------------------------------------------------
@@ -2084,13 +2084,13 @@ L8C21:
     beq L8CA2         ; Jump if absolute string $addr
     ldy #$02
     lda (zpIACC),Y
-    cmp zp36
+    cmp zpCLEN
     bcs L8C84
     lda zpFSA
     sta zpIACC+2
     lda zpFSA+1
     sta zpIACC+3
-    lda zp36
+    lda zpCLEN
     cmp #$08
     bcc L8C43
     adc #$07
@@ -2140,7 +2140,7 @@ L8C5F:
     sta (zpIACC),Y
 L8C84:
     ldy #$03
-    lda zp36
+    lda zpCLEN
     sta (zpIACC),Y
     beq L8CA1
     dey
@@ -2154,7 +2154,7 @@ L8C97:
     lda STRACC,Y
     sta (zpIACC+2),Y
     iny
-    cpy zp36
+    cpy zpCLEN
     bne L8C97
 L8CA1:
     rts
@@ -2192,11 +2192,11 @@ L8CC1:
     lda (zpAESTKP),Y
     tax
     beq L8CE5
-    lda (zp37),Y
+    lda (zpWORK),Y
     sbc #$01
     sta zp39
     iny
-    lda (zp37),Y
+    lda (zpWORK),Y
     sbc #$00
     sta zp3A
 L8CDD:
@@ -2209,7 +2209,7 @@ L8CE5:
     lda (zpAESTKP,X)
     ldy #$03
 L8CE9:
-    sta (zp37),Y
+    sta (zpWORK),Y
     jmp LBDDC
 
 L8CEE:
@@ -2221,7 +2221,7 @@ L8CF5:
     iny
     lda (zpAESTKP),Y
     dey
-    sta (zp37),Y
+    sta (zpWORK),Y
     iny
     dex
     bne L8CF5
@@ -2231,7 +2231,7 @@ L8CFF:
 L8D03:
     ldy #$00
     lda (zpAESTKP),Y
-    sta (zp37),Y
+    sta (zpWORK),Y
     .if version < 3
         iny
         cpy zp39
@@ -2243,18 +2243,18 @@ L8D03:
         ldy #$01
     .endif
     lda (zpAESTKP),Y
-    sta (zp37),Y
+    sta (zpWORK),Y
     iny
     lda (zpAESTKP),Y
-    sta (zp37),Y
+    sta (zpWORK),Y
     iny
     lda (zpAESTKP),Y
-    sta (zp37),Y
+    sta (zpWORK),Y
     iny
     cpy zp39
     bcs L8D26
     lda (zpAESTKP),Y
-    sta (zp37),Y
+    sta (zpWORK),Y
     iny
 L8D26:
     tya
@@ -2296,7 +2296,7 @@ L8D59:
     bpl L8D59
     bmi L8D30
 L8D64:
-    lda zp36
+    lda zpCLEN
     jsr OSBPUT
     tax
     beq L8D30
@@ -2401,7 +2401,7 @@ L8DD2:
     jsr FCON         ; Convert numeric value to string
     lda zpPRINTS          ; Get current field width
     sec
-    sbc zp36          ; A=width-stringlength
+    sbc zpCLEN          ; A=width-stringlength
     bcc L8E0E         ; length>width - print it
     beq L8E0E         ; length=width - print it
     tay               ; Otherwise, Y=number of spaces to pad with
@@ -2413,14 +2413,14 @@ L8E08:
 ; Print string in string buffer
 ; -----------------------------
 L8E0E:
-    lda zp36
+    lda zpCLEN
     beq L8DC3         ; Null string, jump back to main loop
     ldy #$00          ; Point to start of string
 L8E14:
     lda STRACC,Y
     jsr LB558         ; Print character from string buffer
     iny
-    cpy zp36
+    cpy zpCLEN
     bne L8E14         ; Increment pointer, loop for full string
     beq L8DC3         ; Jump back for next print item
 
@@ -2710,9 +2710,9 @@ L8F92:
     sta zp3C
 L8F9A:
     lda zpTXTP
-    sta zp38
+    sta zpWORK+1
     lda #$01
-    sta zp37
+    sta zpWORK
     rts
 
 ; RENUMBER [linenume [,linenum]]
@@ -2726,11 +2726,11 @@ L8FA3:
 ; Build up table of line numbers
 L8FB1:
     ldy #$00
-    lda (zp37),Y
+    lda (zpWORK),Y
     bmi L8FE7         ; Line.hi>$7F, end of program
     sta (zp3B),Y
     iny
-    lda (zp37),Y
+    lda (zpWORK),Y
     sta (zp3B),Y
     sec
     tya
@@ -2791,13 +2791,13 @@ X8FE7:
     jsr L8F9A
 L8FEA:
     ldy #$00
-    lda (zp37),Y
+    lda (zpWORK),Y
     bmi L900D
     lda zp3A
-    sta (zp37),Y
+    sta (zpWORK),Y
     lda zp39
     iny
-    sta (zp37),Y
+    sta (zpWORK),Y
     clc
     lda zpIACC
     adc zp39
@@ -2853,7 +2853,7 @@ L903D:
     jsr L8F92
 L9043:
     ldy #$00
-    lda (zp37),Y
+    lda (zpWORK),Y
     bmi L9082
     lda (zp3B),Y
     iny
@@ -2862,17 +2862,17 @@ L9043:
     lda (zp3B),Y
     cmp zpIACC
     bne L9071
-    lda (zp37),Y
+    lda (zpWORK),Y
     sta zp3D
     dey
-    lda (zp37),Y
+    lda (zpWORK),Y
     sta zp3E
     ldy zpCURSOR
     dey
     lda zpLINE
-    sta zp37
+    sta zpWORK
     lda zpLINE+1
-    sta zp38
+    sta zpWORK+1
     jsr L88F5
 L906D:
     ldy zpCURSOR
@@ -2910,11 +2910,11 @@ L9082:
     beq L906D
 L909F:
     iny
-    lda (zp37),Y
-    adc zp37
-    sta zp37
+    lda (zpWORK),Y
+    adc zpWORK
+    sta zpWORK
     bcc L90AB
-    inc zp38
+    inc zpWORK+1
     clc
 L90AB:
     rts
@@ -3009,10 +3009,10 @@ L912F:
     clc
 L913C:
     sbc #$00
-    sta zp37
+    sta zpWORK
     txa
     sbc #$00
-    sta zp38
+    sta zpWORK+1
     ldx #$05
     stx zp3F
     ldx zpCURSOR
@@ -3029,7 +3029,7 @@ L915E:
     dec zp3F
     iny
     inx
-    lda (zp37),Y
+    lda (zpWORK),Y
     cmp #'('
     beq L916B
 L9168:
@@ -3096,9 +3096,9 @@ L91B7:
     inc zpIACC+1
 L91D2:
     lda zpFSA+1
-    sta zp38
+    sta zpWORK+1
     lda zpFSA
-    sta zp37
+    sta zpWORK
     clc
     adc zpIACC
     tay
@@ -3111,22 +3111,22 @@ L91D2:
     bcs L9218
     sty zpFSA
     stx zpFSA+1
-    lda zp37
+    lda zpWORK
     adc zpPRINTF
     tay
     lda #$00
-    sta zp37
+    sta zpWORK
     bcc L91FC
-    inc zp38
+    inc zpWORK+1
 L91FC:
-    sta (zp37),Y
+    sta (zpWORK),Y
     iny
     bne L9203
-    inc zp38
+    inc zpWORK+1
 L9203:
     cpy zpFSA
     bne L91FC
-    cpx zp38
+    cpx zpWORK+1
     bne L91FC
 L920B:
     jsr L8A97
@@ -3538,9 +3538,9 @@ L93FD:
     pla
     jsr OSWRCH        ; Send PLOT action
     jsr LBE0B         ; Pop integer to temporary store at $37/8
-    lda zp37
+    lda zpWORK
     jsr OSWRCH        ; Send first coordinate to OSWRCH
-    lda zp38
+    lda zpWORK+1
     jsr OSWRCH
     jsr L9456         ; Send IntA to OSWRCH, second coordinate
     lda zpIACC+1
@@ -3595,7 +3595,7 @@ L9456:
 ;
 L945B:
     ldy #$01
-    lda (zp37),Y      ; Get PROC/FN character
+    lda (zpWORK),Y      ; Get PROC/FN character
     ldy #$F6          ; Point to PROC list start
     cmp #tknPROC
     beq L946F         ; If PROC, jump to scan list
@@ -3608,7 +3608,7 @@ L945B:
 ;
 L9469:
     ldy #$01
-    lda (zp37),Y      ; Get first character of variable
+    lda (zpWORK),Y      ; Get first character of variable
     asl
     tay               ; Double it to index into index list
 
@@ -3641,7 +3641,7 @@ L9495:
     lda (zp3A),Y
     beq L94B3
 L949A:
-    cmp (zp37),Y
+    cmp (zpWORK),Y
     bne L94B3
     cpy zp39
     bne L9495
@@ -3680,7 +3680,7 @@ L94CF:
     lda (zp3C),Y
     beq L9479
 L94D4:
-    cmp (zp37),Y
+    cmp (zpWORK),Y
     bne L9479
     cpy zp39
     bne L94CF
@@ -3698,7 +3698,7 @@ L94E1:
 
 L94ED:
     ldy #$01
-    lda (zp37),Y
+    lda (zpWORK),Y
     tax
     lda #$F6
     cpx #$F2
@@ -3707,7 +3707,7 @@ L94ED:
     bne L9501
 L94FC:
     ldy #$01
-    lda (zp37),Y
+    lda (zpWORK),Y
     asl
 L9501:
     sta zp3A
@@ -3736,7 +3736,7 @@ L9516:
     beq L9558
 L9527:
     iny
-    lda (zp37),Y
+    lda (zpWORK),Y
     sta (zpFSA),Y
     cpy zp39
     bne L9527
@@ -3779,7 +3779,7 @@ L9558:
 L9559:
     ldy #$01
 L955B:
-    lda (zp37),Y
+    lda (zpWORK),Y
     cmp #$30
     bcc L9579
     cmp #$40
@@ -3902,15 +3902,15 @@ L95FF:
     clc
 L960E:
     sbc #$00
-    sta zp37
+    sta zpWORK
     bcs L9615
     dex
 L9615:
-    stx zp38
+    stx zpWORK+1
     ldx zpAECUR
     ldy #$01
 L961B:
-    lda (zp37),Y
+    lda (zpWORK),Y
     cmp #$41
     bcs L962D
     cmp #$30
@@ -3945,7 +3945,7 @@ L9641:
     iny
     inx
     iny
-    lda (zp37),Y
+    lda (zpWORK),Y
     dey
 L9654:
     sty zp39
@@ -4019,7 +4019,7 @@ L96AF:
     sty zp39
     iny
     dec zpIACC+2
-    lda (zp37),Y
+    lda (zpWORK),Y
     cmp #'('
     beq L96C9
     jsr L9469
@@ -4082,18 +4082,18 @@ L96FF:
     jsr LBE0D
     ldy zp3C
     pla
-    sta zp38
+    sta zpWORK+1
     pla
-    sta zp37
+    sta zpWORK
     pha
-    lda zp38
+    lda zpWORK+1
     pha
     jsr L97BA
     sty zpIACC+3
-    lda (zp37),Y
+    lda (zpWORK),Y
     sta zp3F
     iny
-    lda (zp37),Y
+    lda (zpWORK),Y
     sta zp40
     lda zpIACC
     adc zp39
@@ -4104,7 +4104,7 @@ L96FF:
     jsr L9236
     ldy #$00
     sec
-    lda (zp37),Y
+    lda (zpWORK),Y
     sbc zpIACC+3
     cmp #$03
     bcs L96FF
@@ -4112,9 +4112,9 @@ L96FF:
     jsr LAE56
     jsr L92F0
     pla
-    sta zp38
+    sta zpWORK+1
     pla
-    sta zp37
+    sta zpWORK
     ldx #$39
     jsr LBE0D
     ldy zp3C
@@ -4131,9 +4131,9 @@ L976C:
     jsr LAE56
     jsr L92F0
     pla
-    sta zp38
+    sta zpWORK+1
     pla
-    sta zp37
+    sta zpWORK
     ldy #$01
     jsr L97BA
 L977D:
@@ -4166,10 +4166,10 @@ L97A3:
     inc zpIACC+1
     clc
 L97AD:
-    lda zp37
+    lda zpWORK
     adc zpIACC
     sta zpIACC
-    lda zp38
+    lda zpWORK+1
     adc zpIACC+1
     sta zpIACC+1
     rts
@@ -4181,10 +4181,10 @@ L97BA:
     ora zpIACC+3
     bne L97D1
     lda zpIACC
-    cmp (zp37),Y
+    cmp (zpWORK),Y
     iny
     lda zpIACC+1
-    sbc (zp37),Y
+    sbc (zpWORK),Y
     bcs L97D1
     iny
     rts
@@ -4522,10 +4522,10 @@ L9948:
     lda zp3F,X
     beq L9948
 L994F:
-    stx zp37
+    stx zpWORK
     lda zpPRINTS
     beq L9960
-    sbc zp37
+    sbc zpWORK
     beq L9960
     .if version < 3
         tay
@@ -4536,7 +4536,7 @@ L995A:
     .elseif version >= 3
         tax
         jsr LB580
-        ldx zp37
+        ldx zpWORK
     .endif
 L9960:
     lda zp3F,X
@@ -4611,9 +4611,9 @@ L99BE:
     tay
     jsr L92F0
     pla
-    sta zp38
+    sta zpWORK+1
     eor zpIACC+3
-    sta zp37
+    sta zpWORK
     jsr LAD71
     ldx #$39
     jsr LBE0D
@@ -4793,14 +4793,14 @@ L9AE7:
     jsr L9C42
     tay
     bne L9A9A
-    stx zp37
-    ldx zp36
+    stx zpWORK
+    ldx zpCLEN
     .if version < 3 || (version == 3 && minorversion < 10)
         ldy #$00
     .endif
     lda (zpAESTKP),Y
     sta zp39
-    cmp zp36
+    cmp zpCLEN
     bcs L9AFF
     tax
 L9AFF:
@@ -4819,11 +4819,11 @@ L9B03:
     bne L9B15
 L9B11:
     lda zp39
-    cmp zp36
+    cmp zpCLEN
 L9B15:
     php
     jsr LBDDC
-    ldx zp37
+    ldx zpWORK
     plp
     rts
 
@@ -5038,14 +5038,14 @@ L9C15:
     tay
     bne L9C88         ; string + number, jump to 'Type mismatch' error
     clc
-    stx zp37
+    stx zpWORK
     ldy #$00
     lda (zpAESTKP),Y      ; Get stacked string length
-    adc zp36
+    adc zpCLEN
     bcs L9C03         ; If added string length >255, jump to error
     tax
     pha
-    ldy zp36          ; Save new string length
+    ldy zpCLEN          ; Save new string length
 L9C2D:
     lda STRACC-1,Y
     sta STRACC-1,X    ; Move current string up in string buffer
@@ -5054,8 +5054,8 @@ L9C2D:
     bne L9C2D
     jsr LBDCB         ; Unstack string to start of string buffer
     pla
-    sta zp36
-    ldx zp37          ; Set new string length
+    sta zpCLEN
+    ldx zpWORK          ; Set new string length
     tya
     beq L9C45         ; Set type=string, jump to check for more + or -
 
@@ -5263,7 +5263,7 @@ L9D69:
     jsr LBDEA
     pla
     eor zpIACC+3
-    sta zp37
+    sta zpWORK
     jsr LAD71
     ldy #$00
     ldx #$00
@@ -5298,7 +5298,7 @@ L9DA6:
     bne L9D8B
     sty zp3D
     stx zp3E
-    lda zp37
+    lda zpWORK
     php
 
 L9DBB:
@@ -5358,7 +5358,7 @@ L9DE5:
 ; -----------
 L9E01:
     jsr L99BE         ; Ensure current value is integer
-    lda zp38
+    lda zpWORK+1
     php
     jmp L9DBB         ; Jump to MOD routine
 
@@ -5370,7 +5370,7 @@ L9E0A:
     rol zp3A
     rol zp3B          ; Multiply IntA by 2
     rol zp3C
-    bit zp37
+    bit zpWORK
     php
     ldx #$39
     jmp L9DBD         ; Jump to DIV routine
@@ -5521,7 +5521,7 @@ FCON:
     bcc L9EE8         ; If <3, ok - use it
     ldx #$00          ; If invalid, $00 for General format
 L9EE8:
-    stx zp37          ; Store format type
+    stx zpWORK          ; Store format type
     lda VARL_AT+1
     beq L9EF5         ; If digits=0, jump to check format
     cmp #$0A
@@ -5536,10 +5536,10 @@ L9EF5:
 L9EF9:
     lda #$0A          ; Otherwise, default to ten digits
 L9EFB:
-    sta zp38
+    sta zpWORK+1
     sta zpFDIGS          ; Store digit length
     lda #$00
-    sta zp36
+    sta zpCLEN
     sta zp49          ; Set initial output length to 0, initial exponent to 0
     bit zpPRINTF
     bmi FCONHX         ; Jump for hex conversion if $15.b7 set
@@ -5549,7 +5549,7 @@ L9EFB:
 L9F0F:
     jsr LA1DA
     bne L9EC8         ; Get -1/0/+1 sign, jump if not zero to output nonzero number
-    lda zp37
+    lda zpWORK
     bne L9F1D         ; If not General format, output fixed or exponential zero
     lda #'0'
     jmp LA066         ; Store single '0' into string buffer and return
@@ -5582,26 +5582,26 @@ L9F39:
     sta zpTYPE
     jsr LA385         ; Copy FloatA to FloatTemp at $27/$046C
     lda zpFDIGS
-    sta zp38          ; Get number of digits
-    ldx zp37          ; Get print format
+    sta zpWORK+1          ; Get number of digits
+    ldx zpWORK          ; Get print format
     cpx #$02
     bne L9F5C         ; Not fixed format, jump to do exponent/general
     adc zp49
     bmi L9FA0
-    sta zp38
+    sta zpWORK+1
     cmp #$0B
     bcc L9F5C
     lda #$0A
-    sta zp38
+    sta zpWORK+1
     lda #$00
-    sta zp37
+    sta zpWORK
 L9F5C:
     jsr LA686         ; Clear FloatA
     lda #$A0
     sta zp31
     lda #$83
     sta zp30
-    ldx zp38
+    ldx zpWORK+1
     beq L9F71
 L9F6B:
     jsr LA24D         ; FloatA=FloatA/10
@@ -5628,7 +5628,7 @@ L9F92:
     lda zp31
     cmp #$A0
     bcs L9F20
-    lda zp38
+    lda zpWORK+1
     bne L9FAD
 
 ; Output zero in Exponent or Fixed format
@@ -5641,15 +5641,15 @@ L9FA0:
     lda #$00
     sta zp49
     lda zpFDIGS
-    sta zp38
-    inc zp38
+    sta zpWORK+1
+    inc zpWORK+1
 L9FAD:
     lda #$01
-    cmp zp37
+    cmp zpWORK
     beq L9FE6
     ldy zp49
     bmi L9FC3
-    cpy zp38
+    cpy zpWORK+1
     bcs L9FE6
     lda #$00
     sta zp49
@@ -5657,7 +5657,7 @@ L9FAD:
     tya
     bne L9FE6
 L9FC3:
-    lda zp37
+    lda zpWORK
     cmp #$02
     beq L9FCF
     lda #$01
@@ -5686,14 +5686,14 @@ L9FE8:
     lda #$2E
     jsr LA066
 L9FF4:
-    dec zp38
+    dec zpWORK+1
     bne L9FE8
-    ldy zp37
+    ldy zpWORK
     dey
     beq LA015
     dey
     beq LA011
-    ldy zp36
+    ldy zpCLEN
 LA002:
     dey
     lda STRACC,Y
@@ -5703,7 +5703,7 @@ LA002:
     beq LA00F
     iny
 LA00F:
-    sty zp36
+    sty zpCLEN
 LA011:
     lda zp49
     beq LA03F
@@ -5719,7 +5719,7 @@ LA015:
     sbc zp49          ; Negate
 LA028:
     jsr LA052
-    lda zp37
+    lda zpWORK
     beq LA03F
     lda #$20
     ldy zp49
@@ -5766,10 +5766,10 @@ LA064:
 ; --------------------------------
 LA066:
     stx zp3B
-    ldx zp36
+    ldx zpCLEN
     sta STRACC,X    ; Store character
     ldx zp3B
-    inc zp36
+    inc zpCLEN
     rts               ; Increment string length
 
 LA072:
@@ -7691,8 +7691,8 @@ LABE9:
     .elseif version >= 3
         bne LAC2C
     .endif
-    inc zp36
-    ldy zp36          ; Increment string length to add a <cr>
+    inc zpCLEN
+    ldy zpCLEN          ; Increment string length to add a <cr>
     lda #$0D
     sta STRACC-1,Y    ; Put in terminating <cr>
     jsr LBDB2         ; Stack the string
@@ -7709,12 +7709,12 @@ LABE9:
     ldx zpAESTKP+1          ; YX=>stackbottom (wrong way around)
     iny               ; Step over length byte
     sty zpAELINE          ; PTRB=>stacked string
-    sty zp37          ; GPTR=>stacked string
+    sty zpWORK          ; GPTR=>stacked string
     bne LAC0F
     inx               ; Inc high byte if next page
 LAC0F:
     stx zpAELINE+1
-    stx zp38          ; PTRB and GPTR high bytes
+    stx zpWORK+1          ; PTRB and GPTR high bytes
     ldy #$FF
     sty zp3B
     iny
@@ -7747,7 +7747,7 @@ LAC2F:
         bne LAC2C
     .endif
 LAC34:
-    ldy zp36
+    ldy zpCLEN
     lda #$00
     sta STRACC,Y
     lda zpAELINE
@@ -7826,7 +7826,7 @@ LAC9E:
     .elseif version >= 3
         bne XAC81
     .endif
-    lda zp36
+    lda zpCLEN
     beq LACC4
     lda STRACC
 LACAA:
@@ -8018,25 +8018,25 @@ LAD1A:
     stx zpIACC+3
     clc
     adc zpAESTKP
-    sta zp37
+    sta zpWORK
     tya
     adc zpAESTKP+1
-    sta zp38
+    sta zpWORK+1
     lda (zpAESTKP),Y
     sec
     sbc zpIACC+3
     bcc LAD52
-    sbc zp36
+    sbc zpCLEN
     bcc LAD52
     adc #$00
     sta zpIACC+1
     jsr LBDDC
 LAD3C:
     ldy #$00
-    ldx zp36
+    ldx zpCLEN
     beq LAD4D
 LAD42:
-    lda (zp37),Y
+    lda (zpWORK),Y
     cmp STRACC,Y
     bne LAD59
     iny
@@ -8061,9 +8061,9 @@ LAD59:
     inc zpIACC
     dec zpIACC+1
     beq LAD55
-    inc zp37
+    inc zpWORK
     bne LAD3C
-    inc zp38
+    inc zpWORK+1
     bne LAD3C
 LAD67:
     jmp L8C0E
@@ -8138,7 +8138,7 @@ LADC5:
     .elseif version >= 3
 LADC8:
         dex
-        stx zp36
+        stx zpCLEN
         sty zpAECUR
         lda #$00
         rts
@@ -8168,7 +8168,7 @@ LADCC:
     .if version < 3
 LADE1:
         dex
-        stx zp36
+        stx zpCLEN
         sty zpAECUR
         lda #$00
         rts
@@ -8368,7 +8368,7 @@ XAEC9:
 XAECC:
         jsr LADEC
         bne XAEC9
-        lda zp36
+        lda zpCLEN
     
 ; Return 8-bit integer
 ; --------------------
@@ -8470,7 +8470,7 @@ LAECE:
 LAED1:
         jsr LADEC
         bne LAECE
-        lda zp36
+        lda zpCLEN
 
 ; Return 8-bit integer
 ; --------------------
@@ -8745,7 +8745,7 @@ LAFBF:
 LAFC2:
     sta STRACC
     lda #$01
-    sta zp36
+    sta zpCLEN
     lda #$00
     rts
 
@@ -8762,9 +8762,9 @@ LAFCC:
     jsr L92F0
     jsr LBDCB
     lda zpIACC
-    cmp zp36
+    cmp zpCLEN
     bcs LAFEB
-    sta zp36
+    sta zpCLEN
 LAFEB:
     lda #$00
     rts
@@ -8781,14 +8781,14 @@ LAFEE:
     jsr LAE56
     jsr L92F0
     jsr LBDCB
-    lda zp36
+    lda zpCLEN
     sec
     sbc zpIACC
     bcc LB023
     beq LB025
     tax
     lda zpIACC
-    sta zp36
+    sta zpCLEN
     beq LB025
     ldy #$00
 LB017:
@@ -8812,7 +8812,7 @@ LB026:
     beq LAFC2
 LB02E:
     lda #$00
-    sta zp36
+    sta zpCLEN
     rts
 
 LB033:
@@ -8853,7 +8853,7 @@ LB061:
     tay
     clc
     beq LB06F
-    sbc zp36
+    sbc zpCLEN
     bcs LB02E
     dey
     tya
@@ -8861,7 +8861,7 @@ LB06F:
     sta zpIACC+2
     tax
     ldy #$00
-    lda zp36
+    lda zpCLEN
     sec
     sbc zpIACC+2
     cmp zpIACC
@@ -8877,7 +8877,7 @@ LB083:
     inx
     cpy zpIACC
     bne LB083
-    sty zp36
+    sty zpCLEN
     lda #$00
     rts
 
@@ -8900,7 +8900,7 @@ LB0A1:
     sta zpPRINTF          ; Get format back
     lda VARL_AT+3
     bne LB0B9         ; Top byte of @%, STR$ uses @%
-    sta zp37          ; Store 'General format'
+    sta zpWORK          ; Store 'General format'
     jsr L9EF9         ; Convert using general format
     lda #$00
     rts               ; Return string
@@ -8922,7 +8922,7 @@ LB0C2:
     jsr LAE56
     bne LB0BF
     jsr LBDEA
-    ldy zp36
+    ldy zpCLEN
     beq LB0F5
     lda zpIACC
     beq LB0F8
@@ -8936,17 +8936,17 @@ LB0E1:
     inx
     iny
     beq LB0FB
-    cpx zp36
+    cpx zpCLEN
     bcc LB0E1
     dec zpIACC
     bne LB0DF
-    sty zp36
+    sty zpCLEN
 LB0F5:
     lda #$00
     rts
 
 LB0F8:
-    sta zp36
+    sta zpCLEN
     rts
 
 LB0FB:
@@ -9019,7 +9019,7 @@ LB158:
     iny
     inx
     lda (zp3C),Y
-    cmp (zp37),Y
+    cmp (zpWORK),Y
     bne LB12D
     cpy zp39
     bne LB158
@@ -9099,10 +9099,10 @@ LB1C8:
     clc
 LB1CA:
     sbc #$01
-    sta zp37
+    sta zpWORK
     tya
     sbc #$00
-    sta zp38          ; $37/8=>PROC token
+    sta zpWORK+1          ; $37/8=>PROC token
     ldy #$02
     jsr L955B         ; Check name is valid
     cpy #$02
@@ -9386,18 +9386,18 @@ LB384:
     beq LB3A7
     ldy #$03
     lda (zpIACC),Y
-    sta zp36
+    sta zpCLEN
     beq LB3A6
     ldy #$01
     lda (zpIACC),Y
-    sta zp38
+    sta zpWORK+1
     dey
     lda (zpIACC),Y
-    sta zp37
-    ldy zp36
+    sta zpWORK
+    ldy zpCLEN
 LB39D:
     dey
-    lda (zp37),Y
+    lda (zpWORK),Y
     sta STRACC,Y
     tya
     bne LB39D
@@ -9418,7 +9418,7 @@ LB3AD:
     bne LB3AD
     tya
 LB3BA:
-    sty zp36
+    sty zpCLEN
     rts
 
 ; =CHR$ numeric
@@ -9434,8 +9434,8 @@ LB3C5:
     sty zpERL
     sty zpERL+1
     ldx zpTXTP
-    stx zp38
-    sty zp37
+    stx zpWORK+1
+    sty zpWORK
     ldx zpLINE+1
     cpx #>BUFFER
     beq LB401
@@ -9444,9 +9444,9 @@ LB3D9:
     jsr L8942
     cmp #$0D
     bne LB3F9
-    cpx zp37
+    cpx zpWORK
     lda zpLINE+1
-    sbc zp38
+    sbc zpWORK+1
     bcc LB401
     jsr L8942
     ora #$00
@@ -9456,9 +9456,9 @@ LB3D9:
     sta zpERL
     jsr L8942
 LB3F9:
-    cpx zp37
+    cpx zpWORK
     lda zpLINE+1
-    sbc zp38
+    sbc zpWORK+1
     bcs LB3D9
 LB401:
     rts
@@ -9622,7 +9622,7 @@ LB484:
 LB48F:
     .ifdef MOS_BBC
         pla
-        sta zp37,X    ; Pop bytes into control block
+        sta zpWORK,X    ; Pop bytes into control block
         dex
         bpl LB48F
         tya           ; Y=OSWORD number
@@ -9662,18 +9662,18 @@ LB4B7:
 LB4C6:
     ldy #$00
     lda zpIACC
-    sta (zp37),Y      ; Store byte 1
+    sta (zpWORK),Y      ; Store byte 1
     lda zp39
     beq LB4DF         ; Exit if size=0, byte
     lda zpIACC+1
     iny
-    sta (zp37),Y      ; Store byte 2
+    sta (zpWORK),Y      ; Store byte 2
     lda zpIACC+2
     iny
-    sta (zp37),Y      ; Store byte 3
+    sta (zpWORK),Y      ; Store byte 3
     lda zpIACC+3
     iny
-    sta (zp37),Y      ; Store byte 4
+    sta (zpWORK),Y      ; Store byte 4
 LB4DF:
     rts
 
@@ -9687,7 +9687,7 @@ LB4E0:
 LB4E9:
     ldy #$00          ; Store 5-byte float
     lda zp30
-    sta (zp37),Y
+    sta (zpWORK),Y
     iny               ; exponent
     lda zp2E
     and #$80
@@ -9695,25 +9695,25 @@ LB4E9:
     lda zp31
     and #$7F          ; Unpack mantissa 1
     ora zp2E
-    sta (zp37),Y      ; sign + mantissa 1
+    sta (zpWORK),Y      ; sign + mantissa 1
     iny
     lda zp32
-    sta (zp37),Y      ; mantissa 2
+    sta (zpWORK),Y      ; mantissa 2
     iny
     lda zp33
-    sta (zp37),Y      ; mantissa 3
+    sta (zpWORK),Y      ; mantissa 3
     iny
     lda zp34
-    sta (zp37),Y      ; mantissa 4
+    sta (zpWORK),Y      ; mantissa 4
     rts
 
 LB500:
 LB50E:
-    sta zp37
+    sta zpWORK
     cmp #$80
     bcc LB558
     lda #<L8071
-    sta zp38          ; Point to token table
+    sta zpWORK+1          ; Point to token table
     lda #>L8071
     sta zp39
     sty zp3A
@@ -9721,15 +9721,15 @@ LB51E:
     ldy #$00
 LB520:
     iny
-    lda (zp38),Y
+    lda (zpWORK+1),Y
     bpl LB520
-    cmp zp37
+    cmp zpWORK
     beq LB536
     iny
     tya
     sec
-    adc zp38
-    sta zp38
+    adc zpWORK+1
+    sta zpWORK+1
     bcc LB51E
     inc zp39
     bcs LB51E
@@ -9737,7 +9737,7 @@ LB520:
 LB536:
     ldy #$00
 LB538:
-    lda (zp38),Y
+    lda (zpWORK+1),Y
     bmi LB542
     jsr LB558
     iny
@@ -10022,12 +10022,12 @@ LB6D7:
     lda (zpIACC),Y
     adc FORSPL-$f,X
     sta (zpIACC),Y
-    sta zp37
+    sta zpWORK
     iny
     lda (zpIACC),Y
     adc FORSPM-$f,X
     sta (zpIACC),Y
-    sta zp38
+    sta zpWORK+1
     iny
     lda (zpIACC),Y
     adc FORSPN-$f,X
@@ -10038,20 +10038,20 @@ LB6D7:
     adc FORSPH-$f,X
     sta (zpIACC),Y
     tay
-    lda zp37
+    lda zpWORK
     sec
     sbc FORLML-$f,X
-    sta zp37
-    lda zp38
+    sta zpWORK
+    lda zpWORK+1
     sbc FORLMM-$f,X
-    sta zp38
+    sta zpWORK+1
     lda zp39
     sbc FORLMN-$f,X
     sta zp39
     tya
     sbc FORLMH-$f,X
-    ora zp37
-    ora zp38
+    ora zpWORK
+    ora zpWORK+1
     ora zp39
     beq LB741
     tya
@@ -10092,9 +10092,9 @@ LB766:
     sta zpARGP+1
     jsr LA500
     lda zpIACC
-    sta zp37
+    sta zpWORK
     lda zpIACC+1
-    sta zp38
+    sta zpWORK+1
     jsr LB4E9
     lda zpFORSTP
     sta zpTYPE
@@ -10155,9 +10155,9 @@ LB7C4:
     ldy zpFORSTP
     cpy #$96
     bcs LB7B0
-    lda zp37
+    lda zpWORK
     sta FORINL,Y
-    lda zp38
+    lda zpWORK+1
     sta FORINH,Y
     lda zp39
     sta FORINT,Y
@@ -10499,7 +10499,7 @@ LB9DA:
     lda zpTYPE
     bne LB9C4
     jsr OSBGET
-    sta zp36
+    sta zpCLEN
     tax
     beq LBA13
 LBA0A:
@@ -10598,7 +10598,7 @@ LBA99:
     jsr LB558
 LBAA2:
     jsr LBBFC         ; Call MOS to input line, set COUNT=0
-    sty zp36
+    sty zpCLEN
     asl zpCOEFP
     clc
     ror zpCOEFP
@@ -10826,8 +10826,8 @@ LBC02:
     lda #>BUFFER
 
 LBC09:
-    sty zp37
-    sta zp38          ; $37/8=>input buffer
+    sty zpWORK
+    sta zpWORK+1          ; $37/8=>input buffer
 
 ; Manually implement RDLINE (OSWORD 0)
 ; ------------------------------------
@@ -10857,7 +10857,7 @@ LDC03:
         beq LDBE4
      
 LDC0B:
-        sta (zp37),Y      ; Store character
+        sta (zpWORK),Y      ; Store character
         cmp #$0D
         beq LBC25     ; Return - finish
         cpy #$EE
@@ -10902,41 +10902,41 @@ LBC2D:
     bcs LBC80
     lda zp3D
     sbc #$02
-    sta zp37
+    sta zpWORK
     sta zp3D
     sta zpTOP
     lda zp3E
     sbc #$00
-    sta zp38
+    sta zpWORK+1
     sta zpTOP+1
     sta zp3E
     ldy #$03
-    lda (zp37),Y
+    lda (zpWORK),Y
     clc
-    adc zp37
-    sta zp37
+    adc zpWORK
+    sta zpWORK
     bcc LBC53
-    inc zp38
+    inc zpWORK+1
 LBC53:
     ldy #$00
 LBC55:
-    lda (zp37),Y
+    lda (zpWORK),Y
     sta (zpTOP),Y
     cmp #$0D
     beq LBC66
 LBC5D:
     iny
     bne LBC55
-    inc zp38
+    inc zpWORK+1
     inc zpTOP+1
     bne LBC55
 LBC66:
     iny
     bne LBC6D
-    inc zp38
+    inc zpWORK+1
     inc zpTOP+1
 LBC6D:
-    lda (zp37),Y
+    lda (zpWORK),Y
     sta (zpTOP),Y
     bmi LBC7C
     jsr LBC81
@@ -10953,9 +10953,9 @@ LBC81:
     iny
     bne LBC88
     inc zpTOP+1
-    inc zp38
+    inc zpWORK+1
 LBC88:
-    lda (zp37),Y
+    lda (zpWORK),Y
     sta (zpTOP),Y
     rts
 
@@ -10982,9 +10982,9 @@ LBC9E:
     lda zpTOP+1
     sta zp3A
     jsr LBE92
-    sta zp37
+    sta zpWORK
     lda zpTOP+1
-    sta zp38
+    sta zpWORK+1
     dey
     lda zpHIMEM
     cmp zpTOP
@@ -11005,11 +11005,11 @@ LBC9E:
 
 LBCD6:
     lda (zp39),Y
-    sta (zp37),Y
+    sta (zpWORK),Y
     tya
     bne LBCE1
     dec zp3A
-    dec zp38
+    dec zpWORK+1
 LBCE1:
     dey
     tya
@@ -11156,9 +11156,9 @@ LBD99:
 LBDB2:
     clc
     lda zpAESTKP
-    sbc zp36          ; stackbot=stackbot-length-1
+    sbc zpCLEN          ; stackbot=stackbot-length-1
     jsr LBE2E         ; Check enough space
-    ldy zp36
+    ldy zpCLEN
     beq LBDC6         ; Zero length, just stack length
 LBDBE:
     lda STRACC-1,Y
@@ -11166,7 +11166,7 @@ LBDBE:
     dey
     bne LBDBE         ; Loop for all characters
 LBDC6:
-    lda zp36
+    lda zpCLEN
     sta (zpAESTKP),Y      ; Copy string length
     rts
 
@@ -11175,7 +11175,7 @@ LBDC6:
 LBDCB:
     ldy #$00
     lda (zpAESTKP),Y      ; Get stacked string length
-    sta zp36
+    sta zpCLEN
     beq LBDDC
     tay               ; If zero length, just unstack length
 LBDD4:
@@ -11359,11 +11359,11 @@ LBE9E:
 ; ------------------------------------------------------
 LBEB2:
     lda #<STRACC
-    sta zp37
+    sta zpWORK
     lda #>STRACC
-    sta zp38
+    sta zpWORK+1
 LBEBA:
-    ldy zp36
+    ldy zpCLEN
     lda #$0D
     sta STRACC,Y
     rts
@@ -11382,18 +11382,18 @@ LBEC2:
 ; Embedded star command
 ; ---------------------
 cmdStar:
-        stx zp37
-        sty zp38      ; $37/8=>cr-string
+        stx zpWORK
+        sty zpWORK+1      ; $37/8=>cr-string
 cmdStar1:
         ldy #$FF
 cmdStarLp1:
         iny
-        lda (zp37),Y
+        lda (zpWORK),Y
         cmp #'*'
         beq cmdStarLp1    ; Skip leading stars
         ldx #0
 cmdStarLp2:
-        lda (zp37),Y
+        lda (zpWORK),Y
         sta $0100,X       ; Copy string onto stack
         iny
         inx
@@ -11739,9 +11739,9 @@ LBFC3:
 ; =================
 LBFCF:
     pla
-    sta zp37
+    sta zpWORK
     pla
-    sta zp38          ; Pop return address to pointer
+    sta zpWORK+1          ; Pop return address to pointer
     ldy #$00
     beq LBFDC         ; Jump into loop
 LBFD9:
@@ -11749,7 +11749,7 @@ LBFD9:
 LBFDC:
     jsr L894B
     bpl LBFD9         ; Update pointer, get character, loop if b7=0
-    jmp (zp37)        ; Jump back to program
+    jmp (zpWORK)        ; Jump back to program
 
 ; REPORT
 ; ======
