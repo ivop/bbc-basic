@@ -1042,10 +1042,10 @@ L8673:
     bcs L86B7
     jsr L8821
     clc
-    lda zp2A
+    lda zpIACC
     sbc ws+$0440
     tay
-    lda zp2B
+    lda zpIACC+1
     sbc ws+$0441
     cpy #$01
     dey
@@ -1074,7 +1074,7 @@ L8691:
 L86A5:
     tay
 L86A6:
-    sty zp2A
+    sty zpIACC
 L86A8:
     ldy #$02
     jmp L862B
@@ -1099,7 +1099,7 @@ L86B7:
 L86C5:
     jsr L8821
 L86C8:
-    lda zp2B
+    lda zpIACC+1
     beq L86A8
 L86CC:
     brk
@@ -1175,7 +1175,7 @@ L872F:
 L8735:
     jsr L8832
 L8738:
-    lda zp2B
+    lda zpIACC+1
     bne L872F
     jmp L86A8
 
@@ -1292,7 +1292,7 @@ L87F0:
     cmp zp37
     bne L87ED
     jsr L882C
-    lda zp2B
+    lda zpIACC+1
     beq L8810         ; High byte=0, continue
     jmp L86CC         ; value>255, jump to Byte error
 
@@ -1302,7 +1302,7 @@ L8810:
 L8813:
     bne L883A
     jsr L8821
-    lda zp2A
+    lda zpIACC
     sta zpBYTESM
     ldy #$00
     jmp L862B
@@ -2024,7 +2024,7 @@ L8BBF:
     jsr L9841         ; Check for and step past '='
     jsr L94FC         ; Create new variable
     ldx #$05          ; X=$05 = float
-    cpx zp2C
+    cpx zpIACC+2
     bne L8BDF         ; Jump if dest. not a float
     inx               ; X=$06
 L8BDF:
@@ -2069,17 +2069,17 @@ L8C0E:
 L8C1E:
     jsr LBDEA         ; Unstack integer (address of data)
 L8C21:
-    lda zp2C
+    lda zpIACC+2
     cmp #$80
     beq L8CA2         ; Jump if absolute string $addr
     ldy #$02
-    lda (zp2A),Y
+    lda (zpIACC),Y
     cmp zp36
     bcs L8C84
     lda zpFSA
-    sta zp2C
+    sta zpIACC+2
     lda zpFSA+1
-    sta zp2D
+    sta zpIACC+3
     lda zp36
     cmp #$08
     bcc L8C43
@@ -2090,20 +2090,20 @@ L8C43:
     clc
     pha
     tax
-    lda (zp2A),Y
+    lda (zpIACC),Y
     ldy #$00
-    adc (zp2A),Y
+    adc (zpIACC),Y
     eor zpFSA
     bne L8C5F
     iny
-    adc (zp2A),Y
+    adc (zpIACC),Y
     eor zpFSA+1
     bne L8C5F
-    sta zp2D
+    sta zpIACC+3
     txa
     iny
     sec
-    sbc (zp2A),Y
+    sbc (zpIACC),Y
     tax
 L8C5F:
     txa
@@ -2120,29 +2120,29 @@ L8C5F:
     stx zpFSA+1
     pla
     ldy #$02
-    sta (zp2A),Y
+    sta (zpIACC),Y
     dey
-    lda zp2D
+    lda zpIACC+3
     beq L8C84
-    sta (zp2A),Y
+    sta (zpIACC),Y
     dey
-    lda zp2C
-    sta (zp2A),Y
+    lda zpIACC+2
+    sta (zpIACC),Y
 L8C84:
     ldy #$03
     lda zp36
-    sta (zp2A),Y
+    sta (zpIACC),Y
     beq L8CA1
     dey
     dey
-    lda (zp2A),Y
-    sta zp2D
+    lda (zpIACC),Y
+    sta zpIACC+3
     dey
-    lda (zp2A),Y
-    sta zp2C
+    lda (zpIACC),Y
+    sta zpIACC+2
 L8C97:
     lda ws+$0600,Y
-    sta (zp2C),Y
+    sta (zpIACC+2),Y
     iny
     cpy zp36
     bne L8C97
@@ -2155,12 +2155,12 @@ L8CA2:
     beq L8CB4
 L8CA9:
     lda ws+$0600,Y
-    sta (zp2A),Y
+    sta (zpIACC),Y
     dey
     bne L8CA9
     lda ws+$0600
 L8CB4:
-    sta (zp2A),Y
+    sta (zpIACC),Y
     rts
 
 L8CB7:
@@ -2272,7 +2272,7 @@ L8D30:
     bmi L8D57
     ldx #$03
 L8D4D:
-    lda zp2A,X
+    lda zpIACC,X
     jsr OSBPUT
     dex
     bpl L8D4D
@@ -2424,7 +2424,7 @@ L8E21:
 L8E24:
     cmp #','
     bne L8E21         ; No comma, jump to TAB(x)
-    lda zp2A
+    lda zpIACC
     pha               ; Save X
     jsr LAE56
     jsr L92F0
@@ -2434,7 +2434,7 @@ L8E24:
     .ifdef MOS_ATOM
         lda #$1E
         jsr OSWRCH    ; Home cursor
-        ldy zp2A
+        ldy zpIACC
         beq XADDC     ; Y=0, no movement needed
         lda #$0A
 XADD6:
@@ -2470,7 +2470,7 @@ L8E40:
     jsr L8A8C
     cmp #')'
     bne L8E24
-    lda zp2A
+    lda zpIACC
     sbc zpTALLY
     beq L8E6A
     .if version < 3
@@ -2485,9 +2485,9 @@ L8E58:
     jsr L92E3
 L8E5B:
     .if version < 3
-        ldy zp2A
+        ldy zpIACC
     .elseif version >= 3
-        ldx zp2A
+        ldx zpIACC
     .endif
     beq L8E6A
 L8E5F:
@@ -2595,13 +2595,13 @@ L8EE0:
     beq L8F1B
     ldy ws+$06FF
     iny
-    lda zp2A
+    lda zpIACC
     sta ws+$0600,Y
     iny
-    lda zp2B
+    lda zpIACC+1
     sta ws+$0600,Y
     iny
-    lda zp2C
+    lda zpIACC+2
     sta ws+$0600,Y
     inc ws+$0600
     jmp L8EE0
@@ -2628,7 +2628,7 @@ L8F1E:
     .if .def TARGET_C64
         jmp $ff9b
     .else
-        jmp (zp2A)    ; Jump to address in IntA
+        jmp (zpIACC)    ; Jump to address in IntA
     .endif
 
 
@@ -2647,9 +2647,9 @@ L8F31:
     jsr L97DF
     bcc L8F2E
     jsr DONE
-    lda zp2A
+    lda zpIACC
     sta zp39
-    lda zp2B
+    lda zpIACC+1
     sta zp3A
     jsr LBDEA
 L8F53:
@@ -2657,9 +2657,9 @@ L8F53:
     jsr TSTBRK
     jsr L9222
     lda zp39
-    cmp zp2A
+    cmp zpIACC
     lda zp3A
-    sbc zp2B
+    sbc zpIACC+1
     bcs L8F53
     jmp L8AF3
 
@@ -2683,9 +2683,9 @@ L8F69:
     cmp #$2C
     bne L8F8D
     jsr L97DF
-    lda zp2B
+    lda zpIACC+1
     bne L8FDF
-    lda zp2A
+    lda zpIACC
     beq L8FDF
     inc zpCURSOR
 L8F8D:
@@ -2789,7 +2789,7 @@ L8FEA:
     iny
     sta (zp37),Y
     clc
-    lda zp2A
+    lda zpIACC
     adc zp39
     sta zp39
     lda #$00
@@ -2847,10 +2847,10 @@ L9043:
     bmi L9082
     lda (zp3B),Y
     iny
-    cmp zp2B
+    cmp zpIACC+1
     bne L9071
     lda (zp3B),Y
-    cmp zp2A
+    cmp zpIACC
     bne L9071
     lda (zp37),Y
     sta zp3D
@@ -2891,10 +2891,10 @@ L9082:
     .endif
     iny
     lda (zpLINE),Y
-    sta zp2B
+    sta zpIACC+1
     iny
     lda (zpLINE),Y
-    sta zp2A
+    sta zpIACC
     jsr L991F         ; Print in decimal
     jsr LBC25         ; Print newline
     beq L906D
@@ -2913,7 +2913,7 @@ L90AB:
 ; ===========================
 L90AC:
     jsr L8F69
-    lda zp2A
+    lda zpIACC
     pha
     jsr LBDEA
 L90B5:
@@ -2928,10 +2928,10 @@ L90B5:
     pla
     pha
     clc
-    adc zp2A
-    sta zp2A
+    adc zpIACC
+    sta zpIACC
     bcc L90B5
-    inc zp2B
+    inc zpIACC+1
     bpl L90B5
 L90D9:
     jmp L8AF3
@@ -2947,28 +2947,28 @@ L90DF:
     jsr LBD94
     jsr L92DD
     jsr L9222
-    lda zp2D
-    ora zp2C
+    lda zpIACC+3
+    ora zpIACC+2
     bne L9127
     clc
-    lda zp2A
+    lda zpIACC
     adc zpFSA
     tay
-    lda zp2B
+    lda zpIACC+1
     adc zpFSA+1
     tax
     cpy zpAESTKP
     sbc zpAESTKP+1
     bcs L90DC
     lda zpFSA
-    sta zp2A
+    sta zpIACC
     lda zpFSA+1
-    sta zp2B
+    sta zpIACC+1
     sty zpFSA
     stx zpFSA+1
     lda #$00
-    sta zp2C
-    sta zp2D
+    sta zpIACC+2
+    sta zpIACC+3
     lda #$40
     sta zpTYPE
     jsr LB4B4
@@ -3045,18 +3045,18 @@ L916B:
 L9185:
     jsr LBD94
     jsr L8821
-    lda zp2B
+    lda zpIACC+1
     and #$C0
-    ora zp2C
-    ora zp2D
+    ora zpIACC+2
+    ora zpIACC+3
     bne L9127
     jsr L9222
     pla
     tay
-    lda zp2A
+    lda zpIACC
     sta (zpFSA),Y
     iny
-    lda zp2B
+    lda zpIACC+1
     sta (zpFSA),Y
     iny
     tya
@@ -3080,19 +3080,19 @@ L91B7:
     ldy #$00
     lda zpPRINTF
     sta (zpFSA),Y
-    adc zp2A
-    sta zp2A
+    adc zpIACC
+    sta zpIACC
     bcc L91D2
-    inc zp2B
+    inc zpIACC+1
 L91D2:
     lda zpFSA+1
     sta zp38
     lda zpFSA
     sta zp37
     clc
-    adc zp2A
+    adc zpIACC
     tay
-    lda zp2B
+    lda zpIACC+1
     adc zpFSA+1
     bcs L9218
     tax
@@ -3139,13 +3139,13 @@ L9218:
     brk
 
 L9222:
-    inc zp2A
+    inc zpIACC
     bne L9230
-    inc zp2B
+    inc zpIACC+1
     bne L9230
-    inc zp2C
+    inc zpIACC+2
     bne L9230
-    inc zp2D
+    inc zpIACC+3
 L9230:
     rts
 
@@ -3161,20 +3161,20 @@ L923A:
     bcc L924B
     clc
     tya
-    adc zp2A
+    adc zpIACC
     tay
     txa
-    adc zp2B
+    adc zpIACC+1
     tax
     bcs L925A
 L924B:
-    asl zp2A
-    rol zp2B
+    asl zpIACC
+    rol zpIACC+1
     lda zp3F
     ora zp40
     bne L923A
-    sty zp2A
-    stx zp2B
+    sty zpIACC
+    stx zpIACC+1
     rts
 
 L925A:
@@ -3184,10 +3184,10 @@ L925A:
 ; =============
 L925D:
     jsr L92EB         ; Set past '=', evaluate integer
-    lda zp2A
+    lda zpIACC
     sta zpHIMEM
     sta zpAESTKP          ; Set HIMEM and STACK
-    lda zp2B
+    lda zpIACC+1
     sta zpHIMEM+1
     sta zpAESTKP+1
     jmp L8B9B         ; Jump back to execution loop
@@ -3196,10 +3196,10 @@ L925D:
 ; =============
 L926F:
     jsr L92EB         ; Step past '=', evaluate integer
-    lda zp2A
+    lda zpIACC
     sta zpLOMEM
     sta zpFSA          ; Set LOMEM and VAREND
-    lda zp2B
+    lda zpIACC+1
     sta zpLOMEM+1
     sta zpFSA+1
     jsr LBD2F
@@ -3209,7 +3209,7 @@ L926F:
 ; ============
 L9283:
     jsr L92EB         ; Step past '=', evaluate integer
-    lda zp2B
+    lda zpIACC+1
     sta zpTXTP          ; Set PAGE
 L928A:
     jmp L8B9B         ; Jump to execution loop
@@ -3236,9 +3236,9 @@ L9295:
 ; -------------
 L92A5:
     jsr DONE         ; Check end of statement
-    lda zp2A
+    lda zpIACC
     sta zpTRNUM          ; Set trace limit low byte
-    lda zp2B
+    lda zpIACC+1
 L92AE:
     sta zpTRNUM+1
     lda #$FF          ; Set trace limit high byte, set TRACE ON
@@ -3339,7 +3339,7 @@ L9304:
 L931B:
     ldy #$03
     lda #$00          ; Set length to zero
-    sta (zp2A),Y
+    sta (zpIACC),Y
     beq L9341         ; Jump to look for next LOCAL item
 
 ; LOCAL variable [,variable ...]
@@ -3351,7 +3351,7 @@ L9323:
     jsr L9582
     beq L9353         ; Find variable, jump if bad variable name
     jsr LB30D         ; Push value on stack, push variable info on stack
-    ldy zp2C
+    ldy zpIACC+2
     bmi L931B         ; If a string, jump to make zero length
     jsr LBD94         ; 
     lda #$00          ; Set IntA to zero
@@ -3423,7 +3423,7 @@ L9372:
 ; =====================
 L937A:
     jsr L8821
-    lda zp2A
+    lda zpIACC
     pha               ; Evaluate integer
     jsr L92DA         ; Step past comma, evaluate integer
     jsr L9852         ; Update program pointer, check for end of statement
@@ -3464,7 +3464,7 @@ L939A:
         lda zpAESTKP+1
         cmp zpHIMEM+1
         bne L9372
-        ldx zp2A
+        ldx zpIACC
         lda #$85
         jsr OSBYTE    ; Get top of memory if we used this MODE
         cpx zpFSA
@@ -3514,7 +3514,7 @@ L93EA:
 ; ==============================
 L93F1:
     jsr L8821
-    lda zp2A
+    lda zpIACC
     pha               ; Evaluate integer
     jsr L8AAE
     jsr L9B29         ; Step past comma, evaluate expression
@@ -3533,13 +3533,13 @@ L93FD:
     lda zp38
     jsr OSWRCH
     jsr L9456         ; Send IntA to OSWRCH, second coordinate
-    lda zp2B
+    lda zpIACC+1
     jsr OSWRCH        ; Send IntA high byte to OSWRCH
     jmp L8B9B         ; Jump to execution loop
 
 
 L942A:
-    lda zp2B
+    lda zpIACC+1
     jsr OSWRCH        ; Send IntA byte 2 to OSWRCH
 
 ; VDU num[,][;][...]
@@ -3569,7 +3569,7 @@ L9453:
 ; Send IntA to OSWRCH via WRCHV
 ; =============================
 L9456:
-    lda zp2A
+    lda zpIACC
     .if WRCHV != 0
         jmp (WRCHV)
     .elseif WRCHV == 0
@@ -3641,10 +3641,10 @@ L949A:
 L94A7:
     tya
     adc zp3A
-    sta zp2A
+    sta zpIACC
     lda zp3B
     adc #$00
-    sta zp2B
+    sta zpIACC+1
 L94B2:
     rts
 
@@ -3680,10 +3680,10 @@ L94D4:
 L94E1:
     tya
     adc zp3C
-    sta zp2A
+    sta zpIACC
     lda zp3D
     adc #$00
-    sta zp2B
+    sta zpIACC+1
     rts
 
 L94ED:
@@ -3803,7 +3803,7 @@ L9582:
     bcs L95A4
     jsr L94FC
     ldx #$05
-    cpx zp2C
+    cpx zpIACC+2
     bne L957F
     inx
     bne L957F
@@ -3830,10 +3830,10 @@ L95A7:
 L95B0:
     inc zpAECUR
     jsr L92E3
-    lda zp2B
+    lda zpIACC+1
     beq L95BF
     lda #$80
-    sta zp2C
+    sta zpIACC+2
     sec
     rts
 
@@ -3867,22 +3867,22 @@ L95DD:
     bcs L95FF
     asl
     asl
-    sta zp2A
+    sta zpIACC
     lda #$04+(ws/256)
-    sta zp2B
+    sta zpIACC+1
     iny
     lda (zpAELINE),Y
     iny
     cmp #$25
     bne L95FF
     ldx #$04
-    stx zp2C
+    stx zpIACC+2
     lda (zpAELINE),Y
     cmp #'('
     bne L9665
 L95FF:
     ldx #$05
-    stx zp2C
+    stx zpIACC+2
     lda zpAECUR
     clc
     adc zpAELINE
@@ -3931,7 +3931,7 @@ L9641:
     beq L96AF
     cmp #$25
     bne L9654
-    dec zp2C
+    dec zpIACC+2
     iny
     inx
     iny
@@ -3978,21 +3978,21 @@ L9681:
     sty zpAECUR
     jsr LB32C
     jsr L92F0
-    lda zp2B
+    lda zpIACC+1
     pha
-    lda zp2A
+    lda zpIACC
     pha
     jsr L92E3
     clc
     pla
-    adc zp2A
-    sta zp2A
+    adc zpIACC
+    sta zpIACC
     pla
-    adc zp2B
-    sta zp2B
+    adc zpIACC+1
+    sta zpIACC+1
 L969F:
     pla
-    sta zp2C
+    sta zpIACC+2
     clc
     lda #$FF
     rts
@@ -4008,7 +4008,7 @@ L96AF:
     iny
     sty zp39
     iny
-    dec zp2C
+    dec zpIACC+2
     lda (zp37),Y
     cmp #'('
     beq L96C9
@@ -4016,17 +4016,17 @@ L96AF:
     beq L9677
     stx zpAECUR
     lda #$81
-    sta zp2C
+    sta zpIACC+2
     sec
     rts
 
 L96C9:
     inx
     sty zp39
-    dec zp2C
+    dec zpIACC+2
     jsr L96DF
     lda #$81
-    sta zp2C
+    sta zpIACC+2
     sec
     rts
 
@@ -4044,14 +4044,14 @@ L96DF:
     jsr L9469
     beq L96D7
     stx zpAECUR
-    lda zp2C
+    lda zpIACC+2
     pha
-    lda zp2A
+    lda zpIACC
     pha
-    lda zp2B
+    lda zpIACC+1
     pha
     ldy #$00
-    lda (zp2A),Y
+    lda (zpIACC),Y
     cmp #$04
     bcc L976C
     tya
@@ -4061,7 +4061,7 @@ L96DF:
         jsr XAED3
     .endif
     lda #$01
-    sta zp2D
+    sta zpIACC+3
 L96FF:
     jsr LBD94
     jsr L92DD
@@ -4079,23 +4079,23 @@ L96FF:
     lda zp38
     pha
     jsr L97BA
-    sty zp2D
+    sty zpIACC+3
     lda (zp37),Y
     sta zp3F
     iny
     lda (zp37),Y
     sta zp40
-    lda zp2A
+    lda zpIACC
     adc zp39
-    sta zp2A
-    lda zp2B
+    sta zpIACC
+    lda zpIACC+1
     adc zp3A
-    sta zp2B
+    sta zpIACC+1
     jsr L9236
     ldy #$00
     sec
     lda (zp37),Y
-    sbc zp2D
+    sbc zpIACC+3
     cmp #$03
     bcs L96FF
     jsr LBD94
@@ -4111,11 +4111,11 @@ L96FF:
     jsr L97BA
     clc
     lda zp39
-    adc zp2A
-    sta zp2A
+    adc zpIACC
+    sta zpIACC
     lda zp3A
-    adc zp2B
-    sta zp2B
+    adc zpIACC+1
+    sta zpIACC+1
     bcc L977D
 L976C:
     jsr LAE56
@@ -4128,52 +4128,52 @@ L976C:
     jsr L97BA
 L977D:
     pla
-    sta zp2C
+    sta zpIACC+2
     cmp #$05
     bne L979B
-    ldx zp2B
-    lda zp2A
-    asl zp2A
-    rol zp2B
-    asl zp2A
-    rol zp2B
-    adc zp2A
-    sta zp2A
+    ldx zpIACC+1
+    lda zpIACC
+    asl zpIACC
+    rol zpIACC+1
+    asl zpIACC
+    rol zpIACC+1
+    adc zpIACC
+    sta zpIACC
     txa
-    adc zp2B
-    sta zp2B
+    adc zpIACC+1
+    sta zpIACC+1
     bcc L97A3
 L979B:
-    asl zp2A
-    rol zp2B
-    asl zp2A
-    rol zp2B
+    asl zpIACC
+    rol zpIACC+1
+    asl zpIACC
+    rol zpIACC+1
 L97A3:
     tya
-    adc zp2A
-    sta zp2A
+    adc zpIACC
+    sta zpIACC
     bcc L97AD
-    inc zp2B
+    inc zpIACC+1
     clc
 L97AD:
     lda zp37
-    adc zp2A
-    sta zp2A
+    adc zpIACC
+    sta zpIACC
     lda zp38
-    adc zp2B
-    sta zp2B
+    adc zpIACC+1
+    sta zpIACC+1
     rts
 
 L97BA:
-    lda zp2B
+    lda zpIACC+1
     and #$C0
-    ora zp2C
-    ora zp2D
+    ora zpIACC+2
+    ora zpIACC+3
     bne L97D1
-    lda zp2A
+    lda zpIACC
     cmp (zp37),Y
     iny
-    lda zp2B
+    lda zpIACC+1
     sbc (zp37),Y
     bcs L97D1
     iny
@@ -4206,13 +4206,13 @@ L97EB:
     and #$C0
     iny
     eor (zpLINE),Y
-    sta zp2A
+    sta zpIACC
     txa
     asl
     asl
     iny
     eor (zpLINE),Y
-    sta zp2B
+    sta zpIACC+1
     iny
     sty zpCURSOR
     sec
@@ -4429,10 +4429,10 @@ L98C2:
 L98CC:
     ldy zpAECUR
     sty zpCURSOR
-    lda zp2A
-    ora zp2B
-    ora zp2C
-    ora zp2D
+    lda zpIACC
+    ora zpIACC+1
+    ora zpIACC+2
+    ora zpIACC+3
     beq L98F1
     cpx #$8C
     beq L98E1
@@ -4463,9 +4463,9 @@ L9902:
     jmp L8B87
 
 L9905:
-    lda zp2A
+    lda zpIACC
     cmp zpTRNUM
-    lda zp2B
+    lda zpIACC+1
     sbc zpTRNUM+1
     bcs NOTRDE
     lda #$5B
@@ -4491,14 +4491,14 @@ L9929:
     sta zp3F,X
     sec
 L992E:
-    lda zp2A
+    lda zpIACC
     sbc L996B,X       ; Subtract 10s low byte
     tay
-    lda zp2B
+    lda zpIACC+1
     sbc L99B9,X       ; Subtract 10s high byte
     bcc L9943         ; Result<0, no more for this digit
-    sta zp2B
-    sty zp2A          ; Update number
+    sta zpIACC+1
+    sty zpIACC          ; Update number
     inc zp3F,X
     bne L992E
 
@@ -4549,7 +4549,7 @@ L9970:
 L9978:
     ldy #$01
     lda (zp3D),Y
-    cmp zp2B
+    cmp zpIACC+1
     bcs L998E
 L9980:
     ldy #$03
@@ -4563,7 +4563,7 @@ L998E:
     bne L99A4
     ldy #$02
     lda (zp3D),Y
-    cmp zp2A
+    cmp zpIACC
     bcc L9980
     bne L99A4
     tya
@@ -4593,7 +4593,7 @@ L99B9:
 L99BE:
     tay
     jsr L92F0
-    lda zp2D
+    lda zpIACC+3
     pha
     jsr LAD71
     jsr L9E1D
@@ -4602,7 +4602,7 @@ L99BE:
     jsr L92F0
     pla
     sta zp38
-    eor zp2D
+    eor zpIACC+3
     sta zp37
     jsr LAD71
     ldx #$39
@@ -4611,10 +4611,10 @@ L99BE:
     sty zp3E
     sty zp3F
     sty zp40
-    lda zp2D
-    ora zp2A
-    ora zp2B
-    ora zp2C
+    lda zpIACC+3
+    ora zpIACC
+    ora zpIACC+1
+    ora zpIACC+2
     beq ZDIVOR      ; Divide by 0 error
     ldy #$20
 L99F4:
@@ -4638,16 +4638,16 @@ L9A01:
     rol zp40
     sec
     lda zp3D
-    sbc zp2A
+    sbc zpIACC
     pha
     lda zp3E
-    sbc zp2B
+    sbc zpIACC+1
     pha
     lda zp3F
-    sbc zp2C
+    sbc zpIACC+2
     tax
     lda zp40
-    sbc zp2D
+    sbc zpIACC+3
     bcc L9A33
     sta zp40
     stx zp3F
@@ -4741,30 +4741,30 @@ L9A9E:
 
 ; Compare IntA with top of stack
 ; ------------------------------
-    lda zp2D
+    lda zpIACC+3
     eor #$80
-    sta zp2D
+    sta zpIACC+3
     sec
     ldy #$00
     lda (zpAESTKP),Y
-    sbc zp2A
-    sta zp2A
+    sbc zpIACC
+    sta zpIACC
     iny
     lda (zpAESTKP),Y
-    sbc zp2B
-    sta zp2B
+    sbc zpIACC+1
+    sta zpIACC+1
     iny
     lda (zpAESTKP),Y
-    sbc zp2C
-    sta zp2C
+    sbc zpIACC+2
+    sta zpIACC+2
     iny
     lda (zpAESTKP),Y
     ldy #$00
     eor #$80
-    sbc zp2D
-    ora zp2A
-    ora zp2B
-    ora zp2C
+    sbc zpIACC+3
+    ora zpIACC
+    ora zpIACC+1
+    ora zpIACC+2
     php
     clc
     lda #$04
@@ -4859,8 +4859,8 @@ L9B3A:
     ldy #$03          ; If float, convert to integer
 L9B43:
     lda (zpAESTKP),Y
-    ora zp2A,Y        ; OR IntA with top of stack    ; abs,y (!)
-    sta zp2A,Y              ; abs,y (!)
+    ora zpIACC,Y        ; OR IntA with top of stack    ; abs,y (!)
+    sta zpIACC,Y              ; abs,y (!)
     dey
     bpl L9B43         ; Store result in IntA
 L9B4E:
@@ -4877,8 +4877,8 @@ L9B55:
     ldy #$03          ; If float, convert to integer
 L9B5E:
     lda (zpAESTKP),Y
-    eor zp2A,Y        ; EOR IntA with top of stack       ; abs,y (!)
-    sta zp2A,Y                  ; abs,y (!)
+    eor zpIACC,Y        ; EOR IntA with top of stack       ; abs,y (!)
+    sta zpIACC,Y                  ; abs,y (!)
     dey
     bpl L9B5E         ; Store result in IntA
     bmi L9B4E         ; Jump to drop from stack and continue
@@ -4911,8 +4911,8 @@ L9B7A:
     ldy #$03          ; If float, convert to integer
 L9B8A:
     lda (zpAESTKP),Y
-    and zp2A,Y        ; AND IntA with top of stack   ; abs,y (!)
-    sta zp2A,Y              ; abs,y (!)
+    and zpIACC,Y        ; AND IntA with top of stack   ; abs,y (!)
+    sta zpIACC,Y              ; abs,y (!)
     dey
     bpl L9B8A         ; Store result in IntA
     jsr LBDFF         ; Drop integer from stack
@@ -4945,10 +4945,10 @@ L9BA8:
 L9BB4:
     dey               ; Decrement to $FF for equal
 L9BB5:
-    sty zp2A
-    sty zp2B
-    sty zp2C          ; Store 0/-1 in IntA
-    sty zp2D
+    sty zpIACC
+    sty zpIACC+1
+    sty zpIACC+2          ; Store 0/-1 in IntA
+    sty zpIACC+3
     lda #$40
     rts               ; Return type=Int
 
@@ -5076,21 +5076,21 @@ L9C4E:
     ldy #$00
     clc
     lda (zpAESTKP),Y
-    adc zp2A
-    sta zp2A          ; Add top of stack to IntA
+    adc zpIACC
+    sta zpIACC          ; Add top of stack to IntA
     iny
     lda (zpAESTKP),Y
-    adc zp2B
-    sta zp2B          ; Store result in IntA
+    adc zpIACC+1
+    sta zpIACC+1          ; Store result in IntA
     iny
     lda (zpAESTKP),Y
-    adc zp2C
-    sta zp2C
+    adc zpIACC+2
+    sta zpIACC+2
     iny
     lda (zpAESTKP),Y
-    adc zp2D
+    adc zpIACC+3
 L9C77:
-    sta zp2D
+    sta zpIACC+3
     clc
     lda zpAESTKP
     adc #$04
@@ -5146,19 +5146,19 @@ L9CB5:
     sec
     ldy #$00
     lda (zpAESTKP),Y
-    sbc zp2A
-    sta zp2A
+    sbc zpIACC
+    sta zpIACC
     iny
     lda (zpAESTKP),Y
-    sbc zp2B
-    sta zp2B          ; Subtract IntA from top of stack
+    sbc zpIACC+1
+    sta zpIACC+1          ; Subtract IntA from top of stack
     iny
     lda (zpAESTKP),Y
-    sbc zp2C
-    sta zp2C          ; Store in IntA
+    sbc zpIACC+2
+    sta zpIACC+2          ; Store in IntA
     iny
     lda (zpAESTKP),Y
-    sbc zp2D
+    sbc zpIACC+3
     jmp L9C77         ; Jump to pop stack and loop for more + or -
 
 ; Real subtraction
@@ -5219,8 +5219,8 @@ L9D3C:
     tay
     beq L9D39         ; If current value is string, jump to error
     bmi L9D20         ; Jump if current valus ia a float
-    lda zp2D
-    cmp zp2C
+    lda zpIACC+3
+    cmp zpIACC+2
     bne L9D1D
     tay
     beq L9D4E
@@ -5228,31 +5228,31 @@ L9D3C:
     bne L9D1D
 
 L9D4E:
-    eor zp2B
+    eor zpIACC+1
     bmi L9D1D
     jsr L9E1D
     stx zpTYPE
     tay
     beq L9D39
     bmi L9D11
-    lda zp2D
-    cmp zp2C
+    lda zpIACC+3
+    cmp zpIACC+2
     bne L9D0E
     tay
     beq L9D69
     cmp #$FF
     bne L9D0E
 L9D69:
-    eor zp2B
+    eor zpIACC+1
     bmi L9D0E
-    lda zp2D
+    lda zpIACC+3
     pha
     jsr LAD71
     ldx #$39
     jsr LBE44
     jsr LBDEA
     pla
-    eor zp2D
+    eor zpIACC+3
     sta zp37
     jsr LAD71
     ldy #$00
@@ -5266,22 +5266,22 @@ L9D8B:
     bcc L9DA6
     clc
     tya
-    adc zp2A
+    adc zpIACC
     tay
     txa
-    adc zp2B
+    adc zpIACC+1
     tax
     lda zp3F
-    adc zp2C
+    adc zpIACC+2
     sta zp3F
     lda zp40
-    adc zp2D
+    adc zpIACC+3
     sta zp40
 L9DA6:
-    asl zp2A
-    rol zp2B
-    rol zp2C
-    rol zp2D
+    asl zpIACC
+    rol zpIACC+1
+    rol zpIACC+2
+    rol zpIACC+3
     lda zp39
     ora zp3A
 
@@ -5445,7 +5445,7 @@ L9E96:
     ldx #$00
     ldy #$00
 L9E9A:
-    lda zp2A,Y        ; abs,y (!)
+    lda zpIACC,Y        ; abs,y (!)
     pha               ; Expand four bytes into eight digits
     and #$0F
     sta zp3F,X
@@ -5874,16 +5874,16 @@ LA11B:
 
 LA11F:
     lda zp32
-    sta zp2D
+    sta zpIACC+3
     and #$80
     ora zp31
     bne LA0F5
     lda zp35
-    sta zp2A
+    sta zpIACC
     lda zp34
-    sta zp2B
+    sta zpIACC+1
     lda zp33
-    sta zp2C
+    sta zpIACC+2
     lda #$40
     sec
     rts
@@ -6137,19 +6137,19 @@ LA2BE:
     ldx #$00
     stx zp35
     stx zp2F
-    lda zp2D
+    lda zpIACC+3
     bpl LA2CD
     jsr LAD93
     ldx #$FF
 LA2CD:
     stx zp2E
-    lda zp2A
+    lda zpIACC
     sta zp34
-    lda zp2B
+    lda zpIACC+1
     sta zp33
-    lda zp2C
+    lda zpIACC+2
     sta zp32
-    lda zp2D
+    lda zpIACC+3
     sta zp31
     lda #$A0
     sta zp30
@@ -6325,13 +6325,13 @@ LA3E4:
     jsr LA3FE         ; Convert real to integer
 LA3E7:
     lda zp31
-    sta zp2D          ; Copy to Integer Accumulator
+    sta zpIACC+3          ; Copy to Integer Accumulator
     lda zp32
-    sta zp2C
+    sta zpIACC+2
     lda zp33
-    sta zp2B
+    sta zpIACC+1
     lda zp34
-    sta zp2A
+    sta zpIACC
     rts
 
 LA3F8:
@@ -7482,7 +7482,7 @@ FIPOWZ:
 ; ==================================================
 LAB33:
     jsr L92E3         ; Evaluate integer
-    ldx zp2A
+    ldx zpIACC
     lda #$80          ; X=low byte, A=$80 for ADVAL
 ; 
 ; WRONG in original disassembly
@@ -7515,15 +7515,15 @@ LAB41:
         jsr L8AAE
         jsr LAE56
         jsr L92F0
-        lda zp2A
+        lda zpIACC
         pha
-        lda zp2B
+        lda zpIACC+1
         pha
         jsr LBDEA
         pla
-        sta zp2D
+        sta zpIACC+3
         pla
-        sta zp2C
+        sta zpIACC+2
         ldx #$2A
         lda #$09
         jsr OSWORD
@@ -7538,9 +7538,9 @@ XAB5B:
 XAB5E:
         ldx #$03
 XAB60:
-        lda zp2A,X
+        lda zpIACC,X
         eor #$FF
-        sta zp2A,X
+        sta zpIACC,X
         dex
         bpl XAB60
         lda #$40
@@ -7557,7 +7557,7 @@ LAB6D:
         jmp LAED8
     .elseif version >= 3
         jsr LAB76
-        stx zp2A
+        stx zpIACC
         rts
     .endif
 
@@ -7586,12 +7586,12 @@ LAB88:
         jsr LADEC
         beq LABE6
         bmi LAB7F
-        lda zp2D
-        ora zp2C
-        ora zp2B
-        ora zp2A
+        lda zpIACC+3
+        ora zpIACC+2
+        ora zpIACC+1
+        ora zpIACC
         beq LABA5
-        lda zp2D
+        lda zpIACC+3
         bpl LABA0
 LAB9D:
         jmp LACC4
@@ -7657,12 +7657,12 @@ LABCB:
 LABD2:
     jsr L92E3         ; Evaluate integer
     jsr L8F1E         ; Set up registers and call code at IntA
-    sta zp2A
-    stx zp2B          ; Store returned A,X in IntA
-    sty zp2C          ; Store returned Y
+    sta zpIACC
+    stx zpIACC+1          ; Store returned A,X in IntA
+    sty zpIACC+2          ; Store returned Y
     php
     pla
-    sta zp2D          ; Store returned flags in IntA
+    sta zpIACC+3          ; Store returned flags in IntA
     cld               ; Ensure in binary mode on return
     lda #$40
     rts               ; Return INTEGER
@@ -7874,15 +7874,15 @@ LACC4:
     .endif
 LACC6:
     .if version < 3
-        sta zp2A
-        sta zp2B
-        sta zp2C
-        sta zp2D
+        sta zpIACC
+        sta zpIACC+1
+        sta zpIACC+2
+        sta zpIACC+3
     .elseif version >= 3
-        stx zp2A
-        stx zp2B
-        stx zp2C
-        stx zp2D
+        stx zpIACC
+        stx zpIACC+1
+        stx zpIACC+2
+        stx zpIACC+3
     .endif
 LACC8:
     lda #$40
@@ -7907,12 +7907,12 @@ XACAA:
         jsr LADEC
         beq XAC81
         bmi XACA1
-        lda zp2D
-        ora zp2C
-        ora zp2B
-        ora zp2A
+        lda zpIACC+3
+        ora zpIACC+2
+        ora zpIACC+1
+        ora zpIACC
         beq LACC8
-        lda zp2D
+        lda zpIACC+3
         bmi LACC4
 XACBF:
         lda #$01
@@ -7927,13 +7927,13 @@ XAB41:
         jsr L8AAE
         jsr LAE56
         jsr L92F0
-        lda zp2A
+        lda zpIACC
         pha
-        ldx zp2B
+        ldx zpIACC+1
         jsr LBDEA
-        stx zp2D
+        stx zpIACC+3
         pla
-        sta zp2C
+        sta zpIACC+2
         ldx #$2A
         lda #$09
         jsr OSWORD
@@ -7949,9 +7949,9 @@ LACD1:
         jsr L92E3
         ldx #$03
 LACD6:
-        lda zp2A,X
+        lda zpIACC,X
         eor #$FF
-        sta zp2A,X
+        sta zpIACC,X
         dex
         bpl LACD6
         lda #$40
@@ -7978,7 +7978,7 @@ LACE2:
         bne XAC81
     .endif
     lda #$01
-    sta zp2A
+    sta zpIACC
     inc zpAECUR
     cpx #')'
     beq LAD12
@@ -7998,14 +7998,14 @@ LAD06:
     jsr LBDCB
 LAD12:
     ldy #$00
-    ldx zp2A
+    ldx zpIACC
     bne LAD1A
     ldx #$01
 LAD1A:
-    stx zp2A
+    stx zpIACC
     txa
     dex
-    stx zp2D
+    stx zpIACC+3
     clc
     adc zpAESTKP
     sta zp37
@@ -8014,12 +8014,12 @@ LAD1A:
     sta zp38
     lda (zpAESTKP),Y
     sec
-    sbc zp2D
+    sbc zpIACC+3
     bcc LAD52
     sbc zp36
     bcc LAD52
     adc #$00
-    sta zp2B
+    sta zpIACC+1
     jsr LBDDC
 LAD3C:
     ldy #$00
@@ -8033,7 +8033,7 @@ LAD42:
     dex
     bne LAD42
 LAD4D:
-    lda zp2A
+    lda zpIACC
 LAD4F:
     .if version < 3
         jmp LAED8
@@ -8048,8 +8048,8 @@ LAD55:
     beq LAD4F
 
 LAD59:
-    inc zp2A
-    dec zp2B
+    inc zpIACC
+    dec zpIACC+1
     beq LAD55
     inc zp37
     bne LAD3C
@@ -8065,7 +8065,7 @@ LAD6A:
     beq LAD67
     bmi LAD77
 LAD71:
-    bit zp2D
+    bit zpIACC+3
     bmi LAD93
     bpl LADAA
 LAD77:
@@ -8092,17 +8092,17 @@ LAD93:
     sec
     lda #$00
     tay
-    sbc zp2A
-    sta zp2A
+    sbc zpIACC
+    sta zpIACC
     tya
-    sbc zp2B
-    sta zp2B
+    sbc zpIACC+1
+    sta zpIACC+1
     tya
-    sbc zp2C
-    sta zp2C
+    sbc zpIACC+2
+    sta zpIACC+2
     tya
-    sbc zp2D
-    sta zp2D
+    sbc zpIACC+3
+    sta zpIACC+3
 LADAA:
     lda #$40
     rts
@@ -8283,10 +8283,10 @@ LAE61:
 LAE6D:
     .if version < 3
         ldx #$00
-        stx zp2A
-        stx zp2B
-        stx zp2C
-        stx zp2D
+        stx zpIACC
+        stx zpIACC+1
+        stx zpIACC+2
+        stx zpIACC+3
         ldy zpAECUR
     .elseif version >= 3
         jsr LACCD
@@ -8311,10 +8311,10 @@ LAE8D:
     ldx #$03
 LAE93:
     asl
-    rol zp2A
-    rol zp2B
-    rol zp2C
-    rol zp2D
+    rol zpIACC
+    rol zpIACC+1
+    rol zpIACC+2
+    rol zpIACC+3
     dex
     bpl LAE93
     iny
@@ -8368,11 +8368,11 @@ XAED3:
 ; Return 16-bit integer in AY
 ; ---------------------------
 XAED5:
-        sta zp2A
-        sty zp2B      ; Store AY in integer accumulator
+        sta zpIACC
+        sty zpIACC+1      ; Store AY in integer accumulator
         lda #$00
-        sta zp2C
-        sta zp2D      ; Set b16-b31 to 0
+        sta zpIACC+2
+        sta zpIACC+3      ; Set b16-b31 to 0
         lda #$40
         rts           ; Return 'integer'
 
@@ -8482,11 +8482,11 @@ LAEDC:
 ; Return 16-bit integer in AY
 ; ---------------------------
 LAEEA:
-        sta zp2A
-        sty zp2B      ; Store AY in integer accumulator
+        sta zpIACC
+        sty zpIACC+1      ; Store AY in integer accumulator
         lda #$00
-        sta zp2C
-        sta zp2D      ; Set b16-b31 to 0
+        sta zpIACC+2
+        sta zpIACC+3      ; Set b16-b31 to 0
         lda #$40
         rts           ; Return 'integer'
 
@@ -8517,12 +8517,12 @@ LAF0A:
     inc zpAECUR
     jsr LAE56
     jsr L92F0
-    lda zp2D
+    lda zpIACC+3
     bmi LAF3F
-    ora zp2C
-    ora zp2B
+    ora zpIACC+2
+    ora zpIACC+1
     bne LAF24
-    lda zp2A
+    lda zpIACC
     beq LAF6C
     cmp #$01
     beq LAF69
@@ -8556,13 +8556,13 @@ LAF49:
     ldx #$0D
 LAF56:
     lda zp+0,X
-    sta zp2A          ; Copy random number to IntA
+    sta zpIACC          ; Copy random number to IntA
     lda zp+1,X
-    sta zp2B
+    sta zpIACC+1
     lda zp+2,X
-    sta zp2C
+    sta zpIACC+2
     lda zp+3,X
-    sta zp2D
+    sta zpIACC+3
     lda #$40
     rts               ; Return Integer
 
@@ -8669,8 +8669,8 @@ LCF8D:
         bpl LCFAB     ; Key pressed
     .endif
     .ifdef MOS_ATOM
-        lda zp2A
-        ora zp2D
+        lda zpIACC
+        ora zpIACC+3
         beq LCFB4     ; Timeout=0
         ldy #$08      ; $0800 gives 1cs delay
 LCF9A:
@@ -8678,11 +8678,11 @@ LCF9A:
         bne LCF9A
         dey
         bne LCF9A     ; Wait 1cs
-        lda zp2A
+        lda zpIACC
         bne LCFA6
-        dec zp2D      ; Decrement timeout
+        dec zpIACC+3      ; Decrement timeout
 LCFA6:
-        dec zp2A
+        dec zpIACC
         jmp LCF8D     ; Loop to keep waiting
 LCFAB:
     .endif
@@ -8712,8 +8712,8 @@ LCFB7:
     .ifdef MOS_BBC
         lda #$81
 LAFB2:
-        ldx zp2A
-        ldy zp2B
+        ldx zpIACC
+        ldy zpIACC+1
         jmp OSBYTE
     .endif
 
@@ -8751,7 +8751,7 @@ LAFCC:
     jsr LAE56
     jsr L92F0
     jsr LBDCB
-    lda zp2A
+    lda zpIACC
     cmp zp36
     bcs LAFEB
     sta zp36
@@ -8773,11 +8773,11 @@ LAFEE:
     jsr LBDCB
     lda zp36
     sec
-    sbc zp2A
+    sbc zpIACC
     bcc LB023
     beq LB025
     tax
-    lda zp2A
+    lda zpIACC
     sta zp36
     beq LB025
     ldy #$00
@@ -8786,7 +8786,7 @@ LB017:
     sta ws+$0600,Y
     inx
     iny
-    dec zp2A
+    dec zpIACC
     bne LB017
 LB023:
     lda #$00
@@ -8826,10 +8826,10 @@ LB039:
     jsr LBDB2
     inc zpAECUR
     jsr L92DD
-    lda zp2A
+    lda zpIACC
     pha
     lda #$FF
-    sta zp2A
+    sta zpIACC
     inc zpAECUR
     cpx #')'
     beq LB061
@@ -8848,24 +8848,24 @@ LB061:
     dey
     tya
 LB06F:
-    sta zp2C
+    sta zpIACC+2
     tax
     ldy #$00
     lda zp36
     sec
-    sbc zp2C
-    cmp zp2A
+    sbc zpIACC+2
+    cmp zpIACC
     bcs LB07F
-    sta zp2A
+    sta zpIACC
 LB07F:
-    lda zp2A
+    lda zpIACC
     beq LB02E
 LB083:
     lda ws+$0600,X
     sta ws+$0600,Y
     iny
     inx
-    cpy zp2A
+    cpy zpIACC
     bne LB083
     sty zp36
     lda #$00
@@ -8914,9 +8914,9 @@ LB0C2:
     jsr LBDEA
     ldy zp36
     beq LB0F5
-    lda zp2A
+    lda zpIACC
     beq LB0F8
-    dec zp2A
+    dec zpIACC
     beq LB0F5
 LB0DF:
     ldx #$00
@@ -8928,7 +8928,7 @@ LB0E1:
     beq LB0FB
     cpx zp36
     bcc LB0E1
-    dec zp2A
+    dec zpIACC
     bne LB0DF
     sty zp36
 LB0F5:
@@ -9108,10 +9108,10 @@ LB1CA:
 ; -------------------------
 LB1E9:
     ldy #$00
-    lda (zp2A),Y
+    lda (zpIACC),Y
     sta zpLINE          ; Set PtrA to address from FN/PROC infoblock
     iny
-    lda (zp2A),Y
+    lda (zpIACC),Y
     sta zpLINE+1
 LB1F4:
     lda #$00
@@ -9190,11 +9190,11 @@ LB24D:
     sta zpAECUR
     pla
     tax
-    lda zp2C
+    lda zpIACC+2
     pha
-    lda zp2B
+    lda zpIACC+1
     pha
-    lda zp2A
+    lda zpIACC
     pha
     inx
     txa
@@ -9214,7 +9214,7 @@ LB28E:
     jsr L9B29
     jsr LBD90
     lda zpTYPE
-    sta zp2D
+    sta zpIACC+3
     jsr LBD94
     pla
     tax
@@ -9251,13 +9251,13 @@ LB2B5:
 LB2CA:
     jsr LBDEA
     pla
-    sta zp2A
+    sta zpIACC
     pla
-    sta zp2B
+    sta zpIACC+1
     pla
-    sta zp2C
+    sta zpIACC+2
     bmi LB2F9
-    lda zp2D
+    lda zpIACC+3
     beq LB2B5
     sta zpTYPE
     ldx #$37
@@ -9275,7 +9275,7 @@ LB2F3:
     jmp LB303
 
 LB2F9:
-    lda zp2D
+    lda zpIACC+3
     bne LB2B5
     jsr LBDCB
     jsr L8C21
@@ -9289,7 +9289,7 @@ LB303:
 ; Push a value onto the stack
 ; ---------------------------
 LB30D:
-    ldy zp2C
+    ldy zpIACC+2
     .if version < 3
         cpy #$04
         bne LB318
@@ -9312,29 +9312,29 @@ LB329:
     jmp LBD94
 
 LB32C:
-    ldy zp2C
+    ldy zpIACC+2
     bmi LB384
     beq LB34F
     cpy #$05
     beq LB354
     ldy #$03
-    lda (zp2A),Y
-    sta zp2D
+    lda (zpIACC),Y
+    sta zpIACC+3
     dey
-    lda (zp2A),Y
-    sta zp2C
+    lda (zpIACC),Y
+    sta zpIACC+2
     dey
-    lda (zp2A),Y
+    lda (zpIACC),Y
     tax
     dey
-    lda (zp2A),Y
-    sta zp2A
-    stx zp2B
+    lda (zpIACC),Y
+    sta zpIACC
+    stx zpIACC+1
     lda #$40
     rts
 
 LB34F:
-    lda (zp2A),Y
+    lda (zpIACC),Y
     .if version < 3
         jmp LAEEA
     .elseif version >= 3
@@ -9343,19 +9343,19 @@ LB34F:
 
 LB354:
     dey
-    lda (zp2A),Y
+    lda (zpIACC),Y
     sta zp34
     dey
-    lda (zp2A),Y
+    lda (zpIACC),Y
     sta zp33
     dey
-    lda (zp2A),Y
+    lda (zpIACC),Y
     sta zp32
     dey
-    lda (zp2A),Y
+    lda (zpIACC),Y
     sta zp2E
     dey
-    lda (zp2A),Y
+    lda (zpIACC),Y
     sta zp30
     sty zp35
     sty zp2F
@@ -9375,14 +9375,14 @@ LB384:
     cpy #$80
     beq LB3A7
     ldy #$03
-    lda (zp2A),Y
+    lda (zpIACC),Y
     sta zp36
     beq LB3A6
     ldy #$01
-    lda (zp2A),Y
+    lda (zpIACC),Y
     sta zp38
     dey
-    lda (zp2A),Y
+    lda (zpIACC),Y
     sta zp37
     ldy zp36
 LB39D:
@@ -9395,12 +9395,12 @@ LB3A6:
     rts
 
 LB3A7:
-    lda zp2B
+    lda zpIACC+1
     beq LB3C0
 LB3AB:
     ldy #$00
 LB3AD:
-    lda (zp2A),Y
+    lda (zpIACC),Y
     sta ws+$0600,Y
     eor #$0D
     beq LB3BA
@@ -9416,7 +9416,7 @@ LB3BA:
 LB3BD:
     jsr L92E3
 LB3C0:
-    lda zp2A
+    lda zpIACC
     jmp LAFC2
 
 LB3C5:
@@ -9556,9 +9556,9 @@ LB44C:
     ldx #$03          ; Three more to evaluate
 LB451:
     .ifdef MOS_BBC
-        lda zp2A
+        lda zpIACC
         pha
-        lda zp2B
+        lda zpIACC+1
         pha           ; Stack current 16-bit integer
     .endif
     txa
@@ -9570,9 +9570,9 @@ LB451:
     bne LB451         ; Loop to stack this one
     .ifdef MOS_BBC
         jsr L9852     ; Check end of statement
-        lda zp2A
+        lda zpIACC
         sta zp3D      ; Copy current 16-bit integer to end of control block
-        lda zp2B
+        lda zpIACC+1
         sta zp3E
         ldy #$07
         ldx #$05      ; Prepare for OSWORD 7 and 6 more bytes
@@ -9589,7 +9589,7 @@ LB472:
     ldx #$0D          ; 13 more to evaluate
 LB477:
     .ifdef MOS_BBC
-        lda zp2A
+        lda zpIACC
         pha           ; Stack current 8-bit integer
     .endif
     txa
@@ -9602,7 +9602,7 @@ LB477:
 LB484:
     jsr L9852         ; Check end of statement
     .ifdef MOS_BBC
-        lda zp2A
+        lda zpIACC
         sta zp44      ; Copy current 8-bit integer to end of control block
         ldx #$0C
         ldy #$08      ; Prepare for 12 more bytes and OSWORD 8
@@ -9627,7 +9627,7 @@ LB48F:
 LB4A0:
     jsr L8821
     jsr L9852
-    ldy zp2A
+    ldy zpIACC
     dey
     sty zpWIDTHV
     jmp L8B9B
@@ -9651,17 +9651,17 @@ LB4B7:
     jsr LA3E4         ; Convert float to integer
 LB4C6:
     ldy #$00
-    lda zp2A
+    lda zpIACC
     sta (zp37),Y      ; Store byte 1
     lda zp39
     beq LB4DF         ; Exit if size=0, byte
-    lda zp2B
+    lda zpIACC+1
     iny
     sta (zp37),Y      ; Store byte 2
-    lda zp2C
+    lda zpIACC+2
     iny
     sta (zp37),Y      ; Store byte 3
-    lda zp2D
+    lda zpIACC+3
     iny
     sta (zp37),Y      ; Store byte 4
 LB4DF:
@@ -9802,7 +9802,7 @@ LB58A:
     jsr L9B1D
     jsr L984C
     jsr L92EE
-    lda zp2A
+    lda zpIACC
     sta zpLISTPO
     jmp L8AF6
 
@@ -9825,9 +9825,9 @@ LB59C:
     php
     jsr LBD94
     lda #$FF
-    sta zp2A
+    sta zpIACC
     lda #$7F
-    sta zp2B
+    sta zpIACC+1
     plp
     bcc LB5CF
     jsr L8A97
@@ -9845,9 +9845,9 @@ LB5CF:
 LB5D8:
     jsr L97DF
 LB5DB:
-    lda zp2A
+    lda zpIACC
     sta zp31
-    lda zp2B
+    lda zpIACC+1
     sta zp32
     jsr DONE
     jsr LBE6F
@@ -9866,18 +9866,18 @@ LB5FC:
     jsr CLYADP
 LB602:
     lda (zpLINE),Y
-    sta zp2B
+    sta zpIACC+1
     iny
     lda (zpLINE),Y
-    sta zp2A
+    sta zpIACC
     iny
     iny
     sty zpCURSOR
 LB60F:
-    lda zp2A
+    lda zpIACC
     clc
     sbc zp31
-    lda zp2B
+    lda zpIACC+1
     sbc zp32
     bcc LB61D
     jmp L8AF6
@@ -9973,13 +9973,13 @@ LB6A3:
     ldx zpFORSTP
     beq LB68E
 LB6A9:
-    lda zp2A
+    lda zpIACC
     cmp ws+$04F1,X
     bne LB6BE
-    lda zp2B
+    lda zpIACC+1
     cmp ws+$04F2,X
     bne LB6BE
-    lda zp2C
+    lda zpIACC+2
     cmp ws+$04F3,X
     beq LB6D7
 LB6BE:
@@ -10002,31 +10002,31 @@ LB6BE:
 
 LB6D7:
     lda ws+$04F1,X
-    sta zp2A
+    sta zpIACC
     lda ws+$04F2,X
-    sta zp2B
+    sta zpIACC+1
     ldy ws+$04F3,X
     cpy #$05
     beq LB766
     ldy #$00
-    lda (zp2A),Y
+    lda (zpIACC),Y
     adc ws+$04F4,X
-    sta (zp2A),Y
+    sta (zpIACC),Y
     sta zp37
     iny
-    lda (zp2A),Y
+    lda (zpIACC),Y
     adc ws+$04F5,X
-    sta (zp2A),Y
+    sta (zpIACC),Y
     sta zp38
     iny
-    lda (zp2A),Y
+    lda (zpIACC),Y
     adc ws+$04F6,X
-    sta (zp2A),Y
+    sta (zpIACC),Y
     sta zp39
     iny
-    lda (zp2A),Y
+    lda (zpIACC),Y
     adc ws+$04F7,X
-    sta (zp2A),Y
+    sta (zpIACC),Y
     tay
     lda zp37
     sec
@@ -10081,9 +10081,9 @@ LB766:
     lda #$05+(ws/256)
     sta zp4C
     jsr LA500
-    lda zp2A
+    lda zpIACC
     sta zp37
-    lda zp2B
+    lda zpIACC+1
     sta zp38
     jsr LB4E9
     lda zpFORSTP
@@ -10159,13 +10159,13 @@ LB7C4:
     beq LB84F
     jsr L92DD
     ldy zpFORSTP
-    lda zp2A
+    lda zpIACC
     sta ws+$0508,Y
-    lda zp2B
+    lda zpIACC+1
     sta ws+$0509,Y
-    lda zp2C
+    lda zpIACC+2
     sta ws+$050A,Y
-    lda zp2D
+    lda zpIACC+3
     sta ws+$050B,Y
     lda #$01
     .if version < 3
@@ -10181,13 +10181,13 @@ LB7C4:
 LB81F:
     sty zpCURSOR
     ldy zpFORSTP
-    lda zp2A
+    lda zpIACC
     sta ws+$0503,Y
-    lda zp2B
+    lda zpIACC+1
     sta ws+$0504,Y
-    lda zp2C
+    lda zpIACC+2
     sta ws+$0505,Y
-    lda zp2D
+    lda zpIACC+3
     sta ws+$0506,Y
 LB837:
     jsr FORR
@@ -10350,11 +10350,11 @@ LB915:
 LB931:
     txa
     pha               ; Save GOTO/GOSUB token
-    lda zp2B
-    ora zp2C          ; Get IntA
-    ora zp2D
+    lda zpIACC+1
+    ora zpIACC+2          ; Get IntA
+    ora zpIACC+3
     bne LB97D         ; ON >255 - out of range, look for an ELSE
-    ldx zp2A
+    ldx zpIACC
     beq LB97D         ; ON zero - out of range, look for an ELSE
     dex
     beq LB95C         ; Dec. counter, if zero use first destination
@@ -10430,9 +10430,9 @@ LB99A:
     jsr L92F0         ; Evaluate expression, ensure integer
     lda zpAECUR
     sta zpCURSOR          ; Line number low byte
-    lda zp2B
+    lda zpIACC+1
     and #$7F
-    sta zp2B          ; Line number high byte
+    sta zpIACC+1          ; Line number high byte
                       ; Note - this makes goto $8000+10 the same as goto 10
 LB9AF:
     jsr L9970
@@ -10508,7 +10508,7 @@ LBA19:
     ldx #$03
 LBA21:
     jsr OSBGET
-    sta zp2A,X
+    sta zpIACC,X
     dex
     bpl LBA21
     bmi LBA39
@@ -10762,10 +10762,10 @@ LBBB1:
     jsr L92EE
     ldx zpDOSTKP
     beq LBBA6
-    lda zp2A
-    ora zp2B
-    ora zp2C
-    ora zp2D
+    lda zpIACC
+    ora zpIACC+1
+    ora zpIACC+2
+    ora zpIACC+3
     beq LBBCD
     dec zpDOSTKP
     jmp L8B9B
@@ -11014,10 +11014,10 @@ LBCEA:
     bcs LBCD6
     sec
     ldy #$01
-    lda zp2B
+    lda zpIACC+1
     sta (zp3D),Y
     iny
-    lda zp2A
+    lda zpIACC
     sta (zp3D),Y
     iny
     lda zp3F
@@ -11128,16 +11128,16 @@ LBD94:
 LBD99:
     jsr LBE2E
     ldy #$03
-    lda zp2D
+    lda zpIACC+3
     sta (zpAESTKP),Y
     dey
-    lda zp2C
+    lda zpIACC+2
     sta (zpAESTKP),Y
     dey
-    lda zp2B
+    lda zpIACC+1
     sta (zpAESTKP),Y
     dey
-    lda zp2A
+    lda zpIACC
     sta (zpAESTKP),Y
     rts
 
@@ -11189,16 +11189,16 @@ LBDE1:
 LBDEA:
     ldy #$03
     lda (zpAESTKP),Y
-    sta zp2D
+    sta zpIACC+3
     dey               ; Copy to IntA
     lda (zpAESTKP),Y
-    sta zp2C
+    sta zpIACC+2
     dey
     lda (zpAESTKP),Y
-    sta zp2B
+    sta zpIACC+1
     dey
     lda (zpAESTKP),Y
-    sta zp2A
+    sta zpIACC
 LBDFF:
     clc
     lda zpAESTKP
@@ -11252,13 +11252,13 @@ LBE41:
     jmp L8CB7
 
 LBE44:
-    lda zp2A
+    lda zpIACC
     sta zp+0,X
-    lda zp2B
+    lda zpIACC+1
     sta zp+1,X
-    lda zp2C
+    lda zpIACC+2
     sta zp+2,X
-    lda zp2D
+    lda zpIACC+3
     sta zp+3,X
     rts
 
@@ -11590,7 +11590,7 @@ LBF58:
     jsr L92EE
     pla
     tay
-    lda zp2A
+    lda zpIACC
     jsr OSBPUT
     jmp L8B9B         ; Call OSBPUT, jump to execution loop
 
@@ -11676,7 +11676,7 @@ LBF96:
 LBF99:
     jsr LBFA9
     jsr L9852         ; Evaluate #handle, check end of statement
-    ldy zp2A          ; Get handle from IntA
+    ldy zpIACC          ; Get handle from IntA
     .ifdef MOS_ATOM
         jsr OSSHUT         
     .endif
@@ -11708,7 +11708,7 @@ LBFB5:
     .endif
     jsr L92E3         ; Evaluate as integer
 LBFBF:
-    ldy zp2A
+    ldy zpIACC
     tya               ; Get low byte and return
 NULLRET:
     rts
