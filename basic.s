@@ -2630,9 +2630,9 @@ L8F1B:
 ; Call code
 ; ---------
 L8F1E:
-    lda ws+$040C
+    lda VARL_C
     lsr
-    lda ws+$0404      ; Get Carry from C%, A from A%
+    lda VARL_A      ; Get Carry from C%, A from A%
     ldx ws+$0460
     ldy ws+$0464      ; Get X from X%, Y from Y%
     .if .def TARGET_C64

@@ -72,6 +72,8 @@ VARL    = ws + $0400    ; VARiable List of resident integer variables
                         ; 4 bytes each [$0400-$046b] [@A-Z]
 
 VARL_AT = VARL          ; @%
+VARL_A  = VARL + $04    ; A%
+VARL_C  = VARL + $0c    ; C%
 
 PC      = VARL + $40    ; P%, program counter
 
