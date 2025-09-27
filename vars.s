@@ -71,6 +71,8 @@ zp4F = zp + $4f
 VARL    = ws + $0400    ; VARiable List of resident integer variables
                         ; 4 bytes each [$0400-$046b] [@A-Z]
 
+VARL_AT = VARL          ; @%
+
 PC      = VARL + $40    ; P%, program counter
 
 FWSA    = VARL + $69    ; FP WorkSpace temporary A, 5 bytes

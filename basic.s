@@ -345,15 +345,15 @@ copyright_string:
 
     ldx #$00
     stx zpLISTPO          ; Set LISTO to 0
-    stx ws+$0402
-    stx ws+$0403      ; Set @% to $0000xxxx
+    stx VARL_AT+2
+    stx VARL_AT+3      ; Set @% to $0000xxxx
     dex
     stx zpWIDTHV          ; Set WIDTH to $FF
 
     ldx #$0A
-    stx ws+$0400
+    stx VARL_AT
     dex
-    stx ws+$0401      ; Set @% to $0000090A
+    stx VARL_AT+1      ; Set @% to $0000090A
 
     lda #$01
     and zpSEED+4
@@ -2343,12 +2343,12 @@ L8D9A:
 ; Print a comma
 ; -------------
 L8DA6:
-    lda ws+$0400
+    lda VARL_AT
     beq L8DBB         ; If field width zero, no padding needed, jump back into main loop
     lda zpTALLY          ; Get COUNT
 L8DAD:
     beq L8DBB         ; Zero, just started a new line, no padding, jump back into main loop
-    sbc ws+$0400      ; Get COUNT-field width
+    sbc VARL_AT      ; Get COUNT-field width
     bcs L8DAD         ; Loop to reduce until (COUNT MOD fieldwidth)<0
     tay               ; Y=number of spaces to get back to (COUNT MOD width)=zero
 L8DB5:
@@ -2358,7 +2358,7 @@ L8DB5:
 
 L8DBB:
     clc               ; Prepare to print decimal
-    lda ws+$0400
+    lda VARL_AT
     sta zpPRINTS          ; Set current field width from @%
 L8DC1:
     ror zpPRINTF          ; Set hex/dec flag from Carry
@@ -3615,9 +3615,9 @@ L9469:
 ; Scan though linked lists in heap
 ; --------------------------------
 L946F:
-    lda ws+$0400,Y
+    lda VARL,Y
     sta zp3A          ; Get start of linked list
-    lda ws+$0401,Y
+    lda VARL+1,Y
     sta zp3B
 L9479:
     lda zp3B
@@ -5516,13 +5516,13 @@ L9ED1:
 ;           $36=string length
 ;
 FCON:
-    ldx ws+$0402      ; Get format byte
+    ldx VARL_AT+2      ; Get format byte
     cpx #$03
     bcc L9EE8         ; If <3, ok - use it
     ldx #$00          ; If invalid, $00 for General format
 L9EE8:
     stx zp37          ; Store format type
-    lda ws+$0401
+    lda VARL_AT+1
     beq L9EF5         ; If digits=0, jump to check format
     cmp #$0A
     bcs L9EF9         ; If 10+ digits, jump to use 10 digits
@@ -8898,7 +8898,7 @@ LB0A1:
     tay
     pla
     sta zpPRINTF          ; Get format back
-    lda ws+$0403
+    lda VARL_AT+3
     bne LB0B9         ; Top byte of @%, STR$ uses @%
     sta zp37          ; Store 'General format'
     jsr L9EF9         ; Convert using general format
