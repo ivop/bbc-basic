@@ -1,10 +1,20 @@
 ;
-; Source for 6502 BASIC II/III
+; BBC BASIC II/III -- NMOS 6502
 ;
-; BBC BASIC Copyright (C) 1982/1983 Acorn Computer and Roger Wilson
-; Source reconstruction and commentary Copyright (C) J.G.Harston
+; Conversion to mads, labelling, bug fixes, and more comments by
+; Ivo van Poorten, September 2025
 ;
-; Conversion to Mad-Assember (mads) by Ivo van Poorten, September 2025
+; Based on source reconstruction and commentary © 2018 J.G.Harston
+; https://mdfs.net/Software/BBCBasic/BBC/
+;
+; BBC BASIC Copyright © 1982/1983 Acorn Computer and Roger Wilson
+;
+; References used:
+;   Advanced BASIC ROM USer Guide
+;   BBC Micro Compendium
+;   AcornCmosBasic (https://github.com/stardot/AcornCmosBasic)
+;   AcornDmosBasic (https://github.com/stardot/AcornDmosBasic)
+;   AcornBasic128 (github.com/stardot/AcornBasic128)
 ;
 
     opt h-            ; No Atari header
