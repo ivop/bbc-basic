@@ -9984,13 +9984,13 @@ LB6A3:
     beq LB68E
 LB6A9:
     lda zpIACC
-    cmp ws+$04F1,X
+    cmp FORINL-$f,X
     bne LB6BE
     lda zpIACC+1
-    cmp ws+$04F2,X
+    cmp FORINH-$f,X
     bne LB6BE
     lda zpIACC+2
-    cmp ws+$04F3,X
+    cmp FORINT-$f,X
     beq LB6D7
 LB6BE:
     txa
@@ -10011,60 +10011,60 @@ LB6BE:
     brk
 
 LB6D7:
-    lda ws+$04F1,X
+    lda FORINL-$f,X
     sta zpIACC
-    lda ws+$04F2,X
+    lda FORINH-$f,X
     sta zpIACC+1
-    ldy ws+$04F3,X
+    ldy FORINT-$f,X
     cpy #$05
     beq LB766
     ldy #$00
     lda (zpIACC),Y
-    adc ws+$04F4,X
+    adc FORSPL-$f,X
     sta (zpIACC),Y
     sta zp37
     iny
     lda (zpIACC),Y
-    adc ws+$04F5,X
+    adc FORSPM-$f,X
     sta (zpIACC),Y
     sta zp38
     iny
     lda (zpIACC),Y
-    adc ws+$04F6,X
+    adc FORSPN-$f,X
     sta (zpIACC),Y
     sta zp39
     iny
     lda (zpIACC),Y
-    adc ws+$04F7,X
+    adc FORSPH-$f,X
     sta (zpIACC),Y
     tay
     lda zp37
     sec
-    sbc ws+$04F9,X
+    sbc FORLML-$f,X
     sta zp37
     lda zp38
-    sbc ws+$04FA,X
+    sbc FORLMM-$f,X
     sta zp38
     lda zp39
-    sbc ws+$04FB,X
+    sbc FORLMN-$f,X
     sta zp39
     tya
-    sbc ws+$04FC,X
+    sbc FORLMH-$f,X
     ora zp37
     ora zp38
     ora zp39
     beq LB741
     tya
-    eor ws+$04F7,X
-    eor ws+$04FC,X
+    eor FORSPH-$f,X
+    eor FORLMH-$f,X
     bpl LB73F
     bcs LB741
     bcc LB751
 LB73F:
     bcs LB751
 LB741:
-    ldy ws+$04FE,X
-    lda ws+$04FF,X
+    ldy FORADL-$f,X
+    lda FORADH-$f,X
     sty zpLINE
     sta zpLINE+1
     jsr SECUR
@@ -10105,7 +10105,7 @@ LB766:
     sta zp4C
     jsr L9A5F
     beq LB741
-    lda ws+$04F5,X
+    lda FORSPM-$f,X
     bmi LB79D
     bcs LB741
     bcc LB751

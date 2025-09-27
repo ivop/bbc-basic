@@ -90,6 +90,8 @@ VARPTR  = ws + $0480    ; Variable Pointer Table
 
 ; Stacks
 
+; FOR Stack, 15 entries per frame
+
 FORINL  = ws + $0500
 FORINH  = FORINL + 1
 FORINT  = FORINH + 1
