@@ -2633,8 +2633,8 @@ L8F1E:
     lda VARL_C
     lsr
     lda VARL_A      ; Get Carry from C%, A from A%
-    ldx ws+$0460
-    ldy ws+$0464      ; Get X from X%, Y from Y%
+    ldx VARL_X
+    ldy VARL_Y      ; Get X from X%, Y from Y%
     .if .def TARGET_C64
         jmp $ff9b
     .else

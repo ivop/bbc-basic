@@ -76,6 +76,8 @@ VARL_A  = VARL + $04    ; A%
 VARL_C  = VARL + $0c    ; C%
 VARL_O  = VARL + $3c    ; O%
 VARL_P  = VARL + $40    ; P%
+VARL_X  = VARL + $60    ; X%
+VARL_Y  = VARL + $64    ; Y%
 
 PC      = VARL_P        ; Program Counter
 
