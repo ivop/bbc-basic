@@ -1030,7 +1030,7 @@ L8650:
     lda zpOPCODE,Y        ; Get opcode byte   (lda abs,y (!))
     bit zp39
     bpl L865B         ; Opcode - jump to store it
-    lda ws+$0600,Y    ; Get EQU byte
+    lda STRACC,Y    ; Get EQU byte
 L865B:
     sta (zp3A),Y      ; Store byte
     inc PC
@@ -2151,7 +2151,7 @@ L8C84:
     lda (zpIACC),Y
     sta zpIACC+2
 L8C97:
-    lda ws+$0600,Y
+    lda STRACC,Y
     sta (zpIACC+2),Y
     iny
     cpy zp36
@@ -2164,11 +2164,11 @@ L8CA2:
     cpy #$00
     beq L8CB4
 L8CA9:
-    lda ws+$0600,Y
+    lda STRACC,Y
     sta (zpIACC),Y
     dey
     bne L8CA9
-    lda ws+$0600
+    lda STRACC
 L8CB4:
     sta (zpIACC),Y
     rts
@@ -2301,7 +2301,7 @@ L8D64:
     tax
     beq L8D30
 L8D6C:
-    lda ws+$05FF,X
+    lda STRACC-1,X
     jsr OSBPUT
     dex
     bne L8D6C
@@ -2417,7 +2417,7 @@ L8E0E:
     beq L8DC3         ; Null string, jump back to main loop
     ldy #$00          ; Point to start of string
 L8E14:
-    lda ws+$0600,Y
+    lda STRACC,Y
     jsr LB558         ; Print character from string buffer
     iny
     cpy zp36
@@ -2594,7 +2594,7 @@ L8ED2:
     jsr L92EE
     jsr LBD94
     ldy #$00
-    sty ws+$0600
+    sty STRACC
 L8EE0:
     sty ws+$06FF
     jsr L8A8C
@@ -2606,14 +2606,14 @@ L8EE0:
     ldy ws+$06FF
     iny
     lda zpIACC
-    sta ws+$0600,Y
+    sta STRACC,Y
     iny
     lda zpIACC+1
-    sta ws+$0600,Y
+    sta STRACC,Y
     iny
     lda zpIACC+2
-    sta ws+$0600,Y
-    inc ws+$0600
+    sta STRACC,Y
+    inc STRACC
     jmp L8EE0
 
 L8F0C:
@@ -4814,7 +4814,7 @@ L9B03:
     beq L9B11
     iny
     lda (zpAESTKP),Y
-    cmp ws+$05FF,Y
+    cmp STRACC-1,Y
     beq L9B03
     bne L9B15
 L9B11:
@@ -5047,8 +5047,8 @@ L9C15:
     pha
     ldy zp36          ; Save new string length
 L9C2D:
-    lda ws+$05FF,Y
-    sta ws+$05FF,X    ; Move current string up in string buffer
+    lda STRACC-1,Y
+    sta STRACC-1,X    ; Move current string up in string buffer
     dex
     dey
     bne L9C2D
@@ -5696,7 +5696,7 @@ L9FF4:
     ldy zp36
 LA002:
     dey
-    lda ws+$0600,Y
+    lda STRACC,Y
     cmp #'0'
     beq LA002
     cmp #'.'
@@ -5767,7 +5767,7 @@ LA064:
 LA066:
     stx zp3B
     ldx zp36
-    sta ws+$0600,X    ; Store character
+    sta STRACC,X    ; Store character
     ldx zp3B
     inc zp36
     rts               ; Increment string length
@@ -6998,8 +6998,8 @@ LA7F5:
 
 
 LA7F7:
-    sta zp4B          ; $4B/C=>FPTEMP
-    lda #$04+(ws/256)
+    sta zp4B
+    lda #>FWSA          ; MSB the same for all four temp registers
     sta zp4C
     rts
 
@@ -7694,7 +7694,7 @@ LABE9:
     inc zp36
     ldy zp36          ; Increment string length to add a <cr>
     lda #$0D
-    sta ws+$05FF,Y    ; Put in terminating <cr>
+    sta STRACC-1,Y    ; Put in terminating <cr>
     jsr LBDB2         ; Stack the string
                       ; String has to be stacked as otherwise would
                       ;  be overwritten by any string operations
@@ -7749,7 +7749,7 @@ LAC2F:
 LAC34:
     ldy zp36
     lda #$00
-    sta ws+$0600,Y
+    sta STRACC,Y
     lda zpAELINE
     pha
     lda zpAELINE+1
@@ -7828,7 +7828,7 @@ LAC9E:
     .endif
     lda zp36
     beq LACC4
-    lda ws+$0600
+    lda STRACC
 LACAA:
     .if version < 3
         jmp LAED8
@@ -8037,7 +8037,7 @@ LAD3C:
     beq LAD4D
 LAD42:
     lda (zp37),Y
-    cmp ws+$0600,Y
+    cmp STRACC,Y
     bne LAD59
     iny
     dex
@@ -8124,7 +8124,7 @@ LADAD:
     ldx #$00
 LADB6:
     lda (zpAELINE),Y
-    sta ws+$0600,X
+    sta STRACC,X
     iny
     inx
     cmp #$0D
@@ -8154,9 +8154,9 @@ LADCC:
     beq LADE9
     .if version < 3
         iny
-        sta ws+$0600,X
+        sta STRACC,X
     .elseif version >= 3
-        sta ws+$0600,X
+        sta STRACC,X
         iny
     .endif
     inx
@@ -8743,7 +8743,7 @@ LAFB9:
 LAFBF:
     jsr OSRDCH
 LAFC2:
-    sta ws+$0600
+    sta STRACC
     lda #$01
     sta zp36
     lda #$00
@@ -8792,8 +8792,8 @@ LAFEE:
     beq LB025
     ldy #$00
 LB017:
-    lda ws+$0600,X
-    sta ws+$0600,Y
+    lda STRACC,X
+    sta STRACC,Y
     inx
     iny
     dec zpIACC
@@ -8871,8 +8871,8 @@ LB07F:
     lda zpIACC
     beq LB02E
 LB083:
-    lda ws+$0600,X
-    sta ws+$0600,Y
+    lda STRACC,X
+    sta STRACC,Y
     iny
     inx
     cpy zpIACC
@@ -8931,8 +8931,8 @@ LB0C2:
 LB0DF:
     ldx #$00
 LB0E1:
-    lda ws+$0600,X
-    sta ws+$0600,Y
+    lda STRACC,X
+    sta STRACC,Y
     inx
     iny
     beq LB0FB
@@ -9398,7 +9398,7 @@ LB384:
 LB39D:
     dey
     lda (zp37),Y
-    sta ws+$0600,Y
+    sta STRACC,Y
     tya
     bne LB39D
 LB3A6:
@@ -9411,7 +9411,7 @@ LB3AB:
     ldy #$00
 LB3AD:
     lda (zpIACC),Y
-    sta ws+$0600,Y
+    sta STRACC,Y
     eor #$0D
     beq LB3BA
     iny
@@ -10504,7 +10504,7 @@ LB9DA:
     beq LBA13
 LBA0A:
     jsr OSBGET
-    sta ws+$05FF,X
+    sta STRACC-1,X
     dex
     bne LBA0A
 LBA13:
@@ -11161,7 +11161,7 @@ LBDB2:
     ldy zp36
     beq LBDC6         ; Zero length, just stack length
 LBDBE:
-    lda ws+$05FF,Y
+    lda STRACC-1,Y
     sta (zpAESTKP),Y      ; Copy string to stack
     dey
     bne LBDBE         ; Loop for all characters
@@ -11180,7 +11180,7 @@ LBDCB:
     tay               ; If zero length, just unstack length
 LBDD4:
     lda (zpAESTKP),Y
-    sta ws+$05FF,Y    ; Copy string to string buffer
+    sta STRACC-1,Y    ; Copy string to string buffer
     dey
     bne LBDD4         ; Loop for all characters
 LBDDC:
@@ -11365,7 +11365,7 @@ LBEB2:
 LBEBA:
     ldy zp36
     lda #$0D
-    sta ws+$0600,Y
+    sta STRACC,Y
     rts
 
 ; OSCLI string$ - Pass string to OSCLI to execute
@@ -11404,7 +11404,7 @@ cmdStarLp2:
 
     .ifdef MOS_BBC
         ldx #$00
-        ldy #>(ws+$0600)
+        ldy #>(STRACC)
         jsr OS_CLI
         jmp L8B9B     ; Call OSCLI and return to execution loop
     .endif
