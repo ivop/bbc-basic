@@ -3279,7 +3279,7 @@ L92C9:
     .ifdef MOS_BBC
         ldx #$2A
         ldy #$00
-        sty zp2E      ; Point to integer, set 5th byte to 0
+        sty zpFACCS      ; Point to integer, set 5th byte to 0
         lda #$02
         jsr OSWORD    ; Call OSWORD $02 to do TIME=
     .endif
@@ -4703,24 +4703,24 @@ L9A62:
     lda zp3B
     and #$80
     sta zp3B
-    lda zp2E
+    lda zpFACCS
     and #$80
     cmp zp3B
     bne L9A92
     lda zp3D
-    cmp zp30
+    cmp zpFACCX
     bne L9A93
     lda zp3E
-    cmp zp31
+    cmp zpFACCMA
     bne L9A93
     lda zp3F
-    cmp zp32
+    cmp zpFACCMB
     bne L9A93
     lda zp40
-    cmp zp33
+    cmp zpFACCMC
     bne L9A93
     lda zp41
-    cmp zp34
+    cmp zpFACCMD
     bne L9A93
 L9A92:
     rts
@@ -5406,7 +5406,7 @@ L9E35:
     jsr L92FD         ; Ensure current value is a float
     jsr LBD51
     jsr L92FA         ; Stack float, evaluate a real
-    lda zp30
+    lda zpFACCX
     cmp #$87
     bcs L9E88
     jsr LA486
@@ -5492,10 +5492,10 @@ L9EBF:
 L9EC8:
     bpl L9ED1         ; Jump forward if positive
     lda #'-'
-    sta zp2E          ; A='-', clear sign flag
+    sta zpFACCS          ; A='-', clear sign flag
     jsr LA066         ; Add '-' to string buffer
 L9ED1:
-    lda zp30          ; Get exponent
+    lda zpFACCX          ; Get exponent
     cmp #$81
     bcs L9F25         ; If m*2^1 or larger, number>=1, jump to output it
     jsr LA1F4         ; FloatA=FloatA*10
@@ -5566,7 +5566,7 @@ L9F25:
     cmp #$84
     bcc L9F39         ; Exponent<4, FloatA<10, jump to convert it
     bne L9F31         ; Exponent<>4, need to divide it
-    lda zp31          ; Get mantissa top byte
+    lda zpFACCMA          ; Get mantissa top byte
     cmp #$A0
     bcc L9F39         ; Less than $A0, less than ten, jump to convert it
 L9F31:
@@ -5578,7 +5578,7 @@ L9F34:
 ; FloatA is now between 1 and 9.999999999
 ; ---------------------------------------
 L9F39:
-    lda zp35
+    lda zpFACCMG
     sta zpTYPE
     jsr LA385         ; Copy FloatA to FloatTemp at $27/$046C
     lda zpFDIGS
@@ -5598,9 +5598,9 @@ L9F39:
 L9F5C:
     jsr LA686         ; Clear FloatA
     lda #$A0
-    sta zp31
+    sta zpFACCMA
     lda #$83
-    sta zp30
+    sta zpFACCX
     ldx zpWORK+1
     beq L9F71
 L9F6B:
@@ -5614,18 +5614,18 @@ L9F71:
     sta zp42
     jsr LA50B; Add
 L9F7E:
-    lda zp30
+    lda zpFACCX
     cmp #$84
     bcs L9F92
-    ror zp31
-    ror zp32
-    ror zp33
-    ror zp34
-    ror zp35
-    inc zp30
+    ror zpFACCMA
+    ror zpFACCMB
+    ror zpFACCMC
+    ror zpFACCMD
+    ror zpFACCMG
+    inc zpFACCX
     bne L9F7E
 L9F92:
-    lda zp31
+    lda zpFACCMA
     cmp #$A0
     bcs L9F20
     lda zpWORK+1
@@ -5734,15 +5734,15 @@ LA03F:
     rts
 
 LA040:
-    lda zp31
+    lda zpFACCMA
     lsr
     lsr
     lsr
     lsr
     jsr LA064
-    lda zp31
+    lda zpFACCMA
     and #$0F
-    sta zp31
+    sta zpFACCMA
     jmp LA197
 
 LA052:
@@ -5774,7 +5774,7 @@ LA066:
 
 LA072:
     clc
-    stx zp35
+    stx zpFACCMG
     jsr LA1DA
     lda #$FF
     rts
@@ -5783,11 +5783,11 @@ LA072:
 ; -------------------
 LA07B:
     ldx #$00
-    stx zp31
-    stx zp32          ; Clear FloatA
-    stx zp33
-    stx zp34
-    stx zp35
+    stx zpFACCMA
+    stx zpFACCMB          ; Clear FloatA
+    stx zpFACCMC
+    stx zpFACCMD
+    stx zpFACCMG
     stx zp48          ; Clear 'Decimal point' flag
     stx zp49          ; Set exponent to zero
     cmp #'.'
@@ -5796,7 +5796,7 @@ LA07B:
     bcs LA072         ; Not a decimal digit, finish
     sbc #'0'-1
     bmi LA072         ; Convert to binary, if not digit finish
-    sta zp35          ; Store digit
+    sta zpFACCMG          ; Store digit
 LA099:
     iny
     lda (zpAELINE),Y      ; Get next character
@@ -5814,7 +5814,7 @@ LA0A8:
     bcs LA0E8         ; Not a digit, jump to finish
     sbc #'0'-1
     bcc LA0E8         ; Not a digit, jump to finish
-    ldx zp31          ; Get mantissa top byte
+    ldx zpFACCMA          ; Get mantissa top byte
     cpx #$18
     bcc LA0C2         ; If <25, still small enough to add to
     ldx zp48
@@ -5828,16 +5828,16 @@ LA0C2:
     dec zp49          ; Decimal point found, decrement exponent
 LA0C8:
     jsr LA197         ; Multiply FloatA by 10
-    adc zp35
-    sta zp35          ; Add digit to mantissa low byte
+    adc zpFACCMG
+    sta zpFACCMG          ; Add digit to mantissa low byte
     bcc LA099         ; No overflow
-    inc zp34
+    inc zpFACCMD
     bne LA099         ; Add carry through mantissa
-    inc zp33
+    inc zpFACCMC
     bne LA099
-    inc zp32
+    inc zpFACCMB
     bne LA099
-    inc zp31
+    inc zpFACCMA
     bne LA099         ; Loop to check next digit
 
 ; Deal with Exponent in scanned number
@@ -5858,10 +5858,10 @@ LA0E8:
     beq LA11B
 LA0F5:
     lda #$A8
-    sta zp30
+    sta zpFACCX
     lda #$00
-    sta zp2F
-    sta zp2E
+    sta zpFACCXH
+    sta zpFACCS
     jsr LA303
     lda zp49
     bmi LA111
@@ -5883,16 +5883,16 @@ LA11B:
     rts
 
 LA11F:
-    lda zp32
+    lda zpFACCMB
     sta zpIACC+3
     and #$80
-    ora zp31
+    ora zpFACCMA
     bne LA0F5
-    lda zp35
+    lda zpFACCMG
     sta zpIACC
-    lda zp34
+    lda zpFACCMD
     sta zpIACC+1
-    lda zp33
+    lda zpFACCMC
     sta zpIACC+2
     lda #$40
     sec
@@ -5949,91 +5949,91 @@ LA174:
     rts               ; Return exp=0 and CC=Ok
 
 LA178:
-    lda zp35
+    lda zpFACCMG
     adc zp42
-    sta zp35
-    lda zp34
+    sta zpFACCMG
+    lda zpFACCMD
     adc zp41
-    sta zp34
-    lda zp33
+    sta zpFACCMD
+    lda zpFACCMC
     adc zp40
-    sta zp33
-    lda zp32
+    sta zpFACCMC
+    lda zpFACCMB
     adc zp3F
-    sta zp32
-    lda zp31
+    sta zpFACCMB
+    lda zpFACCMA
     adc zp3E
-    sta zp31
+    sta zpFACCMA
     rts
 
 LA197:
     pha
-    ldx zp34
-    lda zp31
+    ldx zpFACCMD
+    lda zpFACCMA
     pha
-    lda zp32
+    lda zpFACCMB
     pha
-    lda zp33
+    lda zpFACCMC
     pha
-    lda zp35
+    lda zpFACCMG
     asl
-    rol zp34
-    rol zp33
-    rol zp32
-    rol zp31
+    rol zpFACCMD
+    rol zpFACCMC
+    rol zpFACCMB
+    rol zpFACCMA
     asl
-    rol zp34
-    rol zp33
-    rol zp32
-    rol zp31
-    adc zp35
-    sta zp35
+    rol zpFACCMD
+    rol zpFACCMC
+    rol zpFACCMB
+    rol zpFACCMA
+    adc zpFACCMG
+    sta zpFACCMG
     txa
-    adc zp34
-    sta zp34
+    adc zpFACCMD
+    sta zpFACCMD
     pla
-    adc zp33
-    sta zp33
+    adc zpFACCMC
+    sta zpFACCMC
     pla
-    adc zp32
-    sta zp32
+    adc zpFACCMB
+    sta zpFACCMB
     pla
-    adc zp31
-    asl zp35
-    rol zp34
-    rol zp33
-    rol zp32
+    adc zpFACCMA
+    asl zpFACCMG
+    rol zpFACCMD
+    rol zpFACCMC
+    rol zpFACCMB
     rol
-    sta zp31
+    sta zpFACCMA
     pla
     rts
 
 LA1DA:
-    lda zp31
-    ora zp32
-    ora zp33
-    ora zp34
-    ora zp35
+    lda zpFACCMA
+    ora zpFACCMB
+    ora zpFACCMC
+    ora zpFACCMD
+    ora zpFACCMG
     beq LA1ED
-    lda zp2E
+    lda zpFACCS
     bne LA1F3
     lda #$01
     rts
 
 LA1ED:
-    sta zp2E
-    sta zp30
-    sta zp2F
+    sta zpFACCS
+    sta zpFACCX
+    sta zpFACCXH
 LA1F3:
     rts
 
 LA1F4:
     clc
-    lda zp30
+    lda zpFACCX
     adc #$03
-    sta zp30
+    sta zpFACCX
     bcc LA1FF
-    inc zp2F
+    inc zpFACCXH
 LA1FF:
     jsr LA21E
     jsr LA242
@@ -6042,34 +6042,34 @@ LA208:
     jsr LA178
 LA20B:
     bcc LA21D
-    ror zp31
-    ror zp32
-    ror zp33
-    ror zp34
-    ror zp35
-    inc zp30
+    ror zpFACCMA
+    ror zpFACCMB
+    ror zpFACCMC
+    ror zpFACCMD
+    ror zpFACCMG
+    inc zpFACCX
     bne LA21D
-    inc zp2F
+    inc zpFACCXH
 LA21D:
     rts
 
 LA21E:
-    lda zp2E
+    lda zpFACCS
 LA220:
     sta zp3B
-    lda zp2F
+    lda zpFACCXH
     sta zp3C
-    lda zp30
+    lda zpFACCX
     sta zp3D
-    lda zp31
+    lda zpFACCMA
     sta zp3E
-    lda zp32
+    lda zpFACCMB
     sta zp3F
-    lda zp33
+    lda zpFACCMC
     sta zp40
-    lda zp34
+    lda zpFACCMD
     sta zp41
-    lda zp35
+    lda zpFACCMG
     sta zp42
     rts
 
@@ -6085,11 +6085,11 @@ LA242:
 
 LA24D:
     sec
-    lda zp30
+    lda zpFACCX
     sbc #$04
-    sta zp30
+    sta zpFACCX
     bcs LA258
-    dec zp2F
+    dec zpFACCXH
 LA258:
     jsr LA23F
     jsr LA208
@@ -6100,43 +6100,43 @@ LA258:
     jsr LA208
     lda #$00
     sta zp3E
-    lda zp31
+    lda zpFACCMA
     sta zp3F
-    lda zp32
+    lda zpFACCMB
     sta zp40
-    lda zp33
+    lda zpFACCMC
     sta zp41
-    lda zp34
+    lda zpFACCMD
     sta zp42
-    lda zp35
+    lda zpFACCMG
     rol
     jsr LA208
     lda #$00
     sta zp3E
     sta zp3F
-    lda zp31
+    lda zpFACCMA
     sta zp40
-    lda zp32
+    lda zpFACCMB
     sta zp41
-    lda zp33
+    lda zpFACCMC
     sta zp42
-    lda zp34
+    lda zpFACCMD
     rol
     jsr LA208
-    lda zp32
+    lda zpFACCMB
     rol
-    lda zp31
+    lda zpFACCMA
 LA2A4:
-    adc zp35
-    sta zp35
+    adc zpFACCMG
+    sta zpFACCMG
     bcc LA2BD
-    inc zp34
+    inc zpFACCMD
     bne LA2BD
-    inc zp33
+    inc zpFACCMC
     bne LA2BD
-    inc zp32
+    inc zpFACCMB
     bne LA2BD
-    inc zp31
+    inc zpFACCMA
     bne LA2BD
     jmp LA20B
 
@@ -6145,30 +6145,30 @@ LA2BD:
 
 LA2BE:
     ldx #$00
-    stx zp35
-    stx zp2F
+    stx zpFACCMG
+    stx zpFACCXH
     lda zpIACC+3
     bpl LA2CD
     jsr LAD93
     ldx #$FF
 LA2CD:
-    stx zp2E
+    stx zpFACCS
     lda zpIACC
-    sta zp34
+    sta zpFACCMD
     lda zpIACC+1
-    sta zp33
+    sta zpFACCMC
     lda zpIACC+2
-    sta zp32
+    sta zpFACCMB
     lda zpIACC+3
-    sta zp31
+    sta zpFACCMA
     lda #$A0
-    sta zp30
+    sta zpFACCX
     jmp LA303
 
 LA2E6:
-    sta zp2E
-    sta zp30
-    sta zp2F
+    sta zpFACCS
+    sta zpFACCX
+    sta zpFACCXH
 LA2EC:
     rts
 
@@ -6178,55 +6178,55 @@ LA2ED:
     pla
     beq LA2EC
     bpl LA2FD
-    sta zp2E
+    sta zpFACCS
     lda #$00
     sec
-    sbc zp2E
+    sbc zpFACCS
 LA2FD:
-    sta zp31
+    sta zpFACCMA
     lda #$88
-    sta zp30
+    sta zpFACCX
 LA303:
-    lda zp31
+    lda zpFACCMA
     bmi LA2EC
-    ora zp32
-    ora zp33
-    ora zp34
-    ora zp35
+    ora zpFACCMB
+    ora zpFACCMC
+    ora zpFACCMD
+    ora zpFACCMG
     beq LA2E6
-    lda zp30
+    lda zpFACCX
 LA313:
-    ldy zp31
+    ldy zpFACCMA
     bmi LA2EC
     bne LA33A
-    ldx zp32
-    stx zp31
-    ldx zp33
-    stx zp32
-    ldx zp34
-    stx zp33
-    ldx zp35
-    stx zp34
-    sty zp35
+    ldx zpFACCMB
+    stx zpFACCMA
+    ldx zpFACCMC
+    stx zpFACCMB
+    ldx zpFACCMD
+    stx zpFACCMC
+    ldx zpFACCMG
+    stx zpFACCMD
+    sty zpFACCMG
     sec
     sbc #$08
-    sta zp30
+    sta zpFACCX
     bcs LA313
-    dec zp2F
+    dec zpFACCXH
     bcc LA313
 LA336:
-    ldy zp31
+    ldy zpFACCMA
     bmi LA2EC
 LA33A:
-    asl zp35
-    rol zp34
-    rol zp33
-    rol zp32
-    rol zp31
+    asl zpFACCMG
+    rol zpFACCMD
+    rol zpFACCMC
+    rol zpFACCMB
+    rol zpFACCMA
     sbc #$00
-    sta zp30
+    sta zpFACCX
     bcs LA336
-    dec zp2F
+    dec zpFACCXH
     bcc LA336
 LA34E:
     ldy #$04
@@ -6277,23 +6277,23 @@ LA387:
 
 LA38D:
     ldy #$00
-    lda zp30
+    lda zpFACCX
     sta (zpARGP),Y
     iny
-    lda zp2E            ; tidy up sign bit
+    lda zpFACCS            ; tidy up sign bit
     and #$80
-    sta zp2E
-    lda zp31
+    sta zpFACCS
+    lda zpFACCMA
     and #$7F
-    ora zp2E
+    ora zpFACCS
     sta (zpARGP),Y
-    lda zp32
+    lda zpFACCMB
     iny
     sta (zpARGP),Y
-    lda zp33
+    lda zpFACCMC
     iny
     sta (zpARGP),Y
-    lda zp34
+    lda zpFACCMD
     iny
     sta (zpARGP),Y
     rts
@@ -6303,30 +6303,30 @@ LA3B2:
 LA3B5:
     ldy #$04
     lda (zpARGP),Y
-    sta zp34
+    sta zpFACCMD
     dey
     lda (zpARGP),Y
-    sta zp33
+    sta zpFACCMC
     dey
     lda (zpARGP),Y
-    sta zp32
+    sta zpFACCMB
     dey
     lda (zpARGP),Y
-    sta zp2E
+    sta zpFACCS
     dey
     lda (zpARGP),Y
-    sta zp30
-    sty zp35
-    sty zp2F
-    ora zp2E
-    ora zp32
-    ora zp33
-    ora zp34
+    sta zpFACCX
+    sty zpFACCMG
+    sty zpFACCXH
+    ora zpFACCS
+    ora zpFACCMB
+    ora zpFACCMC
+    ora zpFACCMD
     beq LA3E1
-    lda zp2E
+    lda zpFACCS
     ora #$80
 LA3E1:
-    sta zp31
+    sta zpFACCMA
     rts
 
 ; Convert real to integer
@@ -6334,13 +6334,13 @@ LA3E1:
 LA3E4:
     jsr LA3FE         ; Convert real to integer
 LA3E7:
-    lda zp31
+    lda zpFACCMA
     sta zpIACC+3          ; Copy to Integer Accumulator
-    lda zp32
+    lda zpFACCMB
     sta zpIACC+2
-    lda zp33
+    lda zpFACCMC
     sta zpIACC+1
-    lda zp34
+    lda zpFACCMD
     sta zpIACC
     rts
 
@@ -6358,7 +6358,7 @@ LA3F8:
 ; exponent is $80, indicating that we have got to mantissa * 2^0.
 ;
 LA3FE:
-    lda zp30
+    lda zpFACCX
     bpl LA3F8         ; Exponent<$80, number<1, jump to return 0
     jsr LA453         ; Set $3B-$42 to zero
     jsr LA1DA
@@ -6366,41 +6366,41 @@ LA3FE:
     beq LA468
 
 LA40C:
-    lda zp30          ; Get exponent
+    lda zpFACCX          ; Get exponent
     cmp #$A0
     bcs LA466         ; Exponent is +32, float has been denormalised to an integer
     cmp #$99
     bcs LA43C         ; Loop to keep dividing
     adc #$08
-    sta zp30          ; Increment exponent by 8
+    sta zpFACCX          ; Increment exponent by 8
     lda zp40
     sta zp41
     lda zp3F
     sta zp40
     lda zp3E
     sta zp3F
-    lda zp34
+    lda zpFACCMD
     sta zp3E
-    lda zp33
-    sta zp34          ; Divide mantissa by 2^8
-    lda zp32
-    sta zp33
-    lda zp31
-    sta zp32
+    lda zpFACCMC
+    sta zpFACCMD          ; Divide mantissa by 2^8
+    lda zpFACCMB
+    sta zpFACCMC
+    lda zpFACCMA
+    sta zpFACCMB
     lda #$00
-    sta zp31
+    sta zpFACCMA
     beq LA40C         ; Loop to keep dividing
 
 LA43C:
-    lsr zp31
-    ror zp32
-    ror zp33
-    ror zp34
+    lsr zpFACCMA
+    ror zpFACCMB
+    ror zpFACCMC
+    ror zpFACCMD
     ror zp3E
     ror zp3F
     ror zp40
     ror zp41
-    inc zp30
+    inc zpFACCX
     bne LA40C
 LA450:
     jmp LA66C
@@ -6420,27 +6420,27 @@ LA453:
 LA466:
     bne LA450         ; Exponent>32, jump to 'Too big' error
 LA468:
-    lda zp2E
+    lda zpFACCS
     bpl LA485         ; If positive, jump to return
 LA46C:
     sec               ; Negate the mantissa to get integer
     lda #$00
-    sbc zp34
-    sta zp34
+    sbc zpFACCMD
+    sta zpFACCMD
     lda #$00
-    sbc zp33
-    sta zp33
+    sbc zpFACCMC
+    sta zpFACCMC
     lda #$00
-    sbc zp32
-    sta zp32
+    sbc zpFACCMB
+    sta zpFACCMB
     lda #$00
-    sbc zp31
-    sta zp31
+    sbc zpFACCMA
+    sta zpFACCMA
 LA485:
     rts
 
 LA486:
-    lda zp30
+    lda zpFACCX
     bmi LA491
     lda #$00
     sta zp4A
@@ -6448,15 +6448,15 @@ LA486:
 
 LA491:
     jsr LA3FE
-    lda zp34
+    lda zpFACCMD
     sta zp4A
     jsr LA4E8
     lda #$80
-    sta zp30
-    ldx zp31
+    sta zpFACCX
+    ldx zpFACCMA
     bpl LA4B3
-    eor zp2E
-    sta zp2E
+    eor zpFACCS
+    sta zpFACCS
     bpl LA4AE
     inc zp4A
     jmp LA4B0
@@ -6469,13 +6469,13 @@ LA4B3:
     jmp LA303
 
 LA4B6:
-    inc zp34
+    inc zpFACCMD
     bne LA4C6
-    inc zp33
+    inc zpFACCMC
     bne LA4C6
-    inc zp32
+    inc zpFACCMB
     bne LA4C6
-    inc zp31
+    inc zpFACCMA
     beq LA450
 LA4C6:
     rts
@@ -6494,22 +6494,22 @@ LA4D6:
     jsr LA38D
 LA4DC:
     lda zp3B
-    sta zp2E
+    sta zpFACCS
     lda zp3C
-    sta zp2F
+    sta zpFACCXH
     lda zp3D
-    sta zp30
+    sta zpFACCX
 LA4E8:
     lda zp3E
-    sta zp31
+    sta zpFACCMA
     lda zp3F
-    sta zp32
+    sta zpFACCMB
     lda zp40
-    sta zp33
+    sta zpFACCMC
     lda zp41
-    sta zp34
+    sta zpFACCMD
     lda zp42
-    sta zp35
+    sta zpFACCMG
 LA4FC:
     rts
 
@@ -6527,7 +6527,7 @@ LA50B:
     beq LA4DC
     ldy #$00
     sec
-    lda zp30
+    lda zpFACCX
     sbc zp3D
     beq LA590
     bcc LA552
@@ -6569,7 +6569,7 @@ LA543:
 LA552:
     sec
     lda zp3D
-    sbc zp30
+    sbc zpFACCX
     cmp #$25
     bcs LA4DC
     pha
@@ -6580,15 +6580,15 @@ LA552:
     lsr
     tax
 LA564:
-    lda zp34
-    sta zp35
-    lda zp33
-    sta zp34
-    lda zp32
-    sta zp33
-    lda zp31
-    sta zp32
-    sty zp31
+    lda zpFACCMD
+    sta zpFACCMG
+    lda zpFACCMC
+    sta zpFACCMD
+    lda zpFACCMB
+    sta zpFACCMC
+    lda zpFACCMA
+    sta zpFACCMB
+    sty zpFACCMA
     dex
     bne LA564
 LA579:
@@ -6597,33 +6597,33 @@ LA579:
     beq LA58C
     tax
 LA57F:
-    lsr zp31
-    ror zp32
-    ror zp33
-    ror zp34
-    ror zp35
+    lsr zpFACCMA
+    ror zpFACCMB
+    ror zpFACCMC
+    ror zpFACCMD
+    ror zpFACCMG
     dex
     bne LA57F
 LA58C:
     lda zp3D
-    sta zp30
+    sta zpFACCX
 LA590:
-    lda zp2E
+    lda zpFACCS
     eor zp3B
     bpl LA5DF
-    lda zp31
+    lda zpFACCMA
     cmp zp3E
     bne LA5B7
-    lda zp32
+    lda zpFACCMB
     cmp zp3F
     bne LA5B7
-    lda zp33
+    lda zpFACCMC
     cmp zp40
     bne LA5B7
-    lda zp34
+    lda zpFACCMD
     cmp zp41
     bne LA5B7
-    lda zp35
+    lda zpFACCMG
     cmp zp42
     bne LA5B7
     jmp LA686
@@ -6632,22 +6632,22 @@ LA5B7:
     bcs LA5E3
     sec
     lda zp42
-    sbc zp35
-    sta zp35
+    sbc zpFACCMG
+    sta zpFACCMG
     lda zp41
-    sbc zp34
-    sta zp34
+    sbc zpFACCMD
+    sta zpFACCMD
     lda zp40
-    sbc zp33
-    sta zp33
+    sbc zpFACCMC
+    sta zpFACCMC
     lda zp3F
-    sbc zp32
-    sta zp32
+    sbc zpFACCMB
+    sta zpFACCMB
     lda zp3E
-    sbc zp31
-    sta zp31
+    sbc zpFACCMA
+    sta zpFACCMA
     lda zp3B
-    sta zp2E
+    sta zpFACCS
     jmp LA303
 
 LA5DF:
@@ -6656,21 +6656,21 @@ LA5DF:
 
 LA5E3:
     sec
-    lda zp35
+    lda zpFACCMG
     sbc zp42
-    sta zp35
-    lda zp34
+    sta zpFACCMG
+    lda zpFACCMD
     sbc zp41
-    sta zp34
-    lda zp33
+    sta zpFACCMD
+    lda zpFACCMC
     sbc zp40
-    sta zp33
-    lda zp32
+    sta zpFACCMC
+    lda zpFACCMB
     sbc zp3F
-    sta zp32
-    lda zp31
+    sta zpFACCMB
+    lda zpFACCMA
     sbc zp3E
-    sta zp31
+    sta zpFACCMA
     jmp LA303
 
 LA605:
@@ -6685,28 +6685,28 @@ LA606:
 
 LA613:
     clc
-    lda zp30
+    lda zpFACCX
     adc zp3D
     bcc LA61D
-    inc zp2F
+    inc zpFACCXH
     clc
 LA61D:
     sbc #$7F
-    sta zp30
+    sta zpFACCX
     bcs LA625
-    dec zp2F
+    dec zpFACCXH
 LA625:
     ldx #$05
     ldy #$00
 LA629:
-    lda zp30,X
+    lda zpFACCX,X
     sta zp42,X
-    sty zp30,X
+    sty zpFACCX,X
     dex
     bne LA629
-    lda zp2E
+    lda zpFACCS
     eor zp3B
-    sta zp2E
+    sta zpFACCS
     ldy #$20
 LA63A:
     lsr zp3E
@@ -6731,7 +6731,7 @@ FMUL:
 LA659:
     jsr LA303       ; FNRM
 LA65C:
-    lda zp35
+    lda zpFACCMG
     cmp #$80
     bcc LA67C
     beq LA676
@@ -6749,25 +6749,25 @@ LA66C:
     .endif
     brk
 LA676:
-    lda zp34
+    lda zpFACCMD
     ora #$01
-    sta zp34
+    sta zpFACCMD
 LA67C:
     lda #$00
-    sta zp35
-    lda zp2F
+    sta zpFACCMG
+    lda zpFACCXH
     beq LA698
     bpl LA66C
 LA686:
     lda #$00
-    sta zp2E
-    sta zp2F
-    sta zp30
-    sta zp31
-    sta zp32
-    sta zp33
-    sta zp34
-    sta zp35
+    sta zpFACCS
+    sta zpFACCXH
+    sta zpFACCX
+    sta zpFACCMA
+    sta zpFACCMB
+    sta zpFACCMC
+    sta zpFACCMD
+    sta zpFACCMG
 LA698:
     rts
 
@@ -6776,9 +6776,9 @@ LA698:
 .proc FONE
     jsr LA686           ; FCLR
     ldy #$80
-    sty zp31
+    sty zpFACCMA
     iny
-    sty zp30
+    sty zpFACCX
     tya
     rts                 ; always return with !Z
 .endp
@@ -6835,110 +6835,110 @@ LA6E7:
     jsr LA34E
     beq FDIVZ
 LA6F1:
-    lda zp2E
+    lda zpFACCS
     eor zp3B
-    sta zp2E
+    sta zpFACCS
     sec
-    lda zp30
+    lda zpFACCX
     sbc zp3D
     bcs LA701
-    dec zp2F
+    dec zpFACCXH
     sec
 LA701:
     adc #$80
-    sta zp30
+    sta zpFACCX
     bcc LA70A
-    inc zp2F
+    inc zpFACCXH
     clc
 LA70A:
     ldx #$20
 LA70C:
     bcs LA726
-    lda zp31
+    lda zpFACCMA
     cmp zp3E
     bne LA724
-    lda zp32
+    lda zpFACCMB
     cmp zp3F
     bne LA724
-    lda zp33
+    lda zpFACCMC
     cmp zp40
     bne LA724
-    lda zp34
+    lda zpFACCMD
     cmp zp41
 LA724:
     bcc LA73F
 LA726:
-    lda zp34
+    lda zpFACCMD
     sbc zp41
-    sta zp34
-    lda zp33
+    sta zpFACCMD
+    lda zpFACCMC
     sbc zp40
-    sta zp33
-    lda zp32
+    sta zpFACCMC
+    lda zpFACCMB
     sbc zp3F
-    sta zp32
-    lda zp31
+    sta zpFACCMB
+    lda zpFACCMA
     sbc zp3E
-    sta zp31
+    sta zpFACCMA
     sec
 LA73F:
     rol zp46
     rol zp45
     rol zp44
     rol zp43
-    asl zp34
-    rol zp33
-    rol zp32
-    rol zp31
+    asl zpFACCMD
+    rol zpFACCMC
+    rol zpFACCMB
+    rol zpFACCMA
     dex
     bne LA70C
     ldx #$07
 LA754:
     bcs LA76E
-    lda zp31
+    lda zpFACCMA
     cmp zp3E
     bne LA76C
-    lda zp32
+    lda zpFACCMB
     cmp zp3F
     bne LA76C
-    lda zp33
+    lda zpFACCMC
     cmp zp40
     bne LA76C
-    lda zp34
+    lda zpFACCMD
     cmp zp41
 LA76C:
     bcc LA787
 LA76E:
-    lda zp34
+    lda zpFACCMD
     sbc zp41
-    sta zp34
-    lda zp33
+    sta zpFACCMD
+    lda zpFACCMC
     sbc zp40
-    sta zp33
-    lda zp32
+    sta zpFACCMC
+    lda zpFACCMB
     sbc zp3F
-    sta zp32
-    lda zp31
+    sta zpFACCMB
+    lda zpFACCMA
     sbc zp3E
-    sta zp31
+    sta zpFACCMA
     sec
 LA787:
-    rol zp35
-    asl zp34
-    rol zp33
-    rol zp32
-    rol zp31
+    rol zpFACCMG
+    asl zpFACCMD
+    rol zpFACCMC
+    rol zpFACCMB
+    rol zpFACCMA
     dex
     bne LA754
-    asl zp35
+    asl zpFACCMG
     lda zp46
-    sta zp34
+    sta zpFACCMD
     lda zp45
-    sta zp33
+    sta zpFACCMC
     lda zp44
-    sta zp32
+    sta zpFACCMB
     lda zp43
-    sta zp31
+    sta zpFACCMA
     jmp LA659
 
 LA7A9:
@@ -6960,10 +6960,10 @@ LA7B7:
     beq LA7E6
     bmi LA7A9
     jsr LA385
-    lda zp30
+    lda zpFACCX
     lsr
     adc #$40
-    sta zp30
+    sta zpFACCX
     lda #$05
     sta zp4A
     jsr LA7ED
@@ -6975,7 +6975,7 @@ LA7CF:
     lda #<FWSB
     sta zpARGP
     jsr LA500
-    dec zp30
+    dec zpFACCX
     dec zp4A
     bne LA7CF
 LA7E6:
@@ -7031,9 +7031,9 @@ LA814:
     sty zp3E
     iny
     sty zp3D
-    ldx zp30
+    ldx zpFACCX
     beq LA82A
-    lda zp31
+    lda zpFACCMA
     cmp #$B5
     bcc LA82C
 LA82A:
@@ -7042,7 +7042,7 @@ LA82A:
 LA82C:
     txa
     pha
-    sty zp30
+    sty zpFACCX
     jsr LA505
     lda #<FWSD
     jsr LA387
@@ -7143,7 +7143,7 @@ LA8DA:
     jsr L92FA
     jsr LA1DA
     bpl LA8EA
-    lsr zp2E
+    lsr zpFACCS
     jsr LA8EA
     jmp LA916
 
@@ -7171,15 +7171,15 @@ LA90A:
     jsr LA1DA
     beq LA904
     bpl LA91B
-    lsr zp2E
+    lsr zpFACCS
     jsr LA91B
 LA916:
     lda #$80
-    sta zp2E
+    sta zpFACCS
     rts
 
 LA91B:
-    lda zp30
+    lda zpFACCX
     cmp #$81
     bcc LA936
     jsr FRECIP
@@ -7192,7 +7192,7 @@ LA927:
     jmp LAD7E
 
 LA936:
-    lda zp30
+    lda zpFACCX
     cmp #$73
     bcc LA904
     jsr LA381
@@ -7269,30 +7269,30 @@ LA9C3:
     jmp LAAD1
 
 LA9D3:
-    lda zp30
+    lda zpFACCX
     cmp #$98
     bcs LAA38
     jsr LA385
     jsr LAA55
     jsr LA34E
-    lda zp2E
+    lda zpFACCS
     sta zp3B
     dec zp3D
     jsr LA505
     jsr LA6E7
     jsr LA3FE
-    lda zp34
+    lda zpFACCMD
     sta zp4A
-    ora zp33
-    ora zp32
-    ora zp31
+    ora zpFACCMC
+    ora zpFACCMB
+    ora zpFACCMA
     beq LAA35
     lda #$A0
-    sta zp30
+    sta zpFACCX
     ldy #$00
-    sty zp35
-    lda zp31
-    sta zp2E
+    sty zpFACCMG
+    lda zpFACCMA
+    sta zpFACCS
     bpl LAA0E
     jsr LA46C
 LAA0E:
@@ -7384,16 +7384,16 @@ FSINC:
 LAA91:
     jsr L92FA
 LAA94:
-    lda zp30
+    lda zpFACCX
     cmp #$87
     bcc LAAB8
     bne LAAA2
 LAA9C:
-    ldy zp31
+    ldy zpFACCMA
     cpy #$B3
     bcc LAAB8
 LAAA2:
-    lda zp2E
+    lda zpFACCS
     bpl LAAAC
     jsr LA686
     lda #$FF
@@ -7537,7 +7537,7 @@ LAB41:
         ldx #$2A
         lda #$09
         jsr OSWORD
-        lda zp2E
+        lda zpFACCS
         bmi LAB9D
         jmp LAED8
     .elseif version >= 3
@@ -7658,7 +7658,7 @@ LABC2:
 ; ===
 LABCB:
     jsr LA8FE
-    inc zp30
+    inc zpFACCX
     tay
     rts
 
@@ -7795,7 +7795,7 @@ LAC78:
         beq XAC81
     .endif
     bpl LAC9A
-    lda zp2E
+    lda zpFACCS
     php
     jsr LA3FE
     plp
@@ -7947,7 +7947,7 @@ XAB41:
         ldx #$2A
         lda #$09
         jsr OSWORD
-        lda zp2E
+        lda zpFACCS
         bmi LACC4
         bpl XACC1
     .endif
@@ -8086,9 +8086,9 @@ LAD7E:
     jsr LA1DA
     beq LAD89
 LAD83:
-    lda zp2E
+    lda zpFACCS
     eor #$80
-    sta zp2E
+    sta zpFACCS
 LAD89:
     lda #$FF
     rts
@@ -8580,14 +8580,14 @@ LAF69:
     jsr LAF87
 LAF6C:
     ldx #$00
-    stx zp2E
-    stx zp2F
-    stx zp35
+    stx zpFACCS
+    stx zpFACCXH
+    stx zpFACCMG
     lda #$80
-    sta zp30
+    sta zpFACCX
 LAF78:
     lda zpSEED,X
-    sta zp31,X
+    sta zpFACCMA,X
     inx
     cpx #$04
     bne LAF78
@@ -9354,30 +9354,30 @@ LB34F:
 LB354:
     dey
     lda (zpIACC),Y
-    sta zp34
+    sta zpFACCMD
     dey
     lda (zpIACC),Y
-    sta zp33
+    sta zpFACCMC
     dey
     lda (zpIACC),Y
-    sta zp32
+    sta zpFACCMB
     dey
     lda (zpIACC),Y
-    sta zp2E
+    sta zpFACCS
     dey
     lda (zpIACC),Y
-    sta zp30
-    sty zp35
-    sty zp2F
-    ora zp2E
-    ora zp32
-    ora zp33
-    ora zp34
+    sta zpFACCX
+    sty zpFACCMG
+    sty zpFACCXH
+    ora zpFACCS
+    ora zpFACCMB
+    ora zpFACCMC
+    ora zpFACCMD
     beq LB37F
-    lda zp2E
+    lda zpFACCS
     ora #$80
 LB37F:
-    sta zp31
+    sta zpFACCMA
     lda #$FF
     rts
 
@@ -9686,24 +9686,24 @@ LB4E0:
     jsr LA2BE         ; Convert integer to float
 LB4E9:
     ldy #$00          ; Store 5-byte float
-    lda zp30
+    lda zpFACCX
     sta (zpWORK),Y
     iny               ; exponent
-    lda zp2E
+    lda zpFACCS
     and #$80
-    sta zp2E          ; Unpack sign
-    lda zp31
+    sta zpFACCS          ; Unpack sign
+    lda zpFACCMA
     and #$7F          ; Unpack mantissa 1
-    ora zp2E
+    ora zpFACCS
     sta (zpWORK),Y      ; sign + mantissa 1
     iny
-    lda zp32
+    lda zpFACCMB
     sta (zpWORK),Y      ; mantissa 2
     iny
-    lda zp33
+    lda zpFACCMC
     sta (zpWORK),Y      ; mantissa 3
     iny
-    lda zp34
+    lda zpFACCMD
     sta (zpWORK),Y      ; mantissa 4
     rts
 
@@ -9856,9 +9856,9 @@ LB5D8:
     jsr L97DF
 LB5DB:
     lda zpIACC
-    sta zp31
+    sta zpFACCMA
     lda zpIACC+1
-    sta zp32
+    sta zpFACCMB
     jsr DONE
     jsr LBE6F
     jsr LBDEA
@@ -9886,9 +9886,9 @@ LB602:
 LB60F:
     lda zpIACC
     clc
-    sbc zp31
+    sbc zpFACCMA
     lda zpIACC+1
-    sbc zp32
+    sbc zpFACCMB
     bcc LB61D
     jmp L8AF6
 
@@ -11095,24 +11095,24 @@ LBD51:
     sbc #$05
     jsr LBE2E
     ldy #$00
-    lda zp30
+    lda zpFACCX
     sta (zpAESTKP),Y
     iny
-    lda zp2E
+    lda zpFACCS
     and #$80
-    sta zp2E
-    lda zp31
+    sta zpFACCS
+    lda zpFACCMA
     and #$7F
-    ora zp2E
+    ora zpFACCS
     sta (zpAESTKP),Y
     iny
-    lda zp32
+    lda zpFACCMB
     sta (zpAESTKP),Y
     iny
-    lda zp33
+    lda zpFACCMC
     sta (zpAESTKP),Y
     iny
-    lda zp34
+    lda zpFACCMD
     sta (zpAESTKP),Y
     rts
 
