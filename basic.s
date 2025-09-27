@@ -7759,10 +7759,10 @@ LAC34:
     lda #$00
     sta zpAECUR
     .if version < 3
-        lda #$00
+        lda #<STRACC
     .endif
     sta zpAELINE
-    lda #$06+(ws/256)
+    lda #>STRACC
     sta zpAELINE+1
     jsr L8A8C
     cmp #$2D
@@ -10606,9 +10606,9 @@ LBAA2:
     bvs LBACD
 LBAB0:
     sta zpAECUR
-    lda #$00
+    lda #<STRACC
     sta zpAELINE
-    lda #$06+(ws/256)
+    lda #>STRACC
     sta zpAELINE+1
     jsr LADAD
 LBABD:
@@ -10814,8 +10814,8 @@ LBBE4:
 ; Input string to string buffer
 ; -----------------------------
 LBBFC:
-    ldy #$00
-    lda #$06+(ws/256)     ; String buffer at $0600
+    ldy #<STRACC
+    lda #>STRACC
     bne LBC09
 
 ; Print character, read input line
@@ -11358,9 +11358,9 @@ LBE9E:
 ; Point $37/8 to <cr>-terminated string in string buffer
 ; ------------------------------------------------------
 LBEB2:
-    lda #$00
+    lda #<STRACC
     sta zp37
-    lda #$06+(ws/256)
+    lda #>STRACC
     sta zp38
 LBEBA:
     ldy zp36
