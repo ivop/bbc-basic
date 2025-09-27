@@ -56,9 +56,31 @@ $2e     FACCS * IACCL+4     FLOATING POINT WORK AREA A, 8 bytes [sign]
 $36     CLEN * FACCMG+1     LENGTH OF STRING BUFFER
 $37     WORK * CLEN+1       GENERAL AREAS, 4 bytes
 
+zpWORK    = zp + $37    ; General work area, 2 bytes for now, probably 4
+zp39 = zp + $39
+zp3A = zp + $3a
+; zp3B upto zp40 are also used as zpWORK+4 etc..., careful with replace!
+zpFWRKS   = zp + $3b    ; WorkSpace Floating Point Accumulator, SIGN
+zpFWRKXH  = zp + $3c    ; WorkSpace Floating Point Accumulator, OVER/UNDERFLOW
+zpFWRKX   = zp + $3d    ; WorkSpace Floating Point Accumulator, EXPONENT
+zpFWRKMA  = zp + $3e    ; WorkSpace Floating Point Accumulator, MANTISSA
+zpFWRKMB  = zp + $3f    ; WorkSpace Floating Point Accumulator, MANTISSA
+zpFWRKMC  = zp + $40    ; WorkSpace Floating Point Accumulator, MANTISSA
+zpFWRKMD  = zp + $41    ; WorkSpace Floating Point Accumulator, MANTISSA
+zpFWRKMG  = zp + $42    ; WorkSpace Floating Point Accumulator, ROUNDING
+zp43 = zp + $43
+zp44 = zp + $44
+zp45 = zp + $45
+zp46 = zp + $46
+zp47 = zp + $47
+zpFRDDDP  = zp + $48    ; Decimal Point flag
+zpFRDDDX  = zp + $49    ; Exponent
+zpFPRTDX  = FRDDDX      ; Alt.
+zpFRDDW   = zp + $4a
+zpFQUAD   = zpFRDDW     ; Alt.
+
 --------
-$3b-$42 Second Float area (8 bytes, same as above)
-but possibly repurposed for other (temporary) things, too
+scratch space below
 
 from here Cmos/Dmos/Basic128 are different, sources show multiple
 usages up to WORK+9, and (clear?) up WORK+17 ($48)
@@ -96,6 +118,8 @@ COEFP * ARGP+2          ; def. zp4D/zp4E
 NEWVAR * COEFP+2
 --------
 
+------------------------------------------------------------------------------
+------------------------------------------------------------------------------
 ------------------------------------------------------------------------------
 
 WORKSPACE:

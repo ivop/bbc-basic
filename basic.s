@@ -7181,9 +7181,9 @@ LA916:
 LA91B:
     lda zpFACCX
     cmp #$81
-    bcc LA936
+    bcc FATANB
     jsr FRECIP
-    jsr LA936
+    jsr FATANB
 LA927:
     jsr LAA48
     jsr LA500
@@ -7191,17 +7191,17 @@ LA927:
     jsr LA500
     jmp LAD7E
 
-LA936:
+FATANB:
     lda zpFACCX
     cmp #$73
     bcc LA904
-    jsr LA381
-    jsr LA453
+    jsr LA381           ; STARGC
+    jsr LA453           ; FCLRW+6
     lda #$80
     sta zp3D
     sta zp3E
     sta zp3B
-    jsr LA505
+    jsr LA505           ; FADDW
     lda #<FATANC
     ldy #>FATANC
     jsr FCF
