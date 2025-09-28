@@ -16,7 +16,7 @@ Currently, the following versions are supported:
 | C64    | c64basic2.rom  | C64Basic2.fixed  | 2.00 | $B800 | 89f5b82721cb351f22145ee0c07530c2 |
 
 Note: the fixed reference ROMs contain the proper floating point value for 5.00000 in the FEXPCO table.
-See commit 5a7d6ff7deaeb792381d46ab6004b1abc9a0d855 for details.
+See [this commit](https://github.com/ivop/bbc-basic/commit/5a7d6ff7deaeb792381d46ab6004b1abc9a0d855) for details.
 
 ### Credits
 
