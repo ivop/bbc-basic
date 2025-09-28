@@ -26,15 +26,15 @@
         MOS_BBC    = 1
 
         .if .def BUILD_BBC_BASIC2
-            load          = $8000     ; Code start address
+            romstart      = $8000     ; Code start address
             VERSION       = 2
             MINORVERSION  = 0
         .elseif .def BUILD_BBC_BASIC3
-            load          = $8000     ; Code start address
+            romstart      = $8000     ; Code start address
             VERSION       = 3 
             MINORVERSION  = 0
         .elseif .def BUILD_BBC_BASIC310HI
-            load          = $b800     ; Code start address
+            romstart      = $b800     ; Code start address
             VERSION       = 3 
             MINORVERSION  = 10
         .endif
@@ -114,18 +114,18 @@
         title  = 0
 
         .if .def TARGET_SYSTEM
-            load   = $a000    ; Code start address
-            ws     = $2800-$0400      ; Offset from &400 to workspace
-            membot = $3000
-            ESCFLG = $0e21    ; Escape pending flag
+            romstart = $a000    ; Code start address
+            ws       = $2800-$0400      ; Offset from &400 to workspace
+            membot   = $3000
+            ESCFLG   = $0e21    ; Escape pending flag
         .elseif .def TARGET_ATOM
-            load   = $4000    ; Code start address
-            ws     = $9c00-$0400      ; Offset from &400 to workspace
-            membot = $2800
-            ESCFLG = $b001    ; Escape pending flag
+            romstart = $4000    ; Code start address
+            ws       = $9c00-$0400      ; Offset from &400 to workspace
+            membot   = $2800
+            ESCFLG   = $b001    ; Escape pending flag
         .endif
 
-        memtop  = load    ; Top of memory is start of code
+        memtop  = romstart    ; Top of memory is start of code
         zp      = $00     ; Start of ZP addresses
 
         FAULT  = zp4F     ; Pointer to error block
@@ -167,7 +167,7 @@
         TARGET_C64 = 1
         MOS_BBC    = 1
 
-        load          = $b800     ; Code start address
+        romstart      = $b800     ; Code start address
         VERSION       = 2
         MINORVERSION  = 0
 
@@ -274,7 +274,7 @@ tknREPORT   = $F6
 
 ; ----------------------------------------------------------------------------
 
-    org load
+    org romstart
 
 L8000:
 
@@ -307,13 +307,13 @@ L8000:
     rts
     nop
     dta $60           ; ROM type = Lang+Tube+6502 BASIC
-    dta copyright_string - load       ; Offset to copyright string
+    dta copyright_string - romstart       ; Offset to copyright string
     dta [version*2]-3     ; Version 2 = $01, Version 3 = $03
     dta 'BASIC'
 copyright_string:
     dta 0
     dta '(C)198', [$30+version], ' Acorn', 10, 13, 0
-    dta a(load), a(0)
+    dta a(romstart), a(0)
 .endif
 
 ; LANGUAGE STARTUP
@@ -558,67 +558,47 @@ func_table .macro operator
     dta :1DEG         ; $9D - DEG
     dta :1ERL         ; $9E - ERL
     dta :1ERR         ; $9F - ERR
-    dta :1LABE9       ; $A0 - EVAL
-    dta :1LAA91       ; $A1 - EXP
-    dta :1LBF46       ; $A2 - EXT
+    dta :1EVAL        ; $A0 - EVAL
+    dta :1EXP         ; $A1 - EXP
+    dta :1EXT         ; $A2 - EXT
     dta :1FALSE       ; $A3 - FALSE
-    dta :1LB195       ; $A4 - FN
-    dta :1LAFB9       ; $A5 - GET
-    dta :1LACAD       ; $A6 - INKEY
-    dta :1LACE2       ; $A7 - INSTR(
-    dta :1LAC78       ; $A8 - INT
-    .if version < 3
-        dta :1LEN       ; $A9 - LEN
-    .elseif version >= 3
-        dta :1LEN       ; $A9 - LEN
-    .endif
-    dta :1LA7FE       ; $AA - LN
-    dta :1LABA8       ; $AB - LOG
-    .if version < 3
-        dta :1LACD1       ; $AC - NOT
-    .elseif version >= 3
-        dta :1XAB5B       ; $AC - NOT
-    .endif
-    dta :1LBF80       ; $AD - OPENUP
-    dta :1LBF7C       ; $AE - OPENOUT
-    dta :1LABCB       ; $AF - PI
-    .if version < 3
-        dta :1LAB41       ; $B0 - POINT(
-    .elseif version >= 3
-        dta :1XAB41       ; $B0 - POINT(
-    .endif
-    dta :1LAB6D       ; $B1 - POS
-    dta :1LABB1       ; $B2 - RAD
-    dta :1LAF49       ; $B3 - RND
-    .if version < 3
-        dta :1LAB88       ; $B4 - SGN
-    .elseif version >= 3
-        dta :1XACAA       ; $B4 - SGN
-    .endif
-    dta :1LA998       ; $B5 - SIN
-    dta :1LA7B4       ; $B6 - SQR
-    dta :1LA6BE       ; $B7 - TAN
-    .if version < 3
-        dta :1LAEDC       ; $B8 - TO
-    .elseif version >= 3
-        dta :1XAEA6       ; $B8 - TO
-    .endif
-    dta :1LACC4       ; $B9 - TRUE
-    dta :1LABD2       ; $BA - USR
-    dta :1LAC2F       ; $BB - VAL
-    dta :1LAB76       ; $BC - VPOS
-    dta :1LB3BD       ; $BD - CHR$
-    dta :1LAFBF       ; $BE - GET$
-    dta :1LB026       ; $BF - INKEY$
-    dta :1LAFCC       ; $C0 - LEFT$(
-    dta :1LB039       ; $C1 - MID$(
-    dta :1LAFEE       ; $C2 - RIGHT$(
-    dta :1LB094       ; $C3 - STR$(
-    dta :1LB0C2       ; $C4 - STRING$(
-    dta :1LACB8       ; $C5 - EOF
-    dta :1L90AC       ; $C6 - AUTO
-    dta :1L8F31       ; $C7 - DELETE
-    dta :1LBF24       ; $C8 - LOAD
+    dta :1FN          ; $A4 - FN
+    dta :1GET         ; $A5 - GET
+    dta :1INKEY       ; $A6 - INKEY
+    dta :1INSTR       ; $A7 - INSTR(
+    dta :1INT         ; $A8 - INT
+    dta :1LEN         ; $A9 - LEN
+    dta :1LN          ; $AA - LN
+    dta :1LOG         ; $AB - LOG
+    dta :1NOT         ; $AC - NOT
+    dta :1OPENI       ; $AD - OPENUP
+    dta :1OPENO       ; $AE - OPENOUT
+    dta :1PI          ; $AF - PI
+    dta :1POINT       ; $B0 - POINT(
+    dta :1POS         ; $B1 - POS
+    dta :1RAD         ; $B2 - RAD
+    dta :1RND         ; $B3 - RND
+    dta :1SGN         ; $B4 - SGN
+    dta :1SIN         ; $B5 - SIN
+    dta :1SQR         ; $B6 - SQR
+    dta :1TAN         ; $B7 - TAN
+    dta :1TO          ; $B8 - TO
+    dta :1TRUE        ; $B9 - TRUE
+    dta :1USR         ; $BA - USR
+    dta :1VAL         ; $BB - VAL
+    dta :1VPOS        ; $BC - VPOS
+    dta :1CHRD        ; $BD - CHR$
+    dta :1GETD        ; $BE - GET$
+    dta :1INKED       ; $BF - INKEY$
+    dta :1LEFTD       ; $C0 - LEFT$(
+    dta :1MIDD        ; $C1 - MID$(
+    dta :1RIGHTD      ; $C2 - RIGHT$(
+    dta :1STRD        ; $C3 - STR$(
+    dta :1STRND       ; $C4 - STRING$(
+    dta :1EOF         ; $C5 - EOF
+    dta :1AUTO        ; $C6 - AUTO
+    dta :1DELETE      ; $C7 - DELETE
+    dta :1LOAD        ; $C8 - LOAD
     dta :1LB59C       ; $C9 - LIST
     dta :1L8ADA       ; $CA - NEW
     dta :1L8AB6       ; $CB - OLD
@@ -752,7 +732,7 @@ ASS:
     sta zpBYTESM          ; Set OPT 3, default on entry to '['
 
 CASM:
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     cmp #']'
     beq STOPASM         ; ']' - exit assembler
 
@@ -912,7 +892,7 @@ L85A5:
 
 MNEENT:
     ldx #$03          ; Prepare to fetch three characters
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     ldy #$00
     sty zp3D
     cmp #':'
@@ -1083,7 +1063,7 @@ L86B2:
 L86B7:
     cpx #$29
     bcs L86D3
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     cmp #'#'
     bne L86DA
     jsr L882F
@@ -1107,19 +1087,19 @@ L86CC:
 L86D3:
     cpx #$36
     bne L873F
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
 L86DA:
     cmp #'('
     bne L8715
     jsr L8821
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     cmp #')'
     bne L86FB
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     cmp #','
     bne L870D         ; No comma, jump to Index error
     jsr L882C
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     cmp #'Y'
     bne L870D         ; (zp),Y missing Y, jump to Index error
     beq L86C8
@@ -1129,10 +1109,10 @@ L86DA:
 L86FB:
     cmp #','
     bne L870D         ; No comma, jump to Index error
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     cmp #'X'
     bne L870D         ; zp,X missing X, jump to Index error
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     cmp #')'
     beq L86C8         ; zp,X) - jump to process
 L870D:
@@ -1148,11 +1128,11 @@ L870D:
 L8715:
     dec zpCURSOR
     jsr L8821
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     cmp #','
     bne L8735         ; No comma - jump to process as abs,X
     jsr L882C
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     cmp #'X'
     beq L8735         ; abs,X - jump to process
     cmp #'Y'
@@ -1175,17 +1155,17 @@ L873F:
     bcs L876E
     cpx #$2D
     bcs L8750
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     cmp #'A'
     beq L8767         ; ins A -
     dec zpCURSOR
 L8750:
     jsr L8821
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     cmp #','
     bne L8738         ; No comma, jump to ...
     jsr L882C
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     cmp #'X'
     beq L8738         ; Jump with address,X
     jmp L870D         ; Otherwise, jump to Index error
@@ -1200,7 +1180,7 @@ L876E:
     bcs L8788
     cpx #$31
     beq L8782
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     cmp #'#'
     bne L8780         ; Not #, jump with address
     jmp L86C5         ; Jump with immediate
@@ -1215,7 +1195,7 @@ L8788:
     cpx #$33
     beq L8797
     bcs L87B2
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     cmp #'('
     beq L879F         ; Jump with (... addressing mode
     dec zpCURSOR
@@ -1230,7 +1210,7 @@ L879F:
     jsr L882C
     jsr L882C
     jsr L8821
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     cmp #')'
     beq L879A
     jmp L870D         ; No ) - jump to Index error
@@ -1244,7 +1224,7 @@ L87B2:
     pha
     cpx #$37
     bcs L87F0
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     cmp #'#'
     bne L87CC
     pla
@@ -1255,13 +1235,13 @@ L87CC:
     jsr L8821
     pla
     sta zpWORK
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     cmp #','
     beq L87DE
     jmp L8735
 
 L87DE:
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     and #$1F
     cmp zpWORK
     bne L87ED
@@ -1275,10 +1255,10 @@ L87F0:
     jsr L8821
     pla
     sta zpWORK
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     cmp #','
     bne L8810
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     and #$1F
     cmp zpWORK
     bne L87ED
@@ -1716,25 +1696,27 @@ L8A86:
     bcs L8A96
     jmp L8961
 
-; Skip Spaces
-; ===========
-L8A8C:
+; ----------------------------------------------------------------------------
+
+; Skip Spaces, get next character from the aeline, aecur
+; ------------------------------------------------------
+AESPAC:
     ldy zpAECUR
     inc zpAECUR          ; Get offset, increment it
     lda (zpAELINE),Y      ; Get current character
     cmp #' '
-    beq L8A8C         ; Loop until not space
+    beq AESPAC         ; Loop until not space
 L8A96:
     rts
 
-; Skip spaces at PtrA
-; -------------------
-L8A97:
+; Skip spaces, get next character from the line, cursor
+; -----------------------------------------------------
+SPACES:
     ldy zpCURSOR
     inc zpCURSOR
     lda (zpLINE),Y
     cmp #$20
-    beq L8A97
+    beq SPACES
 L8AA1:
     rts
 
@@ -1751,7 +1733,7 @@ L8AA2:
     .endif
 
 L8AAE:
-    jsr L8A8C
+    jsr AESPAC
     cmp #','
     .if version < 3
         bne L8AA2
@@ -1877,7 +1859,7 @@ L8B0B:
 ; Command entered at immediate prompt
 ; -----------------------------------
 L8B38:
-    jsr L8A97         ; Skip spaces at PtrA
+    jsr SPACES         ; Skip spaces at PtrA
     cmp #$C6
     bcs DISPATCH         ; If command token, jump to execute command
     bcc LETST         ; Not command token, try variable assignment
@@ -2255,7 +2237,7 @@ L8D2B:
 L8D30:
     tya
     pha
-    jsr L8A8C
+    jsr AESPAC
     cmp #$2C
     bne L8D77
     jsr L9B29
@@ -2309,7 +2291,7 @@ L8D83:
     lda #$00
     sta zpPRINTS
     sta zpPRINTF          ; Set current field to zero, hex/dec flag to decimal
-    jsr L8A97         ; Get next non-space character
+    jsr SPACES         ; Get next non-space character
     cmp #':'
     beq L8D80         ; <colon> found, finish printing
     cmp #$0D
@@ -2321,7 +2303,7 @@ L8D83:
 ; PRINT [~][print items]['][,][;]
 ; ===============================
 L8D9A:
-    jsr L8A97         ; Get next non-space char
+    jsr SPACES         ; Get next non-space char
     cmp #'#'
     beq L8D2B         ; If '#' jump to do PRINT#
     dec zpCURSOR
@@ -2350,7 +2332,7 @@ L8DBB:
 L8DC1:
     ror zpPRINTF          ; Set hex/dec flag from Carry
 L8DC3:
-    jsr L8A97         ; Get next non-space character
+    jsr SPACES         ; Get next non-space character
     cmp #':'
     beq L8D7D         ; End of statement if <colon> found
     cmp #$0D
@@ -2464,7 +2446,7 @@ XADE8:
 
 L8E40:
     jsr L92DD
-    jsr L8A8C
+    jsr AESPAC
     cmp #')'
     bne L8E24
     lda zpIACC
@@ -2522,7 +2504,7 @@ L8E89:
     rts
 
 L8E8A:
-    jsr L8A97         ; Skip spaces
+    jsr SPACES         ; Skip spaces
     jsr L8E70
     bcc L8E89
     cmp #$22
@@ -2584,7 +2566,7 @@ L8ED2:
     sty STRACC
 L8EE0:
     sty ws+$06FF
-    jsr L8A8C
+    jsr AESPAC
     cmp #$2C
     bne L8F0C
     ldy zpAECUR
@@ -2634,12 +2616,12 @@ L8F2E:
 
 ; DELETE linenum, linenum
 ; =======================
-L8F31:
+DELETE:
     jsr L97DF
     bcc L8F2E
     jsr LBD94
-    jsr L8A97
-    cmp #$2C
+    jsr SPACES
+    cmp #','
     bne L8F2E
     jsr L97DF
     bcc L8F2E
@@ -2676,7 +2658,7 @@ L8F69:
     .elseif version >= 3
         jsr XAED3
     .endif
-    jsr L8A97
+    jsr SPACES
     cmp #$2C
     bne L8F8D
     jsr L97DF
@@ -2908,7 +2890,7 @@ L90AB:
 
 ; AUTO [numeric [, numeric ]]
 ; ===========================
-L90AC:
+AUTO:
     jsr L8F69
     lda zpIACC
     pha
@@ -2986,7 +2968,7 @@ L9127:
 ; DIM numvar [numeric] [(arraydef)]
 ; =================================
 L912F:
-    jsr L8A97
+    jsr SPACES
     tya
     clc
     adc zpLINE
@@ -3059,7 +3041,7 @@ L9185:
     tya
     pha
     jsr L9231
-    jsr L8A97
+    jsr SPACES
     cmp #$2C
     beq L9185
     cmp #')'
@@ -3116,7 +3098,7 @@ L9203:
     cpx zpWORK+1
     bne L91FC
 L920B:
-    jsr L8A97
+    jsr SPACES
     cmp #$2C
     beq L9215
     jmp SUNK
@@ -3367,7 +3349,7 @@ L9341:
     inc $0106,X       ; Increment number of LOCAL items
     ldy zpAECUR
     sty zpCURSOR          ; Update line pointer
-    jsr L8A97         ; Get next character
+    jsr SPACES         ; Get next character
     cmp #$2C
     beq L9323         ; Comma, loop back to do another item
     jmp SUNK         ; Jump to main execution loop
@@ -3542,7 +3524,7 @@ L942A:
 ; VDU num[,][;][...]
 ; ==================
 L942F:
-    jsr L8A97         ; Get next character
+    jsr SPACES         ; Get next character
 L9432:
     cmp #$3A
     beq L9453         ; If end of statement, jump to exit
@@ -3553,7 +3535,7 @@ L9432:
     dec zpCURSOR          ; Step back to current character
     jsr L8821
     jsr L9456         ; Evaluate integer and output low byte
-    jsr L8A97         ; Get next character
+    jsr SPACES         ; Get next character
     cmp #','
     beq L942F         ; Comma, loop to read another number
     cmp #';'
@@ -4279,7 +4261,7 @@ L9838:
     brk
 
 L9841:
-    jsr L8A8C
+    jsr AESPAC
     cmp #'='
     bne L9821
     rts
@@ -5422,7 +5404,7 @@ L9E6C:
     jsr LA3B5
     jsr LA801
     jsr LAAD1
-    jsr LAA94
+    jsr FEXP
     jsr LA7ED
     jsr FMUL
     lda #$FF
@@ -6799,7 +6781,7 @@ LA698:
 
 ; =TAN numeric
 ; ============
-LA6BE:
+TAN:
     jsr L92FA
     jsr LA9D3
     lda zp4A
@@ -6942,7 +6924,7 @@ LA7A9:
 
 ; =SQR numeric
 ; ============
-LA7B4:
+SQR:
     jsr L92FA
 LA7B7:
     jsr LA1DA
@@ -6994,7 +6976,7 @@ LA7F7:
 
 ; =LN numeric
 ; ===========
-LA7FE:
+LN:
     jsr L92FA
 LA801:
     jsr LA1DA
@@ -7233,7 +7215,7 @@ COS:
 
 ; =SIN numeric
 ; ============
-LA998:
+SIN:
     jsr L92FA
     jsr LA9D3
 LA99E:
@@ -7376,9 +7358,9 @@ FSINC:
 
 ; = EXP numeric
 ; =============
-LAA91:
+EXP:
     jsr L92FA
-LAA94:
+FEXP:
     lda zpFACCX
     cmp #$87
     bcc LAAB8
@@ -7507,7 +7489,7 @@ ADVAL:
     .if version < 3
 ; =POINT(numeric, numeric)
 ; ========================
-LAB41:
+POINT:
         jsr L92DD
         jsr LBD94
         jsr L8AAE
@@ -7531,7 +7513,7 @@ LAB41:
     .elseif version >= 3
 ; =NOT
 ; ====
-XAB5B:
+NOT:
         jsr L92E3
 XAB5E:
         ldx #$03
@@ -7545,23 +7527,27 @@ XAB60:
         rts
     .endif
 
+; ----------------------------------------------------------------------------
+
 ; =POS
 ; ====
-LAB6D:
+POS:
     .if version < 3
         lda #$86
         jsr OSBYTE
         txa
         jmp LAED8
     .elseif version >= 3
-        jsr LAB76
+        jsr VPOS
         stx zpIACC
         rts
     .endif
 
+; ----------------------------------------------------------------------------
+
 ; =VPOS
 ; =====
-LAB76:
+VPOS:
     lda #$86
     jsr OSBYTE
     tya
@@ -7571,6 +7557,8 @@ LAB76:
         jmp XAED3
     .endif
 
+; =SGN numeric
+; ============
     .if version < 3
 LAB7F:
         jsr LA1DA
@@ -7578,9 +7566,7 @@ LAB7F:
         bpl LABA0
         bmi LAB9D
      
-; =SGN numeric
-; ============
-LAB88:
+SGN:
         jsr LADEC
         beq LABE6
         bmi LAB7F
@@ -7592,7 +7578,7 @@ LAB88:
         lda zpIACC+3
         bpl LABA0
 LAB9D:
-        jmp LACC4
+        jmp TRUE
 
 LABA0:
         lda #$01
@@ -7602,12 +7588,14 @@ LABA2:
 LABA5:
         lda #$40
         rts
-    .endif
+    .endif          ;  version < 3
+
+; ----------------------------------------------------------------------------
 
 ; =LOG numeric
 ; ============
-LABA8:
-    jsr LA7FE
+LOG:
+    jsr LN
     ldy #<RPLN10
     .if version < 3
         lda #>RPLN10
@@ -7616,7 +7604,7 @@ LABA8:
 
 ; =RAD numeric
 ; ============
-LABB1:
+RAD:
     jsr L92FA
     ldy #<FPIs18
     .if version < 3
@@ -7652,7 +7640,7 @@ DEG:
 
 ; =PI
 ; ===
-LABCB:
+PI:
     jsr LA8FE
     inc zpFACCX
     tay
@@ -7662,7 +7650,7 @@ LABCB:
 
 ; =USR numeric
 ; ============
-LABD2:
+USR:
     jsr L92E3         ; Evaluate integer
     jsr L8F1E         ; Set up registers and call code at IntA
     sta zpIACC
@@ -7680,9 +7668,11 @@ LABE6:
         jmp LETM
     .endif
 
+; ----------------------------------------------------------------------------
+
 ; =EVAL string$ - Tokenise and evaluate expression
 ; ================================================
-LABE9:
+EVAL:
     jsr LADEC         ; Evaluate value
     .if version < 3
         bne LABE6
@@ -7735,9 +7725,11 @@ LAC2C:
         jmp LETM
     .endif
 
+; ----------------------------------------------------------------------------
+
 ; =VAL numeric
 ; ============
-LAC2F:
+VAL:
     jsr LADEC
     .if version < 3
         bne LAC9B
@@ -7762,19 +7754,19 @@ LAC34:
     sta zpAELINE
     lda #>STRACC
     sta zpAELINE+1
-    jsr L8A8C
+    jsr AESPAC
     cmp #$2D
     beq LAC66
     cmp #$2B
     bne LAC5E
-    jsr L8A8C
+    jsr AESPAC
 LAC5E:
     dec zpAECUR
     jsr LA07B
     jmp LAC73
 
 LAC66:
-    jsr L8A8C
+    jsr AESPAC
     dec zpAECUR
     jsr LA07B
     bcc LAC73
@@ -7785,7 +7777,7 @@ LAC73:
 
 ; =INT numeric
 ; ============
-LAC78:
+INT:
     jsr LADEC
     .if version < 3
         beq LAC9B
@@ -7827,7 +7819,7 @@ ASC:
         bne XAC81
     .endif
     lda zpCLEN
-    beq LACC4
+    beq TRUE
     lda STRACC
 LACAA:
     .if version < 3
@@ -7840,14 +7832,14 @@ LACAA:
 
 ; =INKEY numeric
 ; ==============
-LACAD:
+INKEY:
     jsr LAFAD
     .if version < 3
         cpy #$00
     .elseif version >= 3
         tya     
     .endif
-    bne LACC4
+    bne TRUE
     txa
     .if version < 3
         jmp LAEEA
@@ -7862,7 +7854,7 @@ XAC81:
 
 ; =EOF#numeric
 ; ============
-LACB8:
+EOF:
     jsr CHANN
     tax
     lda #$7F
@@ -7878,7 +7870,7 @@ LACB8:
 
 ; =TRUE
 ; =====
-LACC4:
+TRUE:
     .if version < 3
         lda #$FF
     .elseif version >= 3
@@ -7913,13 +7905,13 @@ XACA1:
         jsr LA1DA
         beq FALSE
         bpl XACBF
-        bmi LACC4
+        bmi TRUE
 
 ; ----------------------------------------------------------------------------
 
 ; =SGN numeric
 ; ============
-XACAA:
+SGN:
         jsr LADEC
         beq XAC81
         bmi XACA1
@@ -7929,7 +7921,7 @@ XACAA:
         ora zpIACC
         beq LACC8
         lda zpIACC+3
-        bmi LACC4
+        bmi TRUE
 XACBF:
         lda #$01
 XACC1:
@@ -7939,7 +7931,7 @@ XACC1:
 
 ; =POINT(numeric, numeric)
 ; ========================
-XAB41:
+POINT:
         jsr L92DD
         jsr LBD94
         jsr L8AAE
@@ -7956,7 +7948,7 @@ XAB41:
         lda #$09
         jsr OSWORD
         lda zpFACCS
-        bmi LACC4
+        bmi TRUE
         bpl XACC1
 
     .endif              ; version >= 3
@@ -7966,7 +7958,7 @@ XAB41:
     .if version < 3
 ; =NOT numeric
 ; ============
-LACD1:
+NOT:
         jsr L92E3
         ldx #$03
 LACD6:
@@ -7983,10 +7975,14 @@ LACD6:
 
 ; =INSTR(string$, string$ [, numeric])
 ; ====================================
-LACE2:
+INSTR:
     jsr L9B29
     .if version < 3
-        bne LACE2-$47     ; dest=LAC9B
+        ; BASIC II for Atom and System do not branch to LAC9B with this code
+        ; this seems broken... XXX: fix
+        ; .print "INSTR-$47 = ", INSTR-$47
+        ; .print "LAC9B = ", LAC9B
+        bne INSTR-$47     ; dest=LAC9B
     .elseif version >= 3
         bne XAC81
     .endif
@@ -7996,7 +7992,7 @@ LACE2:
     jsr LBDB2
     jsr L9B29
     .if version < 3
-        bne LACE2-$47     ; dest=LAC9B
+        bne INSTR-$47     ; dest=LAC9B
     .elseif version >= 3
         bne XAC81
     .endif
@@ -8133,7 +8129,7 @@ LADAA:
     rts
 
 LADAD:
-    jsr L8A8C
+    jsr AESPAC
     cmp #$22
     beq LADC9
     ldx #$00
@@ -8209,7 +8205,7 @@ LADEC:
     cmp #'+'
     bne LAE05         ; Jump with unary plus
 LAE02:
-    jsr L8A8C         ; Get current character
+    jsr AESPAC         ; Get current character
 LAE05:
     cmp #$8E
     bcc LAE10         ; Lowest function token, test for indirections
@@ -8361,7 +8357,7 @@ LAEA2:
 
 ; =TOP - Return top of program
 ; ============================
-XAEA6:
+TO:
         iny
         lda (zpAELINE),Y
         cmp #'P'
@@ -8522,10 +8518,10 @@ LAED8:
 
 ; =TOP - Return top of program
 ; ============================
-LAEDC:
+TO:
         ldy zpAECUR
         lda (zpAELINE),Y
-        cmp #$50
+        cmp #'P'
         bne LAEC7
         inc zpAECUR
         lda zpTOP
@@ -8608,7 +8604,7 @@ LAF3F:
 
 ; RND [(numeric)]
 ; ===============
-LAF49:
+RND:
     ldy zpAECUR
     lda (zpAELINE),Y      ; Get current character
     cmp #'('
@@ -8788,9 +8784,11 @@ LAFB2:
         jmp OSBYTE
     .endif
 
+; ----------------------------------------------------------------------------
+
 ; =GET
 ; ====
-LAFB9:
+GET:
     jsr OSRDCH
     .if version < 3
         jmp LAED8
@@ -8798,10 +8796,11 @@ LAFB9:
         jmp XAED3
     .endif
 
+; ----------------------------------------------------------------------------
 
 ; =GET$
 ; =====
-LAFBF:
+GETD:
     jsr OSRDCH
 LAFC2:
     sta STRACC
@@ -8810,9 +8809,13 @@ LAFC2:
     lda #$00
     rts
 
+; ----------------------------------------------------------------------------
+
+; Note how LEFTD and RIGHTD are partly the same
+
 ; =LEFT$(string$, numeric)
 ; ========================
-LAFCC:
+LEFTD:
     jsr L9B29
     bne LB033
     cpx #$2C
@@ -8830,9 +8833,11 @@ LAFEB:
     lda #$00
     rts
 
+; ----------------------------------------------------------------------------
+
 ; =RIGHT$(string$, numeric)
 ; =========================
-LAFEE:
+RIGHTD:
     jsr L9B29
     bne LB033
     cpx #$2C
@@ -8864,9 +8869,11 @@ LB023:
 LB025:
     rts
 
+; ----------------------------------------------------------------------------
+
 ; =INKEY$ numeric
 ; ===============
-LB026:
+INKED:
     jsr LAFAD
     txa
     cpy #$00
@@ -8886,10 +8893,11 @@ LB036:
         jmp X8AC8
     .endif
 
+; ----------------------------------------------------------------------------
 
 ; =MID$(string$, numeric [, numeric] )
 ; ====================================
-LB039:
+MIDD:
     jsr L9B29
     bne LB033
     cpx #$2C
@@ -8942,10 +8950,12 @@ LB083:
     lda #$00
     rts
 
+; ----------------------------------------------------------------------------
+
 ; =STR$ [~] numeric
 ; =================
-LB094:
-    jsr L8A8C         ; Skip spaces
+STRD:
+    jsr AESPAC         ; Skip spaces
     ldy #$FF          ; Y=$FF for decimal
     cmp #'~'
     beq LB0A1
@@ -8974,9 +8984,11 @@ LB0B9:
 LB0BF:
     jmp LETM         ; Jump to Type mismatch error
 
+; ----------------------------------------------------------------------------
+
 ; =STRING$(numeric, string$)
 ; ==========================
-LB0C2:
+STRND:
     jsr L92DD
     jsr LBD94
     jsr L8AAE
@@ -9060,7 +9072,7 @@ LB12D:
 LB13C:
     iny
     sty zpCURSOR
-    jsr L8A97
+    jsr SPACES
     tya
     tax
     clc
@@ -9113,10 +9125,12 @@ LB18A:
     .endif
     brk
 
+; ----------------------------------------------------------------------------
+
 ; =FNname [parameters]
 ; ====================
-LB195:
-    lda #$A4          ; 'FN' token
+FN:
+    lda #tknFN
 
 ; Call subroutine
 ; ---------------
@@ -9188,7 +9202,7 @@ LB1F4:
     lda #$00
     pha
     sta zpCURSOR          ; Push 'no parameters' (?)
-    jsr L8A97
+    jsr SPACES
     cmp #'('
     beq LB24D
     dec zpCURSOR
@@ -9271,14 +9285,14 @@ LB24D:
     txa
     pha
     jsr LB30D
-    jsr L8A97
+    jsr SPACES
     cmp #','
     beq LB24D
     cmp #')'
     bne LB2B5
     lda #$00
     pha
-    jsr L8A8C
+    jsr AESPAC
     cmp #'('
     bne LB2B5
 LB28E:
@@ -9292,7 +9306,7 @@ LB28E:
     inx
     txa
     pha
-    jsr L8A8C
+    jsr AESPAC
     cmp #','
     beq LB28E
     cmp #')'
@@ -9484,7 +9498,7 @@ LB3BA:
 
 ; =CHR$ numeric
 ; =============
-LB3BD:
+CHRD:
     jsr L92E3
 LB3C0:
     lda zpIACC
@@ -9905,7 +9919,7 @@ LB59C:
     sta zpIACC+1
     plp
     bcc LB5CF
-    jsr L8A97
+    jsr SPACES
     cmp #','
     beq LB5D8
     jsr LBDEA
@@ -9913,7 +9927,7 @@ LB59C:
     dec zpCURSOR
     bpl LB5DB
 LB5CF:
-    jsr L8A97
+    jsr SPACES
     cmp #','
     beq LB5D8
     dec zpCURSOR
@@ -10142,7 +10156,7 @@ LB751:
     sta zpFORSTP
     ldy zpAECUR
     sty zpCURSOR
-    jsr L8A97
+    jsr SPACES
     cmp #','
     bne LB7A1
     jmp LB695
@@ -10227,7 +10241,7 @@ LB7C4:
     lda zp39
     sta FORINT,Y
     tax
-    jsr L8A8C
+    jsr AESPAC
     cmp #$B8
     bne LB7BD
     cpx #$05
@@ -10248,7 +10262,7 @@ LB7C4:
     .elseif version >= 3
         jsr XAED3
     .endif
-    jsr L8A8C
+    jsr AESPAC
     cmp #tknSTEP
     bne LB81F
     jsr L92DD
@@ -10288,7 +10302,7 @@ LB84F:
     sta zpARGP+1
     jsr LA38D
     jsr FONE
-    jsr L8A8C
+    jsr AESPAC
     cmp #$88
     bne LB875
     jsr L9B29
@@ -10383,7 +10397,7 @@ LB8E4:
 ; ON ERROR [OFF | program ]
 ; -------------------------
 LB8F2:
-    jsr L8A97
+    jsr SPACES
     cmp #tknOFF
     beq LB8E4         ; ON ERROR OFF
     ldy zpCURSOR
@@ -10409,7 +10423,7 @@ LB90A:
 ; ON [ERROR] [numeric]
 ; ====================
 LB915:
-    jsr L8A97         ; Skip spaces and get next character
+    jsr SPACES         ; Skip spaces and get next character
     cmp #tknERROR
     beq LB8F2         ; Jump with ON ERROR
     dec zpCURSOR
@@ -10543,7 +10557,7 @@ LB9CF:
     sta zpCURSOR
     sty zpCOEFP
 LB9DA:
-    jsr L8A97
+    jsr SPACES
     cmp #','
     bne LB9CA
     lda zpCOEFP
@@ -10607,7 +10621,7 @@ LBA3F:
 ; INPUT [LINE] [print items][variables]
 ; =====================================
 LBA44:
-    jsr L8A97         ; Get next non-space char
+    jsr SPACES         ; Get next non-space char
     cmp #'#'
     beq LB9CF         ; If '#' jump to do INPUT#
     cmp #tknLINE
@@ -10677,7 +10691,7 @@ LBAB0:
     sta zpAELINE+1
     jsr LADAD
 LBABD:
-    jsr L8A8C
+    jsr AESPAC
     cmp #','
     beq LBACA
     cmp #$0D
@@ -10707,7 +10721,7 @@ LBAE6:
     sty zp3D          ; Set DATA pointer to PAGE
     ldy zpTXTP
     sty zp3E
-    jsr L8A97
+    jsr SPACES
     dec zpCURSOR
     cmp #':'
     beq LBB07
@@ -10727,7 +10741,7 @@ LBB07:
     jmp L8B9B
 
 LBB15:
-    jsr L8A97
+    jsr SPACES
     cmp #','
     beq LBB1F
     jmp SUNK
@@ -10768,7 +10782,7 @@ LBB50:
     sta zpAELINE+1
     ldy #$00
     sty zpAECUR
-    jsr L8A8C
+    jsr AESPAC
     cmp #','
     beq LBBB0
     cmp #tknDATA
@@ -10776,7 +10790,7 @@ LBB50:
     cmp #$0D
     beq LBB7A
 LBB6F:
-    jsr L8A8C
+    jsr AESPAC
     cmp #','
     beq LBBB0
     cmp #$0D
@@ -11362,14 +11376,14 @@ LBE62:
 
     .ifdef MOS_ATOM
         sta F_EXEC+0
-        ldx #$37      ; FILE.EXEC=$FF, load to specified address
+        ldx #$37      ; FILE.EXEC=$FF, romstart to specified address
         sec
         jsr OSLOAD
     .endif
 
     .ifdef MOS_BBC
         sty F_EXEC+0
-        ldx #$37      ; FILE.EXEC=0, load to specified address
+        ldx #$37      ; FILE.EXEC=0, romstart to specified address
         jsr OSFILE
     .endif
 
@@ -11606,7 +11620,7 @@ LBEF3:
 
 ; LOAD string$
 ; ============
-LBF24:
+LOAD:
     jsr LBE62
     jmp L8AF3         ; Do LOAD, jump to immediate mode
 
@@ -11639,7 +11653,7 @@ LBF30:
 
 ; =EXT#numeric - Read file pointer via OSARGS
 ; ===========================================
-LBF46:
+EXT:
     sec               ; Flag to do =EXT
 
 ; =PTR#numeric - Read file pointer via OSARGS
@@ -11710,7 +11724,7 @@ OPENIN:
 
 ; OPENOUT f$ - Call OSFIND to open file for output
 ; ================================================
-LBF7C:
+OPENO:
     .ifdef MOS_ATOM
         clc           ; CLC=OPENOUT
         bcc LBF82     
@@ -11724,7 +11738,7 @@ LBF7C:
 
 ; OPENUP f$ - Call OSFIND to open file for update
 ; ===============================================
-LBF80:
+OPENI:
     .ifdef MOS_ATOM
         sec           ; SEC=OPENUP
     .endif
@@ -11792,7 +11806,7 @@ LBFA9:
 ; Check for '#', evaluate channel
 ; ===============================
 CHANN:
-    jsr L8A8C         ; Skip spaces
+    jsr AESPAC         ; Skip spaces
     cmp #'#'          ; If not '#', jump to give error
     .if version < 3
         bne LBFC3
@@ -11860,7 +11874,7 @@ LBFF4:
         brk
     .endif
 
-    .if * > [load + $4000]
+    .if * > [romstart + $4000]
         .error "***WARNING: Code overrun"
     .endif
 
@@ -11885,9 +11899,9 @@ LBFF4:
         .endif
     .endif
 
-    .if * > [load + $4000]
+    .if * > [romstart + $4000]
         .error "***WARNING: Code overrun"
     .endif
 
-    .align load + $4000, 0
+    .align romstart + $4000, 0
 LC000:
