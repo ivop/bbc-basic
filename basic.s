@@ -397,7 +397,7 @@ RNDOK:
 ;                                                       statement/hex number
 ; Bit 7 - Unused - used externally for quote toggle.
 
-L8071:
+TOKENS:
     dta 'AND'     , $80, $00      ; 00000000
     dta 'ABS'     , $94, $00      ; 00000000
     dta 'ACS'     , $95, $00      ; 00000000
@@ -808,16 +808,16 @@ CASM:
     jsr HEXOUT
 
     lda zpWORK
-    jsr LB562
+    jsr HEXSP
 
     ldx #$FC
     ldy zpWORK+2
-    bpl L8536
+    bpl WRTLOP
 
     ldy zpCLEN
-L8536:
+WRTLOP:
     sty zpWORK+1
-    beq L8556
+    beq RMOVE
 
     ldy #$00
 L853C:
@@ -840,42 +840,41 @@ L8544:
     ldx #$FD
 L854C:
     lda (zp3A),Y
-    jsr LB562
+    jsr HEXSP
 
     iny
     dec zpWORK+1
     bne L853C
 
-L8556:
+RMOVE:
     .if version < 3
         inx
         bpl L8565
         jsr LB565
         jsr LB558
         jsr LB558
-        jmp L8556
+        jmp RMOVE
 L8565:
         ldy #0
     .elseif version >= 3
+; RMOVE:
         txa
         tay
-X855C:
+RMOVEL:
         iny
-
-X855D:
-        beq X8566
+        beq LLLLL
         ldx #3
         jsr LB580
-        beq X855C
+        beq RMOVEL
 
-X8566:
+LLLLL:
         ldx #$0A
         lda (zpLINE),Y
-        cmp #$2E
-        bne X857D
+        cmp #'.'
+        bne NOLABL
 
-X856E:
-        jsr LB50E     ; Print char or token
+LTLABL:
+        jsr TOKOUT     ; Print char or token
         dex
         bne X8576
         ldx #1
@@ -884,9 +883,9 @@ X8576:
         iny
         lda (zpLINE),Y
         cpy zp4F
-        bne X856E
+        bne LTLABL
 
-X857D:
+NOLABL:
         jsr LB580
         dey
 
@@ -905,7 +904,7 @@ L8567:
     beq L857B
 
 L8571:
-    jsr LB50E         ; Print character or token
+    jsr TOKOUT         ; Print character or token
     iny
     bne L8567
 
@@ -1657,9 +1656,9 @@ L89E9:
 L89EC:
     cmp #'X'
     bcs L89CB         ; Jump if >='X', nothing starts with X,Y,Z
-    ldx #<L8071
+    ldx #<TOKENS
     stx zp39          ; Point to token table
-    ldx #>L8071
+    ldx #>TOKENS
     stx zp3A
 L89F8:
     cmp (zp39),Y
@@ -9866,6 +9865,8 @@ LB4C6:
 LB4DF:
     rts
 
+; ----------------------------------------------------------------------------
+
 ; Store float
 ; ===========
 LB4E0:
@@ -9896,43 +9897,50 @@ LB4E9:
     sta (zpWORK),Y      ; mantissa 4
     rts
 
-LB500:
-LB50E:
+; ----------------------------------------------------------------------------
+
+TOKOUT:
     sta zpWORK
     cmp #$80
     bcc LB558
-    lda #<L8071
+    lda #<TOKENS
     sta zpWORK+1          ; Point to token table
-    lda #>L8071
-    sta zp39
-    sty zp3A
-LB51E:
+    lda #>TOKENS
+    sta zpWORK+2
+    sty zpWORK+3        ; save Y
+
+FINTOK:
     ldy #$00
-LB520:
+
+LOOTOK:
     iny
     lda (zpWORK+1),Y
-    bpl LB520
+    bpl LOOTOK
     cmp zpWORK
-    beq LB536
+    beq GOTTOK
+
     iny
     tya
     sec
     adc zpWORK+1
     sta zpWORK+1
-    bcc LB51E
-    inc zp39
-    bcs LB51E
+    bcc FINTOK
+    inc zpWORK+2
+    bcs FINTOK
 
-LB536:
+GOTTOK:
     ldy #$00
-LB538:
+
+PRTTOK:
     lda (zpWORK+1),Y
-    bmi LB542
+    bmi ENDTOK
     jsr LB558
+
     iny
-    bne LB538
-LB542:
-    ldy zp3A
+    bne PRTTOK
+
+ENDTOK:
+    ldy zpWORK+3        ; restore Y
     rts
 
 ; ----------------------------------------------------------------------------
@@ -9960,7 +9968,7 @@ LB558:
     jsr OSWRCH
     jmp BUFEND         ; Set COUNT to zero
 
-LB562:
+HEXSP:
     jsr HEXOUT
 LB565:
     lda #$20
@@ -10146,7 +10154,7 @@ LB67E:
     beq LB688
     dec zp3C
 LB688:
-    jsr LB50E
+    jsr TOKOUT
     iny
     bne LB639
 LB68E:
@@ -12000,7 +12008,7 @@ REPORT:
 LBFEC:
     lda (FAULT),Y
     beq LBFF6         ; Get byte, exit if $00 terminator
-    jsr LB500
+    jsr TOKOUT
     iny
     bne LBFEC         ; Print character or token, loop for next
 LBFF6:

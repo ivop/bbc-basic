@@ -43,7 +43,7 @@ zpWORK    = zp + $37    ; General work area, 2 bytes for now, probably 4
 
 ; WORK+x seem to match Cmos, not Basic128 (is one off (!))
 zp38 = zp + $38 ; WORK+1    ok.
-zp39 = zp + $39 ; WORK+2
+zp39 = zp + $39 ; WORK+2    ok.
 zp3A = zp + $3a ; WORK+3    ok.
 zp3B = zp + $3b ; WORK+4    ok.
 zp3C = zp + $3c ; WORK+5
