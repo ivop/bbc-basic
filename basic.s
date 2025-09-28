@@ -744,33 +744,51 @@ MNEML:
 MNEMH:
     mnemonics packmnemH
 
+ALLOPS = * -MNEMH
+
 ; Opcode base table
 ; -----------------
-
 STCODE:
 
-; No arguments
-; ------------
     brk:clc:cld:cli:clv:dex:dey:inx
     iny:nop:pha:php:pla:plp:rti:rts
     sec:sed:sei:tax:tay:tsx:txa:txs:tya
 
-; Branches
-; --------
+IMPLIED = * - STCODE
+
     dta $90, $B0, $F0, $30    ; BMI, BCC, BCS, BEQ
     dta $D0, $10, $50, $70    ; BNE, BPL, BVC, BVS
 
-; Arithmetic
-; ----------
-    dta $21, $41, $01, $61    ; AND, EOR, ORA, ADC
-    dta $C1, $A1, $E1, $06    ; CMP, LDA, SBC, ASL
-    dta $46, $26, $66, $C6    ; LSR, ROL, ROR, DEC
-    dta $E6, $E0, $C0, $20    ; INC, CPX, CPY, BIT
+BRANCH = * - STCODE
 
-; Others
-; ------
-    dta $4C, $20, $A2, $A0    ; JMP, JSR, LDX, LDY
+    dta $21, $41, $01, $61    ; AND, EOR, ORA, ADC
+    dta $C1, $A1, $E1         ; CMP, LDA, SBC
+
+GROUP1 = * - STCODE
+
+    dta $06, $46, $26, $66    ; ASL, LSR, ROL, ROR
+
+ASLROR = * - STCODE
+
+    dta $C6, $E6              ; DEC, INC
+
+DECINC = * - STCODE
+
+    dta $E0, $C0              ; CPX, CPY
+
+CPXCPY = * - STCODE
+
+    dta $20, $4C, $20         ; BIT, JMP, JSR
+
+JSRJMP = * - STCODE
+
+    dta $A2, $A0              ; LDX, LDY
+
+COPSTA = * - STCODE
+
     dta $81, $86, $84         ; STA, STX, STY
+
+PSEUDO = * - STCODE
 
 ; ----------------------------------------------------------------------------
 
@@ -962,7 +980,8 @@ SETL:                 ; set label
 MNEENT:
     ldx #$03          ; Prepare to fetch three characters
     jsr SPACES        ; Skip spaces
-    ldy #$00
+
+    ldy #$00         ; number of bytes
     sty zpWORK+6
     cmp #':'
     beq MMMM         ; End of statement
@@ -973,57 +992,60 @@ MNEENT:
     cmp #'.'
     beq SETL          ; Label
     dec zpCURSOR
-L85D5:
+
+RDLUP:
     ldy zpCURSOR
     inc zpCURSOR          ; Get current character, inc. index
     lda (zpLINE),Y
-    bmi L8607         ; Token, check for tokenised AND, EOR, OR
-    cmp #$20
-    beq L85F1         ; Space, step past
+    bmi RDSLPT         ; Token, check for tokenised AND, EOR, OR
+
+    cmp #' '
+    beq RDOUT         ; Space, step past
+
     ldy #$05
     asl
     asl
     asl               ; Compact first character
-L85E6:
+INLUP:
     asl
-    rol zp3D
-    rol zp3E
+    rol zpWORK+6
+    rol zpWORK+7
     dey
-    bne L85E6
+    bne INLUP
     dex
-    bne L85D5         ; Loop to fetch three characters
+    bne RDLUP         ; Loop to fetch three characters
 
 ; The current opcode has now been compressed into two bytes
 ; ---------------------------------------------------------
 
-L85F1:
-    ldx #$3A          ; Point to end of opcode lookup table
-    lda zp3D          ; Get low byte of compacted mnemonic
-L85F5:
+RDOUT:
+    ldx #ALLOPS       ; Point to end of opcode lookup table
+    lda zpWORK+6      ; Get low byte of compacted mnemonic
+SRCHM:
     cmp MNEML-1,X
-    bne L8601         ; Low half doesn't match
+    bne NOTGOT        ; Low half doesn't match
     ldy MNEMH-1,X     ; Check high half
     cpy zp3E
-    beq RDOPGT         ; Mnemonic matches
-L8601:
+    beq RDOPGT        ; Mnemonic matches
+NOTGOT:
     dex
-    bne L85F5         ; Loop through opcode lookup table
+    bne SRCHM         ; Loop through opcode lookup table
 ASSDED:
     jmp STDED         ; Mnemonic not matched, Mistake
 
-L8607:
-    ldx #$22          ; opcode number for 'AND'
+RDSLPT:
+    ldx #BRANCH+1     ; opcode number for 'AND'
     cmp #tknAND
-    beq RDOPGT         ; Tokenised 'AND'
+    beq RDOPGT        ; Tokenised 'AND'
     inx               ; opcode number for 'EOR'
     cmp #tknEOR
-    beq RDOPGT         ; Tokenised 'EOR'
+    beq RDOPGT        ; Tokenised 'EOR'
     inx               ; opcode number for 'ORA'
     cmp #tknOR
     bne ASSDED        ; Not tokenised 'OR'
     inc zpCURSOR
     iny
-    lda (zpLINE),Y      ; Get next character
+    lda (zpLINE),Y    ; Get next character
     cmp #'A'
     bne ASSDED        ; Ensure 'OR' followed by 'A'
 
@@ -1032,56 +1054,59 @@ L8607:
 
 RDOPGT:
     lda STCODE-1,X
-    sta zpOPCODE          ; Get base opcode
+    sta zpOPCODE      ; Get base opcode
     ldy #$01          ; Y=1 for one byte
     cpx #$1A
-    bcs NGPONE         ; Opcode $1A+ have arguments
+    bcs NGPONE        ; Opcode $1A+ have arguments
 
 MMMM:
     lda PC
-    sta zpWORK          ; Get P% low byte
-    sty zp39
+    sta zpWORK        ; Get P% low byte
+    sty zpWORK+2
     ldx zpBYTESM
     cpx #$04          ; Offset assembly (opt>3)
     ldx PC+1
-    stx zpWORK+1          ; Get P% high byte
-    bcc L8643         ; No offset assembly
-    lda VARL_O
-    ldx VARL_O+1      ; Get O%
-L8643:
-    sta zp3A
-    stx zp3B          ; Store destination pointer
+    stx zpWORK+1      ; Get P% high byte
+    bcc MMMMLR        ; No offset assembly
+
+    lda VARL_O        ; Get O%
+    ldx VARL_O+1
+MMMMLR:
+    sta zpWORK+3
+    stx zpWORK+4      ; Store destination pointer
     tya
-    beq L8672
-    bpl L8650
+    beq MMMMRT
+    bpl MMMMLP
     ldy zpCLEN
-    beq L8672
-L8650:
+    beq MMMMRT
+
+MMMMLP:
     dey
-    lda zpOPCODE,Y        ; Get opcode byte   (lda abs,y (!))
+    lda zpOPCODE,Y    ; Get opcode byte   (lda abs,y (!))
     bit zp39
-    bpl L865B         ; Opcode - jump to store it
-    lda STRACC,Y    ; Get EQU byte
-L865B:
+    bpl MMMMCL        ; Opcode - jump to store it
+    lda STRACC,Y      ; Get EQU byte
+MMMMCL:
     sta (zp3A),Y      ; Store byte
-    inc PC
-    bne L8665         ; Increment P%
+    inc PC            ; Increment P%
+    bne MMMMLQ
     inc PC+1
-L8665:
-    bcc L866F
+MMMMLQ:
+    bcc MMMMPP        ; Increment O%
     inc VARL_O
-    bne L866F         ; Increment O%
+    bne MMMMPP
     inc VARL_O+1
-L866F:
+MMMMPP:
     tya
-    bne L8650
-L8672:
+    bne MMMMLP
+MMMMRT:
     rts
 
 NGPONE:
-    cpx #$22
+    cpx #BRANCH+1      ; index for 'AND' opcode
     bcs NGPTWO
     jsr ASEXPR
+
     clc
     lda zpIACC
     sbc PC
@@ -1091,18 +1116,19 @@ NGPONE:
     cpy #$01
     dey
     sbc #$00
-    beq L86B2
-    cmp #$FF
-    beq L86AD
+    beq FWD
 
-L8691:
+    cmp #$FF
+    beq BACKWARDS
+
+BOR:
     lda zpBYTESM
     .if version < 3
         lsr
     .elseif version >= 3
         and #$02
     .endif
-    beq L86A5
+    beq BRSTOR
 
     brk
     .if foldup == 1
@@ -1112,26 +1138,26 @@ L8691:
     .endif
     brk
 
-L86A5:
+BRSTOR:
     tay
-L86A6:
-    sty zpIACC
-L86A8:
+BRSTO:
+    sty zpIACC      ; zpOPCODE+1
+BRST:
     ldy #$02
     jmp MMMM
 
-L86AD:
+BACKWARDS:
     tya
-    bmi L86A6
-    bpl L8691
+    bmi BRSTO
+    bpl BOR
 
-L86B2:
+FWD:
     tya
-    bpl L86A6
-    bmi L8691
+    bpl BRSTO
+    bmi BOR
 
 NGPTWO:
-    cpx #$29
+    cpx #GROUP1+1      ; index for 'ASL' opcode
     bcs L86D3
     jsr SPACES         ; Skip spaces
     cmp #'#'
@@ -1141,7 +1167,7 @@ L86C5:
     jsr ASEXPR
 L86C8:
     lda zpIACC+1
-    beq L86A8
+    beq BRST
 L86CC:
     brk
     dta $02
@@ -1151,6 +1177,8 @@ L86CC:
         dta 'Byte'
     .endif
     brk
+
+; ----------------------------------------------------------------------------
 
 ; Parse (zp),Y addressing mode
 ; ----------------------------
@@ -1218,7 +1246,7 @@ L8735:
 L8738:
     lda zpIACC+1
     bne L872F
-    jmp L86A8
+    jmp BRST
 
 L873F:
     cpx #$2F
