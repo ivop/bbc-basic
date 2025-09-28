@@ -739,9 +739,9 @@ ADTABH:
 ; Packed mnemonic table, low/high bytes
 ; -------------------------------------
 
-L8451:
+MNEML:
     mnemonics packmnemL
-L848B:
+MNEMH:
     mnemonics packmnemH
 
 ; Opcode base table
@@ -774,22 +774,22 @@ L84C5:
 
 ; ----------------------------------------------------------------------------
 
-; Exit Assembler
-; --------------
+; Assembler
+; =========
 
-STOPASM:
+STOPASM:              ; Exit Assembler
     lda #$FF          ; Set OPT to 'BASIC'
     sta zpBYTESM
-    jmp STMT         ; Set OPT, return to execution loop
+    jmp STMT          ; Set OPT, return to execution loop
 
 ASS:
     lda #$03
-    sta zpBYTESM          ; Set OPT 3, default on entry to '['
+    sta zpBYTESM      ; Set OPT 3, default on entry to '['
 
 CASM:
-    jsr SPACES         ; Skip spaces
+    jsr SPACES        ; Skip spaces
     cmp #']'
-    beq STOPASM         ; ']' - exit assembler
+    beq STOPASM       ; ']' - exit assembler
 
     jsr CLYADP
 
@@ -799,7 +799,7 @@ CASM:
     dec zpCURSOR
     lda zpBYTESM
     lsr
-    bcc L857E
+    bcc NOLIST
 
     lda zpTALLY
     adc #$04
@@ -861,29 +861,35 @@ L8565:
         tay
 X855C:
         iny
+
 X855D:
         beq X8566
         ldx #3
         jsr LB580
         beq X855C
+
 X8566:
         ldx #$0A
         lda (zpLINE),Y
         cmp #$2E
         bne X857D
+
 X856E:
         jsr LB50E     ; Print char or token
         dex
         bne X8576
         ldx #1
+
 X8576:
         iny
         lda (zpLINE),Y
         cpy zp4F
         bne X856E
+
 X857D:
         jsr LB580
         dey
+
 X8581:
         iny
         cmp (zpLINE),Y
@@ -892,29 +898,36 @@ X8581:
 
 L8567:
     lda (zpLINE),Y
-    cmp #$3A
+    cmp #':'
     beq L8577
+
     cmp #$0D
     beq L857B
+
 L8571:
     jsr LB50E         ; Print character or token
-    iny:BNE L8567
+    iny
+    bne L8567
+
 L8577:
     cpy zpCURSOR
     bcc L8571
+
 L857B:
     jsr NLINE         ; Print newline
 
-L857E:
+NOLIST:
     ldy zpCURSOR
     dey
-L8581:
+
+NOLA:
     iny
     lda (zpLINE),Y
-    cmp #$3A
+    cmp #':'
     beq L858C
     cmp #$0D
-    bne L8581
+    bne NOLA
+
 L858C:
     jsr DONE_WITH_Y
     dey
@@ -986,9 +999,9 @@ L85F1:
     ldx #$3A          ; Point to end of opcode lookup table
     lda zp3D          ; Get low byte of compacted mnemonic
 L85F5:
-    cmp L8451-1,X
+    cmp MNEML-1,X
     bne L8601         ; Low half doesn't match
-    ldy L848B-1,X     ; Check high half
+    ldy MNEMH-1,X     ; Check high half
     cpy zp3E
     beq L8620         ; Mnemonic matches
 L8601:
