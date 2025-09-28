@@ -344,7 +344,7 @@ copyright_string:
     sty zpTXTP
 
     ldx #$00
-    stx zpLISTPO          ; Set LISTO to 0
+    stx zpLISTOP          ; Set LISTO to 0
     stx VARL_AT+2
     stx VARL_AT+3      ; Set @% to $0000xxxx
     dex
@@ -820,37 +820,37 @@ WRTLOP:
     beq RMOVE
 
     ldy #$00
-L853C:
+WRTLPY:
     inx
-    bne L854C
+    bne WRTLPA
 
     jsr NLINE         ; Print newline
 
-    ldx zp3F
+    ldx zpWORK+8
 
     .if version < 3
 L8544:
-        jsr LB565     ; Print a space
+        jsr LISTPT     ; Print a space
         dex
         bne L8544     ; Loop to print spaces
     .elseif version >= 3
-        jsr LB580     ; Print multiple spaces
+        jsr LISTPL     ; Print multiple spaces
     .endif
 
-    ldx #$FD
-L854C:
-    lda (zp3A),Y
+    ldx #$fd
+WRTLPA:
+    lda (zpWORK+3),Y
     jsr HEXSP
 
     iny
     dec zpWORK+1
-    bne L853C
+    bne WRTLPY
 
 RMOVE:
     .if version < 3
         inx
         bpl L8565
-        jsr LB565
+        jsr LISTPT
         jsr LB558
         jsr LB558
         jmp RMOVE
@@ -862,12 +862,12 @@ L8565:
         tay
 RMOVEL:
         iny
-        beq LLLLL
+        beq LLLLL5
         ldx #3
-        jsr LB580
+        jsr LISTPL
         beq RMOVEL
 
-LLLLL:
+LLLLL5:
         ldx #$0A
         lda (zpLINE),Y
         cmp #'.'
@@ -876,43 +876,43 @@ LLLLL:
 LTLABL:
         jsr TOKOUT     ; Print char or token
         dex
-        bne X8576
+        bne MALABL
         ldx #1
 
-X8576:
-        iny
+MALABL:
+        iny             ; Y was 0
         lda (zpLINE),Y
         cpy zp4F
         bne LTLABL
 
 NOLABL:
-        jsr LB580
+        jsr LISTPL
         dey
 
-X8581:
+LABLSP:
         iny
         cmp (zpLINE),Y
-        beq X8581
+        beq LABLSP
     .endif
 
-L8567:
+LLLL4:
     lda (zpLINE),Y
     cmp #':'
-    beq L8577
+    beq NOCODA
 
     cmp #$0D
-    beq L857B
+    beq NOCOD
 
-L8571:
+LLLLLL6:
     jsr TOKOUT         ; Print character or token
     iny
-    bne L8567
+    bne LLLL4
 
-L8577:
+NOCODA:
     cpy zpCURSOR
-    bcc L8571
+    bcc LLLLLL6
 
-L857B:
+NOCOD:
     jsr NLINE         ; Print newline
 
 NOLIST:
@@ -923,34 +923,36 @@ NOLA:
     iny
     lda (zpLINE),Y
     cmp #':'
-    beq L858C
+    beq NOLB
     cmp #$0D
     bne NOLA
 
-L858C:
+NOLB:
     jsr DONE_WITH_Y
     dey
     lda (zpLINE),Y
-    cmp #$3A
-    beq L85A2
+    cmp #':'
+    beq CASMJ
     lda zpLINE+1
     cmp #>BUFFER
-    bne L859F
+    bne INTXT
     jmp L8AF6
 
-L859F:
+INTXT:
     jsr LINO
-L85A2:
+CASMJ:
     jmp CASM
 
-L85A5:
-    jsr L9582
-    beq L8604
-    bcs L8604
-    jsr LBD94
-    jsr LAE3A         ; Find P%
+; ----------------------------------------------------------------------------
+
+SETL:                 ; set label
+    jsr CRAELV
+    beq ASSDED
+    bcs ASSDED
+    jsr LBD94         ; PHADDR??
+    jsr GETPC         ; Find P%
     sta zpTYPE
-    jsr LB4B4
+    jsr STORE
     jsr L8827
 
     .if version >= 3
@@ -959,7 +961,7 @@ L85A5:
 
 MNEENT:
     ldx #$03          ; Prepare to fetch three characters
-    jsr SPACES         ; Skip spaces
+    jsr SPACES        ; Skip spaces
     ldy #$00
     sty zp3D
     cmp #':'
@@ -969,7 +971,7 @@ MNEENT:
     cmp #'\'
     beq L862B         ; Comment
     cmp #'.'
-    beq L85A5         ; Label
+    beq SETL          ; Label
     dec zpCURSOR
 L85D5:
     ldy zpCURSOR
@@ -1006,7 +1008,7 @@ L85F5:
 L8601:
     dex
     bne L85F5         ; Loop through opcode lookup table
-L8604:
+ASSDED:
     jmp STDED         ; Mnemonic not matched, Mistake
 
 L8607:
@@ -1018,12 +1020,12 @@ L8607:
     beq L8620         ; Tokenised 'EOR'
     inx               ; opcode number for 'ORA'
     cmp #tknOR
-    bne L8604         ; Not tokenised 'OR'
+    bne ASSDED        ; Not tokenised 'OR'
     inc zpCURSOR
     iny
     lda (zpLINE),Y      ; Get next character
     cmp #'A'
-    bne L8604         ; Ensure 'OR' followed by 'A'
+    bne ASSDED        ; Ensure 'OR' followed by 'A'
 
 ; Opcode found
 ; ------------
@@ -2089,7 +2091,7 @@ L8BDF:
 ; LET variable = expression
 ; =========================
 LET:
-    jsr L9582
+    jsr CRAELV
     beq L8C0B
 L8BE9:
     bcc L8BFB
@@ -2105,7 +2107,7 @@ L8BFB:
     jsr L9813         ; Check for end of statement
     lda zpTYPE          ; Get evaluation type
     beq LETM         ; If not number, error
-    jsr LB4B4         ; Assign the number
+    jsr STORE         ; Assign the number
     jmp L8B9B         ; Return to execution loop
 
 L8C0B:
@@ -2170,7 +2172,7 @@ L8C5F:
     cpy zpAESTKP
     tax
     sbc zpAESTKP+1
-    bcs L8CB7
+    bcs ALLOCR
     sty zpFSA
     stx zpFSA+1
     pla
@@ -2218,7 +2220,7 @@ L8CB4:
     sta (zpIACC),Y
     rts
 
-L8CB7:
+ALLOCR:
     brk
     dta 0
     .if foldup == 1
@@ -2397,7 +2399,7 @@ L8DAD:
     bcs L8DAD         ; Loop to reduce until (COUNT MOD fieldwidth)<0
     tay               ; Y=number of spaces to get back to (COUNT MOD width)=zero
 L8DB5:
-    jsr LB565
+    jsr LISTPT
     iny
     bne L8DB5         ; Loop to print required spaces
 
@@ -2451,7 +2453,7 @@ L8DD2:
     beq L8E0E         ; length=width - print it
     tay               ; Otherwise, Y=number of spaces to pad with
 L8E08:
-    jsr LB565
+    jsr LISTPT
     dey
     bne L8E08         ; Loop to print required spaces to pad the number
 
@@ -2547,11 +2549,11 @@ L8E5B:
     beq L8E6A
 L8E5F:
     .if version < 3
-        jsr LB565
+        jsr LISTPT
         dey
         bne L8E5F
     .elseif version >= 3
-        jsr LB580
+        jsr LISTPL
     .endif
     beq L8E6A
 L8E67:
@@ -2996,7 +2998,7 @@ L90DC:
 
 L90DF:
     dec zpCURSOR
-    jsr L9582
+    jsr CRAELV
     beq L9127
     bcs L9127
     jsr LBD94
@@ -3026,7 +3028,7 @@ L90DF:
     sta zpIACC+3
     lda #$40
     sta zpTYPE
-    jsr LB4B4
+    jsr STORE
     jsr L8827
     jmp L920B
 
@@ -3373,7 +3375,7 @@ L92F0:
     beq L92F7         ; String, jump to 'Type mismatch'
     bpl L92EA         ; Integer, return
 L92F4:
-    jmp LA3E4         ; Real, jump to convert to integer
+    jmp IFIX         ; Real, jump to convert to integer
 
 L92F7:
     jmp LETM         ; Jump to 'Type mismatch' error
@@ -3421,7 +3423,7 @@ LOCAL:
     tsx
     cpx #$FC
     bcs L936B         ; Not inside subroutine, error
-    jsr L9582
+    jsr CRAELV
     beq L9353         ; Find variable, jump if bad variable name
     jsr LB30D         ; Push value on stack, push variable info on stack
     ldy zpIACC+2
@@ -3434,7 +3436,7 @@ LOCAL:
         jsr XAED3
     .endif
     sta zpTYPE
-    jsr LB4B4         ; Set current variable to IntA (zero)
+    jsr STORE         ; Set current variable to IntA (zero)
 
 ; Next LOCAL item
 ; ---------------
@@ -3844,7 +3846,7 @@ CREATD:
     lda #$00
     ldy #$01
     sta (zpWORK+3),Y
-    jmp L8CB7
+    jmp ALLOCR
 
 L9556:
     sta zpFSA
@@ -3883,18 +3885,20 @@ L957A:
     bcc L956D
     rts
 
-L957F:
+; ----------------------------------------------------------------------------
+
+CRAELT:
     jsr L9531
-L9582:
+CRAELV:
     jsr L95C9
     bne L95A4
     bcs L95A4
     jsr L94FC
     ldx #$05
     cpx zpIACC+2
-    bne L957F
+    bne CRAELT
     inx
-    bne L957F
+    bne CRAELT
 L9595:
     cmp #$21
     beq L95A5
@@ -4515,7 +4519,7 @@ IF:
     jsr AEEXPR
     beq IFE
     bpl L98CC
-    jsr LA3E4
+    jsr IFIX
 L98CC:
     ldy zpAECUR
     sty zpCURSOR
@@ -4564,7 +4568,7 @@ L9911:
     jsr L991F
     lda #$5D
     jsr LB558
-    jmp LB565
+    jmp LISTPT
 
 ; Print 16-bit decimal number
 ; ===========================
@@ -4610,12 +4614,12 @@ L994F:
     .if version < 3
         tay
 L995A:
-        jsr LB565
+        jsr LISTPT
         dey
         bne L995A
     .elseif version >= 3
         tax
-        jsr LB580
+        jsr LISTPL
         ldx zpWORK
     .endif
 L9960:
@@ -4760,7 +4764,7 @@ L9A39:
     jsr LBDEA
     jsr LBD51
     jsr LA2BE
-    jsr LA21E
+    jsr FTOW
     jsr LBD7E
     jsr LA3B5
     jmp L9A62
@@ -5530,7 +5534,7 @@ L9E88:
 FCONHX:
     tya
     bpl L9E96
-    jsr LA3E4         ; Convert real to integer
+    jsr IFIX         ; Convert real to integer
 L9E96:
     ldx #$00
     ldy #$00
@@ -5650,7 +5654,7 @@ L9F25:
     cmp #$A0
     bcc L9F39         ; Less than $A0, less than ten, jump to convert it
 L9F31:
-    jsr LA24D         ; FloatA=FloatA / 10
+    jsr FTENFQ         ; FloatA=FloatA / 10
 L9F34:
     inc zp49
     jmp L9ED1         ; Jump back to get the number >=1 again
@@ -5684,7 +5688,7 @@ L9F5C:
     ldx zpWORK+1
     beq L9F71
 L9F6B:
-    jsr LA24D         ; FloatA=FloatA/10
+    jsr FTENFQ         ; FloatA=FloatA/10
     dex
     bne L9F6B
 L9F71:
@@ -5952,7 +5956,7 @@ LA108:
     bne LA108
     beq LA118
 LA111:
-    jsr LA24D
+    jsr FTENFQ
     inc zp49
     bne LA111
 LA118:
@@ -6115,9 +6119,9 @@ LA1F4:
     bcc LA1FF
     inc zpFACCXH
 LA1FF:
-    jsr LA21E
-    jsr LA242
-    jsr LA242
+    jsr FTOW
+    jsr FASRW
+    jsr FASRW
 LA208:
     jsr LA178
 LA20B:
@@ -6133,94 +6137,122 @@ LA20B:
 LA21D:
     rts
 
-LA21E:
+; ----------------------------------------------------------------------------
+
+; FTOW -- Copy FACC to FWRK
+
+FTOW:
     lda zpFACCS
-LA220:
-    sta zp3B
+    sta zpFWRKS
     lda zpFACCXH
-    sta zp3C
+    sta zpFWRKXH
     lda zpFACCX
-    sta zp3D
+    sta zpFWRKX
     lda zpFACCMA
-    sta zp3E
+    sta zpFWRKMA
     lda zpFACCMB
-    sta zp3F
+    sta zpFWRKMB
     lda zpFACCMC
-    sta zp40
+    sta zpFWRKMC
     lda zpFACCMD
-    sta zp41
+    sta zpFWRKMD
     lda zpFACCMG
-    sta zp42
+    sta zpFWRKMG
     rts
 
-LA23F:
-    jsr LA21E
-LA242:
-    lsr zp3E
-    ror zp3F
-    ror zp40
-    ror zp41
-    ror zp42
+; FTOWAS -- Copy FACC to FWRK and Arithmetic Shift Right
+
+FTOWAS:
+    jsr FTOW
+
+; FASRW -- Mantissa Arithmetic Shift Right FWRK
+
+FASRW:
+    lsr zpFWRKMA
+    ror zpFWRKMB
+    ror zpFWRKMC
+    ror zpFWRKMD
+    ror zpFWRKMG
     rts
 
-LA24D:
+; ----------------------------------------------------------------------------
+
+; FTENFQ -- Divide FACC by 10.0
+;
+;   FX:=FX-4; WRK:=ACC; WRK:=WRK>>1; ACC:=ACC+WRK
+;   ADJUST IF CARRY
+;   WRK:=ACC; WRK:=WRK>>4; ACC:=ACC+WRK
+;   ADJUST IF CARRY
+;   WRK:=ACC>>8; ACC:=ACC>>8
+;   ADJUST IF CARRY
+;   WRK:=ACC>>16; ACC:=ACC+WRK
+;   ADJUST IF CARRY
+;   ACC:=ACC+(ACC>>32)
+;   ADJUST IF CARRY
+
+FTENFQ:
     sec
     lda zpFACCX
     sbc #$04
     sta zpFACCX
-    bcs LA258
+    bcs FTENB
     dec zpFACCXH
-LA258:
-    jsr LA23F
-    jsr LA208
-    jsr LA23F
-    jsr LA242
-    jsr LA242
-    jsr LA242
-    jsr LA208
+FTENB:
+    jsr FTOWAS
+    jsr LA208           ; * 0.00011
+    jsr FTOWAS
+    jsr FASRW
+    jsr FASRW
+    jsr FASRW
+    jsr LA208           ; * 0.000110011
+
     lda #$00
-    sta zp3E
+    sta zpFWRKMA
     lda zpFACCMA
-    sta zp3F
+    sta zpFWRKMB
     lda zpFACCMB
-    sta zp40
+    sta zpFWRKMC
     lda zpFACCMC
-    sta zp41
+    sta zpFWRKMD
     lda zpFACCMD
-    sta zp42
+    sta zpFWRKMG
+
     lda zpFACCMG
-    rol
-    jsr LA208
+    rol                 ; set carry bit properly
+    jsr LA208           ; OK to 16 bits
     lda #$00
-    sta zp3E
-    sta zp3F
+    sta zpFWRKMA        ; later BASICS skip this, because FWRKMA is already 0
+    sta zpFWRKMB
+
     lda zpFACCMA
-    sta zp40
+    sta zpFWRKMC
     lda zpFACCMB
-    sta zp41
+    sta zpFWRKMD
     lda zpFACCMC
-    sta zp42
+    sta zpFWRKMG
+
     lda zpFACCMD
     rol
     jsr LA208
     lda zpFACCMB
     rol
     lda zpFACCMA
-LA2A4:
+
+FPLNF:
     adc zpFACCMG
     sta zpFACCMG
-    bcc LA2BD
+    bcc FPLNY
     inc zpFACCMD
-    bne LA2BD
+    bne FPLNY
     inc zpFACCMC
-    bne LA2BD
+    bne FPLNY
     inc zpFACCMB
-    bne LA2BD
+    bne FPLNY
     inc zpFACCMA
-    bne LA2BD
+    bne FPLNY
     jmp LA20B
 
-LA2BD:
+FPLNY:
     rts
 
 LA2BE:
@@ -6411,9 +6443,10 @@ LA3E1:
 
 ; Convert real to integer
 ; =======================
-LA3E4:
-    jsr LA3FE         ; Convert real to integer
-LA3E7:
+IFIX:
+    jsr FFIX         ; Convert real to integer
+
+COPY_FACC_TO_IACC:
     lda zpFACCMA
     sta zpIACC+3          ; Copy to Integer Accumulator
     lda zpFACCMB
@@ -6424,35 +6457,36 @@ LA3E7:
     sta zpIACC
     rts
 
-LA3F8:
-    jsr LA21E         ; Copy FloatA to FloatB
-    jmp LA686         ; Set FloatA to zero and return
-
-; Convert float to integer
-; ========================
-; On entry, FloatA ($30-$34) holds a float
-; On exit,  FloatA ($30-$34) holds integer part
-; ---------------------------------------------
+; FFIX converts float to integer
+; ==============================
+; On entry, FACCX-FACCMD ($30-$34) holds a float
+; On exit,  FACCX-FACCMD ($30-$34) holds integer part
+; ---------------------------------------------------
 ; The real value is partially denormalised by repeatedly dividing the mantissa
 ; by 2 and incrementing the exponent to multiply the number by 2, until the
 ; exponent is $80, indicating that we have got to mantissa * 2^0.
-;
-LA3FE:
+; Truncates towards zero.
+
+FFIXQ:
+    jsr FTOW         ; Copy FloatA to FloatB
+    jmp LA686         ; Set FloatA to zero and return
+
+FFIX:
     lda zpFACCX
-    bpl LA3F8         ; Exponent<$80, number<1, jump to return 0
+    bpl FFIXQ         ; Exponent<$80, number<1, jump to return 0
     jsr LA453         ; Set $3B-$42 to zero
     jsr LA1DA
     bne LA43C
     beq LA468
 
-LA40C:
-    lda zpFACCX          ; Get exponent
+FFIXB:
+    lda zpFACCX    ; Get exponent
     cmp #$A0
-    bcs LA466         ; Exponent is +32, float has been denormalised to an integer
+    bcs LA466      ; Exponent is +32, float has been denormalised to an integer
     cmp #$99
-    bcs LA43C         ; Loop to keep dividing
+    bcs LA43C      ; Loop to keep dividing
     adc #$08
-    sta zpFACCX          ; Increment exponent by 8
+    sta zpFACCX    ; Increment exponent by 8
     lda zp40
     sta zp41
     lda zp3F
@@ -6469,7 +6503,7 @@ LA40C:
     sta zpFACCMB
     lda #$00
     sta zpFACCMA
-    beq LA40C         ; Loop to keep dividing
+    beq FFIXB         ; Loop to keep dividing
 
 LA43C:
     lsr zpFACCMA
@@ -6481,7 +6515,7 @@ LA43C:
     ror zp40
     ror zp41
     inc zpFACCX
-    bne LA40C
+    bne FFIXB
 LA450:
     jmp LA66C
 
@@ -6527,7 +6561,7 @@ LA486:
     jmp LA1DA
 
 LA491:
-    jsr LA3FE
+    jsr FFIX
     lda zpFACCMD
     sta zp4A
     jsr LA4E8
@@ -6816,7 +6850,7 @@ LA65C:
     bcc LA67C
     beq LA676
     lda #$FF
-    jsr LA2A4       ; FPLNF
+    jsr FPLNF
     jmp LA67C       ; FTRNDZ
 
 LA66C:
@@ -6876,7 +6910,7 @@ LA698:
 .proc FXDIV
     jsr LA1DA
     beq FDIVZ
-    jsr LA21E
+    jsr FTOW
     jsr LA3B5
     bne LA6F1
     rts
@@ -7366,7 +7400,7 @@ LA9D3:
     dec zp3D
     jsr LA505
     jsr LA6E7
-    jsr LA3FE
+    jsr FFIX
     lda zpFACCMD
     sta zp4A
     ora zpFACCMC
@@ -7896,7 +7930,7 @@ INT:
     bpl LAC9A
     lda zpFACCS
     php
-    jsr LA3FE
+    jsr FFIX
     plp
     bpl LAC95
     lda zp3E
@@ -7906,7 +7940,7 @@ INT:
     beq LAC95
     jsr LA4C7
 LAC95:
-    jsr LA3E7
+    jsr COPY_FACC_TO_IACC
     lda #$40
 LAC9A:
     rts
@@ -8336,7 +8370,7 @@ LAE10:
 LAE20:
     dec zpAECUR
     jsr L95DD
-    beq LAE30         ; Jump with undefined variable or bad name
+    beq ERRFAC         ; Jump with undefined variable or bad name
     jmp LB32C
 
 LAE2A:
@@ -8344,20 +8378,23 @@ LAE2A:
     bcc LAE43
     rts
 
-LAE30:
-    lda zpBYTESM          ; Check assembler option
+ERRFAC:
+    lda zpBYTESM      ; Check assembler option
     and #$02          ; Is 'ignore undefiened variables' set?
     bne LAE43         ; b1=1, jump to give No such variable
     bcs LAE43         ; Jump with bad variable name
     stx zpAECUR
-LAE3A:
+
+GETPC:
     lda PC      ; Use P% for undefined variable
     ldy PC+1
     .if version < 3
-        jmp LAEEA     ; Jump to return 16-bit integer
+        jmp LAEEA     ; Jump to return 16-bit integer, tail call
     .elseif version >= 3
-        jmp XAED5     ; Jump to return 16-bit integer
+        jmp XAED5     ; Jump to return 16-bit integer, tail call
     .endif
+
+; ----------------------------------------------------------------------------
 
 LAE43:
     brk
@@ -8367,6 +8404,7 @@ LAE43:
     .else
         dta 'No such variable'
     .endif
+
 LAE54:
     brk
     .if version >= 3
@@ -8376,6 +8414,7 @@ LAE54:
         .else
             dta 'Missing )'
         .endif
+
 LAE55:
         brk
         dta $1C
@@ -8386,6 +8425,8 @@ LAE55:
         .endif
         brk
     .endif
+
+; ----------------------------------------------------------------------------
 
 LAE56:
     jsr L9B29
@@ -8699,7 +8740,7 @@ LAF24:
     jsr LBD7E
     jsr LA606
     jsr LA303
-    jsr LA3E4
+    jsr IFIX
     jsr L9222
     lda #$40
     rts
@@ -9252,7 +9293,7 @@ LB197:
     txa
     clc
     adc zpAESTKP          ; Drop BASIC stack by size of 6502 stack
-    jsr LBE2E         ; Store new BASIC stack pointer, check for No Room
+    jsr HIDEC         ; Store new BASIC stack pointer, check for No Room
     ldy #$00
     txa
     sta (zpAESTKP),Y      ; Store 6502 Stack Pointer on BASIC stack
@@ -9372,7 +9413,7 @@ LB24D:
     pha
     lda zpAELINE+1
     pha
-    jsr L9582
+    jsr CRAELV
     beq LB2B5
     lda zpAECUR
     sta zpCURSOR
@@ -9465,7 +9506,7 @@ LB2CA:
 LB2F0:
     jsr LBDEA
 LB2F3:
-    jsr LB4B7
+    jsr STORF
     jmp LB303
 
 LB2F9:
@@ -9830,24 +9871,25 @@ WIDTH:
 
 ; ----------------------------------------------------------------------------
 
-LB4AE:
+STORER:
     jmp LETM
 
 ; Store byte or word integer
 ; ==========================
 LB4B1:
     jsr L9B29         ; Evaluate expression
-LB4B4:
+STORE:
     jsr LBE0B         ; Unstack integer (address of data)
-LB4B7:
-    lda zp39
+STORF:
+    lda zpWORK+2
     cmp #$05
     beq LB4E0         ; Size=5, jump to store float
     lda zpTYPE
-    beq LB4AE         ; Type<>num, jump to error
-    bpl LB4C6         ; Type=int, jump to store it
-    jsr LA3E4         ; Convert float to integer
-LB4C6:
+    beq STORER        ; Type<>num, jump to error
+    bpl STORIN        ; Type=int, jump to store it
+    jsr IFIX          ; Convert float to integer
+
+STORIN:
     ldy #$00
     lda zpIACC
     sta (zpWORK),Y      ; Store byte 1
@@ -9871,7 +9913,7 @@ LB4DF:
 ; ===========
 LB4E0:
     lda zpTYPE
-    beq LB4AE         ; Type<>num, jump to error
+    beq STORER         ; Type<>num, jump to error
     bmi LB4E9         ; Type=float, jump to store it
     jsr LA2BE         ; Convert integer to float
 LB4E9:
@@ -9964,48 +10006,50 @@ DIGR:
     adc #$30
 LB558:
     cmp #$0D
-    bne LB567
+    bne NCH
     jsr OSWRCH
     jmp BUFEND         ; Set COUNT to zero
 
 HEXSP:
     jsr HEXOUT
-LB565:
-    lda #$20
-LB567:
+LISTPT:
+    lda #' '
+NCH:
     pha
     lda zpWIDTHV
     cmp zpTALLY
-    bcs LB571
+    bcs NOCRLF
     jsr NLINE
-LB571:
+NOCRLF:
     pla
     inc zpTALLY
     .if WRCHV != 0
-        jmp (WRCHV)
+        jmp (WRCHV)     ; tail call
     .endif
     .if WRCHV == 0
-        jmp OSWRCH 
+        jmp OSWRCH      ; tail call
     .endif
 
-LB577:
-    and zpLISTPO
-    beq LB589
+; ----------------------------------------------------------------------------
+
+LISTPS:
+    and zpLISTOP
+    beq LISTPX
     txa
-    beq LB589
-    bmi LB565
+    beq LISTPX
+    bmi LISTPT
     .if version >= 3
         asl
         tax
     .endif
-LB580:
-    jsr LB565
+LISTPL:
+    jsr LISTPT
     .if version < 3
         jsr LB558
     .endif
     dex
-    bne LB580
-LB589:
+    bne LISTPL
+LISTPX:
     rts
 
 LB58A:
@@ -10014,7 +10058,7 @@ LB58A:
     jsr FDONE
     jsr L92EE
     lda zpIACC
-    sta zpLISTPO
+    sta zpLISTOP
     jmp L8AF6
 
 ; LIST [linenum [,linenum]]
@@ -10098,13 +10142,13 @@ LB61D:
     ldx #$FF
     stx zpCOEFP
     lda #$01
-    jsr LB577
+    jsr LISTPS
     ldx zp3B
     lda #$02
-    jsr LB577
+    jsr LISTPS
     ldx zp3C
     lda #$04
-    jsr LB577
+    jsr LISTPS
 LB637:
     ldy zpCURSOR
 LB639:
@@ -10347,7 +10391,7 @@ LB7BD:
 ; FOR numvar = numeric TO numeric [STEP numeric]
 ; ==============================================
 FOR:
-    jsr L9582
+    jsr CRAELV
     beq LB7A4
     bcs LB7A4
     jsr LBD94
@@ -10694,7 +10738,7 @@ LB9DA:
     bne LB9CA
     lda zpCOEFP
     pha
-    jsr L9582
+    jsr CRAELV
     beq LB9C7
     lda zpAECUR
     sta zpCURSOR
@@ -10742,7 +10786,7 @@ LBA2D:
     bpl LBA2D
     jsr LA3B2
 LBA39:
-    jsr LB4B4
+    jsr STORE
     jmp LB9DA
 
 LBA3F:
@@ -10790,7 +10834,7 @@ LBA69:
     pha
     lda zpCOEFP+1
     pha
-    jsr L9582
+    jsr CRAELV
     beq LBA3F
     pla
     sta zpCOEFP+1
@@ -10839,7 +10883,7 @@ LBACD:
     bcs LBADC
     jsr LBD94
     jsr LAC34
-    jsr LB4B4
+    jsr STORE
     jmp LBA5A
 
 LBADC:
@@ -10883,7 +10927,7 @@ LBB15:
 ; READ varname [,...]
 ; ===================
 READ:
-    jsr L9582
+    jsr CRAELV
     beq LBB15
     bcs LBB32
     jsr LBB50
@@ -11320,7 +11364,7 @@ LBD51:
     lda zpAESTKP
     sec
     sbc #$05
-    jsr LBE2E
+    jsr HIDEC
     ldy #$00
     lda zpFACCX
     sta (zpAESTKP),Y
@@ -11358,12 +11402,13 @@ LBD7E:
 LBD90:
     beq LBDB2
     bmi LBD51
+
 LBD94:
     lda zpAESTKP
     sec
     sbc #$04
 LBD99:
-    jsr LBE2E
+    jsr HIDEC
     ldy #$03
     lda zpIACC+3
     sta (zpAESTKP),Y
@@ -11384,7 +11429,7 @@ LBDB2:
     clc
     lda zpAESTKP
     sbc zpCLEN          ; stackbot=stackbot-length-1
-    jsr LBE2E         ; Check enough space
+    jsr HIDEC         ; Check enough space
     ldy zpCLEN
     beq LBDC6         ; Zero length, just stack length
 LBDBE:
@@ -11471,22 +11516,26 @@ LBE0D:
     inc zpAESTKP+1
     rts
 
-LBE2E:
+; ----------------------------------------------------------------------------
+
+HIDEC:
     sta zpAESTKP
-    bcs LBE34
+    bcs HIDECA
     dec zpAESTKP+1
-LBE34:
+HIDECA:
     ldy zpAESTKP+1
     cpy zpFSA+1
-    bcc LBE41
-    bne LBE40
+    bcc HIDECE
+    bne HIDECX
     cmp zpFSA
-    bcc LBE41
-LBE40:
+    bcc HIDECE
+HIDECX:
     rts
 
-LBE41:
-    jmp L8CB7
+HIDECE:
+    jmp ALLOCR
+
+; ----------------------------------------------------------------------------
 
 LBE44:
     lda zpIACC
