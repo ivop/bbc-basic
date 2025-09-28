@@ -669,17 +669,80 @@ ADTABH:
 ; ASSEMBLER
 ; =========
 
-; Packed mnemonic table, low bytes
-; --------------------------------
+    .macro packmnemL a b c
+        dta [[:b<<5] + [:c&0x1f]] & 0xff
+    .endm
+    .macro packmnemH a b c
+        dta [[:a&0x1f]<<2] + [[:b&0x1f]>>3]
+    .endm
+    .macro mnemonics
+        :1 'B' 'R' 'K'
+        :1 'C' 'L' 'C'
+        :1 'C' 'L' 'D'
+        :1 'C' 'L' 'I'
+        :1 'C' 'L' 'V'
+        :1 'D' 'E' 'X'
+        :1 'D' 'E' 'Y'
+        :1 'I' 'N' 'X'
+        :1 'I' 'N' 'Y'
+        :1 'N' 'O' 'P'
+        :1 'P' 'H' 'A'
+        :1 'P' 'H' 'P'
+        :1 'P' 'L' 'A'
+        :1 'P' 'L' 'P'
+        :1 'R' 'T' 'I'
+        :1 'R' 'T' 'S'
+        :1 'S' 'E' 'C'
+        :1 'S' 'E' 'D'
+        :1 'S' 'E' 'I'
+        :1 'T' 'A' 'X'
+        :1 'T' 'A' 'Y'
+        :1 'T' 'S' 'X'
+        :1 'T' 'X' 'A'
+        :1 'T' 'X' 'S'
+        :1 'T' 'Y' 'A'
+        :1 'B' 'C' 'C'
+        :1 'B' 'C' 'S'
+        :1 'B' 'E' 'Q'
+        :1 'B' 'M' 'I'
+        :1 'B' 'N' 'E'
+        :1 'B' 'P' 'L'
+        :1 'B' 'V' 'C'
+        :1 'B' 'V' 'S'
+        :1 'A' 'N' 'D'
+        :1 'E' 'O' 'R'
+        :1 'O' 'R' 'A'
+        :1 'A' 'D' 'C'
+        :1 'C' 'M' 'P'
+        :1 'L' 'D' 'A'
+        :1 'S' 'B' 'C'
+        :1 'A' 'S' 'L'
+        :1 'L' 'S' 'R'
+        :1 'R' 'O' 'L'
+        :1 'R' 'O' 'R'
+        :1 'D' 'E' 'C'
+        :1 'I' 'N' 'C'
+        :1 'C' 'P' 'X'
+        :1 'C' 'P' 'Y'
+        :1 'B' 'I' 'T'
+        :1 'J' 'M' 'P'
+        :1 'J' 'S' 'R'
+        :1 'L' 'D' 'X'
+        :1 'L' 'D' 'Y'
+        :1 'S' 'T' 'A'
+        :1 'S' 'T' 'X'
+        :1 'S' 'T' 'Y'
+        :1 'O' 'P' 'T'
+        :1 'E' 'Q' 'U'
+    .endm
+
+; Packed mnemonic table, low/high bytes
+; -------------------------------------
 
 L8451:
-    icl 'mneml.s'
-
-; Packed mnemonic table, high bytes
-; ---------------------------------
-
+    mnemonics packmnemL
 L848B:
-    icl 'mnemh.s'
+    mnemonics packmnemH
 
 ; Opcode base table
 ; -----------------

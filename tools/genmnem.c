@@ -18,7 +18,7 @@ static inline unsigned char mnemH(char *m) {
 }
 
 int main(int argc, char **argv) {
-    if (argc != 2 || (argv[1][0] != 'L' && argv[1][0] != 'H')) {
+    if (argc != 2 || (argv[1][0] != 'L' && argv[1][0] != 'H' && argv[1][0] != 'X')) {
         printf("usage: %s L|H\n", argv[0]);
         return 1;
     }
@@ -29,5 +29,11 @@ int main(int argc, char **argv) {
     if (argv[1][0] == 'H') {
         for (int i=0; mnemonics[i]; i++)
             printf("    dta $%02x ; %s\n", mnemH(mnemonics[i]), mnemonics[i]);
+    }
+    if (argv[1][0] == 'X') {
+        for (int i=0; mnemonics[i]; i++)
+            printf("        :1 '%c' '%c' '%c'\n", mnemonics[i][0],
+                                                  mnemonics[i][1],
+                                                  mnemonics[i][2]);
     }
 }
