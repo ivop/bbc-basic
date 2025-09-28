@@ -81,11 +81,12 @@ zpFPRTDX  = zpFRDDDX    ; Alt.
 zpFRDDW   = zp + $4a
 zpFQUAD   = zpFRDDW     ; Alt.
 
-zpARGP = zp + $4b
-zpCOEFP = zp + $4d      ; ptr
-zpFDIGS = zpCOEFP+1     ; alternative usage
-zpFPRTWN = zpCOEFP+1    ; another alternative usage
-zp4F = zp + $4f
+zpARGP    = zp + $4b
+zpCOEFP   = zp + $4d    ; ptr
+zpFDIGS   = zp + $4e    ; alternative usage (overlaps with COEFP+1
+zpFPRTWN  = zp + $4e    ; another alternative usage (idem)
+zpNEWVAR  = zp + $4f
+zp4F      = zp + $4f
 
 ; Workspace (for now, relative to ws)
 

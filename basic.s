@@ -747,7 +747,7 @@ MNEMH:
 ; Opcode base table
 ; -----------------
 
-L84C5:
+STCODE:
 
 ; No arguments
 ; ------------
@@ -953,23 +953,23 @@ SETL:                 ; set label
     jsr GETPC         ; Find P%
     sta zpTYPE
     jsr STORE
-    jsr L8827
+    jsr ASCUR
 
     .if version >= 3
-        sty zp4F
+        sty zpNEWVAR
     .endif
 
 MNEENT:
     ldx #$03          ; Prepare to fetch three characters
     jsr SPACES        ; Skip spaces
     ldy #$00
-    sty zp3D
+    sty zpWORK+6
     cmp #':'
-    beq L862B         ; End of statement
+    beq MMMM         ; End of statement
     cmp #$0D
-    beq L862B         ; End of line
+    beq MMMM         ; End of line
     cmp #'\'
-    beq L862B         ; Comment
+    beq MMMM         ; Comment
     cmp #'.'
     beq SETL          ; Label
     dec zpCURSOR
@@ -1004,7 +1004,7 @@ L85F5:
     bne L8601         ; Low half doesn't match
     ldy MNEMH-1,X     ; Check high half
     cpy zp3E
-    beq L8620         ; Mnemonic matches
+    beq RDOPGT         ; Mnemonic matches
 L8601:
     dex
     bne L85F5         ; Loop through opcode lookup table
@@ -1014,10 +1014,10 @@ ASSDED:
 L8607:
     ldx #$22          ; opcode number for 'AND'
     cmp #tknAND
-    beq L8620         ; Tokenised 'AND'
+    beq RDOPGT         ; Tokenised 'AND'
     inx               ; opcode number for 'EOR'
     cmp #tknEOR
-    beq L8620         ; Tokenised 'EOR'
+    beq RDOPGT         ; Tokenised 'EOR'
     inx               ; opcode number for 'ORA'
     cmp #tknOR
     bne ASSDED        ; Not tokenised 'OR'
@@ -1030,13 +1030,14 @@ L8607:
 ; Opcode found
 ; ------------
 
-L8620:
-    lda L84C5-1,X
+RDOPGT:
+    lda STCODE-1,X
     sta zpOPCODE          ; Get base opcode
     ldy #$01          ; Y=1 for one byte
     cpx #$1A
-    bcs L8673         ; Opcode $1A+ have arguments
-L862B:
+    bcs NGPONE         ; Opcode $1A+ have arguments
+
+MMMM:
     lda PC
     sta zpWORK          ; Get P% low byte
     sty zp39
@@ -1077,9 +1078,9 @@ L866F:
 L8672:
     rts
 
-L8673:
+NGPONE:
     cpx #$22
-    bcs L86B7
+    bcs NGPTWO
     jsr ASEXPR
     clc
     lda zpIACC
@@ -1117,7 +1118,7 @@ L86A6:
     sty zpIACC
 L86A8:
     ldy #$02
-    jmp L862B
+    jmp MMMM
 
 L86AD:
     tya
@@ -1129,7 +1130,7 @@ L86B2:
     bpl L86A6
     bmi L8691
 
-L86B7:
+NGPTWO:
     cpx #$29
     bcs L86D3
     jsr SPACES         ; Skip spaces
@@ -1273,7 +1274,7 @@ L8797:
 L879A:
     ldy #$03
 L879C:
-    jmp L862B
+    jmp MMMM
 
 L879F:
     jsr L882C
@@ -1345,12 +1346,13 @@ L8813:
     lda zpIACC
     sta zpBYTESM
     ldy #$00
-    jmp L862B
+    jmp MMMM
 
 ASEXPR:
     jsr AEEXPR
     jsr L92F0
-L8827:
+
+ASCUR:
     ldy zpAECUR
     sty zpCURSOR
     rts
@@ -1392,7 +1394,7 @@ L8858:
     pla
     tay
 L8864:
-    jmp L862B
+    jmp MMMM
 
 L8867:
     jmp LETM
@@ -1404,7 +1406,7 @@ L886A:
     bne L8867
     pla
     sta zpBYTESM
-    jsr L8827
+    jsr ASCUR
     ldy #$FF
     bne L8864
 
@@ -3029,7 +3031,7 @@ L90DF:
     lda #$40
     sta zpTYPE
     jsr STORE
-    jsr L8827
+    jsr ASCUR
     jmp L920B
 
 L9127:
