@@ -1856,23 +1856,26 @@ KMATCH:
 
 JMATCH:
     iny
-    lda (zp39),Y
+    lda (zpWORK+2),Y
     bpl JMATCH
-    cmp #$FE        ;xxx missing token, fix first
-    bne L8A25
+
+    cmp #tknWIDTH       ; last token in list
+    bne MMATCH
     bcs MATCHV
 
 ABBREV:
     iny
 
-L8A19:
-    lda (zp39),Y
+ABBREA:
+    lda (zpWORK+2),Y
     bmi LMATCH
-    inc zp39
-    bne L8A19
-    inc zp3A
-    bne L8A19
-L8A25:
+
+    inc zpWORK+2
+    bne ABBREA
+    inc zpWORK+3
+    bne ABBREA
+
+MMATCH:
     sec
     iny
     tya
