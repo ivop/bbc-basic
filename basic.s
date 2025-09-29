@@ -1056,7 +1056,7 @@ RDOPGT:
     lda STCODE-1,X
     sta zpOPCODE      ; Get base opcode
     ldy #$01          ; Y=1 for one byte
-    cpx #$1A
+    cpx #IMPLIED+1
     bcs NGPONE        ; Opcode $1A+ have arguments
 
 MMMM:
@@ -1083,7 +1083,7 @@ MMMMLR:
 MMMMLP:
     dey
     lda zpOPCODE,Y    ; Get opcode byte   (lda abs,y (!))
-    bit zp39
+    bit zpWORK+2
     bpl MMMMCL        ; Opcode - jump to store it
     lda STRACC,Y      ; Get EQU byte
 MMMMCL:
@@ -1260,12 +1260,14 @@ OPTIMA:
 
 NOPSTA:
     cpx #DECINC+1
-    bcs L876E
-    cpx #$2D
+    bcs NGPFR
+    cpx #ASLROR+1
     bcs L8750
+
     jsr SPACES         ; Skip spaces
     cmp #'A'
-    beq L8767         ; ins A -
+    beq ACCUMS         ; ins A -
+
     dec zpCURSOR
 L8750:
     jsr ASEXPR
@@ -1278,31 +1280,32 @@ L8750:
     beq OPTIMA         ; Jump with address,X
     jmp BADIND         ; Otherwise, jump to Index error
 
-L8767:
+ACCUMS:
     jsr PLUS4
     ldy #$01
     bne JSRC
 
-L876E:
-    cpx #$32
-    bcs L8788
-    cpx #$31
-    beq L8782
+NGPFR:
+    cpx #JSRJMP-1
+    bcs NGPFV
+    cpx #CPXCPY+1
+    beq BIT_
     jsr SPACES         ; Skip spaces
     cmp #'#'
-    bne L8780         ; Not #, jump with address
+    bne NHASH         ; Not #, jump with address
     jmp IMMED         ; Jump with immediate
 
-L8780:
+NHASH:
     dec zpCURSOR
-L8782:
+
+BIT_:
     jsr ASEXPR
     jmp OPTIM
 
-L8788:
-    cpx #$33
+NGPFV:
+    cpx #JSRJMP
     beq JSR_
-    bcs L87B2
+    bcs NGPSX
     jsr SPACES       ; Skip spaces
     cmp #'('
     beq JSRA         ; Jump with (... addressing mode
@@ -1326,63 +1329,63 @@ JSRA:
     beq JSRB
     jmp BADIND         ; No ) - jump to Index error
 
-L87B2:
-    cpx #$39
-    bcs L8813
+NGPSX:
+    cpx #PSEUDO + 1
+    bcs OPTION
     lda zp3D
     eor #$01
     and #$1F
     pha
-    cpx #$37
-    bcs L87F0
+    cpx #PSEUDO - 1
+    bcs STXY
     jsr SPACES         ; Skip spaces
     cmp #'#'
-    bne L87CC
+    bne LDXY
     pla
     jmp IMMED
 
-L87CC:
+LDXY:
     dec zpCURSOR
     jsr ASEXPR
     pla
     sta zpWORK
     jsr SPACES         ; Skip spaces
     cmp #','
-    beq L87DE
+    beq LDIND
     jmp OPTIM
 
-L87DE:
+LDIND:
     jsr SPACES         ; Skip spaces
     and #$1F
     cmp zpWORK
-    bne L87ED
+    bne LDINDB
     jsr PLUS10
     jmp OPTIM
 
-L87ED:
+LDINDB:
     jmp BADIND         ; Jump to Index error
 
-L87F0:
+STXY:
     jsr ASEXPR
     pla
     sta zpWORK
     jsr SPACES         ; Skip spaces
     cmp #','
-    bne L8810
+    bne GOOP
     jsr SPACES         ; Skip spaces
     and #$1F
     cmp zpWORK
-    bne L87ED
+    bne LDINDB
     jsr PLUS10
     lda zpIACC+1
-    beq L8810         ; High byte=0, continue
+    beq GOOP         ; High byte=0, continue
     jmp BYTE         ; value>255, jump to Byte error
 
-L8810:
+GOOP:
     jmp OPTIMA
 
-L8813:
-    bne L883A
+OPTION:
+    bne EQUBWS
     jsr ASEXPR
     lda zpIACC
     sta zpBYTESM
@@ -1391,7 +1394,7 @@ L8813:
 
 ASEXPR:
     jsr AEEXPR
-    jsr L92F0
+    jsr INTEGB
 
 ASCUR:
     ldy zpAECUR
@@ -1415,49 +1418,53 @@ PLUS4:
 
 ; ----------------------------------------------------------------------------
 
-L883A:
+EQUBWS:
     ldx #$01          ; Prepare for one byte
     ldy zpCURSOR
     inc zpCURSOR          ; Increment index
     lda (zpLINE),Y      ; Get next character
     cmp #'B'
-    beq L8858         ; EQUB
+    beq EQUB
     inx               ; Prepare for two bytes
     cmp #'W'
-    beq L8858         ; EQUW
+    beq EQUB
     ldx #$04          ; Prepare for four bytes
     cmp #'D'
-    beq L8858         ; EQUD
+    beq EQUB
     cmp #'S'
-    beq L886A         ; EQUS
+    beq EQUS
     jmp STDED         ; Syntax error
 
-L8858:
+EQUB:
     txa
     pha
     jsr ASEXPR
-    ldx #$29
+    ldx #zpOPCODE
     jsr LBE44
     pla
     tay
-L8864:
+EQUSX:
     jmp MMMM
 
-L8867:
+EQUSE:
     jmp LETM
 
-L886A:
+EQUS:
     lda zpBYTESM
     pha
     jsr AEEXPR
-    bne L8867
+    bne EQUSE
     pla
     sta zpBYTESM
     jsr ASCUR
     ldy #$FF
-    bne L8864
+    bne EQUSX
 
-L887C:
+; ----------------------------------------------------------------------------
+
+; Insert token in A into line
+
+INTOK:
     pha
     clc
     tya
@@ -1527,7 +1534,7 @@ L88D5:
 L88DA:
     dey
     lda #$8D
-    jsr L887C
+    jsr INTOK
     lda zpWORK
     adc #$02
     sta zp39
@@ -1776,7 +1783,7 @@ L8A48:
     adc #$40
 L8A54:
     dey
-    jsr L887C
+    jsr INTOK
     ldy #$00
     ldx #$FF
     lda zp3D
@@ -2533,7 +2540,7 @@ L8E24:
     lda zpIACC
     pha               ; Save X
     jsr LAE56
-    jsr L92F0
+    jsr INTEGB
 
 ; Atom - manually position cursor
 ; -------------------------------
@@ -2687,7 +2694,7 @@ L8ECC:
 ; ==========================
 CALL:
     jsr AEEXPR
-    jsr L92EE
+    jsr INTEG
     jsr LBD94
     ldy #$00
     sty STRACC
@@ -3291,7 +3298,7 @@ L925A:
 ; HIMEM=numeric
 ; =============
 LHIMM:
-    jsr L92EB         ; Set past '=', evaluate integer
+    jsr INEQEX         ; Set past '=', evaluate integer
     lda zpIACC
     sta zpHIMEM
     sta zpAESTKP          ; Set HIMEM and STACK
@@ -3305,7 +3312,7 @@ LHIMM:
 ; LOMEM=numeric
 ; =============
 LLOMM:
-    jsr L92EB         ; Step past '=', evaluate integer
+    jsr INEQEX         ; Step past '=', evaluate integer
     lda zpIACC
     sta zpLOMEM
     sta zpFSA          ; Set LOMEM and VAREND
@@ -3320,7 +3327,7 @@ LLOMM:
 ; PAGE=numeric
 ; ============
 LPAGE:
-    jsr L92EB         ; Step past '=', evaluate integer
+    jsr INEQEX         ; Step past '=', evaluate integer
     lda zpIACC+1
     sta zpTXTP          ; Set PAGE
 L928A:
@@ -3387,7 +3394,7 @@ L92C0:
 ; TIME=numeric
 ; ============
 LTIME:
-    jsr L92EB         ; Step past '=', evaluate integer
+    jsr INEQEX         ; Step past '=', evaluate integer
     .ifdef MOS_BBC
         ldx #$2A
         ldy #$00
@@ -3405,28 +3412,31 @@ L92DA:
     jsr L8AAE         ; Check for and step past comma
 L92DD:
     jsr L9B29
-    jmp L92F0
+    jmp INTEGB
 
 L92E3:
     jsr LADEC
-    beq L92F7
-    bmi L92F4
+    beq INTEGE
+    bmi INTEGF
 L92EA:
     rts
 
 ; Evaluate <equals><integer>
 ; ==========================
-L92EB:
+INEQEX:
     jsr L9807         ; Check for equals, evaluate numeric
-L92EE:
+
+INTEG:
     lda zpTYPE          ; Get result type
-L92F0:
-    beq L92F7         ; String, jump to 'Type mismatch'
+
+INTEGB:
+    beq INTEGE         ; String, jump to 'Type mismatch'
     bpl L92EA         ; Integer, return
-L92F4:
+
+INTEGF:
     jmp IFIX         ; Real, jump to convert to integer
 
-L92F7:
+INTEGE:
     jmp LETM         ; Jump to 'Type mismatch' error
 
 ; Evaluate <real>
@@ -3437,7 +3447,7 @@ L92FA:
 ; Ensure value is real
 ; --------------------
 L92FD:
-    beq L92F7         ; String, jump to 'Type mismatch'
+    beq INTEGE         ; String, jump to 'Type mismatch'
     bmi L92EA         ; Real, return
     jmp LA2BE         ; Integer, jump to convert to real
 
@@ -3655,7 +3665,7 @@ PLOT:
     jsr L8AAE
     jsr L9B29         ; Step past comma, evaluate expression
 L93FD:
-    jsr L92EE         ; Confirm numeric and ensure is integer
+    jsr INTEG         ; Confirm numeric and ensure is integer
     jsr LBD94         ; Stack integer
     jsr L92DA         ; Step past command and evaluate integer
     jsr L9852         ; Update program pointer, check for end of statement
@@ -4118,7 +4128,7 @@ L9681:
     iny
     sty zpAECUR
     jsr LB32C
-    jsr L92F0
+    jsr INTEGB
     lda zpIACC+1
     pha
     lda zpIACC
@@ -4241,7 +4251,7 @@ L96FF:
     bcs L96FF
     jsr LBD94
     jsr LAE56
-    jsr L92F0
+    jsr INTEGB
     pla
     sta zpWORK+1
     pla
@@ -4260,7 +4270,7 @@ L96FF:
     bcc L977D
 L976C:
     jsr LAE56
-    jsr L92F0
+    jsr INTEGB
     pla
     sta zpWORK+1
     pla
@@ -4735,14 +4745,14 @@ L99B9:
 
 L99BE:
     tay
-    jsr L92F0
+    jsr INTEGB
     lda zpIACC+3
     pha
     jsr LAD71
     jsr L9E1D
     stx zpTYPE
     tay
-    jsr L92F0
+    jsr INTEGB
     pla
     sta zpWORK+1
     eor zpIACC+3
@@ -4998,7 +5008,7 @@ L9B2C:
 L9B3A:
     jsr L9B6B
     tay               ; Stack as integer, call Evaluator Level 6
-    jsr L92F0
+    jsr INTEGB
     ldy #$03          ; If float, convert to integer
 L9B43:
     lda (zpAESTKP),Y
@@ -5016,7 +5026,7 @@ L9B4E:
 L9B55:
     jsr L9B6B
     tay
-    jsr L92F0
+    jsr INTEGB
     ldy #$03          ; If float, convert to integer
 L9B5E:
     lda (zpAESTKP),Y
@@ -5030,7 +5040,7 @@ L9B5E:
 ; --------------------------------------------------
 L9B6B:
     tay
-    jsr L92F0
+    jsr INTEGB
     jsr LBD94         ; If float, convert to integer, push into stack
 
 ; Evaluator Level 6 - AND
@@ -5046,11 +5056,11 @@ L9B75:
 ; -----------
 L9B7A:
     tay
-    jsr L92F0
+    jsr INTEGB
     jsr LBD94         ; If float, convert to integer, push onto stack
     jsr L9B9C         ; Call Evaluator Level 5, < <= = >= > <>
     tay
-    jsr L92F0
+    jsr INTEGB
     ldy #$03          ; If float, convert to integer
 L9B8A:
     lda (zpAESTKP),Y
@@ -7686,7 +7696,7 @@ POINT:
         jsr LBD94
         jsr L8AAE
         jsr LAE56
-        jsr L92F0
+        jsr INTEGB
         lda zpIACC
         pha
         lda zpIACC+1
@@ -8128,7 +8138,7 @@ POINT:
         jsr LBD94
         jsr L8AAE
         jsr LAE56
-        jsr L92F0
+        jsr INTEGB
         lda zpIACC
         pha
         ldx zpIACC+1
@@ -8205,7 +8215,7 @@ LAD03:
 LAD06:
     jsr LBDB2
     jsr LAE56
-    jsr L92F0
+    jsr INTEGB
     jsr LBDCB
 LAD12:
     ldy #$00
@@ -8772,7 +8782,7 @@ RHIMEM:
 LAF0A:
     inc zpAECUR
     jsr LAE56
-    jsr L92F0
+    jsr INTEGB
     lda zpIACC+3
     bmi LAF3F
     ora zpIACC+2
@@ -9022,7 +9032,7 @@ LEFTD:
     inc zpAECUR
     jsr LBDB2
     jsr LAE56
-    jsr L92F0
+    jsr INTEGB
     jsr LBDCB
     lda zpIACC
     cmp zpCLEN
@@ -9044,7 +9054,7 @@ RIGHTD:
     inc zpAECUR
     jsr LBDB2
     jsr LAE56
-    jsr L92F0
+    jsr INTEGB
     jsr LBDCB
     lda zpCLEN
     sec
@@ -9114,7 +9124,7 @@ MIDD:
     cpx #$2C
     bne LB036
     jsr LAE56
-    jsr L92F0
+    jsr INTEGB
 LB061:
     jsr LBDCB
     pla
@@ -10105,7 +10115,7 @@ LB58A:
     inc zpCURSOR
     jsr AEEXPR
     jsr FDONE
-    jsr L92EE
+    jsr INTEG
     lda zpIACC
     sta zpLISTOP
     jmp L8AF6
@@ -10653,7 +10663,7 @@ ON:
     beq LB8F2         ; Jump with ON ERROR
     dec zpCURSOR
     jsr AEEXPR
-    jsr L92F0
+    jsr INTEGB
     ldy zpAECUR
     iny
     sty zpCURSOR
@@ -10741,7 +10751,7 @@ LB99A:
     jsr L97DF
     bcs LB9AF         ; Embedded line number found
     jsr AEEXPR
-    jsr L92F0         ; Evaluate expression, ensure integer
+    jsr INTEGB         ; Evaluate expression, ensure integer
     lda zpAECUR
     sta zpCURSOR          ; Line number low byte
     lda zpIACC+1
@@ -11077,7 +11087,7 @@ LBBB0:
 UNTIL:
     jsr AEEXPR
     jsr FDONE
-    jsr L92EE
+    jsr INTEG
     ldx zpDOSTKP
     beq LBBA6
     lda zpIACC
@@ -11886,7 +11896,7 @@ LPTR:
     jsr LBFA9
     pha               ; Evaluate #handle
     jsr L9813
-    jsr L92EE         ; Step past '=', evaluate integer
+    jsr INTEG         ; Step past '=', evaluate integer
     pla
     tay
     ldx #$2A          ; Get handle, point to IntA
@@ -11936,7 +11946,7 @@ BPUT:
     pha               ; Evaluate #handle
     jsr L8AAE
     jsr L9849
-    jsr L92EE
+    jsr INTEG
     pla
     tay
     lda zpIACC
