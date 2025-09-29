@@ -291,14 +291,14 @@ tknTRUE     = $B9
 tknUSR      = $BA
 tknVAL      = $BB
 tknVPOS     = $BC
-tknCHR      = $BD
+tknCHRD     = $BD
 tknGETD     = $BE
 tknINKEYD   = $BF
-tknLEFT     = $C0
-tknMID      = $C1
-tknRIGHT    = $C2
-tknSTR      = $C3
-tknSTRING   = $C4
+tknLEFTD    = $C0
+tknMIDD     = $C1
+tknRIGHTD   = $C2
+tknSTRD     = $C3
+tknSTRINGD  = $C4
 tknEOF      = $C5
 tknAUTO     = $C6
 tknDELETE   = $C7
@@ -484,141 +484,141 @@ RNDOK:
 ; Bit 7 - Unused - used externally for quote toggle.
 
 TOKENS:
-    dta 'AND'     , $80, $00      ; 00000000
-    dta 'ABS'     , $94, $00      ; 00000000
-    dta 'ACS'     , $95, $00      ; 00000000
-    dta 'ADVAL'   , $96, $00      ; 00000000
-    dta 'ASC'     , $97, $00      ; 00000000
-    dta 'ASN'     , $98, $00      ; 00000000
-    dta 'ATN'     , $99, $00      ; 00000000
-    dta 'AUTO'    , $C6, $10      ; 00010000
-    dta 'BGET'    , $9A, $01      ; 00000001
-    dta 'BPUT'    , $D5, $03      ; 00000011
+    dta 'AND'     , tknAND,         $00      ; 00000000
+    dta 'ABS'     , tknABS,         $00      ; 00000000
+    dta 'ACS'     , tknACS,         $00      ; 00000000
+    dta 'ADVAL'   , tknADVAL,       $00      ; 00000000
+    dta 'ASC'     , tknASC,         $00      ; 00000000
+    dta 'ASN'     , tknASN,         $00      ; 00000000
+    dta 'ATN'     , tknATN,         $00      ; 00000000
+    dta 'AUTO'    , tknAUTO,        $10      ; 00010000
+    dta 'BGET'    , tknBGET,        $01      ; 00000001
+    dta 'BPUT'    , tknBPUT,        $03      ; 00000011
     .if version == 2 || (version == 3 && minorversion == 10)
-        dta 'COLOUR', $FB, $02    ; 00000010
+        dta 'COLOUR', tknCOLOR,     $02      ; 00000010
     .elseif version == 3
-        dta 'COLOR', $FB, $02     ; 00000010
+        dta 'COLOR', tknCOLOR,      $02      ; 00000010
     .endif
-    dta 'CALL'    , $D6, $02      ; 00000010
-    dta 'CHAIN'   , $D7, $02      ; 00000010
-    dta 'CHR$'    , $BD, $00      ; 00000000
-    dta 'CLEAR'   , $D8, $01      ; 00000001
-    dta 'CLOSE'   , $D9, $03      ; 00000011
-    dta 'CLG'     , $DA, $01      ; 00000001
-    dta 'CLS'     , $DB, $01      ; 00000001
-    dta 'COS'     , $9B, $00      ; 00000000
-    dta 'COUNT'   , $9C, $01      ; 00000001
+    dta 'CALL'    , tknCALL,        $02      ; 00000010
+    dta 'CHAIN'   , tknCHAIN,       $02      ; 00000010
+    dta 'CHR$'    , tknCHRD,        $00      ; 00000000
+    dta 'CLEAR'   , tknCLEAR,       $01      ; 00000001
+    dta 'CLOSE'   , tknCLOSE,       $03      ; 00000011
+    dta 'CLG'     , tknCLG,         $01      ; 00000001
+    dta 'CLS'     , tknCLS,         $01      ; 00000001
+    dta 'COS'     , tknCOS,         $00      ; 00000000
+    dta 'COUNT'   , tknCOUNT,       $01      ; 00000001
     .if version == 3 && minorversion != 10
-        dta 'COLOUR', $FB, $02    ; 00000010
+        dta 'COLOUR', tknCOLOR,     $02      ; 00000010
     .elseif version == 3 && minorversion == 10
-        dta 'COLOR', $FB, $02     ; 00000010
+        dta 'COLOR', tknCOLOR,      $02      ; 00000010
     .endif
-    dta 'DATA'    , $DC, $20      ; 00100000
-    dta 'DEG'     , $9D, $00      ; 00000000
-    dta 'DEF'     , $DD, $00      ; 00000000
-    dta 'DELETE'  , $C7, $10      ; 00010000
-    dta 'DIV'     , $81, $00      ; 00000000
-    dta 'DIM'     , $DE, $02      ; 00000010
-    dta 'DRAW'    , $DF, $02      ; 00000010
-    dta 'ENDPROC' , $E1, $01      ; 00000001
-    dta 'END'     , $E0, $01      ; 00000001
-    dta 'ENVELOPE', $E2, $02      ; 00000010
-    dta 'ELSE'    , $8B, $14      ; 00010100
-    dta 'EVAL'    , $A0, $00      ; 00000000
-    dta 'ERL'     , $9E, $01      ; 00000001
-    dta 'ERROR'   , $85, $04      ; 00000100
-    dta 'EOF'     , $C5, $01      ; 00000001
-    dta 'EOR'     , $82, $00      ; 00000000
-    dta 'ERR'     , $9F, $01      ; 00000001
-    dta 'EXP'     , $A1, $00      ; 00000000
-    dta 'EXT'     , $A2, $01      ; 00000001
-    dta 'FOR'     , $E3, $02      ; 00000010
-    dta 'FALSE'   , $A3, $01      ; 00000001
-    dta 'FN'      , $A4, $08      ; 00001000
-    dta 'GOTO'    , $E5, $12      ; 00010010
-    dta 'GET$'    , $BE, $00      ; 00000000
-    dta 'GET'     , $A5, $00      ; 00000000
-    dta 'GOSUB'   , $E4, $12      ; 00010010
-    dta 'GCOL'    , $E6, $02      ; 00000010
-    dta 'HIMEM'   , $93, $43      ; 00100011
-    dta 'INPUT'   , $E8, $02      ; 00000010
-    dta 'IF'      , $E7, $02      ; 00000010
-    dta 'INKEY$'  , $BF, $00      ; 00000000
-    dta 'INKEY'   , $A6, $00      ; 00000000
-    dta 'INT'     , $A8, $00      ; 00000000
-    dta 'INSTR('  , $A7, $00      ; 00000000
-    dta 'LIST'    , $C9, $10      ; 00010000
-    dta 'LINE'    , $86, $00      ; 00000000
-    dta 'LOAD'    , $C8, $02      ; 00000010
-    dta 'LOMEM'   , $92, $43      ; 01000011
-    dta 'LOCAL'   , $EA, $02      ; 00000010
-    dta 'LEFT$('  , $C0, $00      ; 00000000
-    dta 'LEN'     , $A9, $00      ; 00000000
-    dta 'LET'     , $E9, $04      ; 00000100
-    dta 'LOG'     , $AB, $00      ; 00000000
-    dta 'LN'      , $AA, $00      ; 00000000
-    dta 'MID$('   , $C1, $00      ; 00000000
-    dta 'MODE'    , $EB, $02      ; 00000010
-    dta 'MOD'     , $83, $00      ; 00000000
-    dta 'MOVE'    , $EC, $02      ; 00000010
-    dta 'NEXT'    , $ED, $02      ; 00000010
-    dta 'NEW'     , $CA, $01      ; 00000001
-    dta 'NOT'     , $AC, $00      ; 00000000
-    dta 'OLD'     , $CB, $01      ; 00000001
-    dta 'ON'      , $EE, $02      ; 00000010
-    dta 'OFF'     , $87, $00      ; 00000000
-    dta 'OR'      , $84, $00      ; 00000000
-    dta 'OPENIN'  , $8E, $00      ; 00000000
-    dta 'OPENOUT' , $AE, $00      ; 00000000
-    dta 'OPENUP'  , $AD, $00      ; 00000000
-    dta 'OSCLI'   , $FF, $02      ; 00000010
-    dta 'PRINT'   , $F1, $02      ; 00000010
-    dta 'PAGE'    , $90, $43      ; 01000011
-    dta 'PTR'     , $8F, $43      ; 01000011
-    dta 'PI'      , $AF, $01      ; 00000001
-    dta 'PLOT'    , $F0, $02      ; 00000010
-    dta 'POINT('  , $B0, $00      ; 00000000
-    dta 'PROC'    , $F2, $0A      ; 00001010
-    dta 'POS'     , $B1, $01      ; 00000001
-    dta 'RETURN'  , $F8, $01      ; 00000001
-    dta 'REPEAT'  , $F5, $00      ; 00000000
-    dta 'REPORT'  , $F6, $01      ; 00000001
-    dta 'READ'    , $F3, $02      ; 00000010
-    dta 'REM'     , $F4, $20      ; 00100000
-    dta 'RUN'     , $F9, $01      ; 00000001
-    dta 'RAD'     , $B2, $00      ; 00000000
-    dta 'RESTORE' , $F7, $12      ; 00010010
-    dta 'RIGHT$(' , $C2, $00      ; 00000000
-    dta 'RND'     , $B3, $01      ; 00000001
-    dta 'RENUMBER', $CC, $10      ; 00010000
-    dta 'STEP'    , $88, $00      ; 00000000
-    dta 'SAVE'    , $CD, $02      ; 00000010
-    dta 'SGN'     , $B4, $00      ; 00000000
-    dta 'SIN'     , $B5, $00      ; 00000000
-    dta 'SQR'     , $B6, $00      ; 00000000
-    dta 'SPC'     , $89, $00      ; 00000000
-    dta 'STR$'    , $C3, $00      ; 00000000
-    dta 'STRING$(', $C4, $00      ; 00000000
-    dta 'SOUND'   , $D4, $02      ; 00000010
-    dta 'STOP'    , $FA, $01      ; 00000001
-    dta 'TAN'     , $B7, $00      ; 00000000
-    dta 'THEN'    , $8C, $14      ; 00010100
-    dta 'TO'      , $B8, $00      ; 00000000
-    dta 'TAB('    , $8A, $00      ; 00000000
-    dta 'TRACE'   , $FC, $12      ; 00010010
-    dta 'TIME'    , $91, $43      ; 01000011
-    dta 'TRUE'    , $B9, $01      ; 00000001
-    dta 'UNTIL'   , $FD, $02      ; 00000010
-    dta 'USR'     , $BA, $00      ; 00000000
-    dta 'VDU'     , $EF, $02      ; 00000010
-    dta 'VAL'     , $BB, $00      ; 00000000
-    dta 'VPOS'    , $BC, $01      ; 00000001
-    dta 'WIDTH'   , $FE, $02      ; 00000010
-    dta 'PAGE'    , $D0, $00      ; 00000000
-    dta 'PTR'     , $CF, $00      ; 00000000
-    dta 'TIME'    , $D1, $00      ; 00000000
-    dta 'LOMEM'   , $D2, $00      ; 00000000
-    dta 'HIMEM'   , $D3, $00      ; 00000000
+    dta 'DATA'    , tknDATA,        $20      ; 00100000
+    dta 'DEG'     , tknDEG,         $00      ; 00000000
+    dta 'DEF'     , tknDEF,         $00      ; 00000000
+    dta 'DELETE'  , tknDELETE,      $10      ; 00010000
+    dta 'DIV'     , tknDIV,         $00      ; 00000000
+    dta 'DIM'     , tknDIM,         $02      ; 00000010
+    dta 'DRAW'    , tknDRAW,        $02      ; 00000010
+    dta 'ENDPROC' , tknENDPROC,     $01      ; 00000001
+    dta 'END'     , tknEND,         $01      ; 00000001
+    dta 'ENVELOPE', tknENVELOPE,    $02      ; 00000010
+    dta 'ELSE'    , tknELSE,        $14      ; 00010100
+    dta 'EVAL'    , tknEVAL,        $00      ; 00000000
+    dta 'ERL'     , tknERL,         $01      ; 00000001
+    dta 'ERROR'   , tknERROR,       $04      ; 00000100
+    dta 'EOF'     , tknEOF,         $01      ; 00000001
+    dta 'EOR'     , tknEOR,         $00      ; 00000000
+    dta 'ERR'     , tknERR,         $01      ; 00000001
+    dta 'EXP'     , tknEXP,         $00      ; 00000000
+    dta 'EXT'     , tknEXT,         $01      ; 00000001
+    dta 'FOR'     , tknFOR,         $02      ; 00000010
+    dta 'FALSE'   , tknFALSE,       $01      ; 00000001
+    dta 'FN'      , tknFN,          $08      ; 00001000
+    dta 'GOTO'    , tknGOTO,        $12      ; 00010010
+    dta 'GET$'    , tknGETD,        $00      ; 00000000
+    dta 'GET'     , tknGET,         $00      ; 00000000
+    dta 'GOSUB'   , tknGOSUB,       $12      ; 00010010
+    dta 'GCOL'    , tknGCOL,        $02      ; 00000010
+    dta 'HIMEM'   , tknHIMEM,       $43      ; 00100011
+    dta 'INPUT'   , tknINPUT,       $02      ; 00000010
+    dta 'IF'      , tknIF,          $02      ; 00000010
+    dta 'INKEY$'  , tknINKEYD,      $00      ; 00000000
+    dta 'INKEY'   , tknINKEY,       $00      ; 00000000
+    dta 'INT'     , tknINT,         $00      ; 00000000
+    dta 'INSTR('  , tknINSTR,       $00      ; 00000000
+    dta 'LIST'    , tknLIST,        $10      ; 00010000
+    dta 'LINE'    , tknLINE,        $00      ; 00000000
+    dta 'LOAD'    , tknLOAD,        $02      ; 00000010
+    dta 'LOMEM'   , tknLOMEM,       $43      ; 01000011
+    dta 'LOCAL'   , tknLOCAL,       $02      ; 00000010
+    dta 'LEFT$('  , tknLEFTD,       $00      ; 00000000
+    dta 'LEN'     , tknLEN,         $00      ; 00000000
+    dta 'LET'     , tknLET,         $04      ; 00000100
+    dta 'LOG'     , tknLOG,         $00      ; 00000000
+    dta 'LN'      , tknLN,          $00      ; 00000000
+    dta 'MID$('   , tknMIDD,        $00      ; 00000000
+    dta 'MODE'    , tknMODE,        $02      ; 00000010
+    dta 'MOD'     , tknMOD,         $00      ; 00000000
+    dta 'MOVE'    , tknMOVE,        $02      ; 00000010
+    dta 'NEXT'    , tknNEXT,        $02      ; 00000010
+    dta 'NEW'     , tknNEW,         $01      ; 00000001
+    dta 'NOT'     , tknNOT,         $00      ; 00000000
+    dta 'OLD'     , tknOLD,         $01      ; 00000001
+    dta 'ON'      , tknON,          $02      ; 00000010
+    dta 'OFF'     , tknOFF,         $00      ; 00000000
+    dta 'OR'      , tknOR,          $00      ; 00000000
+    dta 'OPENIN'  , tknOPENIN,      $00      ; 00000000
+    dta 'OPENOUT' , tknOPENOUT,     $00      ; 00000000
+    dta 'OPENUP'  , tknOPENUP,      $00      ; 00000000
+    dta 'OSCLI'   , tknOSCLI,       $02      ; 00000010
+    dta 'PRINT'   , tknPRINT,       $02      ; 00000010
+    dta 'PAGE'    , tknPAGE,        $43      ; 01000011
+    dta 'PTR'     , tknPTR,         $43      ; 01000011
+    dta 'PI'      , tknPI,          $01      ; 00000001
+    dta 'PLOT'    , tknPLOT,        $02      ; 00000010
+    dta 'POINT('  , tknPOINT,       $00      ; 00000000
+    dta 'PROC'    , tknPROC,        $0A      ; 00001010
+    dta 'POS'     , tknPOS,         $01      ; 00000001
+    dta 'RETURN'  , tknRETURN,      $01      ; 00000001
+    dta 'REPEAT'  , tknREPEAT,      $00      ; 00000000
+    dta 'REPORT'  , tknREPORT,      $01      ; 00000001
+    dta 'READ'    , tknREAD,        $02      ; 00000010
+    dta 'REM'     , tknREM,         $20      ; 00100000
+    dta 'RUN'     , tknRUN,         $01      ; 00000001
+    dta 'RAD'     , tknRAD,         $00      ; 00000000
+    dta 'RESTORE' , tknRESTORE,     $12      ; 00010010
+    dta 'RIGHT$(' , tknRIGHTD,      $00      ; 00000000
+    dta 'RND'     , tknRND,         $01      ; 00000001
+    dta 'RENUMBER', tknRENUMBER,    $10      ; 00010000
+    dta 'STEP'    , tknSTEP,        $00      ; 00000000
+    dta 'SAVE'    , tknSAVE,        $02      ; 00000010
+    dta 'SGN'     , tknSGN,         $00      ; 00000000
+    dta 'SIN'     , tknSIN,         $00      ; 00000000
+    dta 'SQR'     , tknSQR,         $00      ; 00000000
+    dta 'SPC'     , tknSPC,         $00      ; 00000000
+    dta 'STR$'    , tknSTRD,        $00      ; 00000000
+    dta 'STRING$(', tknSTRINGD,     $00      ; 00000000
+    dta 'SOUND'   , tknSOUND,       $02      ; 00000010
+    dta 'STOP'    , tknSTOP,        $01      ; 00000001
+    dta 'TAN'     , tknTAN,         $00      ; 00000000
+    dta 'THEN'    , tknTHEN,        $14      ; 00010100
+    dta 'TO'      , tknTO,          $00      ; 00000000
+    dta 'TAB('    , tknTAB,         $00      ; 00000000
+    dta 'TRACE'   , tknTRACE,       $12      ; 00010010
+    dta 'TIME'    , tknTIME,        $43      ; 01000011
+    dta 'TRUE'    , tknTRUE,        $01      ; 00000001
+    dta 'UNTIL'   , tknUNTIL,       $02      ; 00000010
+    dta 'USR'     , tknUSR,         $00      ; 00000000
+    dta 'VDU'     , tknVDU,         $02      ; 00000010
+    dta 'VAL'     , tknVAL,         $00      ; 00000000
+    dta 'VPOS'    , tknVPOS,        $01      ; 00000001
+    dta 'WIDTH'   , tknWIDTH,       $02      ; 00000010
+    dta 'PAGE'    , tknPAGE2,       $00      ; 00000000
+    dta 'PTR'     , tknPTRc,        $00      ; 00000000
+    dta 'TIME'    , tknTIME2,       $00      ; 00000000
+    dta 'LOMEM'   , tknLOMEM2,      $00      ; 00000000
+    dta 'HIMEM'   , tknHIMEM2,      $00      ; 00000000
 
 ; ----------------------------------------------------------------------------
 
