@@ -229,7 +229,7 @@
 
 ; ----------------------------------------------------------------------------
 
-; BASIC Token Values
+; BASIC Token Values        xxx: several are missing
 
 tknAND      = $80
 tknDIV      = $81
@@ -244,7 +244,9 @@ tknSPC      = $89
 tknTAB      = $8A
 tknELSE     = $8B
 tknTHEN     = $8C
+
 tknERL      = $9E
+
 tknEXP      = $A1
 tknEXT      = $A2
 tknFN       = $A4
@@ -1469,69 +1471,73 @@ INTOK:
     clc
     tya
     adc zpWORK
-    sta zp39
+    sta zpWORK+2
     ldy #$00
     tya
     adc zpWORK+1
-    sta zp3A
+    sta zpWORK+3
     pla
     sta (zpWORK),Y
-L888D:
-    iny
+INTOKA:
+    iny             ; Replace
     lda (zp39),Y
     sta (zpWORK),Y
     cmp #$0D
-    bne L888D
+    bne INTOKA
     rts
 
-L8897:
+; ----------------------------------------------------------------------------
+
+CONSTQ:
     and #$0F
-    sta zp3D
-    sty zp3E
-L889D:
+    sta zpWORK+6
+    sty zpWORK+7
+
+CONSTR:
     iny
     lda (zpWORK),Y
     .if version < 3
         cmp #'9'+1
-        bcs L88DA
+        bcs CONSTX
         cmp #'0'
     .elseif version >= 3
-        jsr L8936
+        jsr NUMBCP
     .endif
-    bcc L88DA
+    bcc CONSTX
     and #$0F
     pha
-    ldx zp3E
-    lda zp3D
+    ldx zpWORK+7
+    lda zpWORK+6
     asl
-    rol zp3E
-    bmi L88D5
+    rol zpWORK+7
+    bmi CONSTY
     asl
-    rol zp3E
-    bmi L88D5
-    adc zp3D
-    sta zp3D
+    rol zpWORK+7
+    bmi CONSTY
+    adc zpWORK+6
+    sta zpWORK+6
     txa
-    adc zp3E
-    asl zp3D
+    adc zpWORK+7
+    asl zpWORK+6
     rol
-    bmi L88D5
-    bcs L88D5
-    sta zp3E
+    bmi CONSTY
+    bcs CONSTY
+    sta zpWORK+7
     pla
-    adc zp3D
-    sta zp3D
-    bcc L889D
-    inc zp3E
-    bpl L889D
+    adc zpWORK+6
+    sta zpWORK+6
+    bcc CONSTR
+    inc zpWORK+7
+    bpl CONSTR
     pha
-L88D5:
+
+CONSTY:
     pla
     ldy #$00
     sec
     rts
 
-L88DA:
+CONSTX:
     dey
     lda #$8D
     jsr INTOK
@@ -1541,208 +1547,243 @@ L88DA:
     lda zpWORK+1
     adc #$00
     sta zp3A
-L88EC:
+
+CONSTL:
     lda (zpWORK),Y
-    sta (zp39),Y
+    sta (zpWORK+2),Y
     dey
-    bne L88EC
+    bne CONSTL
     ldy #$03
-L88F5:
-    lda zp3E
+
+CONSTI:                 ; insert constant
+    lda zpWORK+7
     ora #$40
     sta (zpWORK),Y
     dey
-    lda zp3D
-    and #$3F
+    lda zpWORK+6
+    and #~$C0
     ora #$40
     sta (zpWORK),Y
     dey
-    lda zp3D
+    lda zpWORK+6
     and #$C0
-    sta zp3D
-    lda zp3E
+    sta zpWORK+6
+    lda zpWORK+7
     and #$C0
     lsr
     lsr
-    ora zp3D
+    ora zpWORK+6
     lsr
     lsr
     eor #$54
     sta (zpWORK),Y
-    jsr L8944         ; Increment $37/8
-    jsr L8944         ; Increment $37/8
-    jsr L8944         ; Increment $37/8
+    jsr NEXTCH
+    jsr NEXTCH
+    jsr NEXTCH
     ldy #$00
-L8924:
+WORDCN:
     clc
     rts
 
-L8926:
+WORDCQ:
     cmp #$7B
-    bcs L8924
-    cmp #$5F
-    bcs L893C
+    bcs WORDCN
+    cmp #'_'
+    bcs WORDCY
     cmp #$5B
-    bcs L8924
-    cmp #$41
-    bcs L893C
-L8936:
-    cmp #$3A
-    bcs L8924
-    cmp #$30
-L893C:
+    bcs WORDCN
+    cmp #'A'
+    bcs WORDCY
+
+NUMBCP:
+    cmp #'9'+1
+    bcs WORDCN
+    cmp #'0'
+WORDCY:
     rts
 
-L893D:
-    cmp #$2E
-    bne L8936
+NUMBCQ:
+    cmp #'.'
+    bne NUMBCP
     rts
 
-L8942:
+GETWRK:
     lda (zpWORK),Y
-L8944:
+NEXTCH:
     inc zpWORK
-    bne L894A
+    bne RELRTS
     inc zpWORK+1
-L894A:
+RELRTS:
     rts
 
-L894B:
-    jsr L8944         ; Increment $37/8
+GETWK2:
+    jsr NEXTCH         ; Increment $37/8
     lda (zpWORK),Y
     rts
+
+; ----------------------------------------------------------------------------
 
 ; Tokenise line at $37/8
 ; ======================
-L8951:
+MATCH:
     ldy #$00
-    sty zp3B          ; Set tokeniser to left-hand-side
-L8955:
-    sty zp3C
-L8957:
+    sty zpWORK+4        ; Set tokeniser to left-hand-side
+
+MATCEV:
+    sty zpWORK+5
+
+MATCHA:
     lda (zpWORK),Y      ; Get current character
     cmp #$0D
-    beq L894A         ; Exit with <cr>
-    cmp #$20
-    bne L8966         ; Skip <spc>
-L8961:
-    jsr L8944
-    bne L8957         ; Increment $37/8 and check next character
+    beq RELRTS         ; Exit with <cr>
+    cmp #' '
+    bne BMATCH         ; Skip <spc>
 
-L8966:
+MATCHB:
+    jsr NEXTCH
+    bne MATCHA         ; Increment $37/8 and check next character
+
+BMATCH:
     cmp #'&'
-    bne L897C         ; Jump if not '&'
-L896A:
-    jsr L894B         ; Increment $37/8 and get next character
-    jsr L8936
-    bcs L896A         ; Jump if numeric character
+    bne CMATCH         ; Jump if not '&'
+
+MATCHC:
+    jsr GETWK2         ; Increment $37/8 and get next character
+    jsr NUMBCP
+    bcs MATCHC         ; Jump if numeric character
+
     cmp #'A'
-    bcc L8957         ; Loop back if <'A'
+    bcc MATCHA         ; Loop back if <'A'
+
     cmp #'F'+1
-    bcc L896A         ; Step to next if 'A'..'F'
-    bcs L8957         ; Loop back for next character
-L897C:
-    cmp #$22
-    bne L898C
-L8980:
-    jsr L894B         ; Increment $37/8 and get next character
-    cmp #$22
-    beq L8961         ; Not quote, jump to process next character
+    bcc MATCHC         ; Step to next if 'A'..'F'
+    bcs MATCHA         ; Loop back for next character
+
+CMATCH:
+    cmp #'"'
+    bne DMATCH
+
+MATCHD:
+    jsr GETWK2         ; Increment $37/8 and get next character
+    cmp #'"'
+    beq MATCHB         ; Not quote, jump to process next character
+
     cmp #$0D
-    bne L8980
+    bne MATCHD
     rts
 
-L898C:
+DMATCH:
     cmp #':'
-    bne L8996
-    sty zp3B
-    sty zp3C
-    beq L8961
-L8996:
+    bne MATCHE
+    sty zpWORK+4
+    sty zpWORK+5    ; mode:=left;constant:=false
+    beq MATCHB
+
+MATCHE:
     cmp #','
-    beq L8961
+    beq MATCHB
+
     cmp #'*'
-    bne L89A3
-    lda zp3B
-    bne L89E3
+    bne FMATCH
+
+    lda zpWORK+4
+    bne YMATCH      ; test '*' and mode=left
     rts
 
-L89A3:
+FMATCH:
     cmp #'.'
-    beq L89B5
-    jsr L8936
-    bcc L89DF
-    ldx zp3C
-    beq L89B5
-    jsr L8897
-    bcc L89E9
-L89B5:
+    beq MATCHZ
+
+    jsr NUMBCP
+    bcc GMATCH
+
+    ldx zpWORK+5    ; constant?
+    beq MATCHZ
+
+    jsr CONSTQ
+    bcc MATCHF
+
+MATCHZ:
     lda (zpWORK),Y
-    jsr L893D
-    bcc L89C2
-    jsr L8944
-    jmp L89B5
+    jsr NUMBCQ
+    bcc MATCHY
 
-L89C2:
+    jsr NEXTCH
+    jmp MATCHZ
+
+MATCHY:
     ldx #$FF
-    stx zp3B
-    sty zp3C
-    jmp L8957
+    stx zpWORK+4
+    sty zpWORK+5
+    jmp MATCHA
 
-L89CB:
-    jsr L8926
-    bcc L89E3
-L89D0:
+MATCHW:
+    jsr WORDCQ
+    bcc YMATCH
+
+MATCHV:
     ldy #$00
-L89D2:
+
+MATCHG:
     lda (zpWORK),Y
-    jsr L8926
-    bcc L89C2
-    jsr L8944
-    jmp L89D2
+    jsr WORDCQ
+    bcc MATCHY
 
-L89DF:
+    jsr NEXTCH
+    jmp MATCHG
+
+GMATCH:               ; lookup word (optimised for none present words)
     cmp #'A'
-    bcs L89EC         ; Jump if letter
-L89E3:
-    ldx #$FF
-    stx zp3B
-    sty zp3C
-L89E9:
-    jmp L8961
+    bcs HMATCH         ; Jump if letter
 
-L89EC:
+YMATCH:
+    ldx #$FF
+    stx zpWORK+4
+    sty zpWORK+5
+
+MATCHF:
+    jmp MATCHB
+
+HMATCH:
     cmp #'X'
-    bcs L89CB         ; Jump if >='X', nothing starts with X,Y,Z
+    bcs MATCHW         ; Jump if >='X', nothing starts with X,Y,Z
+
     ldx #<TOKENS
-    stx zp39          ; Point to token table
+    stx zpWORK+2       ; Point to token table
     ldx #>TOKENS
-    stx zp3A
-L89F8:
-    cmp (zp39),Y
-    bcc L89D2
-    bne L8A0D
-L89FE:
+    stx zpWORK+3
+
+IMATCH:
+    cmp (zpWORK+2),Y   ; Special check on first character
+    bcc MATCHG
+    bne JMATCH
+
+KMATCH:
     iny
-    lda (zp39),Y
-    bmi L8A37
+    lda (zpWORK+2),Y
+    bmi LMATCH
+
     cmp (zpWORK),Y
-    beq L89FE
+    beq KMATCH
+
     lda (zpWORK),Y
     cmp #'.'
-    beq L8A18
-L8A0D:
+    beq ABBREV
+
+JMATCH:
     iny
     lda (zp39),Y
-    bpl L8A0D
-    cmp #$FE
+    bpl JMATCH
+    cmp #$FE        ;xxx missing token, fix first
     bne L8A25
-    bcs L89D0
-L8A18:
+    bcs MATCHV
+
+ABBREV:
     iny
+
 L8A19:
     lda (zp39),Y
-    bmi L8A37
+    bmi LMATCH
     inc zp39
     bne L8A19
     inc zp3A
@@ -1758,9 +1799,9 @@ L8A25:
 L8A30:
     ldy #$00
     lda (zpWORK),Y
-    jmp L89F8
+    jmp IMATCH
 
-L8A37:
+LMATCH:
     tax
     iny
     lda (zp39),Y
@@ -1769,8 +1810,8 @@ L8A37:
     lsr
     bcc L8A48
     lda (zpWORK),Y
-    jsr L8926
-    bcs L89D0
+    jsr WORDCQ
+    bcs MATCHV
 L8A48:
     txa
     bit zp3D
@@ -1804,9 +1845,9 @@ L8A6D:
     iny
 L8A72:
     lda (zpWORK),Y
-    jsr L8926
+    jsr WORDCQ
     bcc L8A7F
-    jsr L8944
+    jsr NEXTCH
     jmp L8A72
 
 L8A7F:
@@ -1819,7 +1860,7 @@ L8A81:
 L8A86:
     lsr
     bcs L8A96
-    jmp L8961
+    jmp MATCHB
 
 ; ----------------------------------------------------------------------------
 
@@ -1982,7 +2023,7 @@ L8B0B:
     sta zpWORK+1
     sty zp3B
     sty zpCURSOR
-    jsr L8957
+    jsr MATCHA
     jsr L97DF
     bcc L8B38         ; Tokenise, jump forward if no line number
     jsr LBC8D
@@ -2976,7 +3017,7 @@ L9043:
     sta zpWORK
     lda zpLINE+1
     sta zpWORK+1
-    jsr L88F5
+    jsr CONSTI
 L906D:
     ldy zpCURSOR
     bne L901C
@@ -3035,7 +3076,7 @@ L90B5:
     lda #$20
     jsr LBC02
     jsr LBDEA
-    jsr L8951
+    jsr MATCH
     jsr LBC8D
     jsr LBD20
     pla
@@ -7909,7 +7950,7 @@ LAC0F:
     sty zp3B
     iny
     sty zpAECUR          ; Point PTRB offset back to start
-    jsr L8955         ; Tokenise string on stack at GPTR
+    jsr MATCEV         ; Tokenise string on stack at GPTR
     jsr L9B29         ; Call expression evaluator
     jsr LBDDC         ; Drop string from stack
 LAC23:
@@ -9307,7 +9348,7 @@ LB158:
     bne LB158
     iny
     lda (zp3C),Y
-    jsr L8926
+    jsr WORDCQ
     bcs LB12D
     txa
     tay
@@ -9725,20 +9766,20 @@ LB3C5:
     beq LB401
     ldx zpLINE
 LB3D9:
-    jsr L8942
+    jsr GETWRK
     cmp #$0D
     bne LB3F9
     cpx zpWORK
     lda zpLINE+1
     sbc zpWORK+1
     bcc LB401
-    jsr L8942
+    jsr GETWRK
     ora #$00
     bmi LB401
     sta zpERL+1
-    jsr L8942
+    jsr GETWRK
     sta zpERL
-    jsr L8942
+    jsr GETWRK
 LB3F9:
     cpx zpWORK
     lda zpLINE+1
@@ -12103,7 +12144,7 @@ LBFCF:
 LBFD9:
     jsr OSASCI        ; Print character
 LBFDC:
-    jsr L894B
+    jsr GETWK2
     bpl LBFD9         ; Update pointer, get character, loop if b7=0
     jmp (zpWORK)        ; Jump back to program
 
