@@ -308,7 +308,7 @@ tknNEW      = $CA
 tknOLD      = $CB
 tknRENUMBER = $CC
 tknSAVE     = $CD
-tknPTRc     = $CF
+tknPTR2     = $CF
 tknPAGE2    = $D0
 tknTIME2    = $D1
 tknLOMEM2   = $D2
@@ -615,7 +615,7 @@ TOKENS:
     dta 'VPOS'    , tknVPOS,        $01      ; 00000001
     dta 'WIDTH'   , tknWIDTH,       $02      ; 00000010
     dta 'PAGE'    , tknPAGE2,       $00      ; 00000000
-    dta 'PTR'     , tknPTRc,        $00      ; 00000000
+    dta 'PTR'     , tknPTR2,        $00      ; 00000000
     dta 'TIME'    , tknTIME2,       $00      ; 00000000
     dta 'LOMEM'   , tknLOMEM2,      $00      ; 00000000
     dta 'HIMEM'   , tknHIMEM2,      $00      ; 00000000
@@ -1879,74 +1879,91 @@ MMATCH:
     sec
     iny
     tya
-    adc zp39
-    sta zp39
-    bcc L8A30
+    adc zpWORK+2
+    sta zpWORK+2
+    bcc NMATCH
+
     inc zp3A
-L8A30:
+NMATCH:
     ldy #$00
     lda (zpWORK),Y
     jmp IMATCH
 
 LMATCH:
-    tax
+    tax               ; token held in x for now
     iny
-    lda (zp39),Y
-    sta zp3D          ; Get token flag
+    lda (zpWORK+2),Y
+    sta zpWORK+6      ; Get token flag
     dey
     lsr
-    bcc L8A48
+    bcc OMATCH
+
     lda (zpWORK),Y
     jsr WORDCQ
     bcs MATCHV
-L8A48:
+
+OMATCH:
     txa
-    bit zp3D
-    bvc L8A54
-    ldx zp3B
-    bne L8A54
+    bit zpWORK+6
+    bvc WMATCH
+
+    ldx zpWORK+4      ; mode=left?
+    bne WMATCH
+
     .if split == 0
         clc           ; Superflous as all paths to here have CLC
     .endif
-    adc #$40
-L8A54:
+    adc #tknPTR2-$8f
+
+WMATCH:
     dey
     jsr INTOK
+
     ldy #$00
     ldx #$FF
-    lda zp3D
+    lda zpWORK+6
     lsr
     lsr
-    bcc L8A66
-    stx zp3B
-    sty zp3C
-L8A66:
+    bcc QMATCH
+
+    stx zpWORK+4        ; mode=right
+    sty zpWORK+5        ; constant=false
+
+QMATCH:
     lsr
-    bcc L8A6D
-    sty zp3B
-    sty zp3C
-L8A6D:
+    bcc RMATCH
+
+    sty zpWORK+4
+    sty zpWORK+5
+
+RMATCH:
     lsr
-    bcc L8A81
+    bcc TMATCH
+
     pha
     iny
-L8A72:
+
+SMATCH:
     lda (zpWORK),Y
     jsr WORDCQ
-    bcc L8A7F
-    jsr NEXTCH
-    jmp L8A72
+    bcc XMATCH
 
-L8A7F:
+    jsr NEXTCH
+    jmp SMATCH
+
+XMATCH:
     dey
     pla
-L8A81:
+
+TMATCH:
     lsr
-    bcc L8A86
-    stx zp3C
-L8A86:
+    bcc UMATCH
+
+    stx zpWORK+5        ; constant
+
+UMATCH:
     lsr
-    bcs L8A96
+    bcs AESPAR
     jmp MATCHB
 
 ; ----------------------------------------------------------------------------
@@ -1955,11 +1972,11 @@ L8A86:
 ; ------------------------------------------------------
 AESPAC:
     ldy zpAECUR
-    inc zpAECUR          ; Get offset, increment it
-    lda (zpAELINE),Y      ; Get current character
+    inc zpAECUR        ; Get offset, increment it
+    lda (zpAELINE),Y   ; Get current character
     cmp #' '
     beq AESPAC         ; Loop until not space
-L8A96:
+AESPAR:
     rts
 
 ; Skip spaces, get next character from the line, cursor
@@ -1968,13 +1985,13 @@ SPACES:
     ldy zpCURSOR
     inc zpCURSOR
     lda (zpLINE),Y
-    cmp #$20
+    cmp #' '
     beq SPACES
-L8AA1:
+COMRTS:
     rts
 
     .if version < 3
-L8AA2:
+COMERR:
         brk
         dta 5
         .if foldup == 1
@@ -1985,15 +2002,15 @@ L8AA2:
         brk
     .endif
 
-L8AAE:
+COMEAT:
     jsr AESPAC
     cmp #','
     .if version < 3
-        bne L8AA2
+        bne COMERR
         rts
     .elseif version >= 3
-        beq L8AA1
-X8AC8:
+        beq COMRTS
+COMERR:
         brk
         dta 5
         .if foldup == 1
@@ -2232,7 +2249,7 @@ STMT:
     lda (zpLINE),Y    ; Get current character
     cmp #' '
     beq STMT          ; Skip spaces
-    cmp #tknPTRc
+    cmp #tknPTR2
     bcc LETST         ; Not program command, jump to try variable assignment
 
 ; Dispatch function/command
@@ -2656,11 +2673,7 @@ L8E14:
     beq L8DC3         ; Jump back for next print item
 
 L8E21:
-    .if version < 3
-        jmp L8AA2
-    .elseif version >= 3
-        jmp X8AC8
-    .endif
+    jmp COMERR
 
 L8E24:
     cmp #','
@@ -3537,7 +3550,7 @@ LTIME:
 ; Evaluate <comma><numeric>
 ; =========================
 L92DA:
-    jsr L8AAE         ; Check for and step past comma
+    jsr COMEAT         ; Check for and step past comma
 L92DD:
     jsr L9B29
     jmp INTEGB
@@ -3790,7 +3803,7 @@ PLOT:
     jsr ASEXPR
     lda zpIACC
     pha               ; Evaluate integer
-    jsr L8AAE
+    jsr COMEAT
     jsr L9B29         ; Step past comma, evaluate expression
 L93FD:
     jsr INTEG         ; Confirm numeric and ensure is integer
@@ -7822,7 +7835,7 @@ ADVAL:
 POINT:
         jsr L92DD
         jsr LBD94
-        jsr L8AAE
+        jsr COMEAT
         jsr LAE56
         jsr INTEGB
         lda zpIACC
@@ -8264,7 +8277,7 @@ XACC1:
 POINT:
         jsr L92DD
         jsr LBD94
-        jsr L8AAE
+        jsr COMEAT
         jsr LAE56
         jsr INTEGB
         lda zpIACC
@@ -8334,11 +8347,7 @@ INSTR:
     cpx #$2C
     beq LAD06
 LAD03:
-    .if version < 3
-        jmp L8AA2
-    .elseif version >= 3
-        jmp X8AC8
-    .endif
+    jmp COMERR
 
 LAD06:
     jsr LBDB2
@@ -9224,11 +9233,7 @@ LB033:
     jmp LETM
 
 LB036:
-    .if version < 3
-        jmp L8AA2
-    .elseif version >= 3
-        jmp X8AC8
-    .endif
+    jmp COMERR
 
 ; ----------------------------------------------------------------------------
 
@@ -9328,7 +9333,7 @@ LB0BF:
 STRND:
     jsr L92DD
     jsr LBD94
-    jsr L8AAE
+    jsr COMEAT
     jsr LAE56
     bne LB0BF
     jsr LBDEA
@@ -12072,7 +12077,7 @@ RPTR:
 BPUT:
     jsr LBFA9
     pha               ; Evaluate #handle
-    jsr L8AAE
+    jsr COMEAT
     jsr L9849
     jsr INTEG
     pla
