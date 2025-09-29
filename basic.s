@@ -1158,17 +1158,20 @@ FWD:
 
 NGPTWO:
     cpx #GROUP1+1      ; index for 'ASL' opcode
-    bcs L86D3
+    bcs NGPTHR
     jsr SPACES         ; Skip spaces
     cmp #'#'
-    bne L86DA
-    jsr L882F
-L86C5:
+    bne NOTHSH
+    jsr PLUS8
+
+IMMED:
     jsr ASEXPR
-L86C8:
+
+INDINX:
     lda zpIACC+1
     beq BRST
-L86CC:
+
+BYTE:
     brk
     dta $02
     .if foldup == 1
@@ -1182,38 +1185,42 @@ L86CC:
 
 ; Parse (zp),Y addressing mode
 ; ----------------------------
-L86D3:
-    cpx #$36
-    bne L873F
-    jsr SPACES         ; Skip spaces
-L86DA:
+NGPTHR:
+    cpx #COPSTA+1
+    bne NOPSTA
+    jsr SPACES         ; Skip spaces, sta as others in group3 but for #
+
+NOTHSH:
     cmp #'('
-    bne L8715
+    bne NOTIND
     jsr ASEXPR
     jsr SPACES         ; Skip spaces
     cmp #')'
-    bne L86FB
+    bne ININX
     jsr SPACES         ; Skip spaces
     cmp #','
-    bne L870D         ; No comma, jump to Index error
-    jsr L882C
+    bne BADIND         ; No comma, jump to Index error
+    jsr PLUS10
     jsr SPACES         ; Skip spaces
     cmp #'Y'
-    bne L870D         ; (zp),Y missing Y, jump to Index error
-    beq L86C8
+    bne BADIND         ; (zp),Y missing Y, jump to Index error
+    beq INDINX
 
 ; Parse (zp,X) addressing mode
 ; ----------------------------
-L86FB:
+ININX:
     cmp #','
-    bne L870D         ; No comma, jump to Index error
+    bne BADIND         ; No comma, jump to Index error
+
     jsr SPACES         ; Skip spaces
     cmp #'X'
-    bne L870D         ; zp,X missing X, jump to Index error
+    bne BADIND         ; zp,X missing X, jump to Index error
+
     jsr SPACES         ; Skip spaces
     cmp #')'
-    beq L86C8         ; zp,X) - jump to process
-L870D:
+    beq INDINX         ; zp,X) - jump to process
+
+BADIND:
     brk
     dta $03
     .if foldup == 1
@@ -1223,33 +1230,36 @@ L870D:
     .endif
     brk
 
-L8715:
+NOTIND:
     dec zpCURSOR
     jsr ASEXPR
     jsr SPACES         ; Skip spaces
     cmp #','
-    bne L8735         ; No comma - jump to process as abs,X
-    jsr L882C
+    bne OPTIM         ; No comma - jump to process as abs,X
+
+    jsr PLUS10
     jsr SPACES         ; Skip spaces
     cmp #'X'
-    beq L8735         ; abs,X - jump to process
+    beq OPTIM         ; abs,X - jump to process
+
     cmp #'Y'
-    bne L870D         ; Not abs,Y - jump to Index error
-L872F:
-    jsr L882F
-    jmp L879A
+    bne BADIND         ; Not abs,Y - jump to Index error
+
+UNOPT:
+    jsr PLUS8
+    jmp JSRB
 
 ; abs and abs,X
 ; -------------
-L8735:
-    jsr L8832
-L8738:
+OPTIM:
+    jsr PLUS4
+OPTIMA:
     lda zpIACC+1
-    bne L872F
+    bne UNOPT
     jmp BRST
 
-L873F:
-    cpx #$2F
+NOPSTA:
+    cpx #DECINC+1
     bcs L876E
     cpx #$2D
     bcs L8750
@@ -1261,17 +1271,17 @@ L8750:
     jsr ASEXPR
     jsr SPACES         ; Skip spaces
     cmp #','
-    bne L8738         ; No comma, jump to ...
-    jsr L882C
+    bne OPTIMA         ; No comma, jump to ...
+    jsr PLUS10
     jsr SPACES         ; Skip spaces
     cmp #'X'
-    beq L8738         ; Jump with address,X
-    jmp L870D         ; Otherwise, jump to Index error
+    beq OPTIMA         ; Jump with address,X
+    jmp BADIND         ; Otherwise, jump to Index error
 
 L8767:
-    jsr L8832
+    jsr PLUS4
     ldy #$01
-    bne L879C
+    bne JSRC
 
 L876E:
     cpx #$32
@@ -1281,37 +1291,40 @@ L876E:
     jsr SPACES         ; Skip spaces
     cmp #'#'
     bne L8780         ; Not #, jump with address
-    jmp L86C5         ; Jump with immediate
+    jmp IMMED         ; Jump with immediate
 
 L8780:
     dec zpCURSOR
 L8782:
     jsr ASEXPR
-    jmp L8735
+    jmp OPTIM
 
 L8788:
     cpx #$33
-    beq L8797
+    beq JSR_
     bcs L87B2
-    jsr SPACES         ; Skip spaces
+    jsr SPACES       ; Skip spaces
     cmp #'('
-    beq L879F         ; Jump with (... addressing mode
+    beq JSRA         ; Jump with (... addressing mode
     dec zpCURSOR
-L8797:
+
+JSR_:
     jsr ASEXPR
-L879A:
+
+JSRB:
     ldy #$03
-L879C:
+
+JSRC:
     jmp MMMM
 
-L879F:
-    jsr L882C
-    jsr L882C
+JSRA:
+    jsr PLUS10
+    jsr PLUS10
     jsr ASEXPR
     jsr SPACES         ; Skip spaces
     cmp #')'
-    beq L879A
-    jmp L870D         ; No ) - jump to Index error
+    beq JSRB
+    jmp BADIND         ; No ) - jump to Index error
 
 L87B2:
     cpx #$39
@@ -1326,7 +1339,7 @@ L87B2:
     cmp #'#'
     bne L87CC
     pla
-    jmp L86C5
+    jmp IMMED
 
 L87CC:
     dec zpCURSOR
@@ -1336,18 +1349,18 @@ L87CC:
     jsr SPACES         ; Skip spaces
     cmp #','
     beq L87DE
-    jmp L8735
+    jmp OPTIM
 
 L87DE:
     jsr SPACES         ; Skip spaces
     and #$1F
     cmp zpWORK
     bne L87ED
-    jsr L882C
-    jmp L8735
+    jsr PLUS10
+    jmp OPTIM
 
 L87ED:
-    jmp L870D         ; Jump to Index error
+    jmp BADIND         ; Jump to Index error
 
 L87F0:
     jsr ASEXPR
@@ -1360,13 +1373,13 @@ L87F0:
     and #$1F
     cmp zpWORK
     bne L87ED
-    jsr L882C
+    jsr PLUS10
     lda zpIACC+1
     beq L8810         ; High byte=0, continue
-    jmp L86CC         ; value>255, jump to Byte error
+    jmp BYTE         ; value>255, jump to Byte error
 
 L8810:
-    jmp L8738
+    jmp OPTIMA
 
 L8813:
     bne L883A
@@ -1385,16 +1398,22 @@ ASCUR:
     sty zpCURSOR
     rts
 
-L882C:
-    jsr L882F
-L882F:
-    jsr L8832
-L8832:
+; ----------------------------------------------------------------------------
+
+; Add constants to zpOPCODE
+
+PLUS10:             ; + $10 (+16)
+    jsr PLUS8
+PLUS8:
+    jsr PLUS4
+PLUS4:
     lda zpOPCODE
     clc
     adc #$04
     sta zpOPCODE
     rts
+
+; ----------------------------------------------------------------------------
 
 L883A:
     ldx #$01          ; Prepare for one byte
