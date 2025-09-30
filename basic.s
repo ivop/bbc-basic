@@ -2101,7 +2101,7 @@ FORMAT:
     .endif
 
 FSASET:
-    jsr LBD20         ; Clear variables, heap, stack
+    jsr SETFSA         ; Clear variables, heap, stack
 
 ; IMMEDIATE LOOP
 ; ==============
@@ -2301,7 +2301,7 @@ LETST:
     bne LETSZ         ; Jump if dest. not a float
     inx               ; X=$06
 LETSZ:
-    jsr L9531
+    jsr CREAX
     dec zpCURSOR
 
 ; LET variable = expression
@@ -2796,7 +2796,7 @@ NO_XMOVEMENT:
     jmp PRTSTM         ; Continue to next PRINT item
 
 TAB:
-    jsr L92DD
+    jsr INEXPR
     jsr AESPAC
     cmp #')'
     bne TAB2
@@ -3285,11 +3285,14 @@ STEPON:
     lda (zpWORK),Y
     adc zpWORK
     sta zpWORK
-    bcc L90AB
+    bcc STEPX
+
     inc zpWORK+1
     clc
-L90AB:
+STEPX:
     rts
+
+; ----------------------------------------------------------------------------
 
 ; AUTO [numeric [, numeric ]]
 ; ===========================
@@ -3298,40 +3301,51 @@ AUTO:
     lda zpIACC
     pha
     jsr POPACC
-L90B5:
+
+AUTOLP:
     jsr PHACC
     jsr NPRN
-    lda #$20
+
+    lda #' '
     jsr BUFF
     jsr POPACC
     jsr MATCH
     jsr INSRT
-    jsr LBD20
+    jsr SETFSA
+
     pla
     pha
     clc
     adc zpIACC
     sta zpIACC
-    bcc L90B5
+    bcc AUTOLP
     inc zpIACC+1
-    bpl L90B5
+    bpl AUTOLP
+
 ENDAUT:
     jmp FSASET
 
-L90DC:
-    jmp L9218
+; ----------------------------------------------------------------------------
 
-L90DF:
+; Code related to DIM
+
+DIMSPR:
+    jmp DIMRAM
+
+DIMSP:
     dec zpCURSOR
     jsr CRAELV
-    beq L9127
-    bcs L9127
+    beq NOTGO
+    bcs NOTGO
+
     jsr PHACC
-    jsr L92DD
+    jsr INEXPR
     jsr INCACC
+
     lda zpIACC+3
     ora zpIACC+2
-    bne L9127
+    bne NOTGO
+
     clc
     lda zpIACC
     adc zpFSA
@@ -3341,23 +3355,26 @@ L90DF:
     tax
     cpy zpAESTKP
     sbc zpAESTKP+1
-    bcs L90DC
+    bcs DIMSPR
+
     lda zpFSA
     sta zpIACC
     lda zpFSA+1
     sta zpIACC+1
     sty zpFSA
     stx zpFSA+1
+
     lda #$00
     sta zpIACC+2
     sta zpIACC+3
     lda #$40
     sta zpTYPE
+
     jsr STORE
     jsr ASCUR
-    jmp L920B
+    jmp DIMNXT
 
-L9127:
+NOTGO:
     brk
     dta 10
     .if foldup == 1
@@ -3376,59 +3393,70 @@ DIM:
     clc
     adc zpLINE
     ldx zpLINE+1
-    bcc L913C
+    bcc DIMNNO
+
     inx
     clc
-L913C:
+
+DIMNNO:
     sbc #$00
     sta zpWORK
     txa
     sbc #$00
     sta zpWORK+1
     ldx #$05
-    stx zp3F
+    stx zpWORK+8
     ldx zpCURSOR
     jsr L9559
+
     cpy #$01
-    beq L9127
+    beq NOTGO
     cmp #'('
-    beq L916B
-    cmp #$24
-    beq L915E
-    cmp #$25
-    bne L9168
-L915E:
-    dec zp3F
+    beq DIMVAR
+    cmp #'$'
+    beq DIMINT
+    cmp #'%'
+    bne DIMSPA
+
+DIMINT:
+    dec zpWORK+8
     iny
     inx
     lda (zpWORK),Y
     cmp #'('
-    beq L916B
-L9168:
-    jmp L90DF
+    beq DIMVAR
 
-L916B:
-    sty zp39
+DIMSPA:
+    jmp DIMSP
+
+DIMVAR:
+    sty zpWORK+2
     stx zpCURSOR
-    jsr L9469
-    bne L9127
+    jsr LOOKUP
+    bne NOTGO       ; NE chain branch to NOTGO
+
     jsr CREATE
     ldx #$01
-    jsr L9531
-    lda zp3F
+    jsr CREAX
+
+    lda zpWORK+8
     pha
     lda #$01
     pha
     jsr SINSTK
-L9185:
+
+RDLOOP:
     jsr PHACC
     jsr ASEXPR
+
     lda zpIACC+1
     and #$C0
     ora zpIACC+2
     ora zpIACC+3
-    bne L9127
+    bne NOTGO
+
     jsr INCACC
+
     pla
     tay
     lda zpIACC
@@ -3437,32 +3465,38 @@ L9185:
     lda zpIACC+1
     sta (zpFSA),Y
     iny
+
     tya
     pha
-    jsr L9231
+    jsr SMUL
     jsr SPACES
-    cmp #$2C
-    beq L9185
-    cmp #')'
-    beq L91B7
-    jmp L9127
 
-L91B7:
+    cmp #','
+    beq RDLOOP
+    cmp #')'
+    beq DIMGON
+
+    jmp NOTGO
+
+DIMGON:
     pla
     sta zpPRINTF
     pla
-    sta zp3F
+    sta zpWORK+8
+
     lda #$00
-    sta zp40
-    jsr L9236
+    sta zpWORK+9
+    jsr WMUL
+
     ldy #$00
     lda zpPRINTF
     sta (zpFSA),Y
     adc zpIACC
     sta zpIACC
-    bcc L91D2
+    bcc NOHINC
+
     inc zpIACC+1
-L91D2:
+NOHINC:
     lda zpFSA+1
     sta zpWORK+1
     lda zpFSA
@@ -3472,11 +3506,13 @@ L91D2:
     tay
     lda zpIACC+1
     adc zpFSA+1
-    bcs L9218
+    bcs DIMRAM
+
     tax
     cpy zpAESTKP
     sbc zpAESTKP+1
-    bcs L9218
+    bcs DIMRAM
+
     sty zpFSA
     stx zpFSA+1
     lda zpWORK
@@ -3484,28 +3520,32 @@ L91D2:
     tay
     lda #$00
     sta zpWORK
-    bcc L91FC
+    bcc ZELOOP
+
     inc zpWORK+1
-L91FC:
+
+ZELOOP:
     sta (zpWORK),Y
     iny
-    bne L9203
+    bne ZELPA
     inc zpWORK+1
-L9203:
+
+ZELPA:
     cpy zpFSA
-    bne L91FC
+    bne ZELOOP
     cpx zpWORK+1
-    bne L91FC
-L920B:
+    bne ZELOOP
+
+DIMNXT:
     jsr SPACES
-    cmp #$2C
-    beq L9215
+    cmp #','
+    beq DIMJ
     jmp SUNK
 
-L9215:
+DIMJ:
     jmp DIM
 
-L9218:
+DIMRAM:
     brk
     dta 11
     dta tknDIM
@@ -3531,16 +3571,21 @@ INCDON:
 
 ; ----------------------------------------------------------------------------
 
-L9231:
-    ldx #$3F
+; Integer Multiply, 16-bit, top of stack * IACC, result in IACC
+
+SMUL:
+    ldx #zpWORK+8
     jsr POPX
-L9236:
+
+WMUL:
     ldx #$00
     ldy #$00
-L923A:
-    lsr zp40
-    ror zp3F
-    bcc L924B
+
+SMULA:
+    lsr zpWORK+9
+    ror zpWORK+8
+    bcc SMULB
+
     clc
     tya
     adc zpIACC
@@ -3548,19 +3593,25 @@ L923A:
     txa
     adc zpIACC+1
     tax
-    bcs L925A
-L924B:
+    bcs SMULXE
+
+SMULB:
     asl zpIACC
     rol zpIACC+1
-    lda zp3F
-    ora zp40
-    bne L923A
+    lda zpWORK+8
+    ora zpWORK+9
+    bne SMULA
+
+    .if .hi(SMULA) != .hi(*)
+        .error "ASSERT: SMUL loop crosses page"
+    .endif
+
     sty zpIACC
     stx zpIACC+1
     rts
 
-L925A:
-    jmp L9127
+SMULXE:
+    jmp NOTGO
 
 ; ----------------------------------------------------------------------------
 
@@ -3588,7 +3639,7 @@ LLOMM:
     lda zpIACC+1
     sta zpLOMEM+1
     sta zpFSA+1
-    jsr LBD2F
+    jsr SETVAL
     beq L928A         ; Clear dynamic variables, jump to execution loop
 
 ; ----------------------------------------------------------------------------
@@ -3608,7 +3659,7 @@ L928A:
 ; =====
 CLEAR:
     jsr DONE         ; Check end of statement
-    jsr LBD20         ; Clear heap, stack, data, variables
+    jsr SETFSA         ; Clear heap, stack, data, variables
     beq L928A         ; Jump to execution loop
 
 ; ----------------------------------------------------------------------------
@@ -3677,11 +3728,14 @@ LTIME:
 
 ; Evaluate <comma><numeric>
 ; =========================
-L92DA:
+INCMEX:
     jsr COMEAT         ; Check for and step past comma
-L92DD:
+
+INEXPR:
     jsr EXPR
     jmp INTEGB
+
+; ----------------------------------------------------------------------------
 
 L92E3:
     jsr LADEC
@@ -3718,7 +3772,7 @@ L92FA:
 L92FD:
     beq INTEGE         ; String, jump to 'Type mismatch'
     bmi L92EA         ; Real, return
-    jmp LA2BE         ; Integer, jump to convert to real
+    jmp IFLT         ; Integer, jump to convert to real
 
     .if split == 0
 ; PROCname [(parameters)]
@@ -3826,7 +3880,7 @@ GRAPH:
     jsr ASEXPR
     lda zpIACC
     pha               ; Evaluate integer
-    jsr L92DA         ; Step past comma, evaluate integer
+    jsr INCMEX         ; Step past comma, evaluate integer
     jsr AEDONE         ; Update program pointer, check for end of statement
     lda #$12
     jsr OSWRCH        ; Send VDU 18 for GCOL
@@ -3932,7 +3986,7 @@ PLOT:
 L93FD:
     jsr INTEG         ; Confirm numeric and ensure is integer
     jsr PHACC         ; Stack integer
-    jsr L92DA         ; Step past command and evaluate integer
+    jsr INCMEX         ; Step past command and evaluate integer
     jsr AEDONE         ; Update program pointer, check for end of statement
     lda #$19
     jsr OSWRCH        ; Send VDU 25 for PLOT
@@ -4005,11 +4059,15 @@ L945B:
     ldy #$F8
     bne L946F         ; Point to FN list start and scan list
 
+; ----------------------------------------------------------------------------
+
 ; Look for a variable in the heap
 ; -------------------------------
-; On entry, ($37)+1=>first character of name
+; LOOKUP is given a base address-1 in WORK,WORK+1, length+1 in WORK+2
+; It returns with EQ set if it can't find the thing, else with
+; IACC,IACC+1 pointing to the data item and NEQ.
 ;
-L9469:
+LOOKUP:
     ldy #$01
     lda (zpWORK),Y      ; Get first character of variable
     asl
@@ -4035,7 +4093,7 @@ L9479:
     lda (zp3A),Y
     bne L949A         ; Jump if not null name
     dey
-    cpy zp39
+    cpy zpWORK+2
     bne L94B3
     iny
     bcs L94A7
@@ -4151,37 +4209,49 @@ L9527:
     bne L9527
     rts
 
-L9531:
+; ----------------------------------------------------------------------------
+;  CREAX updates FSA on the assumption that x-1 bytes are to be used
+;  Y contains next address offset, four bytes are zeroed
+;  If we run out of ram it resets the list end with the old
+;  pointer in WORK+3/4
+
+CREAX:
     lda #$00
-L9533:
+CREZER:
     iny
     sta (zpFSA),Y
     dex
-    bne L9533
-L9539:
+    bne CREZER
+
+FSAPY:
     sec
     tya
     adc zpFSA
-    bcc L9541
+    bcc CREATY
+
     inc zpFSA+1
-L9541:
+
+CREATY:
     ldy zpFSA+1
     cpy zpAESTKP+1
-    bcc L9556
+    bcc CREATZ
     bne CREATD
+
     cmp zpAESTKP
-    bcc L9556
+    bcc CREATZ
+
 CREATD:
     lda #$00
     ldy #$01
     sta (zpWORK+3),Y
     jmp ALLOCR
 
-L9556:
+CREATZ:
     sta zpFSA
 L9558:
     rts
 
+; ----------------------------------------------------------------------------
 
 ; Check if variable name is valid
 ; ===============================
@@ -4217,7 +4287,7 @@ L957A:
 ; ----------------------------------------------------------------------------
 
 CRAELT:
-    jsr L9531
+    jsr CREAX
 CRAELV:
     jsr L95C9
     bne L95A4
@@ -4362,7 +4432,7 @@ L9654:
     sty zp39
     cmp #'('
     beq L96A6
-    jsr L9469
+    jsr LOOKUP
     beq L9677
     stx zpAECUR
 L9661:
@@ -4433,7 +4503,7 @@ L96AF:
     lda (zpWORK),Y
     cmp #'('
     beq L96C9
-    jsr L9469
+    jsr LOOKUP
     beq L9677
     stx zpAECUR
     lda #$81
@@ -4462,7 +4532,7 @@ L96D7:
     brk
 
 L96DF:
-    jsr L9469
+    jsr LOOKUP
     beq L96D7
     stx zpAECUR
     lda zpIACC+2
@@ -4481,7 +4551,7 @@ L96DF:
     sta zpIACC+3
 L96FF:
     jsr PHACC
-    jsr L92DD
+    jsr INEXPR
     inc zpAECUR
     cpx #$2C
     bne L96D7
@@ -4508,7 +4578,7 @@ L96FF:
     lda zpIACC+1
     adc zp3A
     sta zpIACC+1
-    jsr L9236
+    jsr WMUL
     ldy #$00
     sec
     lda (zpWORK),Y
@@ -5139,23 +5209,23 @@ DIVRET:
 
 ; ----------------------------------------------------------------------------
 
-L9A39:
+FCOMPS:
     stx zpTYPE
     jsr POPACC
-    jsr LBD51
-    jsr LA2BE
+    jsr PHFACC
+    jsr IFLT
     jsr FTOW
-    jsr LBD7E
+    jsr POPSET
     jsr LA3B5
     jmp L9A62
 
 L9A50:
-    jsr LBD51
+    jsr PHFACC
     jsr L9C42
     stx zpTYPE
     tay
     jsr L92FD
-    jsr LBD7E
+    jsr POPSET
 L9A5F:
     jsr LA34E
 
@@ -5211,7 +5281,7 @@ L9A9E:
     jsr L9C42
     tay               ; Evaluate next expression
     beq L9A9A         ; Error if string
-    bmi L9A39         ; Float, jump to compare floats
+    bmi FCOMPS         ; Float, jump to compare floats
 
 ; Compare IntA with top of stack
 ; ------------------------------
@@ -5580,15 +5650,15 @@ L9C88:
 ; Real addition
 ; -------------
 L9C8B:
-    jsr LBD51
+    jsr PHFACC
     jsr L9DD1         ; Stack float, call Evaluator Level 3
     tay
     beq L9C88         ; float + string, jump to 'Type mismatch' error
     stx zpTYPE
     bmi L9C9B         ; float + float, skip conversion
-    jsr LA2BE         ; float + int, convert int to float
+    jsr IFLT         ; float + int, convert int to float
 L9C9B:
-    jsr LBD7E         ; Pop float from stack, point FPTR to it
+    jsr POPSET         ; Pop float from stack, point FPTR to it
     jsr LA500         ; Unstack float to FPA2 and add to FPA1
 L9CA1:
     ldx zpTYPE          ; Get nextchar back
@@ -5600,8 +5670,8 @@ L9CA1:
 L9CA7:
     stx zpTYPE
     jsr POPACC         ; Unstack integer to IntA
-    jsr LBD51
-    jsr LA2BE         ; Stack float, convert integer in IntA to float in FPA1
+    jsr PHFACC
+    jsr IFLT         ; Stack float, convert integer in IntA to float in FPA1
     jmp L9C9B         ; Jump to do float + <stacked float>
 
 ; - numeric
@@ -5638,15 +5708,15 @@ L9CB5:
 ; Real subtraction
 ; ----------------
 L9CE1:
-    jsr LBD51
+    jsr PHFACC
     jsr L9DD1         ; Stack float, call Evaluator Level 3
     tay
     beq L9C88         ; float - string, jump to 'Type mismatch' error
     stx zpTYPE
     bmi L9CF1         ; float - float, skip conversion
-    jsr LA2BE         ; float - int, convert int to float
+    jsr IFLT         ; float - int, convert int to float
 L9CF1:
-    jsr LBD7E         ; Pop float from stack and point FPTR to it
+    jsr POPSET         ; Pop float from stack and point FPTR to it
     jsr LA4FD         ; Unstack float to FPA2 and subtract it from FPA1
     jmp L9CA1         ; Jump to set result and loop for more + or -
 
@@ -5655,30 +5725,30 @@ L9CF1:
 L9CFA:
     stx zpTYPE
     jsr POPACC         ; Unstack integer to IntA
-    jsr LBD51
-    jsr LA2BE         ; Stack float, convert integer in IntA to float in FPA1
-    jsr LBD7E         ; Pop float from stack, point FPTR to it
+    jsr PHFACC
+    jsr IFLT         ; Stack float, convert integer in IntA to float in FPA1
+    jsr POPSET         ; Pop float from stack, point FPTR to it
     jsr LA4D0         ; Subtract FPTR float from FPA1 float
     jmp L9CA1         ; Jump to set result and loop for more + or -
 
 L9D0E:
-    jsr LA2BE
+    jsr IFLT
 L9D11:
     jsr POPACC
-    jsr LBD51
-    jsr LA2BE
+    jsr PHFACC
+    jsr IFLT
     jmp L9D2C
 
 L9D1D:
-    jsr LA2BE
+    jsr IFLT
 L9D20:
-    jsr LBD51
+    jsr PHFACC
     jsr L9E20
     stx zpTYPE
     tay
     jsr L92FD
 L9D2C:
-    jsr LBD7E
+    jsr POPSET
     jsr FMUL
     lda #$FF
     ldx zpTYPE
@@ -5807,12 +5877,12 @@ L9DD4:
 L9DE5:
     tay
     jsr L92FD         ; Ensure current value is real
-    jsr LBD51
+    jsr PHFACC
     jsr L9E20         ; Stack float, call Evaluator Level 2
     stx zpTYPE
     tay
     jsr L92FD         ; Ensure current value is real
-    jsr LBD7E
+    jsr POPSET
     jsr FXDIV         ; Unstack to FPTR, call divide routine
     ldx zpTYPE
     lda #$FF
@@ -5868,14 +5938,14 @@ L9E24:
 L9E35:
     tay
     jsr L92FD         ; Ensure current value is a float
-    jsr LBD51
+    jsr PHFACC
     jsr L92FA         ; Stack float, evaluate a real
     lda zpFACCX
     cmp #$87
     bcs L9E88
     jsr LA486
     bne L9E59
-    jsr LBD7E
+    jsr POPSET
     jsr LA3B5
     lda zp4A
     jsr FIPOW
@@ -5893,7 +5963,7 @@ L9E59:
     jsr FIPOW
 L9E6C:
     jsr LA37D
-    jsr LBD7E
+    jsr POPSET
     jsr LA3B5
     jsr LA801
     jsr LAAD1
@@ -6009,7 +6079,7 @@ L9EFB:
     bmi FCONHX         ; Jump for hex conversion if $15.b7 set
     tya
     bmi L9F0F
-    jsr LA2BE         ; Convert integer to real
+    jsr IFLT         ; Convert integer to real
 L9F0F:
     jsr LA1DA
     bne L9EC8         ; Get -1/0/+1 sign, jump if not zero to output nonzero number
@@ -6635,7 +6705,9 @@ FPLNF:
 FPLNY:
     rts
 
-LA2BE:
+; ----------------------------------------------------------------------------
+
+IFLT:
     ldx #$00
     stx zpFACCMG
     stx zpFACCXH
@@ -8009,7 +8081,7 @@ ADVAL:
 ; =POINT(numeric, numeric)
 ; ========================
 POINT:
-        jsr L92DD
+        jsr INEXPR
         jsr PHACC
         jsr COMEAT
         jsr LAE56
@@ -8439,7 +8511,7 @@ XACC1:
 ; =POINT(numeric, numeric)
 ; ========================
 POINT:
-        jsr L92DD
+        jsr INEXPR
         jsr PHACC
         jsr COMEAT
         jsr LAE56
@@ -9086,10 +9158,10 @@ LAF0A:
     cmp #$01
     beq LAF69
 LAF24:
-    jsr LA2BE
-    jsr LBD51
+    jsr IFLT
+    jsr PHFACC
     jsr LAF69
-    jsr LBD7E
+    jsr POPSET
     jsr LA606
     jsr LA303
     jsr IFIX
@@ -9402,7 +9474,7 @@ MIDD:
     bne LB036
     jsr LBDB2
     inc zpAECUR
-    jsr L92DD
+    jsr INEXPR
     lda zpIACC
     pha
     lda #$FF
@@ -9487,7 +9559,7 @@ LB0BF:
 ; =STRING$(numeric, string$)
 ; ==========================
 STRND:
-    jsr L92DD
+    jsr INEXPR
     jsr PHACC
     jsr COMEAT
     jsr LAE56
@@ -9603,14 +9675,14 @@ LB158:
     jsr CLYADP
     jsr LOOKFN
     ldx #$01
-    jsr L9531
+    jsr CREAX
     ldy #$00
     lda zpLINE
     sta (zpFSA),Y
     iny
     lda zpLINE+1
     sta (zpFSA),Y
-    jsr L9539
+    jsr FSAPY
     jmp LB1F4
 
 LB18A:
@@ -9847,7 +9919,7 @@ LB2CA:
     jsr LBE44
     lda zpTYPE
     bpl LB2F0
-    jsr LBD7E
+    jsr POPSET
     jsr LA3B5
     jmp LB2F3
 
@@ -10142,7 +10214,7 @@ LB451:
     .endif
     txa
     pha
-    jsr L92DA         ; Step past comma, evaluate next integer
+    jsr INCMEX         ; Step past comma, evaluate next integer
     pla
     tax
     dex
@@ -10173,7 +10245,7 @@ LB477:
     .endif
     txa
     pha
-    jsr L92DA         ; Step past comma, evaluate next integer
+    jsr INCMEX         ; Step past comma, evaluate next integer
     pla
     tax
     dex
@@ -10259,7 +10331,7 @@ LB4E0:
     lda zpTYPE
     beq STORER         ; Type<>num, jump to error
     bmi LB4E9         ; Type=float, jump to store it
-    jsr LA2BE         ; Convert integer to float
+    jsr IFLT         ; Convert integer to float
 LB4E9:
     ldy #$00          ; Store 5-byte float
     lda zpFACCX
@@ -10756,7 +10828,7 @@ FOR:
     bne LB7BD
     cpx #$05
     beq LB84F
-    jsr L92DD
+    jsr INEXPR
     ldy zpFORSTP
     lda zpIACC
     sta FORLML,Y
@@ -10775,7 +10847,7 @@ FOR:
     jsr AESPAC
     cmp #tknSTEP
     bne LB81F
-    jsr L92DD
+    jsr INEXPR
     ldy zpAECUR
 LB81F:
     sty zpCURSOR
@@ -11607,7 +11679,7 @@ LBC9E:
     sbc zpTOP+1
     bcs MOVEUP
     jsr ENDER
-    jsr LBD20
+    jsr SETFSA
 
     brk
     dta 0
@@ -11667,7 +11739,7 @@ LBD10:
 RUN:
     jsr DONE
 RUNNER:
-    jsr LBD20
+    jsr SETFSA
     lda zpTXTP
     sta zpLINE+1          ; Point PtrA to PAGE
     stx zpLINE
@@ -11677,7 +11749,7 @@ RUNNER:
 
 ; Clear BASIC heap, stack and DATA pointer
 ; ========================================
-LBD20:
+SETFSA:
     lda zpTOP
     sta zpLOMEM
     sta zpFSA          ; LOMEM=TOP, VAREND=TOP
@@ -11685,13 +11757,15 @@ LBD20:
     sta zpLOMEM+1
     sta zpFSA+1
     jsr SETVAR         ; Clear DATA and stack
-LBD2F:
+
+SETVAL:
     ldx #$80
     lda #$00
-LBD33:
+SETVRL:
     sta VARPTR-1,X
     dex
-    bne LBD33
+    bne SETVRL
+
     rts               ; Clear dynamic variables list
 
 ; ----------------------------------------------------------------------------
@@ -11714,7 +11788,7 @@ SETVAR:
 
 ; ----------------------------------------------------------------------------
 
-LBD51:
+PHFACC:
     lda zpAESTKP
     sec
     sbc #$05
@@ -11741,7 +11815,9 @@ LBD51:
     sta (zpAESTKP),Y
     rts
 
-LBD7E:
+; ----------------------------------------------------------------------------
+
+POPSET:
     lda zpAESTKP
     clc
     sta zpARGP
@@ -11757,7 +11833,7 @@ LBD7E:
 
 LBD90:
     beq LBDB2
-    bmi LBD51
+    bmi PHFACC
 
 ; Push Integer ACC to stack
 
@@ -11857,10 +11933,13 @@ POPINC:
 POPACI:
     rts
 
-; Unstack an integer to zero page
-; -------------------------------
+; Unstack an integer to zpWORK
+; -----------------------------
 POPWRK:
     ldx #zpWORK
+
+; Use X as Index, jsr here to override X (i.e. ldx #zpWORK+8, jsr POPX)
+
 POPX:
     ldy #$03
     lda (zpAESTKP),Y
