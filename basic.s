@@ -244,6 +244,7 @@ tknSPC      = $89
 tknTAB      = $8A
 tknELSE     = $8B
 tknTHEN     = $8C
+tknCONST    = $8D
 tknOPENIN   = $8E
 tknPTR      = $8F
 tknPAGE     = $90
@@ -370,7 +371,7 @@ L8000:
 ; =======================
 
 .ifdef MOS_ATOM
-    jsr LBFCF         ; Print inline text
+    jsr VSTRNG         ; Print inline text
     dta 'BBC BASIC II'
     .if version == 3
         dta 'I'
@@ -1623,7 +1624,7 @@ CONSTY:
 
 CONSTX:
     dey
-    lda #$8D
+    lda #tknCONST
     jsr INTOK
     lda zpWORK
     adc #$02
@@ -3030,28 +3031,33 @@ GETTWO:
     jsr SINSTK
     jsr SPTSTN
     jsr PHACC
+
     lda #$0A
     jsr SINSTK
     jsr SPACES
-    cmp #$2C
-    bne L8F8D
+    cmp #','
+    bne NO
+
     jsr SPTSTN
     lda zpIACC+1
-    bne L8FDF
+    bne GETYUK
+
     lda zpIACC
-    beq L8FDF
+    beq GETYUK
+
     inc zpCURSOR
-L8F8D:
+NO:
     dec zpCURSOR
     jmp DONE
 
 ; called by renumber
-L8F92:
+RENSET:
     lda zpTOP
-    sta zp3B
+    sta zpWORK+4
     lda zpTOP+1
-    sta zp3C
-L8F9A:
+    sta zpWORK+5
+
+RENSTR:
     lda zpTXTP
     sta zpWORK+1
     lda #$01
@@ -3063,32 +3069,38 @@ L8F9A:
 RENUM:
     jsr GETTWO
     ldx #zpWORK+2
-    jsr LBE0D
+    jsr POPX
     jsr ENDER
-    jsr L8F92
+    jsr RENSET
+
 ; Build up table of line numbers
-L8FB1:
+NUMBA:
     ldy #$00
     lda (zpWORK),Y
-    bmi L8FE7         ; Line.hi>$7F, end of program
-    sta (zp3B),Y
+    bmi NUMBB         ; Line.hi>$7F, end of program
+
+    sta (zpWORK+4),Y
     iny
     lda (zpWORK),Y
-    sta (zp3B),Y
+    sta (zpWORK+4),Y
+
     sec
     tya
-    adc zp3B
-    sta zp3B
+    adc zpWORK+4
+    sta zpWORK+4
+
     tax
-    lda zp3C
+    lda zpWORK+5
     adc #$00
-    sta zp3C
+    sta zpWORK+5
     cpx zpHIMEM
     sbc zpHIMEM+1
-    bcs L8FD6
-    jsr L909F
-    bcc L8FB1
-L8FD6:
+    bcs NUMBFL
+
+    jsr STEPON      ; Y=1
+    bcc NUMBA
+
+NUMBFL:
     brk
     dta 0
     dta tknRENUMBER
@@ -3097,7 +3109,7 @@ L8FD6:
     .else
         dta ' space'      ; Terminated by following BRK
     .endif
-L8FDF:
+GETYUK:
     brk
     dta 0
     .if foldup == 1
@@ -3109,9 +3121,9 @@ L8FDF:
 
 ; Do 4K+12K split here
 ; --------------------
-L8FE7:
+NUMBB:
     .if split == 1
-        jmp X8FE7
+        jmp NUMBB
 
 ; PROCname [(parameters)]
 ; =======================
@@ -3127,31 +3139,37 @@ PROC:
                       ; Will return here after ENDPROC
         jsr AEDONE     ; Check for end of statement
         jmp NXT     ; Return to execution loop
+NUMBB:
     .endif
 
 ; Look for renumber references
-X8FE7:
-    jsr L8F9A
-L8FEA:
+    jsr RENSTR
+
+NUMBC:
     ldy #$00
     lda (zpWORK),Y
-    bmi L900D
-    lda zp3A
+    bmi NUMBD
+
+    lda zpWORK+3
     sta (zpWORK),Y
-    lda zp39
+    lda zpWORK+2
     iny
     sta (zpWORK),Y
+
     clc
     lda zpIACC
-    adc zp39
-    sta zp39
+    adc zpWORK+2
+    sta zpWORK+2
+
     lda #$00
-    adc zp3A
+    adc zpWORK+3
     and #$7F
-    sta zp3A
-    jsr L909F
-    bcc L8FEA
-L900D:
+    sta zpWORK+3
+
+    jsr STEPON
+    bcc NUMBC
+
+NUMBD:
     lda zpTXTP
     sta zpLINE+1
     ldy #$00
@@ -3159,57 +3177,61 @@ L900D:
     iny
     lda (zpLINE),Y
     .if version < 3
-        bmi L903A
+        bmi NUMBXX
     .elseif version >= 3
-        bmi L9080
+        bmi NUMBX
     .endif
-L901A:
+
+NUMBE:
     ldy #$04
-L901C:
+NUMBF:
     lda (zpLINE),Y
-    cmp #$8D
-    beq L903D
+    cmp #tknCONST
+    beq NUMBG
     iny
     cmp #$0D
-    bne L901C
+    bne NUMBF
     lda (zpLINE),Y
     .if version < 3
-        bmi L903A
+        bmi NUMBXX
     .elseif version >= 3
-        bmi L9080
+        bmi NUMBX
     .endif
     ldy #$03
     lda (zpLINE),Y
     clc
     adc zpLINE
     sta zpLINE
-    bcc L901A
+    bcc NUMBE
+
     inc zpLINE+1
-    bcs L901A
-L903A:
+    bcs NUMBE
+
+NUMBXX:
     .if version < 3
         jmp FSASET
     .endif
 
-L903D:
-    jsr L97EB
-    jsr L8F92
-L9043:
+NUMBG:
+    jsr SPGETN
+    jsr RENSET
+
+NUMBH:
     ldy #$00
     lda (zpWORK),Y
-    bmi L9082
-    lda (zp3B),Y
+    bmi NUMBJ
+    lda (zpWORK+4),Y
     iny
     cmp zpIACC+1
-    bne L9071
-    lda (zp3B),Y
+    bne NUMBI
+    lda (zpWORK+4),Y
     cmp zpIACC
-    bne L9071
+    bne NUMBI
     lda (zpWORK),Y
-    sta zp3D
+    sta zpWORK+6
     dey
     lda (zpWORK),Y
-    sta zp3E
+    sta zpWORK+7
     ldy zpCURSOR
     dey
     lda zpLINE
@@ -3217,26 +3239,31 @@ L9043:
     lda zpLINE+1
     sta zpWORK+1
     jsr CONSTI
-L906D:
+
+NUMBFA:
     ldy zpCURSOR
-    bne L901C
-L9071:
+    bne NUMBF
+
+NUMBI:
     .if version >= 3
         clc
     .endif
-    jsr L909F
-    lda zp3B
+    jsr STEPON
+    lda zpWORK+4
     adc #$02
     sta zp3B
-    bcc L9043
-    inc zp3C
-    bcs L9043
-L9080:
+    bcc NUMBH
+
+    inc zpWORK+5
+    bcs NUMBH
+
+NUMBX:
     .if version >= 3
-        bmi L90D9
+        bmi ENDAUT
     .endif
-L9082:
-    jsr LBFCF         ; Print inline text
+
+NUMBJ:
+    jsr VSTRNG         ; Print inline text
     .if foldup == 1
         dta 'FAILED AT '
     .else
@@ -3248,10 +3275,12 @@ L9082:
     iny
     lda (zpLINE),Y
     sta zpIACC
-    jsr L991F         ; Print in decimal
+
+    jsr POSITE         ; Print in decimal
     jsr NLINE         ; Print newline
-    beq L906D
-L909F:
+    beq NUMBFA
+
+STEPON:
     iny
     lda (zpWORK),Y
     adc zpWORK
@@ -3271,7 +3300,7 @@ AUTO:
     jsr POPACC
 L90B5:
     jsr PHACC
-    jsr L9923
+    jsr NPRN
     lda #$20
     jsr BUFF
     jsr POPACC
@@ -3286,7 +3315,7 @@ L90B5:
     bcc L90B5
     inc zpIACC+1
     bpl L90B5
-L90D9:
+ENDAUT:
     jmp FSASET
 
 L90DC:
@@ -3504,7 +3533,7 @@ INCDON:
 
 L9231:
     ldx #$3F
-    jsr LBE0D
+    jsr POPX
 L9236:
     ldx #$00
     ldy #$00
@@ -3909,7 +3938,7 @@ L93FD:
     jsr OSWRCH        ; Send VDU 25 for PLOT
     pla
     jsr OSWRCH        ; Send PLOT action
-    jsr LBE0B         ; Pop integer to temporary store at $37/8
+    jsr POPWRK         ; Pop integer to temporary store at $37/8
     lda zpWORK
     jsr OSWRCH        ; Send first coordinate to OSWRCH
     lda zpWORK+1
@@ -4457,7 +4486,7 @@ L96FF:
     cpx #$2C
     bne L96D7
     ldx #$39
-    jsr LBE0D
+    jsr POPX
     ldy zp3C
     pla
     sta zpWORK+1
@@ -4494,7 +4523,7 @@ L96FF:
     pla
     sta zpWORK
     ldx #$39
-    jsr LBE0D
+    jsr POPX
     ldy zp3C
     jsr L97BA
     clc
@@ -4588,10 +4617,10 @@ SPTSTN:
     cmp #$20
     beq SPTSTM
 
-    cmp #$8D
+    cmp #tknCONST
     bne L9805
 
-L97EB:
+SPGETN:
     iny
     lda (zpLINE),Y
     asl
@@ -4866,110 +4895,133 @@ L9905:
     lda #$5B
 L9911:
     jsr CHOUT
-    jsr L991F
+    jsr POSITE
     lda #$5D
     jsr CHOUT
     jmp LISTPT
 
+; ----------------------------------------------------------------------------
+
 ; Print 16-bit decimal number
 ; ===========================
-L991F:
+POSITE:
     lda #$00          ; No padding
-    beq L9925
-L9923:
+    beq NPRN+2        ; skip lda #5
+
+NPRN:
     lda #$05          ; Pad to five characters
-L9925:
     sta zpPRINTS
     ldx #$04
-L9929:
+
+NUMLOP:
     lda #$00
-    sta zp3F,X
+    sta zpWORK+8,X
     sec
-L992E:
+
+NUMLP:
     lda zpIACC
-    sbc L996B,X       ; Subtract 10s low byte
+    sbc VALL,X       ; Subtract 10s low byte
     tay
     lda zpIACC+1
-    sbc L99B9,X       ; Subtract 10s high byte
-    bcc L9943         ; Result<0, no more for this digit
+    sbc VALM,X       ; Subtract 10s high byte
+    bcc OUTNUM        ; Result<0, no more for this digit
     sta zpIACC+1
-    sty zpIACC          ; Update number
-    inc zp3F,X
-    bne L992E
+    sty zpIACC       ; Update number
+    inc zpWORK+8,X
+    bne NUMLP        ; branch always
 
-L9943:
+OUTNUM:
     dex
-    bpl L9929
+    bpl NUMLOP
+
     ldx #$05
-L9948:
+LZB:
     dex
-    beq L994F
-    lda zp3F,X
-    beq L9948
-L994F:
+    beq LASTZ
+    lda zpWORK+8,X
+    beq LZB
+
+LASTZ:
     stx zpWORK
     lda zpPRINTS
-    beq L9960
-    sbc zpWORK
-    beq L9960
+    beq PLUME
+
+    sbc zpWORK      ; carry clear
+    beq PLUME
+
     .if version < 3
         tay
-L995A:
+LISTPLLP:
         jsr LISTPT
         dey
-        bne L995A
+        bne LISTPLLP
     .elseif version >= 3
         tax
         jsr LISTPL
         ldx zpWORK
     .endif
-L9960:
-    lda zp3F,X
+
+PLUME:
+    lda zpWORK+8,X
     ora #$30
     jsr CHOUT
     dex
-    bpl L9960
+    bpl PLUME
+
     rts
+
+; ----------------------------------------------------------------------------
 
 ; Low bytes of powers of ten
-L996B:
+VALL:
     dta 1, 10, 100, <1000, <10000
 
-; Line Search
-L9970:
+; ----------------------------------------------------------------------------
+
+; Line Search, find line number in IACC
+FNDLNO:
     ldy #$00
-    sty zp3D
+    sty zpWORK+6
     lda zpTXTP
-    sta zp3E
-L9978:
+    sta zpWORK+7
+
+SIGHT:
     ldy #$01
-    lda (zp3D),Y
+    lda (zpWORK+6),Y
     cmp zpIACC+1
-    bcs L998E
-L9980:
+    bcs LOOK
+
+LOOKR:
     ldy #$03
-    lda (zp3D),Y
-    adc zp3D
-    sta zp3D
-    bcc L9978
-    inc zp3E
-    bcs L9978
-L998E:
-    bne L99A4
+    lda (zpWORK+6),Y
+    adc zpWORK+6
+    sta zpWORK+6
+    bcc SIGHT
+
+    inc zpWORK+7
+    bcs SIGHT
+
+LOOK:
+    bne PAST
+
     ldy #$02
-    lda (zp3D),Y
+    lda (zpWORK+6),Y
     cmp zpIACC
-    bcc L9980
-    bne L99A4
+    bcc LOOKR
+    bne PAST
+
     tya
-    adc zp3D
-    sta zp3D
-    bcc L99A4
-    inc zp3E
+    adc zpWORK+6
+    sta zpWORK+6
+    bcc PAST
+
+    inc zpWORK+7
     clc
-L99A4:
+PAST:
     ldy #$02
     rts
+
+; ----------------------------------------------------------------------------
 
 ZDIVOR:
     brk
@@ -4981,9 +5033,13 @@ ZDIVOR:
     .endif
     ; ending zero overlaps with VALM
 
+; ----------------------------------------------------------------------------
+
 ; High byte of powers of ten
-L99B9:
+VALM:
     dta 0, 0, 0, >1000, >10000
+
+; ----------------------------------------------------------------------------
 
 L99BE:
     tay
@@ -5001,7 +5057,7 @@ L99BE:
     sta zpWORK
     jsr LAD71
     ldx #$39
-    jsr LBE0D
+    jsr POPX
     sty zp3D
     sty zp3E
     sty zp3F
@@ -9643,7 +9699,7 @@ LB202:
     beq LB226
     sta zp3F
 LB21C:
-    jsr LBE0B
+    jsr POPWRK
     jsr STORST
     dec zp3F
     bne LB21C
@@ -10144,7 +10200,7 @@ STORER:
 LB4B1:
     jsr EXPR         ; Evaluate expression
 STORE:
-    jsr LBE0B         ; Unstack integer (address of data)
+    jsr POPWRK         ; Unstack integer (address of data)
 STORF:
     lda zpWORK+2
     cmp #$05
@@ -10372,7 +10428,7 @@ LB5DB:
     jsr DONE
     jsr ENDER
     jsr POPACC
-    jsr L9970
+    jsr FNDLNO
     lda zp3D
     sta zpLINE
     lda zp3E
@@ -10403,7 +10459,7 @@ LB60F:
     jmp CLRSTK
 
 LB61D:
-    jsr L9923
+    jsr NPRN
     ldx #$FF
     stx zpCOEFP
     lda #$01
@@ -10435,11 +10491,11 @@ LB651:
     bpl LB64B
     cmp #$8D
     bne LB668
-    jsr L97EB
+    jsr SPGETN
     sty zpCURSOR
     lda #$00
     sta zpPRINTS
-    jsr L991F
+    jsr POSITE
     jmp LB637
 
 LB668:
@@ -10965,7 +11021,7 @@ LB99A:
     sta zpIACC+1          ; Line number high byte
                       ; Note - this makes goto $8000+10 the same as goto 10
 LB9AF:
-    jsr L9970
+    jsr FNDLNO
     bcs LB9B5
     rts               ; Look for line, error if not found
 
@@ -11430,7 +11486,7 @@ BUFEND:
     rts
 
 REMOVE:
-    jsr L9970
+    jsr FNDLNO
     bcs LBC80
     lda zpWORK+6
     sbc #$02
@@ -11780,9 +11836,9 @@ POPACI:
 
 ; Unstack an integer to zero page
 ; -------------------------------
-LBE0B:
-    ldx #$37
-LBE0D:
+POPWRK:
+    ldx #zpWORK
+POPX:
     ldy #$03
     lda (zpAESTKP),Y
     sta zp+3,X
@@ -11907,7 +11963,7 @@ LBE9B:
 ; Report 'Bad program' and jump to immediate mode
 ; -----------------------------------------------
 LBE9E:
-    jsr LBFCF         ; Print inline text
+    jsr VSTRNG         ; Print inline text
     dta 13
     .if foldup == 1
         dta 'BAD PROGRAM'
@@ -12321,7 +12377,7 @@ LBFC3:
 
 ; Print inline text
 ; =================
-LBFCF:
+VSTRNG:
     pla
     sta zpWORK
     pla
