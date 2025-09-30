@@ -5041,80 +5041,103 @@ VALM:
 
 ; ----------------------------------------------------------------------------
 
-L99BE:
+; Divide top of stack by IACC
+
+DIVOP:              ; divide with remainder
     tay
     jsr INTEGB
     lda zpIACC+3
     pha
-    jsr LAD71
-    jsr L9E1D
+    jsr ABSCOM
+    jsr PHPOW
+
     stx zpTYPE
     tay
     jsr INTEGB
+
     pla
     sta zpWORK+1
     eor zpIACC+3
     sta zpWORK
-    jsr LAD71
-    ldx #$39
-    jsr POPX
-    sty zp3D
-    sty zp3E
-    sty zp3F
-    sty zp40
-    lda zpIACC+3
+    jsr ABSCOM
+
+    ldx #zpWORK+2
+    jsr POPX        ; pop from stack into zpWORK+2 ... zpWORK+5
+
+    sty zpWORK+6    ; clear dword
+    sty zpWORK+7
+    sty zpWORK+8
+    sty zpWORK+9
+
+    lda zpIACC+3    ; check divisor
     ora zpIACC
     ora zpIACC+1
     ora zpIACC+2
     beq ZDIVOR      ; Divide by 0 error
+
     ldy #$20
-L99F4:
+
+DIVJUS:
     dey
-    beq L9A38
+    beq DIVRET
     asl zp39
     rol zp3A
 
     rol zp3B
     rol zp3C
-    bpl L99F4
-L9A01:
-    rol zp39
-    rol zp3A
+    bpl DIVJUS
 
-    rol zp3B
-    rol zp3C
-    rol zp3D
-    rol zp3E
-    rol zp3F
-    rol zp40
+DIVER:
+    rol zpWORK+2
+    rol zpWORK+3
+    rol zpWORK+4
+    rol zpWORK+5
+    rol zpWORK+6
+    rol zpWORK+7
+    rol zpWORK+8
+    rol zpWORK+9
+
     sec
-    lda zp3D
+    lda zpWORK+6
     sbc zpIACC
     pha
-    lda zp3E
+
+    lda zpWORK+7
     sbc zpIACC+1
     pha
-    lda zp3F
+
+    lda zpWORK+8
     sbc zpIACC+2
     tax
-    lda zp40
+
+    lda zpWORK+9
     sbc zpIACC+3
-    bcc L9A33
-    sta zp40
-    stx zp3F
+    bcc NOSUB
+
+    sta zpWORK+9
+    stx zpWORK+8
     pla
-    sta zp3E
+    sta zpWORK+7
     pla
-    sta zp3D
-    bcs L9A35
-L9A33:
+    sta zpWORK+6
+    bcs NOSUB+2         ; skip pla, pla
+
+NOSUB:
     pla
     pla
-L9A35:
     dey
-    bne L9A01
-L9A38:
+    bne DIVER
+
+; Later BASICs have this check, disabled for now because it failse for
+; Atom and System targets...
+;    .if .hi(DIVER) != .hi(*)
+;        .error "ASSERT: page crossing in DIVOP loop"
+;    .endif
+
+DIVRET:
     rts
+
+; ----------------------------------------------------------------------------
 
 L9A39:
     stx zpTYPE
@@ -5681,7 +5704,7 @@ L9D3C:
 L9D4E:
     eor zpIACC+1
     bmi L9D1D
-    jsr L9E1D
+    jsr PHPOW
     stx zpTYPE
     tay
     beq L9D39
@@ -5698,14 +5721,14 @@ L9D69:
     bmi L9D0E
     lda zpIACC+3
     pha
-    jsr LAD71
+    jsr ABSCOM
     ldx #$39
     jsr LBE44
     jsr POPACC
     pla
     eor zpIACC+3
     sta zpWORK
-    jsr LAD71
+    jsr ABSCOM
     ldy #$00
     ldx #$00
     sty zp3F
@@ -5798,7 +5821,7 @@ L9DE5:
 ; MOD <value>
 ; -----------
 L9E01:
-    jsr L99BE         ; Ensure current value is integer
+    jsr DIVOP         ; Ensure current value is integer
     lda zpWORK+1
     php
     jmp L9DBB         ; Jump to MOD routine
@@ -5806,7 +5829,7 @@ L9E01:
 ; DIV <value>
 ; -----------
 L9E0A:
-    jsr L99BE         ; Ensure current value is integer
+    jsr DIVOP         ; Ensure current value is integer
     rol zp39
     rol zp3A
     rol zp3B          ; Multiply IntA by 2
@@ -5819,7 +5842,7 @@ L9E0A:
 
 ; Stack current integer and evaluate another Level 2
 ; --------------------------------------------------
-L9E1D:
+PHPOW:
     jsr PHACC         ; Stack integer
 
 ; Evaluator Level 2, ^
@@ -8561,7 +8584,7 @@ ABS:
     jsr LADEC       ; FACTOR
     beq LAD67
     bmi LAD77
-LAD71:
+ABSCOM:
     bit zpIACC+3
     bmi LAD93
     bpl LADAA
