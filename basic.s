@@ -3027,19 +3027,11 @@ DODELS:
 ; Called by RENUMBER and AUTO
 GETTWO:
     lda #$0A
-    .if version < 3
-        jsr SINSTK
-    .elseif version >= 3
-        jsr SINSTK
-    .endif
+    jsr SINSTK
     jsr SPTSTN
     jsr PHACC
     lda #$0A
-    .if version < 3
-        jsr SINSTK
-    .elseif version >= 3
-        jsr SINSTK
-    .endif
+    jsr SINSTK
     jsr SPACES
     cmp #$2C
     bne L8F8D
@@ -3398,11 +3390,7 @@ L916B:
     pha
     lda #$01
     pha
-    .if version < 3
-        jsr SINSTK
-    .elseif version >= 3
-        jsr SINSTK
-    .endif
+    jsr SINSTK
 L9185:
     jsr PHACC
     jsr ASEXPR
@@ -3741,11 +3729,7 @@ LOCAL:
     bmi L931B         ; If a string, jump to make zero length
     jsr PHACC         ; 
     lda #$00          ; Set IntA to zero
-    .if version < 3
-        jsr SINSTK
-    .elseif version >= 3
-        jsr SINSTK
-    .endif
+    jsr SINSTK
     sta zpTYPE
     jsr STORE         ; Set current variable to IntA (zero)
 
@@ -4463,11 +4447,7 @@ L96DF:
     cmp #$04
     bcc L976C
     tya
-    .if version < 3
-        jsr SINSTK
-    .elseif version >= 3
-        jsr SINSTK
-    .endif
+    jsr SINSTK
     lda #$01
     sta zpIACC+3
 L96FF:
@@ -4810,11 +4790,7 @@ LINO:
     lda (zpLINE),Y
     tay
     pla
-    .if version < 3
-        jsr AYACC
-    .elseif version >= 3
-        jsr AYACC
-    .endif
+    jsr AYACC
     jsr L9905
     pla
     tay
@@ -7948,11 +7924,7 @@ ADVAL:
         .endif
     .endif
     txa
-    .if version < 3
-        jmp AYACC
-    .elseif version >= 3
-        jmp AYACC
-    .endif
+    jmp AYACC
 
     .if version < 3
 ; =POINT(numeric, numeric)
@@ -8019,11 +7991,7 @@ VPOS:
     lda #$86
     jsr OSBYTE
     tya
-    .if version < 3
-        jmp SINSTK
-    .elseif version >= 3
-        jmp SINSTK
-    .endif
+    jmp SINSTK          ; tail call
 
 ; =SGN numeric
 ; ============
@@ -8290,11 +8258,7 @@ ASC:
     beq TRUE
     lda STRACC
 LACAA:
-    .if version < 3
-        jmp SINSTK
-    .elseif version >= 3
-        jmp SINSTK
-    .endif
+    jmp SINSTK          ; tail call
 
 ; ----------------------------------------------------------------------------
 
@@ -8309,11 +8273,7 @@ INKEY:
     .endif
     bne TRUE
     txa
-    .if version < 3
-        jmp AYACC
-    .elseif version >= 3
-        jmp AYACC
-    .endif
+    jmp AYACC
 
     .if version >= 3
 XAC81:
@@ -8518,11 +8478,7 @@ LAD42:
 LAD4D:
     lda zpIACC
 LAD4F:
-    .if version < 3
-        jmp SINSTK
-    .elseif version >= 3
-        jmp SINSTK
-    .endif
+    jmp SINSTK      ; tail call
 
 LAD52:
     jsr POPSTX
@@ -8709,11 +8665,7 @@ ERRFAC:
 GETPC:
     lda PC      ; Use P% for undefined variable
     ldy PC+1
-    .if version < 3
-        jmp AYACC     ; Jump to return 16-bit integer, tail call
-    .elseif version >= 3
-        jmp AYACC     ; Jump to return 16-bit integer, tail call
-    .endif
+    jmp AYACC     ; Jump to return 16-bit integer, tail call
 
 ; ----------------------------------------------------------------------------
 
@@ -9887,11 +9839,7 @@ LB32C:
 
 LB34F:
     lda (zpIACC),Y
-    .if version < 3
-        jmp AYACC
-    .elseif version >= 3
-        jmp AYACC
-    .endif
+    jmp AYACC
 
 LB354:
     dey
