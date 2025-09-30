@@ -2909,17 +2909,19 @@ PRSTRN:
 CLG:
     jsr DONE         ; Check end of statement
     lda #$10
-    bne L8ECC         ; Jump to do VDU 16
+    bne DOCL         ; Jump to do VDU 16, branch always
 
 ; CLS
 ; ===
 CLS:
     jsr DONE         ; Check end of statement
-    jsr BUFEND         ; Set COUNT to zero
-    lda #$0C          ; Do VDU 12
-L8ECC:
+    jsr BUFEND       ; Set COUNT to zero
+    lda #$0C         ; Do VDU 12
+DOCL:
     jsr OSWRCH
-    jmp NXT         ; Send A to OSWRCH, jump to execution loop
+    jmp NXT          ; jump to execution loop
+
+; ----------------------------------------------------------------------------
 
 ; CALL numeric [,items ... ]
 ; ==========================
@@ -2927,16 +2929,21 @@ CALL:
     jsr AEEXPR
     jsr INTEG
     jsr PHACC
+
     ldy #$00
     sty STRACC
-L8EE0:
+
+CALLLP:
     sty ws+$06FF
     jsr AESPAC
-    cmp #$2C
-    bne L8F0C
+
+    cmp #','
+    bne CALLDN
+
     ldy zpAECUR
-    jsr L95D5
-    beq L8F1B
+    jsr LVBLNKplus1
+    beq CALLFL
+
     ldy ws+$06FF
     iny
     lda zpIACC
@@ -2948,80 +2955,90 @@ L8EE0:
     lda zpIACC+2
     sta STRACC,Y
     inc STRACC
-    jmp L8EE0
 
-L8F0C:
+    jmp CALLLP
+
+CALLDN:
     dec zpAECUR
-    jsr L9852         ; Check for end of statement
-    jsr POPACC         ; Pop integer to IntA
-    jsr L8F1E         ; Set up registers and call code at IntA
-    cld               ; Ensure Binary mode on return
+    jsr AEDONE      ; Check for end of statement
+    jsr POPACC      ; Pop integer to IntA
+    jsr USER        ; Set up registers and call code at IntA
+    cld             ; Ensure Binary mode on return
     jmp NXT         ; Jump back to program loop
 
-L8F1B:
-    jmp LAE43
+CALLFL:
+    jmp FACERR
 
 ; Call code
 ; ---------
-L8F1E:
-    lda VARL_C
+USER:
+    lda VARL_C      ; get carry from C%
     lsr
-    lda VARL_A      ; Get Carry from C%, A from A%
-    ldx VARL_X
-    ldy VARL_Y      ; Get X from X%, Y from Y%
+    lda VARL_A      ; get A from A%
+    ldx VARL_X      ; get X from X%
+    ldy VARL_Y      ; get Y from Y%
     .if .def TARGET_C64
         jmp $ff9b
     .else
         jmp (zpIACC)    ; Jump to address in IntA
     .endif
 
+; ----------------------------------------------------------------------------
 
-L8F2E:
+DELDED:
     jmp STDED
 
 ; DELETE linenum, linenum
 ; =======================
 DELETE:
     jsr SPTSTN
-    bcc L8F2E
+    bcc DELDED
+
     jsr PHACC
     jsr SPACES
     cmp #','
-    bne L8F2E
+    bne DELDED
+
     jsr SPTSTN
-    bcc L8F2E
+    bcc DELDED
+
     jsr DONE
     lda zpIACC
-    sta zp39
+    sta zpWORK+2
     lda zpIACC+1
-    sta zp3A
+    sta zpWORK+3
     jsr POPACC
-L8F53:
-    jsr LBC2D
+
+DODELS:
+    jsr REMOVE
     jsr TSTBRK
-    jsr L9222
-    lda zp39
+    jsr INCACC
+
+    lda zpWORK+2
     cmp zpIACC
-    lda zp3A
+    lda zpWORK+3
     sbc zpIACC+1
-    bcs L8F53
+    bcs DODELS
+
     jmp FSASET
 
+;  ----------------------------------------------------------------------------
+
 ; Called by RENUMBER and AUTO
-L8F69:
+GETTWO:
     lda #$0A
     .if version < 3
-        jsr LAED8
+        jsr SINSTK
     .elseif version >= 3
-        jsr XAED3
+        jsr SINSTK
     .endif
     jsr SPTSTN
     jsr PHACC
     lda #$0A
     .if version < 3
-        jsr LAED8
+        jsr SINSTK
     .elseif version >= 3
-        jsr XAED3
+        jsr SINSTK
     .endif
     jsr SPACES
     cmp #$2C
@@ -3052,7 +3069,7 @@ L8F9A:
 ; RENUMBER [linenume [,linenum]]
 ; ==============================
 RENUM:
-    jsr L8F69
+    jsr GETTWO
     ldx #zpWORK+2
     jsr LBE0D
     jsr ENDER
@@ -3116,7 +3133,7 @@ PROC:
         lda #$F2
         jsr LB197     ; Call PROC/FN dispatcher
                       ; Will return here after ENDPROC
-        jsr L9852     ; Check for end of statement
+        jsr AEDONE     ; Check for end of statement
         jmp NXT     ; Return to execution loop
     .endif
 
@@ -3256,7 +3273,7 @@ L90AB:
 ; AUTO [numeric [, numeric ]]
 ; ===========================
 AUTO:
-    jsr L8F69
+    jsr GETTWO
     lda zpIACC
     pha
     jsr POPACC
@@ -3290,7 +3307,7 @@ L90DF:
     bcs L9127
     jsr PHACC
     jsr L92DD
-    jsr L9222
+    jsr INCACC
     lda zpIACC+3
     ora zpIACC+2
     bne L9127
@@ -3382,9 +3399,9 @@ L916B:
     lda #$01
     pha
     .if version < 3
-        jsr LAED8
+        jsr SINSTK
     .elseif version >= 3
-        jsr XAED3
+        jsr SINSTK
     .endif
 L9185:
     jsr PHACC
@@ -3394,7 +3411,7 @@ L9185:
     ora zpIACC+2
     ora zpIACC+3
     bne L9127
-    jsr L9222
+    jsr INCACC
     pla
     tay
     lda zpIACC
@@ -3482,16 +3499,20 @@ L9218:
     .endif
     brk
 
-L9222:
+; ----------------------------------------------------------------------------
+
+INCACC:
     inc zpIACC
-    bne L9230
+    bne INCDON
     inc zpIACC+1
-    bne L9230
+    bne INCDON
     inc zpIACC+2
-    bne L9230
+    bne INCDON
     inc zpIACC+3
-L9230:
+INCDON:
     rts
+
+; ----------------------------------------------------------------------------
 
 L9231:
     ldx #$3F
@@ -3695,7 +3716,7 @@ PROC:
         lda #$F2
         jsr LB197     ; Call PROC/FN dispatcher
                       ; Will return here after ENDPROC
-        jsr L9852     ; Check for end of statement
+        jsr AEDONE     ; Check for end of statement
         jmp NXT     ; Return to execution loop
     .endif
 
@@ -3721,9 +3742,9 @@ LOCAL:
     jsr PHACC         ; 
     lda #$00          ; Set IntA to zero
     .if version < 3
-        jsr LAED8
+        jsr SINSTK
     .elseif version >= 3
-        jsr XAED3
+        jsr SINSTK
     .endif
     sta zpTYPE
     jsr STORE         ; Set current variable to IntA (zero)
@@ -3793,7 +3814,7 @@ GRAPH:
     lda zpIACC
     pha               ; Evaluate integer
     jsr L92DA         ; Step past comma, evaluate integer
-    jsr L9852         ; Update program pointer, check for end of statement
+    jsr AEDONE         ; Update program pointer, check for end of statement
     lda #$12
     jsr OSWRCH        ; Send VDU 18 for GCOL
     jmp L93DA         ; Jump to send two bytes to OSWRCH
@@ -3899,7 +3920,7 @@ L93FD:
     jsr INTEG         ; Confirm numeric and ensure is integer
     jsr PHACC         ; Stack integer
     jsr L92DA         ; Step past command and evaluate integer
-    jsr L9852         ; Update program pointer, check for end of statement
+    jsr AEDONE         ; Update program pointer, check for end of statement
     lda #$19
     jsr OSWRCH        ; Send VDU 25 for PLOT
     pla
@@ -4240,13 +4261,13 @@ L95C9:
     sta zpAELINE+1
     ldy zpCURSOR
     dey
-L95D4:
+LVBLNK:
     iny
-L95D5:
+LVBLNKplus1:
     sty zpAECUR
     lda (zpAELINE),Y
     cmp #$20
-    beq L95D4
+    beq LVBLNK
 LVCONT:
     cmp #'@'
     bcc L9595
@@ -4443,9 +4464,9 @@ L96DF:
     bcc L976C
     tya
     .if version < 3
-        jsr LAED8
+        jsr SINSTK
     .elseif version >= 3
-        jsr XAED3
+        jsr SINSTK
     .endif
     lda #$01
     sta zpIACC+3
@@ -4691,7 +4712,7 @@ FDONE:
     ldy zpAECUR
     jmp DONET
 
-L9852:
+AEDONE:
     ldy zpAECUR
     jmp DONE_WITH_Y
 
@@ -4790,9 +4811,9 @@ LINO:
     tay
     pla
     .if version < 3
-        jsr LAEEA
+        jsr AYACC
     .elseif version >= 3
-        jsr XAED5
+        jsr AYACC
     .endif
     jsr L9905
     pla
@@ -7928,9 +7949,9 @@ ADVAL:
     .endif
     txa
     .if version < 3
-        jmp LAEEA
+        jmp AYACC
     .elseif version >= 3
-        jmp XAED5
+        jmp AYACC
     .endif
 
     .if version < 3
@@ -7956,7 +7977,7 @@ POINT:
         jsr OSWORD
         lda zpFACCS
         bmi LAB9D
-        jmp LAED8
+        jmp SINSTK
     .elseif version >= 3
 ; =NOT
 ; ====
@@ -7983,7 +8004,7 @@ POS:
         lda #$86
         jsr OSBYTE
         txa
-        jmp LAED8
+        jmp SINSTK
     .elseif version >= 3
         jsr VPOS
         stx zpIACC
@@ -7999,9 +8020,9 @@ VPOS:
     jsr OSBYTE
     tya
     .if version < 3
-        jmp LAED8
+        jmp SINSTK
     .elseif version >= 3
-        jmp XAED3
+        jmp SINSTK
     .endif
 
 ; =SGN numeric
@@ -8030,7 +8051,7 @@ LAB9D:
 LABA0:
         lda #$01
 LABA2:
-        jmp LAED8
+        jmp SINSTK
 
 LABA5:
         lda #$40
@@ -8099,7 +8120,7 @@ PI:
 ; ============
 USR:
     jsr L92E3         ; Evaluate integer
-    jsr L8F1E         ; Set up registers and call code at IntA
+    jsr USER         ; Set up registers and call code at IntA
     sta zpIACC
     stx zpIACC+1          ; Store returned A,X in IntA
     sty zpIACC+2          ; Store returned Y
@@ -8270,9 +8291,9 @@ ASC:
     lda STRACC
 LACAA:
     .if version < 3
-        jmp LAED8
+        jmp SINSTK
     .elseif version >= 3
-        jmp XAED3
+        jmp SINSTK
     .endif
 
 ; ----------------------------------------------------------------------------
@@ -8289,9 +8310,9 @@ INKEY:
     bne TRUE
     txa
     .if version < 3
-        jmp LAEEA
+        jmp AYACC
     .elseif version >= 3
-        jmp XAED5
+        jmp AYACC
     .endif
 
     .if version >= 3
@@ -8372,7 +8393,7 @@ SGN:
 XACBF:
         lda #$01
 XACC1:
-        jmp XAED3
+        jmp SINSTK
 
 ; ----------------------------------------------------------------------------
 
@@ -8498,9 +8519,9 @@ LAD4D:
     lda zpIACC
 LAD4F:
     .if version < 3
-        jmp LAED8
+        jmp SINSTK
     .elseif version >= 3
-        jmp XAED3
+        jmp SINSTK
     .endif
 
 LAD52:
@@ -8653,7 +8674,7 @@ LAE05:
     cmp #$8E
     bcc LAE10         ; Lowest function token, test for indirections
     cmp #$C6
-    bcs LAE43         ; Highest function token, jump to error
+    bcs FACERR         ; Highest function token, jump to error
     jmp DISPATCH         ; Jump via function dispatch table
 
 ; Indirection, hex, brackets
@@ -8675,28 +8696,28 @@ LAE20:
 
 LAE2A:
     jsr LA07B
-    bcc LAE43
+    bcc FACERR
     rts
 
 ERRFAC:
     lda zpBYTESM      ; Check assembler option
     and #$02          ; Is 'ignore undefiened variables' set?
-    bne LAE43         ; b1=1, jump to give No such variable
-    bcs LAE43         ; Jump with bad variable name
+    bne FACERR         ; b1=1, jump to give No such variable
+    bcs FACERR         ; Jump with bad variable name
     stx zpAECUR
 
 GETPC:
     lda PC      ; Use P% for undefined variable
     ldy PC+1
     .if version < 3
-        jmp LAEEA     ; Jump to return 16-bit integer, tail call
+        jmp AYACC     ; Jump to return 16-bit integer, tail call
     .elseif version >= 3
-        jmp XAED5     ; Jump to return 16-bit integer, tail call
+        jmp AYACC     ; Jump to return 16-bit integer, tail call
     .endif
 
 ; ----------------------------------------------------------------------------
 
-LAE43:
+FACERR:
     brk
     dta $1A
     .if foldup == 1
@@ -8811,11 +8832,11 @@ TO:
         iny
         lda (zpAELINE),Y
         cmp #'P'
-        bne LAE43
+        bne FACERR
         inc zpAECUR
         lda zpTOP
         ldy zpTOP+1
-        bcs XAED5
+        bcs AYACC
 
 ; ----------------------------------------------------------------------------
 
@@ -8824,7 +8845,7 @@ TO:
 RPAGE:
         ldy zpTXTP
         lda #$00
-        beq XAED5       ; branch always
+        beq AYACC       ; branch always
 
 LENB:
         jmp LETM
@@ -8840,12 +8861,12 @@ LEN:
     
 ; Return 8-bit integer
 ; --------------------
-XAED3:
+SINSTK:
         ldy #$00      ; Clear b8-b15, jump to return 16-bit int
 
 ; Return 16-bit integer in AY
 ; ---------------------------
-XAED5:
+AYACC:
         sta zpIACC
         sty zpIACC+1      ; Store AY in integer accumulator
         lda #$00
@@ -8860,7 +8881,7 @@ XAED5:
 ; =====================
 COUNT:
         lda zpTALLY
-        bcc XAED3     ; Get COUNT, jump to return 8-bit integer
+        bcc SINSTK     ; Get COUNT, jump to return 8-bit integer
      
 ; ----------------------------------------------------------------------------
 
@@ -8869,7 +8890,7 @@ COUNT:
 RLOMEM:
         lda zpLOMEM
         ldy zpLOMEM+1
-        bcc XAED5     ; Get LOMEM to AY, jump to return as integer
+        bcc AYACC     ; Get LOMEM to AY, jump to return as integer
      
 ; ----------------------------------------------------------------------------
 
@@ -8878,7 +8899,7 @@ RLOMEM:
 RHIMEM:
         lda zpHIMEM
         ldy zpHIMEM+1
-        bcc XAED5     ; Get HIMEM to AY, jump to return as integer
+        bcc AYACC     ; Get HIMEM to AY, jump to return as integer
 
 ; ----------------------------------------------------------------------------
 
@@ -8887,7 +8908,7 @@ RHIMEM:
 ERL:
         ldy zpERL+1
         lda zpERL
-        bcc XAED5     ; Get ERL to AY, jump to return 16-bit integer
+        bcc AYACC     ; Get ERL to AY, jump to return 16-bit integer
 
 ; ----------------------------------------------------------------------------
 
@@ -8896,7 +8917,7 @@ ERL:
 ERR:
         ldy #$00
         lda (FAULT),Y
-        bcc XAED5     ; Get error number, jump to return 16-bit integer
+        bcc AYACC     ; Get error number, jump to return 16-bit integer
 
     .endif      ; version > 3
 
@@ -8935,10 +8956,10 @@ RTIME:
 RPAGE:
         lda #$00
         ldy zpTXTP
-        jmp LAEEA
+        jmp AYACC
      
 LAEC7:
-        jmp LAE43
+        jmp FACERR
      
 ; ----------------------------------------------------------------------------
 
@@ -8946,7 +8967,7 @@ LAEC7:
 ; ======
 FALSE:
         lda #$00
-        beq LAED8     ; Jump to return $00 as 16-bit integer
+        beq SINSTK     ; Jump to return $00 as 16-bit integer
 
 LENB:
         jmp LETM
@@ -8962,9 +8983,9 @@ LEN:
 
 ; Return 8-bit integer
 ; --------------------
-LAED8:
+SINSTK:
         ldy #$00
-        beq LAEEA     ; Clear b8-b15, jump to return 16-bit int
+        beq AYACC     ; Clear b8-b15, jump to return 16-bit int
 
 ; =TOP - Return top of program
 ; ============================
@@ -8979,7 +9000,7 @@ TO:
 
 ; Return 16-bit integer in AY
 ; ---------------------------
-LAEEA:
+AYACC:
         sta zpIACC
         sty zpIACC+1      ; Store AY in integer accumulator
         lda #$00
@@ -8994,7 +9015,7 @@ LAEEA:
 ; =====================
 COUNT:
         lda zpTALLY
-        jmp LAED8     ; Get COUNT, jump to return 8-bit integer
+        jmp SINSTK     ; Get COUNT, jump to return 8-bit integer
      
 ; ----------------------------------------------------------------------------
 
@@ -9003,7 +9024,7 @@ COUNT:
 RLOMEM:
         lda zpLOMEM
         ldy zpLOMEM+1
-        jmp LAEEA     ; Get LOMEM to AY, jump to return as integer
+        jmp AYACC     ; Get LOMEM to AY, jump to return as integer
      
 ; ----------------------------------------------------------------------------
 
@@ -9012,7 +9033,7 @@ RLOMEM:
 RHIMEM:
         lda zpHIMEM
         ldy zpHIMEM+1
-        jmp LAEEA     ; Get HIMEM to AY, jump to return as integer
+        jmp AYACC     ; Get HIMEM to AY, jump to return as integer
 
     .endif      ; version < 3
 
@@ -9041,7 +9062,7 @@ LAF24:
     jsr LA606
     jsr LA303
     jsr IFIX
-    jsr L9222
+    jsr INCACC
     lda #$40
     rts
 
@@ -9154,7 +9175,7 @@ LAF89:
 ERL:
         ldy zpERL+1
         lda zpERL
-        jmp LAEEA     ; Get ERL to AY, jump to return 16-bit integer
+        jmp AYACC     ; Get ERL to AY, jump to return 16-bit integer
 
 ; ----------------------------------------------------------------------------
 
@@ -9163,7 +9184,7 @@ ERL:
 ERR:
         ldy #$00
         lda (FAULT),Y
-        jmp LAEEA     ; Get error number, jump to return 16-bit integer
+        jmp AYACC     ; Get error number, jump to return 16-bit integer
 
     .endif          ; version < 3
 
@@ -9241,9 +9262,9 @@ LAFB2:
 GET:
     jsr OSRDCH
     .if version < 3
-        jmp LAED8
+        jmp SINSTK
     .elseif version >= 3
-        jmp XAED3
+        jmp SINSTK
     .endif
 
 ; ----------------------------------------------------------------------------
@@ -9867,9 +9888,9 @@ LB32C:
 LB34F:
     lda (zpIACC),Y
     .if version < 3
-        jmp LAEEA
+        jmp AYACC
     .elseif version >= 3
-        jmp XAED5
+        jmp AYACC
     .endif
 
 LB354:
@@ -10100,7 +10121,7 @@ LB451:
     dex
     bne LB451         ; Loop to stack this one
     .ifdef MOS_BBC
-        jsr L9852     ; Check end of statement
+        jsr AEDONE     ; Check end of statement
         lda zpIACC
         sta zp3D      ; Copy current 16-bit integer to end of control block
         lda zpIACC+1
@@ -10131,7 +10152,7 @@ LB477:
     dex
     bne LB477         ; Loop to stack this one
 LB484:
-    jsr L9852         ; Check end of statement
+    jsr AEDONE         ; Check end of statement
     .ifdef MOS_BBC
         lda zpIACC
         sta zp44      ; Copy current 8-bit integer to end of control block
@@ -10159,7 +10180,7 @@ LB48F:
 ; =============
 WIDTH:
     jsr ASEXPR
-    jsr L9852
+    jsr AEDONE
     ldy zpIACC
     dey
     sty zpWIDTHV
@@ -10368,9 +10389,9 @@ LIST:
     sta zp3B
     sta zp3C
     .if version < 3
-        jsr LAED8
+        jsr SINSTK
     .elseif version >= 3
-        jsr XAED3
+        jsr SINSTK
     .endif
     jsr SPTSTN
     php
@@ -10720,9 +10741,9 @@ FOR:
     sta FORLMH,Y
     lda #$01
     .if version < 3
-        jsr LAED8
+        jsr SINSTK
     .elseif version >= 3
-        jsr XAED3
+        jsr SINSTK
     .endif
     jsr AESPAC
     cmp #tknSTEP
@@ -11460,25 +11481,26 @@ BUFEND:
     sta zpTALLY          ; Set COUNT to zero
     rts
 
-LBC2D:
+REMOVE:
     jsr L9970
     bcs LBC80
-    lda zp3D
+    lda zpWORK+6
     sbc #$02
     sta zpWORK
-    sta zp3D
+    sta zpWORK+6
     sta zpTOP
-    lda zp3E
+    lda zpWORK+7
     sbc #$00
     sta zpWORK+1
     sta zpTOP+1
-    sta zp3E
+    sta zpWORK+7
     ldy #$03
     lda (zpWORK),Y
     clc
     adc zpWORK
     sta zpWORK
     bcc LBC53
+
     inc zpWORK+1
 LBC53:
     ldy #$00
@@ -11526,7 +11548,7 @@ LBC88:
 
 INSRT:
     sty zpWORK+4
-    jsr LBC2D
+    jsr REMOVE
     ldy #>BUFFER
     sty zpWORK+5
     ldy #$00
@@ -12219,9 +12241,9 @@ BGET:
     jsr CHANN
     jsr OSBGET        ; Evaluate #handle
     .if version < 3
-        jmp LAED8     ; Jump to return 8-bit integer
+        jmp SINSTK     ; Jump to return 8-bit integer
     .elseif version >= 3
-        jmp XAED3     ; Jump to return 8-bit integer
+        jmp SINSTK     ; Jump to return 8-bit integer
     .endif
 
 ; ----------------------------------------------------------------------------
@@ -12288,9 +12310,9 @@ LBF82:
 
     jsr OSFIND        ; Pass to OSFIND, jump to return integer from A
     .if version < 3
-        jmp LAED8
+        jmp SINSTK
     .elseif version >= 3
-        jmp XAED3
+        jmp SINSTK
     .endif
 
 LBF96:
@@ -12300,7 +12322,7 @@ LBF96:
 ; =============
 CLOSE:
     jsr LBFA9
-    jsr L9852         ; Evaluate #handle, check end of statement
+    jsr AEDONE         ; Evaluate #handle, check end of statement
     ldy zpIACC          ; Get handle from IntA
     .ifdef MOS_ATOM
         jsr OSSHUT         
