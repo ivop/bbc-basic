@@ -89,7 +89,11 @@ zpFPRTWN  = zp + $4e    ; another alternative usage (idem)
 zpNEWVAR  = zp + $4f
 zp4F      = zp + $4f
 
+; ----------------------------------------------------------------------------
+
 ; Workspace (for now, relative to ws)
+
+WORKSPACE = ws
 
 VARL    = ws + $0400    ; VARiable List of resident integer variables
                         ; 4 bytes each [$0400-$046b] [@A-Z]

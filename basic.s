@@ -11,10 +11,10 @@
 ;
 ; References used:
 ;   Advanced BASIC ROM USer Guide
-;   BBC Micro Compendium
 ;   AcornCmosBasic (https://github.com/stardot/AcornCmosBasic)
 ;   AcornDmosBasic (https://github.com/stardot/AcornDmosBasic)
 ;   AcornBasic128 (github.com/stardot/AcornBasic128)
+;   BBC Micro Compendium (not really used yet)
 ;
 
     opt h-            ; No Atari header
@@ -406,7 +406,7 @@ copyright_string:
 ; LANGUAGE STARTUP
 ; ================
 
-.proc ENTRY
+ENTRY:
     .if memtop == 0
         lda #$84      ; Read top of memory
         jsr OSBYTE
@@ -464,7 +464,6 @@ RNDOK:
     sta BRKV+1
     cli
     jmp FORMAT         ; Enable IRQs, jump to immediate loop
-.endp
 
 ; ----------------------------------------------------------------------------
 
@@ -2753,7 +2752,7 @@ TAB2:
     bne TABCOM         ; No comma, jump to TAB(x)
     lda zpIACC
     pha               ; Save X
-    jsr LAE56
+    jsr BRA
     jsr INTEGB
 
 ; Atom - manually position cursor
@@ -2814,7 +2813,7 @@ TAB:
     beq SPCT
 
 SPC:
-    jsr L92E3
+    jsr INTFAC
 
 SPCT:
     .if version < 3
@@ -2962,8 +2961,8 @@ CALLLP:
 CALLDN:
     dec zpAECUR
     jsr AEDONE      ; Check for end of statement
-    jsr POPACC      ; Pop integer to IntA
-    jsr USER        ; Set up registers and call code at IntA
+    jsr POPACC      ; Pop integer to IACC
+    jsr USER        ; Set up registers and call code at IACC
     cld             ; Ensure Binary mode on return
     jmp NXT         ; Jump back to program loop
 
@@ -2981,7 +2980,7 @@ USER:
     .if .def TARGET_C64
         jmp $ff9b
     .else
-        jmp (zpIACC)    ; Jump to address in IntA
+        jmp (zpIACC)    ; Jump to address in IACC
     .endif
 
 ; ----------------------------------------------------------------------------
@@ -3135,10 +3134,10 @@ PROC:
         lda zpCURSOR
         sta zpAECUR
         lda #$F2
-        jsr LB197     ; Call PROC/FN dispatcher
-                      ; Will return here after ENDPROC
+        jsr FNBODY     ; Call PROC/FN dispatcher
+                       ; Will return here after ENDPROC
         jsr AEDONE     ; Check for end of statement
-        jmp NXT     ; Return to execution loop
+        jmp NXT        ; Return to execution loop
 NUMBB:
     .endif
 
@@ -3407,7 +3406,7 @@ DIMNNO:
     ldx #$05
     stx zpWORK+8
     ldx zpCURSOR
-    jsr L9559
+    jsr WORD
 
     cpy #$01
     beq NOTGO
@@ -3618,14 +3617,16 @@ SMULXE:
 ; HIMEM=numeric
 ; =============
 LHIMM:
-    jsr INEQEX         ; Set past '=', evaluate integer
+    jsr INEQEX          ; Set past '=', evaluate integer
+
     lda zpIACC
     sta zpHIMEM
-    sta zpAESTKP          ; Set HIMEM and STACK
+    sta zpAESTKP        ; Set HIMEM and STACK
     lda zpIACC+1
     sta zpHIMEM+1
     sta zpAESTKP+1
-    jmp NXT         ; Jump back to execution loop
+
+    jmp NXT             ; Jump back to execution loop
 
 ; ----------------------------------------------------------------------------
 
@@ -3633,14 +3634,16 @@ LHIMM:
 ; =============
 LLOMM:
     jsr INEQEX         ; Step past '=', evaluate integer
+
     lda zpIACC
     sta zpLOMEM
     sta zpFSA          ; Set LOMEM and VAREND
     lda zpIACC+1
     sta zpLOMEM+1
     sta zpFSA+1
-    jsr SETVAL
-    beq L928A         ; Clear dynamic variables, jump to execution loop
+    jsr SETVAL         ; Clear dynamic variables
+
+    beq LPAGEX         ; branch always, jump to execution loop
 
 ; ----------------------------------------------------------------------------
 
@@ -3649,18 +3652,18 @@ LLOMM:
 LPAGE:
     jsr INEQEX         ; Step past '=', evaluate integer
     lda zpIACC+1
-    sta zpTXTP          ; Set PAGE
-L928A:
-    jmp NXT         ; Jump to execution loop
+    sta zpTXTP         ; Set PAGE
+LPAGEX:
+    jmp NXT            ; Jump to execution loop
 
 ; ----------------------------------------------------------------------------
 
 ; CLEAR
 ; =====
 CLEAR:
-    jsr DONE         ; Check end of statement
+    jsr DONE           ; Check end of statement
     jsr SETFSA         ; Clear heap, stack, data, variables
-    beq L928A         ; Jump to execution loop
+    beq LPAGEX         ; Jump to execution loop
 
 ; ----------------------------------------------------------------------------
 
@@ -3668,24 +3671,24 @@ CLEAR:
 ; ========================
 TRACE:
     jsr SPTSTN
-    bcs L92A5         ; If line number, jump for TRACE linenum
+    bcs TRACNM         ; If line number, jump for TRACE linenum
     cmp #tknON
-    beq L92B7         ; Jump for TRACE ON
+    beq TRACON         ; Jump for TRACE ON
     cmp #tknOFF
-    beq L92C0         ; Jump for TRACE OFF
+    beq TOFF         ; Jump for TRACE OFF
     jsr ASEXPR         ; Evaluate integer
 
 ; TRACE numeric
 ; -------------
-L92A5:
+TRACNM:
     jsr DONE         ; Check end of statement
     lda zpIACC
     sta zpTRNUM          ; Set trace limit low byte
     lda zpIACC+1
-L92AE:
+TRACNO:
     sta zpTRNUM+1
     lda #$FF          ; Set trace limit high byte, set TRACE ON
-L92B2:
+TRACNN:
     sta zpTRFLAG
     jmp NXT         ; Set TRACE flag, return to execution loop
 
@@ -3693,21 +3696,21 @@ L92B2:
 
 ; TRACE ON
 ; --------
-L92B7:
+TRACON:
     inc zpCURSOR
     jsr DONE         ; Step past, check end of statement
     lda #$FF
-    bne L92AE         ; Jump to set TRACE $FFxx
+    bne TRACNO         ; Jump to set TRACE $FFxx
 
 ; ----------------------------------------------------------------------------
 
 ; TRACE OFF
 ; ---------
-L92C0:
+TOFF:
     inc zpCURSOR
     jsr DONE         ; Step past, check end of statement
     lda #$00
-    beq L92B2         ; Jump to set TRACE OFF
+    beq TRACNN         ; Jump to set TRACE OFF
 
 ; ----------------------------------------------------------------------------
 
@@ -3737,42 +3740,45 @@ INEXPR:
 
 ; ----------------------------------------------------------------------------
 
-L92E3:
-    jsr LADEC
-    beq INTEGE
-    bmi INTEGF
-L92EA:
-    rts
-
 ; Evaluate <equals><integer>
 ; ==========================
+INTFAC:
+    jsr FACTOR
+    beq INTEGE
+    bmi INTEGF
+
+INTEGX:
+    rts
+
 INEQEX:
-    jsr L9807         ; Check for equals, evaluate numeric
+    jsr AEEQEX          ; Check for equals, evaluate numeric
 
 INTEG:
-    lda zpTYPE          ; Get result type
+    lda zpTYPE         ; Get result type
 
 INTEGB:
     beq INTEGE         ; String, jump to 'Type mismatch'
-    bpl L92EA         ; Integer, return
+    bpl INTEGX         ; Integer, return
 
 INTEGF:
-    jmp IFIX         ; Real, jump to convert to integer
+    jmp IFIX           ; Real, jump to convert to integer
 
 INTEGE:
-    jmp LETM         ; Jump to 'Type mismatch' error
+    jmp LETM           ; Jump to 'Type mismatch' error
 
 ; Evaluate <real>
 ; ===============
-L92FA:
-    jsr LADEC         ; Evaluate expression
+FLTFAC:
+    jsr FACTOR         ; Evaluate expression
 
 ; Ensure value is real
 ; --------------------
-L92FD:
+FLOATI:
     beq INTEGE         ; String, jump to 'Type mismatch'
-    bmi L92EA         ; Real, return
-    jmp IFLT         ; Integer, jump to convert to real
+    bmi INTEGX         ; Real, return
+    jmp IFLT           ; Integer, jump to convert to real
+
+; ----------------------------------------------------------------------------
 
     .if split == 0
 ; PROCname [(parameters)]
@@ -3784,52 +3790,59 @@ PROC:
         sta zpAELINE+1
         lda zpCURSOR
         sta zpAECUR
-        lda #$F2
-        jsr LB197     ; Call PROC/FN dispatcher
-                      ; Will return here after ENDPROC
+        lda #tknPROC
+        jsr FNBODY     ; Call PROC/FN dispatcher
+                       ; Will return here after ENDPROC
         jsr AEDONE     ; Check for end of statement
-        jmp NXT     ; Return to execution loop
+        jmp NXT        ; Return to execution loop
     .endif
 
-; Make string zero length
-; -----------------------
-L931B:
+; ----------------------------------------------------------------------------
+
+LOCSTR:
     ldy #$03
-    lda #$00          ; Set length to zero
+    lda #$00           ; Set length to zero
     sta (zpIACC),Y
-    beq L9341         ; Jump to look for next LOCAL item
+    beq LOCVAR         ; Jump to look for next LOCAL item
 
 ; LOCAL variable [,variable ...]
 ; ==============================
 LOCAL:
     tsx
     cpx #$FC
-    bcs L936B         ; Not inside subroutine, error
+    bcs NLOCAL        ; Not inside subroutine, error
+
     jsr CRAELV
-    beq L9353         ; Find variable, jump if bad variable name
-    jsr LB30D         ; Push value on stack, push variable info on stack
+    beq LOCEND        ; Find variable, jump if bad variable name
+
+    jsr RETINF        ; Push value on stack, push variable info on stack
+
     ldy zpIACC+2
-    bmi L931B         ; If a string, jump to make zero length
-    jsr PHACC         ; 
-    lda #$00          ; Set IntA to zero
+    bmi LOCSTR        ; If a string, jump to make zero length
+
+    jsr PHACC
+    lda #$00          ; Set IACC to zero
     jsr SINSTK
+
     sta zpTYPE
-    jsr STORE         ; Set current variable to IntA (zero)
+    jsr STORE         ; Set current variable to IACC (zero)
 
 ; Next LOCAL item
 ; ---------------
-L9341:
+LOCVAR:
     tsx
     inc $0106,X       ; Increment number of LOCAL items
     ldy zpAECUR
-    sty zpCURSOR          ; Update line pointer
-    jsr SPACES         ; Get next character
-    cmp #$2C
+    sty zpCURSOR      ; Update line pointer
+    jsr SPACES        ; Get next character
+    cmp #','
     beq LOCAL         ; Comma, loop back to do another item
-    jmp SUNK         ; Jump to main execution loop
+    jmp SUNK          ; Jump to main execution loop
 
-L9353:
+LOCEND:
     jmp DONEXT
+
+; ----------------------------------------------------------------------------
 
 ; ENDPROC
 ; =======
@@ -3838,12 +3851,13 @@ L9353:
 ENDPR:
     tsx
     cpx #$FC
-    bcs L9365         ; If stack empty, jump to give error
+    bcs NOPROC         ; If stack empty, jump to give error
     lda $01FF
-    cmp #$F2
-    bne L9365         ; If pushed token<>'PROC', give error
-    jmp DONE         ; Check for end of statement and return to pop from subroutine
-L9365:
+    cmp #tknPROC
+    bne NOPROC         ; If pushed token<>'PROC', give error
+    jmp DONE     ; Check for end of statement and return to pop from subroutine
+
+NOPROC:
     brk
     dta 13
     .if foldup == 1
@@ -3852,7 +3866,8 @@ L9365:
         dta 'No '
     .endif
     dta tknPROC       ; Terminated by following BRK
-L936B:
+
+NLOCAL:
     brk
     dta 12
     .if foldup == 1
@@ -3861,7 +3876,8 @@ L936B:
         dta 'Not '
     .endif
     dta tknLOCAL      ; Terminated by following BRK
-L9372:
+
+MODESX:
     brk
     dta $19
     .if foldup == 1
@@ -3884,7 +3900,7 @@ GRAPH:
     jsr AEDONE         ; Update program pointer, check for end of statement
     lda #$12
     jsr OSWRCH        ; Send VDU 18 for GCOL
-    jmp L93DA         ; Jump to send two bytes to OSWRCH
+    jmp SENTWO         ; Jump to send two bytes to OSWRCH
 
 ; ----------------------------------------------------------------------------
 
@@ -3895,7 +3911,7 @@ COLOUR:
     pha               ; Stack VDU 17 for COLOUR
     jsr ASEXPR
     jsr DONE         ; Evaluate integer, check end of statement
-    jmp L93DA         ; Jump to send two bytes to OSWRCH
+    jmp SENTWO         ; Jump to send two bytes to OSWRCH
 
 ; ----------------------------------------------------------------------------
 
@@ -3910,32 +3926,37 @@ MODES:
 ; BBC - Check if changing MODE will move screen into stack
 ; --------------------------------------------------------
     .ifdef MOS_BBC
-        jsr LBEE7     ; Get machine address high word
+        jsr GETMAC    ; Get machine address high word
         cpx #$FF      ; later BASICs use inx
-        bne L93D7     ; Not $xxFFxxxx, skip memory test
+        bne MODEGO    ; Not $xxFFxxxx, skip memory test
         cpy #$FF      ; later BASICs use iny
-        bne L93D7     ; Not $FFFFxxxx, skip memory test
+        bne MODEGO    ; Not $FFFFxxxx, skip memory test
 
                       ; MODE change in I/O processor, must check memory limits
         lda zpAESTKP
         cmp zpHIMEM
-        bne L9372     ; STACK<>HIMEM, stack not empty, give 'Bad MODE' error
+        bne MODESX     ; STACK<>HIMEM, stack not empty, give 'Bad MODE' error
+
         lda zpAESTKP+1
         cmp zpHIMEM+1
-        bne L9372
+        bne MODESX
+
         ldx zpIACC
         lda #$85
         jsr OSBYTE    ; Get top of memory if we used this MODE
+
         cpx zpFSA
         tya
         sbc zpFSA+1
-        bcc L9372     ; Would be below VAREND, give error
+        bcc MODESX     ; Would be below VAREND, give error
+
         cpx zpTOP
         tya
         sbc zpTOP+1
-        bcc L9372     ; Would be below TOP, give error
+        bcc MODESX     ; Would be below TOP, give error
 
-                      ; BASIC stack is empty, screen would not hit heap or program
+        ; BASIC stack is empty, screen would not hit heap or program
+
         stx zpHIMEM
         stx zpAESTKP      ; Set STACK and HIMEM to new address
         sty zpHIMEM+1
@@ -3943,16 +3964,16 @@ MODES:
     .endif
 
 ; Change MODE
-L93D7:
+MODEGO:
     jsr BUFEND         ; Set COUNT to zero
 
-; Send two bytes to OSWRCH, stacked byte, then IntA
+; Send two bytes to OSWRCH, stacked byte, then IACC
 ; -------------------------------------------------
-L93DA:
+SENTWO:
     pla
     jsr OSWRCH        ; Send stacked byte to OSWRCH
     jsr WRIACC
-    jmp NXT         ; Send IntA to OSWRCH, jump to execution loop
+    jmp NXT           ; Send IACC to OSWRCH, jump to execution loop
 
 ; ----------------------------------------------------------------------------
 
@@ -3970,8 +3991,8 @@ DRAW:
     lda #$05          ; Do PLOT 5 for DRAW
 DRAWER:
     pha
-    jsr AEEXPR         ; Evaluate first expression
-    jmp L93FD         ; Jump to evaluate second expression and send to OSWRCH
+    jsr AEEXPR        ; Evaluate first expression
+    jmp PLOTER         ; Jump to evaluate second expression and send to OSWRCH
 
 ; ----------------------------------------------------------------------------
 
@@ -3979,33 +4000,43 @@ DRAWER:
 ; ==============================
 PLOT:
     jsr ASEXPR
+
     lda zpIACC
     pha               ; Evaluate integer
     jsr COMEAT
-    jsr EXPR         ; Step past comma, evaluate expression
-L93FD:
+    jsr EXPR          ; Step past comma, evaluate expression
+
+PLOTER:
     jsr INTEG         ; Confirm numeric and ensure is integer
     jsr PHACC         ; Stack integer
-    jsr INCMEX         ; Step past command and evaluate integer
-    jsr AEDONE         ; Update program pointer, check for end of statement
+    jsr INCMEX        ; Step past command and evaluate integer
+    jsr AEDONE        ; Update program pointer, check for end of statement
+
     lda #$19
     jsr OSWRCH        ; Send VDU 25 for PLOT
+
     pla
     jsr OSWRCH        ; Send PLOT action
-    jsr POPWRK         ; Pop integer to temporary store at $37/8
+    jsr POPWRK        ; Pop integer to temporary store at $37/8
+
     lda zpWORK
     jsr OSWRCH        ; Send first coordinate to OSWRCH
+
     lda zpWORK+1
     jsr OSWRCH
-    jsr WRIACC         ; Send IntA to OSWRCH, second coordinate
-    lda zpIACC+1
-    jsr OSWRCH        ; Send IntA high byte to OSWRCH
-    jmp NXT         ; Jump to execution loop
 
+    jsr WRIACC        ; Send IACC to OSWRCH, second coordinate
 
-L942A:
     lda zpIACC+1
-    jsr OSWRCH        ; Send IntA byte 2 to OSWRCH
+    jsr OSWRCH        ; Send IACC high byte to OSWRCH
+
+    jmp NXT           ; Jump to execution loop
+
+; ----------------------------------------------------------------------------
+
+VDUP:
+    lda zpIACC+1
+    jsr OSWRCH        ; Send IACC byte 2 to OSWRCH
 
 ; ----------------------------------------
 
@@ -4013,25 +4044,33 @@ L942A:
 ; ==================
 VDU:
     jsr SPACES         ; Get next character
-L9432:
-    cmp #$3A
-    beq L9453         ; If end of statement, jump to exit
+
+VDUL:
+    cmp #':'
+    beq VDUX           ; If end of statement, jump to exit
+
     cmp #$0D
-    beq L9453
-    cmp #$8B
-    beq L9453
-    dec zpCURSOR          ; Step back to current character
+    beq VDUX
+
+    cmp #tknELSE
+    beq VDUX
+
+    dec zpCURSOR       ; Step back to current character
     jsr ASEXPR
     jsr WRIACC         ; Evaluate integer and output low byte
     jsr SPACES         ; Get next character
+
     cmp #','
-    beq VDU         ; Comma, loop to read another number
+    beq VDU            ; Comma, loop to read another number
+
     cmp #';'
-    bne L9432         ; Not semicolon, loop to check for end of statement
-    beq L942A         ; Loop to output high byte and read another
-L9453:
+    bne VDUL           ; Not semicolon, loop to check for end of statement
+    beq VDUP           ; Loop to output high byte and read another
+
+VDUX:
     jmp SUNK         ; Jump to execution loop
 
+; ----------------------------------------------------------------------------
 
 ; Send IACC to OSWRCH via WRCHV
 ; =============================
@@ -4043,21 +4082,22 @@ WRIACC:
         jmp OSWRCH 
     .endif
 
+; ----------------------------------------------------------------------------
 
 ; VARIABLE PROCESSING
 ; ===================
 ; Look for a FN/PROC in heap
 ; --------------------------
-; On entry, ($37)+1=>FN/PROC token (ie, first character of name)
+; On entry, (zpWORK)+1=>FN/PROC token (ie, first character of name)
 ;
-L945B:
+CREAFN:
     ldy #$01
     lda (zpWORK),Y      ; Get PROC/FN character
-    ldy #$F6          ; Point to PROC list start
+    ldy #$F6            ; Point to PROC list start
     cmp #tknPROC
-    beq L946F         ; If PROC, jump to scan list
+    beq CREATF          ; If PROC, jump to scan list
     ldy #$F8
-    bne L946F         ; Point to FN list start and scan list
+    bne CREATF          ; Point to FN list start and scan list
 
 ; ----------------------------------------------------------------------------
 
@@ -4070,89 +4110,107 @@ L945B:
 LOOKUP:
     ldy #$01
     lda (zpWORK),Y      ; Get first character of variable
-    asl
-    tay               ; Double it to index into index list
+    asl                 ; Double it to index into index list
+    tay
 
 ; Scan though linked lists in heap
 ; --------------------------------
-L946F:
+CREATF:
     lda VARL,Y
-    sta zp3A          ; Get start of linked list
+    sta zpWORK+3          ; Get start of linked list
     lda VARL+1,Y
-    sta zp3B
+    sta zpWORK+4
+
 L9479:
-    lda zp3B
+    lda zpWORK+4
     beq L94B2         ; End of list
+
     ldy #$00
-    lda (zp3A),Y
-    sta zp3C
+    lda (zpWORK+3),Y
+    sta zpWORK+5
     iny
-    lda (zp3A),Y
-    sta zp3D
+    lda (zpWORK+3),Y
+    sta zpWORK+6
     iny
-    lda (zp3A),Y
+    lda (zpWORK+3),Y
     bne L949A         ; Jump if not null name
+
     dey
     cpy zpWORK+2
     bne L94B3
+
     iny
     bcs L94A7
+
 L9495:
     iny
-    lda (zp3A),Y
+    lda (zpWORK+3),Y
     beq L94B3
+
 L949A:
     cmp (zpWORK),Y
     bne L94B3
-    cpy zp39
+
+    cpy zpWORK+2
     bne L9495
+
     iny
-    lda (zp3A),Y
+    lda (zpWORK+3),Y
     bne L94B3
+
 L94A7:
     tya
-    adc zp3A
+    adc zpWORK+3
     sta zpIACC
-    lda zp3B
+    lda zpWORK+4
     adc #$00
     sta zpIACC+1
+
 L94B2:
     rts
 
 L94B3:
-    lda zp3D
+    lda zpWORK+6
     beq L94B2
+
     ldy #$00
-    lda (zp3C),Y
-    sta zp3A
+    lda (zpWORK+5),Y
+    sta zpWORK+3
     iny
-    lda (zp3C),Y
-    sta zp3B
+    lda (zpWORK+5),Y
+    sta zpWORK+4
     iny
-    lda (zp3C),Y
+    lda (zpWORK+5),Y
     bne L94D4
+
     dey
-    cpy zp39
+    cpy zpWORK+2
     bne L9479
+
     iny
     bcs L94E1
+
 L94CF:
     iny
-    lda (zp3C),Y
+    lda (zpWORK+5),Y
     beq L9479
+
 L94D4:
     cmp (zpWORK),Y
     bne L9479
-    cpy zp39
+
+    cpy zpWORK+2
     bne L94CF
+
     iny
-    lda (zp3C),Y
+    lda (zpWORK+5),Y
     bne L9479
+
 L94E1:
     tya
-    adc zp3C
+    adc zpWORK+5
     sta zpIACC
-    lda zp3D
+    lda zpWORK+6
     adc #$00
     sta zpIACC+1
     rts
@@ -4163,9 +4221,9 @@ LOOKFN:
     tax
     lda #$F6
     cpx #tknPROC
-    beq L9501
+    beq LOOKMN
     lda #$F8
-    bne L9501
+    bne LOOKMN
 
 ; ----------------------------------------------------------------------------
 
@@ -4176,37 +4234,42 @@ CREATE:
     ldy #$01
     lda (zpWORK),Y
     asl
-L9501:
-    sta zp3A
-    lda #$04+(ws/256)
-    sta zp3B
-L9507:
-    lda (zp3A),Y
-    beq L9516
+
+LOOKMN:
+    sta zpWORK+3
+    lda #>VARL
+    sta zpWORK+4
+
+LOOPLB:
+    lda (zpWORK+3),Y
+    beq LOOKK
+
     tax
     dey
-    lda (zp3A),Y
-    sta zp3A
-    stx zp3B
+    lda (zpWORK+3),Y
+    sta zpWORK+3
+    stx zpWORK+4
     iny
-    bpl L9507
-L9516:
+    bpl LOOPLB
+
+LOOKK:
     lda zpFSA+1
-    sta (zp3A),Y
+    sta (zpWORK+3),Y
     lda zpFSA
     dey
-    sta (zp3A),Y
+    sta (zpWORK+3),Y
     tya
     iny
     sta (zpFSA),Y
-    cpy zp39
-    beq L9558
-L9527:
+    cpy zpWORK+2
+    beq CREATX
+
+LOOPRA:
     iny
     lda (zpWORK),Y
     sta (zpFSA),Y
-    cpy zp39
-    bne L9527
+    cpy zpWORK+2
+    bne LOOPRA
     rts
 
 ; ----------------------------------------------------------------------------
@@ -4248,87 +4311,101 @@ CREATD:
 
 CREATZ:
     sta zpFSA
-L9558:
+CREATX:
     rts
 
 ; ----------------------------------------------------------------------------
 
 ; Check if variable name is valid
 ; ===============================
-L9559:
+WORD:
     ldy #$01
-L955B:
+
+WORDLP:
     lda (zpWORK),Y
-    cmp #$30
-    bcc L9579
-    cmp #$40
-    bcs L9571
-    cmp #$3A
-    bcs L9579
+    cmp #'0'
+    bcc WORDDN
+
+    cmp #'@'
+    bcs WORDNA
+
+    cmp #':'
+    bcs WORDDN
+
     cpy #$01
-    beq L9579
-L956D:
+    beq WORDDN
+
+WORDNC:
     inx
     iny
-    bne L955B
-L9571:
-    cmp #$5F
-    bcs L957A
-    cmp #$5B
-    bcc L956D
-L9579:
+    bne WORDLP
+
+WORDNA:
+    cmp #'_'
+    bcs WORDNB
+    cmp #'['
+    bcc WORDNC
+WORDDN:
     rts
 
-L957A:
+WORDNB:
     cmp #$7B
-    bcc L956D
+    bcc WORDNC
     rts
 
 ; ----------------------------------------------------------------------------
 
 CRAELT:
     jsr CREAX
+
 CRAELV:
-    jsr L95C9
-    bne L95A4
-    bcs L95A4
+    jsr AELV
+    bne LVRTS
+    bcs LVRTS
+
     jsr CREATE
+
     ldx #$05
     cpx zpIACC+2
     bne CRAELT
     inx
     bne CRAELT
-L9595:
-    cmp #$21
-    beq L95A5
-    cmp #$24
-    beq L95B0
-    eor #$3F
-    beq L95A7
+
+LVFD:
+    cmp #'!'
+    beq UNPLIN
+    cmp #'$'
+    beq DOLL
+    eor #'?'
+    beq UNIND
+
     lda #$00
     sec
-L95A4:
+
+LVRTS:
     rts
 
-L95A5:
+UNPLIN:
     lda #$04
-L95A7:
+UNIND:
     pha
     inc zpAECUR
-    jsr L92E3
-    jmp L969F
+    jsr INTFAC
+    jmp INSET
 
-L95B0:
+DOLL:
     inc zpAECUR
-    jsr L92E3
+    jsr INTFAC
+
     lda zpIACC+1
-    beq L95BF
+    beq DOLLER
+
     lda #$80
     sta zpIACC+2
     sec
     rts
 
-L95BF:
+DOLLER:
     brk
     dta 8
     .if foldup == 1
@@ -4337,143 +4414,176 @@ L95BF:
         dta '$ range'
     .endif
     brk
-L95C9:
+
+AELV:
     lda zpLINE
     sta zpAELINE
     lda zpLINE+1
     sta zpAELINE+1
     ldy zpCURSOR
     dey
+
 LVBLNK:
     iny
+
 LVBLNKplus1:
     sty zpAECUR
     lda (zpAELINE),Y
-    cmp #$20
+    cmp #' '
     beq LVBLNK
+
 LVCONT:
     cmp #'@'
-    bcc L9595
-    cmp #$5B
-    bcs L95FF
+    bcc LVFD        ; probably not an lv but check for unary things
+                    ; this test also removes numeric first characters
+
+    cmp #'['
+    bcs MULTI
+
     asl
     asl
     sta zpIACC
-    lda #$04+(ws/256)
+    lda #>VARL
     sta zpIACC+1
     iny
     lda (zpAELINE),Y
     iny
-    cmp #$25
-    bne L95FF
+    cmp #'%'
+    bne MULTI
+
     ldx #$04
     stx zpIACC+2
     lda (zpAELINE),Y
     cmp #'('
-    bne L9665
-L95FF:
+    bne CHKQUE
+
+MULTI:
     ldx #$05
     stx zpIACC+2
     lda zpAECUR
     clc
     adc zpAELINE
     ldx zpAELINE+1
-    bcc L960E
+    bcc BKTVNO
+
     inx
     clc
-L960E:
+BKTVNO:
     sbc #$00
     sta zpWORK
-    bcs L9615
+    bcs BKTVNP
+
     dex
-L9615:
+BKTVNP:
     stx zpWORK+1
     ldx zpAECUR
     ldy #$01
-L961B:
+
+BKTVD:
     lda (zpWORK),Y
-    cmp #$41
-    bcs L962D
-    cmp #$30
-    bcc L9641
-    cmp #$3A
-    bcs L9641
+    cmp #'A'
+    bcs BKTVA
+
+    cmp #'0'
+    bcc BKTVE
+
+    cmp #'9'+1
+    bcs BKTVE
+
     inx
     iny
-    bne L961B
-L962D:
-    cmp #$5B
-    bcs L9635
+    bne BKTVD
+
+BKTVA:
+    cmp #'Z'+1
+    bcs BKTVDD
     inx
     iny
-    bne L961B
-L9635:
-    cmp #$5F
-    bcc L9641
-    cmp #$7B
-    bcs L9641
+    bne BKTVD
+
+BKTVDD:
+    cmp #'_'
+    bcc BKTVE
+
+    cmp #'z'+1
+    bcs BKTVE
+
     inx
     iny
-    bne L961B
-L9641:
+    bne BKTVD
+
+BKTVE:
     dey
-    beq L9673
-    cmp #$24
-    beq L96AF
-    cmp #$25
-    bne L9654
+    beq BKTVFL
+
+    cmp #'$'
+    beq LVSTR
+
+    cmp #'%'
+    bne BKTVF
+
     dec zpIACC+2
     iny
     inx
     iny
     lda (zpWORK),Y
     dey
-L9654:
-    sty zp39
+
+BKTVF:
+    sty zpWORK+2
     cmp #'('
-    beq L96A6
+    beq BKTVAR
+
     jsr LOOKUP
-    beq L9677
+    beq BKTVFC
+
     stx zpAECUR
-L9661:
+
+CHKPLI:
     ldy zpAECUR
     lda (zpAELINE),Y
-L9665:
-    cmp #$21
-    beq L967F
-    cmp #$3F
-    beq L967B
+
+CHKQUE:
+    cmp #'!'
+    beq BIPLIN
+
+    cmp #'?'
+    beq BIQUER
+
     clc
     sty zpAECUR
     lda #$FF
     rts
 
-L9673:
+BKTVFL:
     lda #$00
     sec
     rts
 
-L9677:
+BKTVFC:
     lda #$00
     clc
     rts
 
-L967B:
+BIQUER:
     lda #$00
-    beq L9681
-L967F:
+    beq BIPLIN+2    ; skip lda #4
+
+BIPLIN:
     lda #$04
-L9681:
     pha
     iny
     sty zpAECUR
-    jsr LB32C
+
+    jsr VARIND
     jsr INTEGB
+
     lda zpIACC+1
     pha
     lda zpIACC
     pha
-    jsr L92E3
+    jsr INTFAC
+
     clc
     pla
     adc zpIACC
@@ -4481,47 +4591,50 @@ L9681:
     pla
     adc zpIACC+1
     sta zpIACC+1
-L969F:
+
+INSET:
     pla
     sta zpIACC+2
     clc
     lda #$FF
     rts
 
-L96A6:
+BKTVAR:
     inx
-    inc zp39
-    jsr L96DF
-    jmp L9661
+    inc zpWORK+2
+    jsr ARRAY
+    jmp CHKPLI
 
-L96AF:
+LVSTR:
     inx
     iny
-    sty zp39
+    sty zpWORK+2
     iny
     dec zpIACC+2
     lda (zpWORK),Y
     cmp #'('
-    beq L96C9
+    beq LVSTRA
+
     jsr LOOKUP
-    beq L9677
+    beq BKTVFC
+
     stx zpAECUR
     lda #$81
     sta zpIACC+2
     sec
     rts
 
-L96C9:
+LVSTRA:
     inx
     sty zp39
     dec zpIACC+2
-    jsr L96DF
+    jsr ARRAY
     lda #$81
     sta zpIACC+2
     sec
     rts
 
-L96D7:
+UNARRY:
     brk
     dta 14
     .if foldup == 1
@@ -4531,9 +4644,10 @@ L96D7:
     .endif
     brk
 
-L96DF:
+ARRAY:
     jsr LOOKUP
-    beq L96D7
+    beq UNARRY
+
     stx zpAECUR
     lda zpIACC+2
     pha
@@ -4541,23 +4655,28 @@ L96DF:
     pha
     lda zpIACC+1
     pha
+
     ldy #$00
     lda (zpIACC),Y
     cmp #$04
-    bcc L976C
+    bcc AQUICK
+
     tya
     jsr SINSTK
     lda #$01
     sta zpIACC+3
-L96FF:
+
+ARLOP:
     jsr PHACC
     jsr INEXPR
     inc zpAECUR
-    cpx #$2C
-    bne L96D7
-    ldx #$39
+    cpx #','
+    bne UNARRY
+
+    ldx #zpWORK+2
     jsr POPX
-    ldy zp3C
+
+    ldy zpWORK+5
     pla
     sta zpWORK+1
     pla
@@ -4565,59 +4684,72 @@ L96FF:
     pha
     lda zpWORK+1
     pha
-    jsr L97BA
+
+    jsr TSTRNG
+
     sty zpIACC+3
     lda (zpWORK),Y
-    sta zp3F
+    sta zpWORK+8
     iny
     lda (zpWORK),Y
-    sta zp40
+    sta zpWORK+9
     lda zpIACC
-    adc zp39
+    adc zpWORK+2
     sta zpIACC
     lda zpIACC+1
-    adc zp3A
+    adc zpWORK+3
     sta zpIACC+1
+
     jsr WMUL
+
     ldy #$00
     sec
     lda (zpWORK),Y
     sbc zpIACC+3
     cmp #$03
-    bcs L96FF
+    bcs ARLOP
+
     jsr PHACC
-    jsr LAE56
+    jsr BRA
     jsr INTEGB
+
     pla
     sta zpWORK+1
     pla
     sta zpWORK
-    ldx #$39
+
+    ldx #zpWORK+2
     jsr POPX
-    ldy zp3C
-    jsr L97BA
+
+    ldy zpWORK+5
+    jsr TSTRNG
+
     clc
-    lda zp39
+    lda zpWORK+2
     adc zpIACC
     sta zpIACC
-    lda zp3A
+    lda zpWORK+3
     adc zpIACC+1
     sta zpIACC+1
-    bcc L977D
-L976C:
-    jsr LAE56
+    bcc ARFOUR
+
+AQUICK:
+    jsr BRA
     jsr INTEGB
+
     pla
     sta zpWORK+1
     pla
     sta zpWORK
     ldy #$01
-    jsr L97BA
-L977D:
+    jsr TSTRNG
+
+ARFOUR:
     pla
     sta zpIACC+2
     cmp #$05
-    bne L979B
+    bne ARFO
+
     ldx zpIACC+1
     lda zpIACC
     asl zpIACC
@@ -4629,20 +4761,23 @@ L977D:
     txa
     adc zpIACC+1
     sta zpIACC+1
-    bcc L97A3
-L979B:
+    bcc ARFI
+
+ARFO:
     asl zpIACC
     rol zpIACC+1
     asl zpIACC
     rol zpIACC+1
-L97A3:
+
+ARFI:
     tya
     adc zpIACC
     sta zpIACC
-    bcc L97AD
+    bcc NNINC
+
     inc zpIACC+1
     clc
-L97AD:
+NNINC:
     lda zpWORK
     adc zpIACC
     sta zpIACC
@@ -4651,22 +4786,24 @@ L97AD:
     sta zpIACC+1
     rts
 
-L97BA:
+TSTRNG:
     lda zpIACC+1
     and #$C0
     ora zpIACC+2
     ora zpIACC+3
-    bne L97D1
+    bne SUBSCP
+
     lda zpIACC
     cmp (zpWORK),Y
     iny
     lda zpIACC+1
     sbc (zpWORK),Y
-    bcs L97D1
+    bcs SUBSCP
+
     iny
     rts
 
-L97D1:
+SUBSCP:
     brk
     dta 15
     .if foldup == 1
@@ -4684,7 +4821,7 @@ SPTSTM:
 SPTSTN:
     ldy zpCURSOR
     lda (zpLINE),Y
-    cmp #$20
+    cmp #' '
     beq SPTSTM
 
     cmp #tknCONST
@@ -4715,7 +4852,7 @@ L9805:
     clc
     rts
 
-L9807:
+AEEQEX:
     lda zpLINE
     sta zpAELINE
     lda zpLINE+1
@@ -5224,7 +5361,7 @@ L9A50:
     jsr L9C42
     stx zpTYPE
     tay
-    jsr L92FD
+    jsr FLOATI
     jsr POPSET
 L9A5F:
     jsr LA34E
@@ -5283,7 +5420,7 @@ L9A9E:
     beq L9A9A         ; Error if string
     bmi FCOMPS         ; Float, jump to compare floats
 
-; Compare IntA with top of stack
+; Compare IACC with top of stack
 ; ------------------------------
     lda zpIACC+3
     eor #$80
@@ -5383,7 +5520,7 @@ AEEXPR:
 ; ---------------------------
 EXPR:
     jsr L9B72         ; Call Evaluator Level 6 - AND
-                      ; Returns A=type, value in IntA/FPA/StrA, X=next char
+                      ; Returns A=type, value in IACC/FPA/StrA, X=next char
 L9B2C:
     cpx #tknOR
     beq L9B3A         ; Jump if next char is OR
@@ -5403,10 +5540,10 @@ L9B3A:
     ldy #$03          ; If float, convert to integer
 L9B43:
     lda (zpAESTKP),Y
-    ora zpIACC,Y        ; OR IntA with top of stack    ; abs,y (!)
+    ora zpIACC,Y        ; OR IACC with top of stack    ; abs,y (!)
     sta zpIACC,Y              ; abs,y (!)
     dey
-    bpl L9B43         ; Store result in IntA
+    bpl L9B43         ; Store result in IACC
 L9B4E:
     jsr POPINC         ; Drop integer from stack
     lda #$40
@@ -5421,10 +5558,10 @@ L9B55:
     ldy #$03          ; If float, convert to integer
 L9B5E:
     lda (zpAESTKP),Y
-    eor zpIACC,Y        ; EOR IntA with top of stack       ; abs,y (!)
+    eor zpIACC,Y        ; EOR IACC with top of stack       ; abs,y (!)
     sta zpIACC,Y                  ; abs,y (!)
     dey
-    bpl L9B5E         ; Store result in IntA
+    bpl L9B5E         ; Store result in IACC
     bmi L9B4E         ; Jump to drop from stack and continue
 
 ; Stack current as integer, evaluate another Level 6
@@ -5455,10 +5592,10 @@ L9B7A:
     ldy #$03          ; If float, convert to integer
 L9B8A:
     lda (zpAESTKP),Y
-    and zpIACC,Y        ; AND IntA with top of stack   ; abs,y (!)
+    and zpIACC,Y        ; AND IACC with top of stack   ; abs,y (!)
     sta zpIACC,Y              ; abs,y (!)
     dey
-    bpl L9B8A         ; Store result in IntA
+    bpl L9B8A         ; Store result in IACC
     jsr POPINC         ; Drop integer from stack
     lda #$40
     bne L9B75         ; Return type=Int, jump to check for another AND
@@ -5491,7 +5628,7 @@ L9BB4:
 L9BB5:
     sty zpIACC
     sty zpIACC+1
-    sty zpIACC+2          ; Store 0/-1 in IntA
+    sty zpIACC+2          ; Store 0/-1 in IACC
     sty zpIACC+3
     lda #$40
     rts               ; Return type=Int
@@ -5621,11 +5758,11 @@ L9C4E:
     clc
     lda (zpAESTKP),Y
     adc zpIACC
-    sta zpIACC          ; Add top of stack to IntA
+    sta zpIACC          ; Add top of stack to IACC
     iny
     lda (zpAESTKP),Y
     adc zpIACC+1
-    sta zpIACC+1          ; Store result in IntA
+    sta zpIACC+1          ; Store result in IACC
     iny
     lda (zpAESTKP),Y
     adc zpIACC+2
@@ -5669,9 +5806,9 @@ L9CA1:
 ; -----------
 L9CA7:
     stx zpTYPE
-    jsr POPACC         ; Unstack integer to IntA
+    jsr POPACC         ; Unstack integer to IACC
     jsr PHFACC
-    jsr IFLT         ; Stack float, convert integer in IntA to float in FPA1
+    jsr IFLT         ; Stack float, convert integer in IACC to float in FPA1
     jmp L9C9B         ; Jump to do float + <stacked float>
 
 ; - numeric
@@ -5695,11 +5832,11 @@ L9CB5:
     iny
     lda (zpAESTKP),Y
     sbc zpIACC+1
-    sta zpIACC+1          ; Subtract IntA from top of stack
+    sta zpIACC+1          ; Subtract IACC from top of stack
     iny
     lda (zpAESTKP),Y
     sbc zpIACC+2
-    sta zpIACC+2          ; Store in IntA
+    sta zpIACC+2          ; Store in IACC
     iny
     lda (zpAESTKP),Y
     sbc zpIACC+3
@@ -5724,9 +5861,9 @@ L9CF1:
 ; -----------
 L9CFA:
     stx zpTYPE
-    jsr POPACC         ; Unstack integer to IntA
+    jsr POPACC         ; Unstack integer to IACC
     jsr PHFACC
-    jsr IFLT         ; Stack float, convert integer in IntA to float in FPA1
+    jsr IFLT         ; Stack float, convert integer in IACC to float in FPA1
     jsr POPSET         ; Pop float from stack, point FPTR to it
     jsr LA4D0         ; Subtract FPTR float from FPA1 float
     jmp L9CA1         ; Jump to set result and loop for more + or -
@@ -5746,7 +5883,7 @@ L9D20:
     jsr L9E20
     stx zpTYPE
     tay
-    jsr L92FD
+    jsr FLOATI
 L9D2C:
     jsr POPSET
     jsr FMUL
@@ -5876,12 +6013,12 @@ L9DD4:
 ; ---------
 L9DE5:
     tay
-    jsr L92FD         ; Ensure current value is real
+    jsr FLOATI         ; Ensure current value is real
     jsr PHFACC
     jsr L9E20         ; Stack float, call Evaluator Level 2
     stx zpTYPE
     tay
-    jsr L92FD         ; Ensure current value is real
+    jsr FLOATI         ; Ensure current value is real
     jsr POPSET
     jsr FXDIV         ; Unstack to FPTR, call divide routine
     ldx zpTYPE
@@ -5902,7 +6039,7 @@ L9E0A:
     jsr DIVOP         ; Ensure current value is integer
     rol zp39
     rol zp3A
-    rol zp3B          ; Multiply IntA by 2
+    rol zp3B          ; Multiply IACC by 2
     rol zp3C
     bit zpWORK
     php
@@ -5918,7 +6055,7 @@ PHPOW:
 ; Evaluator Level 2, ^
 ; --------------------
 L9E20:
-    jsr LADEC         ; Call Evaluator Level 1, - + NOT function ( ) ? ! $ | "
+    jsr FACTOR         ; Call Evaluator Level 1, - + NOT function ( ) ? ! $ | "
 L9E23:
     pha
 L9E24:
@@ -5937,9 +6074,9 @@ L9E24:
 ; ---------
 L9E35:
     tay
-    jsr L92FD         ; Ensure current value is a float
+    jsr FLOATI         ; Ensure current value is a float
     jsr PHFACC
-    jsr L92FA         ; Stack float, evaluate a real
+    jsr FLTFAC         ; Stack float, evaluate a real
     lda zpFACCX
     cmp #$87
     bcs L9E88
@@ -6039,7 +6176,7 @@ L9ED1:
 ; Convert numeric value to string
 ; ===============================
 ; On entry, FloatA ($2E-$35)  = number
-;           or IntA ($2A-$2D) = number
+;           or IACC ($2A-$2D) = number
 ;                           Y = type
 ;                          @% = print format
 ;                     $15.b7 set if hex
@@ -7339,7 +7476,7 @@ LA698:
 
 ; ----------------------------------------------------------------------------
 
-.proc FONE
+FONE:
     jsr LA686           ; FCLR
     ldy #$80
     sty zpFACCMA
@@ -7347,37 +7484,33 @@ LA698:
     sty zpFACCX
     tya
     rts                 ; always return with !Z
-.endp
 
 ; ----------------------------------------------------------------------------
 
-.proc FRECIP
+FRECIP:
     jsr STARGA
     jsr FONE
     bne LA6E7           ; branch always, FONE returns with !Z
-.endp
 
 ; ----------------------------------------------------------------------------
 
-.proc FXDIV
+FXDIV:
     jsr LA1DA
     beq FDIVZ
     jsr FTOW
     jsr LA3B5
     bne LA6F1
     rts
-.endp
 
-.proc FDIVZ
+FDIVZ:
     jmp ZDIVOR      ; Divide by zero error
-.endp
 
 ; ----------------------------------------------------------------------------
 
 ; =TAN numeric
 ; ============
 TAN:
-    jsr L92FA
+    jsr FLTFAC
     jsr LA9D3
     lda zp4A
     pha
@@ -7520,7 +7653,7 @@ LA7A9:
 ; =SQR numeric
 ; ============
 SQR:
-    jsr L92FA
+    jsr FLTFAC
 LA7B7:
     jsr LA1DA
     beq LA7E6
@@ -7572,7 +7705,7 @@ LA7F7:
 ; =LN numeric
 ; ===========
 LN:
-    jsr L92FA
+    jsr FLTFAC
 LA801:
     jsr LA1DA
     beq LA808
@@ -7710,7 +7843,7 @@ ACS:
 ; =ASN numeric
 ; ============
 ASN:
-    jsr L92FA
+    jsr FLTFAC
     jsr LA1DA
     bpl LA8EA
     lsr zpFACCS
@@ -7738,7 +7871,7 @@ LA904:
 ; =ATN numeric
 ; ============
 ATN:
-    jsr L92FA
+    jsr FLTFAC
 LA90A:
     jsr LA1DA
     beq LA904
@@ -7803,7 +7936,7 @@ FATANC:
 ; =COS numeric
 ; ============
 COS:
-    jsr L92FA         ; Evaluate float
+    jsr FLTFAC         ; Evaluate float
     jsr LA9D3
     inc zp4A
     jmp LA99E
@@ -7811,7 +7944,7 @@ COS:
 ; =SIN numeric
 ; ============
 SIN:
-    jsr L92FA
+    jsr FLTFAC
     jsr LA9D3
 LA99E:
     lda zp4A
@@ -7954,7 +8087,7 @@ FSINC:
 ; = EXP numeric
 ; =============
 EXP:
-    jsr L92FA
+    jsr FLTFAC
 FEXP:
     lda zpFACCX
     cmp #$87
@@ -8032,7 +8165,7 @@ FEXPCO:
 ; FIPOW - Computes X**N where X is passed in FP Accu, N is a one byte
 ;         signed integer passed in A
 
-.proc FIPOW
+FIPOW:
     tax
     bpl FIPOWA
     dex
@@ -8056,14 +8189,13 @@ FIPOWB:
 
 FIPOWZ:
     rts
-.endp
 
 ; ----------------------------------------------------------------------------
 
 ; =ADVAL numeric - Call OSBYTE to read buffer/device
 ; ==================================================
 ADVAL:
-    jsr L92E3         ; Evaluate integer
+    jsr INTFAC         ; Evaluate integer
     ldx zpIACC
     lda #$80          ; X=low byte, A=$80 for ADVAL
 
@@ -8084,7 +8216,7 @@ POINT:
         jsr INEXPR
         jsr PHACC
         jsr COMEAT
-        jsr LAE56
+        jsr BRA
         jsr INTEGB
         lda zpIACC
         pha
@@ -8105,7 +8237,7 @@ POINT:
 ; =NOT
 ; ====
 NOT:
-        jsr L92E3
+        jsr INTFAC
 XAB5E:
         ldx #$03
 XAB60:
@@ -8154,7 +8286,7 @@ LAB7F:
         bmi LAB9D
      
 SGN:
-        jsr LADEC
+        jsr FACTOR
         beq LABE6
         bmi LAB7F
         lda zpIACC+3
@@ -8192,7 +8324,7 @@ LOG:
 ; =RAD numeric
 ; ============
 RAD:
-    jsr L92FA
+    jsr FLTFAC
     ldy #<FPIs18
     .if version < 3
         lda #>FPIs18
@@ -8212,7 +8344,7 @@ LABB8:
 ; =DEG numeric
 ; ============
 DEG:
-    jsr L92FA
+    jsr FLTFAC
     ldy #<F180sP
     .if version >= 3
         .error  <F180sP == 0
@@ -8238,14 +8370,14 @@ PI:
 ; =USR numeric
 ; ============
 USR:
-    jsr L92E3         ; Evaluate integer
-    jsr USER         ; Set up registers and call code at IntA
+    jsr INTFAC         ; Evaluate integer
+    jsr USER         ; Set up registers and call code at IACC
     sta zpIACC
-    stx zpIACC+1          ; Store returned A,X in IntA
+    stx zpIACC+1          ; Store returned A,X in IACC
     sty zpIACC+2          ; Store returned Y
     php
     pla
-    sta zpIACC+3          ; Store returned flags in IntA
+    sta zpIACC+3          ; Store returned flags in IACC
     cld               ; Ensure in binary mode on return
     lda #$40
     rts               ; Return INTEGER
@@ -8260,7 +8392,7 @@ LABE6:
 ; =EVAL string$ - Tokenise and evaluate expression
 ; ================================================
 EVAL:
-    jsr LADEC         ; Evaluate value
+    jsr FACTOR         ; Evaluate value
     .if version < 3
         bne LABE6
     .elseif version >= 3
@@ -8317,7 +8449,7 @@ LAC2C:
 ; =VAL numeric
 ; ============
 VAL:
-    jsr LADEC
+    jsr FACTOR
     .if version < 3
         bne LAC9B
     .elseif version >= 3
@@ -8365,7 +8497,7 @@ LAC73:
 ; =INT numeric
 ; ============
 INT:
-    jsr LADEC
+    jsr FACTOR
     .if version < 3
         beq LAC9B
     .elseif version >= 3
@@ -8399,7 +8531,7 @@ LAC9B:
 ; =ASC string$
 ; ============
 ASC:
-    jsr LADEC
+    jsr FACTOR
     .if version < 3
         bne LAC9B
     .elseif version >= 3
@@ -8491,7 +8623,7 @@ XACA1:
 ; =SGN numeric
 ; ============
 SGN:
-        jsr LADEC
+        jsr FACTOR
         beq XAC81
         bmi XACA1
         lda zpIACC+3
@@ -8514,7 +8646,7 @@ POINT:
         jsr INEXPR
         jsr PHACC
         jsr COMEAT
-        jsr LAE56
+        jsr BRA
         jsr INTEGB
         lda zpIACC
         pha
@@ -8538,7 +8670,7 @@ POINT:
 ; =NOT numeric
 ; ============
 NOT:
-        jsr L92E3
+        jsr INTFAC
         ldx #$03
 LACD6:
         lda zpIACC,X
@@ -8587,7 +8719,7 @@ LAD03:
 
 LAD06:
     jsr LBDB2
-    jsr LAE56
+    jsr BRA
     jsr INTEGB
     jsr LBDCB
 LAD12:
@@ -8653,7 +8785,7 @@ LAD67:
 ; =ABS numeric
 ; ============
 ABS:
-    jsr LADEC       ; FACTOR
+    jsr FACTOR       ; FACTOR
     beq LAD67
     bmi LAD77
 ABSCOM:
@@ -8763,12 +8895,12 @@ LADE9:
 
 ; Evaluator Level 1, - + NOT function ( ) ? ! $ | "
 ; -------------------------------------------------
-LADEC:
+FACTOR:
     ldy zpAECUR
     inc zpAECUR
     lda (zpAELINE),Y      ; Get next character
     cmp #$20
-    beq LADEC         ; Loop to skip spaces
+    beq FACTOR         ; Loop to skip spaces
     cmp #'-'
     beq LAD8C         ; Jump with unary minus
     cmp #'"'
@@ -8794,12 +8926,12 @@ LAE10:
     cmp #'&'
     beq LAE6D         ; Jump with hex number
     cmp #'('
-    beq LAE56         ; Jump with brackets
+    beq BRA         ; Jump with brackets
 LAE20:
     dec zpAECUR
     jsr LVCONT
     beq ERRFAC         ; Jump with undefined variable or bad name
-    jmp LB32C
+    jmp VARIND
 
 LAE2A:
     jsr LA07B
@@ -8829,9 +8961,9 @@ FACERR:
         dta 'No such variable'
     .endif
 
-LAE54:
     brk
     .if version >= 3
+BKTERR = * -1               ; include previous BRK
         dta $1B
         .if foldup == 1
             dta 'MISSING )'
@@ -8852,20 +8984,16 @@ LAE55:
 
 ; ----------------------------------------------------------------------------
 
-LAE56:          ; BRA
+BRA:
     jsr EXPR
     inc zpAECUR
     cpx #')'
-    .if version < 3
-        bne LAE61
-    .elseif version >= 3
-        bne LAE54
-    .endif
+    bne BKTERR
     tay
     rts
 
     .if version < 3
-LAE61:
+BKTERR:
         brk
         dta $1B
         .if foldup == 1
@@ -8875,6 +9003,7 @@ LAE61:
         .endif
         brk
     .endif
+
 LAE6D:
     .if version < 3
         ldx #$00
@@ -8958,7 +9087,7 @@ LENB:
 ; =LEN string$
 ; ============
 LEN:
-        jsr LADEC
+        jsr FACTOR
         bne LENB
         lda zpCLEN
     
@@ -9043,7 +9172,7 @@ LAEAA:
 RTIME:
     ldx #$2A
     ldy #$00          ; Point to integer accumulator
-    lda #$01          ; Read TIME to IntA via OSWORD $01
+    lda #$01          ; Read TIME to IACC via OSWORD $01
     .ifdef MOS_BBC
         jsr OSWORD
     .endif
@@ -9080,7 +9209,7 @@ LENB:
 ; =LEN string$
 ; ============
 LEN:
-        jsr LADEC
+        jsr FACTOR
         bne LENB
         lda zpCLEN
 
@@ -9146,7 +9275,7 @@ RHIMEM:
 ; -------------
 LAF0A:
     inc zpAECUR
-    jsr LAE56
+    jsr BRA
     jsr INTEGB
     lda zpIACC+3
     bmi LAF3F
@@ -9187,7 +9316,7 @@ RND:
     ldx #$0D
 LAF56:
     lda zp+0,X
-    sta zpIACC          ; Copy random number to IntA
+    sta zpIACC          ; Copy random number to IACC
     lda zp+1,X
     sta zpIACC+1
     lda zp+2,X
@@ -9296,7 +9425,7 @@ ERR:
 ; INKEY
 ; =====
 LAFAD:
-    jsr L92E3         ; Evaluate <numeric>
+    jsr INTFAC         ; Evaluate <numeric>
 
 ; Atom/System - Manually implement INKEY(num)
 ; -------------------------------------------
@@ -9396,7 +9525,7 @@ LEFTD:
     bne LB036
     inc zpAECUR
     jsr LBDB2
-    jsr LAE56
+    jsr BRA
     jsr INTEGB
     jsr LBDCB
     lda zpIACC
@@ -9418,7 +9547,7 @@ RIGHTD:
     bne LB036
     inc zpAECUR
     jsr LBDB2
-    jsr LAE56
+    jsr BRA
     jsr INTEGB
     jsr LBDCB
     lda zpCLEN
@@ -9484,7 +9613,7 @@ MIDD:
     beq LB061
     cpx #$2C
     bne LB036
-    jsr LAE56
+    jsr BRA
     jsr INTEGB
 LB061:
     jsr LBDCB
@@ -9534,7 +9663,7 @@ STRD:
 LB0A1:
     tya
     pha               ; Save format
-    jsr LADEC
+    jsr FACTOR
     beq LB0BF         ; Evaluate, error if not number
     tay
     pla
@@ -9562,7 +9691,7 @@ STRND:
     jsr INEXPR
     jsr PHACC
     jsr COMEAT
-    jsr LAE56
+    jsr BRA
     bne LB0BF
     jsr POPACC
     ldy zpCLEN
@@ -9707,7 +9836,7 @@ FN:
 ; A=FN or PROC
 ; PtrA=>start of FN/PROC name
 ;
-LB197:
+FNBODY:
     sta zpTYPE          ; Save PROC/FN token
     tsx
     txa
@@ -9749,13 +9878,13 @@ LB1CA:
     sbc #$00
     sta zpWORK+1          ; $37/8=>PROC token
     ldy #$02
-    jsr L955B         ; Check name is valid
+    jsr WORDLP         ; Check name is valid
     cpy #$02
     beq LB18A         ; No valid characters, jump to 'Bad call' error
     stx zpAECUR          ; Line pointer offset => after valid FN/PROC name
     dey
     sty zp39
-    jsr L945B
+    jsr CREAFN
     bne LB1E9         ; Look for FN/PROC name in heap, if found, jump to it
     jmp LB112         ; Not in heap, jump to look through program
 
@@ -9854,7 +9983,7 @@ LB24D:
     inx
     txa
     pha
-    jsr LB30D
+    jsr RETINF
     jsr SPACES
     cmp #','
     beq LB24D
@@ -9941,9 +10070,11 @@ LB303:
     pha
     jmp LB202
 
+; ----------------------------------------------------------------------------
+
 ; Push a value onto the stack
 ; ---------------------------
-LB30D:
+RETINF:
     ldy zpIACC+2
     .if version < 3
         cpy #$04
@@ -9952,10 +10083,11 @@ LB30D:
         cpy #$05
         bcs LB318
     .endif
-    ldx #$37
+    ldx #zpWORK
     jsr LBE44
+
 LB318:
-    jsr LB32C
+    jsr VARIND
     php
     jsr LBD90
     plp
@@ -9966,7 +10098,7 @@ LB318:
 LB329:
     jmp PHACC
 
-LB32C:
+VARIND:
     ldy zpIACC+2
     bmi LB384
     beq LB34F
@@ -10065,7 +10197,7 @@ LB3BA:
 ; =CHR$ numeric
 ; =============
 CHRD:
-    jsr L92E3
+    jsr INTFAC
 LB3C0:
     lda zpIACC
     jmp LAFC2
@@ -10631,7 +10763,7 @@ LB68E:
 ; NEXT [variable [,...]]
 ; ======================
 NEXT:
-    jsr L95C9
+    jsr AELV
     bne LB6A3
     ldx zpFORSTP
     beq LB68E
@@ -10875,7 +11007,7 @@ LB837:
 
 LB84F:
     jsr EXPR
-    jsr L92FD
+    jsr FLOATI
     lda zpFORSTP
     clc
     adc #$08
@@ -10888,7 +11020,7 @@ LB84F:
     cmp #$88
     bne LB875
     jsr EXPR
-    jsr L92FD
+    jsr FLOATI
     ldy zpAECUR
 LB875:
     sty zpCURSOR
@@ -11032,7 +11164,7 @@ LB931:
     txa
     pha               ; Save GOTO/GOSUB token
     lda zpIACC+1
-    ora zpIACC+2          ; Get IntA
+    ora zpIACC+2          ; Get IACC
     ora zpIACC+3
     bne LB97D         ; ON >255 - out of range, look for an ELSE
     ldx zpIACC
@@ -12006,7 +12138,7 @@ LBE5F:
     rts
 
 LBE62:
-    jsr LBEDD
+    jsr OSTHIG
     tay
     lda #$FF          ; FILE.LOAD=PAGE
 
@@ -12141,15 +12273,18 @@ LBED2:
     jsr LBEB2
     jmp FDONE         ; Convert to <cr>-string, check end of statement
 
+; ----------------------------------------------------------------------------
+
 ; Set FILE.LOAD to MEMHI.PAGE
 ; ---------------------------
-LBEDD:
+OSTHIG:
     jsr LBED2
     dey
     sty F_LOAD+0      ; LOAD.lo=$00
     lda zpTXTP
     sta F_LOAD+1      ; LOAD.hi=PAGEhi
-LBEE7:
+
+GETMAC:
     .ifdef MOS_BBC
         lda #$82
         jsr OSBYTE    ; Get memory base high word
@@ -12160,7 +12295,7 @@ LBEE7:
     rts
 
 ; BBC At/Sy
-; 37   37   FNAME
+; 37   37   FNAME   zpWORK
 ; 38
 ; 39   39   LOAD
 ; 3A
@@ -12197,7 +12332,7 @@ SAVE:
         sta F_EXEC+1
         lda zpTXTP
         sta F_START+1     ; Set FILE.START to PAGE
-        jsr LBEDD     ; Set FILE.LOAD to PAGE
+        jsr OSTHIG     ; Set FILE.LOAD to PAGE
     .endif
     .if version < 3
         .ifdef MOS_BBC
@@ -12217,7 +12352,7 @@ SAVE:
     .endif
 
     .if version >= 3
-        jsr LBEDD     ; Set FILE.LOAD to PAGE
+        jsr OSTHIG     ; Set FILE.LOAD to PAGE
     .endif
     .if version >= 3
         .ifdef MOS_BBC
@@ -12285,7 +12420,7 @@ LPTR:
     jsr INTEG         ; Step past '=', evaluate integer
     pla
     tay
-    ldx #$2A          ; Get handle, point to IntA
+    ldx #$2A          ; Get handle, point to IACC
     .ifdef MOS_ATOM
         jsr OSSTAR         
     .endif
@@ -12313,7 +12448,7 @@ RPTR:
     pha               ; Atom - A=0/1, BBC - A=0/2
     jsr CHANN
     ldx #$2A
-    pla               ; Evaluate #handle, point to IntA
+    pla               ; Evaluate #handle, point to IACC
     .ifdef MOS_ATOM
         jsr OSRDAR
     .endif
@@ -12398,7 +12533,7 @@ LBF82:
     .ifdef MOS_BBC
         pha       
     .endif
-    jsr LADEC
+    jsr FACTOR
     bne LBF96         ; Evaluate, if not string, jump to error
 
     .ifdef MOS_ATOM
@@ -12429,7 +12564,7 @@ LBF96:
 CLOSE:
     jsr LBFA9
     jsr AEDONE         ; Evaluate #handle, check end of statement
-    ldy zpIACC          ; Get handle from IntA
+    ldy zpIACC         ; Get handle from IACC
     .ifdef MOS_ATOM
         jsr OSSHUT         
     .endif
@@ -12459,7 +12594,7 @@ CHANN:
     .elseif version >= 3
         bne LBFF4
     .endif
-    jsr L92E3         ; Evaluate as integer
+    jsr INTFAC         ; Evaluate as integer
     ldy zpIACC
     tya               ; Get low byte and return
 NULLRET:
