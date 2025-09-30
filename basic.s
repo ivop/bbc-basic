@@ -462,7 +462,7 @@ RNDOK:
     lda #>LB402
     sta BRKV+1
     cli
-    jmp L8ADD         ; Enable IRQs, jump to immediate loop
+    jmp FORMAT         ; Enable IRQs, jump to immediate loop
 .endp
 
 ; ----------------------------------------------------------------------------
@@ -955,8 +955,8 @@ RMOVE:
         inx
         bpl L8565
         jsr LISTPT
-        jsr LB558
-        jsr LB558
+        jsr CHOUT
+        jsr CHOUT
         jmp RMOVE
 L8565:
         ldy #0
@@ -1040,7 +1040,7 @@ NOLB:
     lda zpLINE+1
     cmp #>BUFFER
     bne INTXT
-    jmp L8AF6
+    jmp CLRSTK
 
 INTXT:
     jsr LINO
@@ -1053,7 +1053,7 @@ SETL:                 ; set label
     jsr CRAELV
     beq ASSDED
     bcs ASSDED
-    jsr LBD94         ; PHADDR??
+    jsr PHACC         ; PHADDR??
     jsr GETPC         ; Find P%
     sta zpTYPE
     jsr STORE
@@ -2025,29 +2025,35 @@ COMERR:
 
 ; OLD - Attempt to restore program
 ; ================================
+; OLD command does ?&3001=0, finds new end of text and frees
+
 OLD:
-    jsr DONE         ; Check end of statement
+    jsr DONE          ; Check end of statement
     lda zpTXTP
-    sta zpWORK+1          ; Point $37/8 to PAGE
+    sta zpWORK+1      ; Point $37/8 to PAGE
     lda #$00
     sta zpWORK
-    sta (zpWORK),Y      ; Remove end marker
-    jsr LBE6F         ; Check program and set TOP
-    bne L8AF3         ; Jump to clear heap and go to immediate mode
+    sta (zpWORK),Y    ; Remove end marker
+    jsr ENDER         ; Check program and set TOP
+    bne FSASET         ; Jump to clear heap and go to immediate mode
 
 ; ----------------------------------------------------------------------------
 
 ; END - Return to immediate mode
 ; ==============================
+; END statement finds end of text and stops
+
 END:
     jsr DONE         ; Check end of statement
-    jsr LBE6F         ; Check program and set TOP
-    bne L8AF6         ; Jump to immediate mode, keeping variables, etc
+    jsr ENDER         ; Check program and set TOP
+    bne CLRSTK         ; Jump to immediate mode, keeping variables, etc
 
 ; ----------------------------------------------------------------------------
 
 ; STOP - Abort program with an error
 ; ==================================
+; STOP statement prints that it has stopped
+
 STOP:
     jsr DONE         ; Check end of statement
     .if version < 3 && foldup == 0
@@ -2067,6 +2073,8 @@ STOP:
 
 ; NEW - Clear program, enter immediate mode
 ; =========================================
+; NEW comand clears text and frees
+
 NEW:
     jsr DONE         ; Check end of statement
     .if title != 0
@@ -2075,14 +2083,14 @@ NEW:
 
 ; Start up with NEW program
 ; -------------------------
-L8ADD:  ; FORMAT?
+FORMAT:
     .if title == 0
         lda #$0D
         ldy zpTXTP
-        sty zpTOP+1      ; TOP hi=PAGE hi
+        sty zpTOP+1    ; TOP hi=PAGE hi
         ldy #$00
         sty zpTOP
-        sty zpTRFLAG      ; TOP=PAGE, TRACE OFF
+        sty zpTRFLAG   ; TOP=PAGE, TRACE OFF
         sta (zpTOP),Y  ; ?(PAGE+0)=<cr>
         lda #$FF
         iny
@@ -2091,58 +2099,61 @@ L8ADD:  ; FORMAT?
         sty zpTOP      ; TOP=PAGE+2
     .endif
 
-L8AF3:
+FSASET:
     jsr LBD20         ; Clear variables, heap, stack
 
 ; IMMEDIATE LOOP
 ; ==============
-L8AF6:
+CLRSTK:
     ldy #>BUFFER
-    sty zpLINE+1          ; PtrA=$0700 - input buffer
+    sty zpLINE+1
     ldy #<BUFFER
     sty zpLINE
-    lda #<LB433
-    sta zpERRORLH          ; ON ERROR OFF
-    lda #>LB433
+    lda #<BASERR       ; default error message
+    sta zpERRORLH
+    lda #>BASERR
     sta zpERRORLH+1
     lda #'>'
-    jsr LBC02         ; Print '>' prompt, read input to buffer at PtrA
+    jsr BUFF           ; Print '>' prompt, read input to buffer at PtrA
 
 ; Execute line at program pointer in $0B/C
 ; ----------------------------------------
-L8B0B:
-    lda #<LB433
-    sta zpERRORLH          ; ON ERROR OFF again
-    lda #>LB433
+RUNTHG:
+    lda #<BASERR       ; default error message
+    sta zpERRORLH
+    lda #>BASERR
     sta zpERRORLH+1
     ldx #$FF
-    stx zpBYTESM          ; OPT=$FF - not within assembler
-    stx zp3C
-    txs               ; Clear machine stack
-    jsr LBD3A
-    tay               ; Clear DATA and stacks
+    stx zpBYTESM       ; OPT=$FF - not within assembler
+    stx zpWORK+5       ; constant
+    txs                ; Clear machine stack
+    jsr SETVAR         ; Clear DATA and stacks
+
+    tay
     lda zpLINE
-    sta zpWORK          ; Point $37/8 to program line
+    sta zpWORK         ; Point zpWORK to program line
     lda zpLINE+1
     sta zpWORK+1
-    sty zp3B
+    sty zpWORK+4
     sty zpCURSOR
+
     jsr MATCHA
-    jsr L97DF
-    bcc L8B38         ; Tokenise, jump forward if no line number
-    jsr LBC8D
-    jmp L8AF3         ; Insert into program, jump back to immediate loop
+    jsr SPTSTN
+    bcc DC             ; Tokenise, jump forward if no line number
+
+    jsr INSRT          ; Insert into program
+    jmp FSASET         ; Jump back to immediate loop
 
 ; Command entered at immediate prompt
 ; -----------------------------------
-L8B38:
+DC:                    ; Direct Command
     jsr SPACES         ; Skip spaces at PtrA
-    cmp #$C6
-    bcs DISPATCH         ; If command token, jump to execute command
-    bcc LETST         ; Not command token, try variable assignment
+    cmp #tknAUTO
+    bcs DISPATCH       ; If command token, jump to execute command
+    bcc LETST          ; Not command token, try variable assignment
 
-L8B41:
-    jmp L8AF6         ; Jump back to immediate mode
+LEAVE:
+    jmp CLRSTK         ; Jump back to immediate mode
 
 ; [ - enter assembler
 ; ===================
@@ -2181,18 +2192,20 @@ FNERR:
 OTSTMT:
     ldy zpCURSOR
     dey
-    lda (zpLINE),Y      ; Step program pointer back and fetch char
+    lda (zpLINE),Y    ; Step program pointer back and fetch char
     cmp #'='
     beq FNRET         ; Jump for '=', return from FN
     cmp #'*'
-    beq L8B73         ; Jump for '*', embedded *command
+    beq DOS           ; Jump for '*', embedded *command
     cmp #'['
-    beq JUMPASS         ; Jump for '[', start assembler
-    bne SUNK         ; Otherwise, see if end of statement
+    beq JUMPASS       ; Jump for '[', start assembler
+    bne SUNK          ; Otherwise, see if end of statement
+
+; ----------------------------------------------------------------------------
 
 ; Embedded *command
 ; =================
-L8B73:
+DOS:
     jsr CLYADP         ; Update PtrA to current address
     ldx zpLINE
     ldy zpLINE+1          ; XY=>command string
@@ -2216,16 +2229,16 @@ REM:
     lda #$0D
     ldy zpCURSOR
     dey               ; Get program pointer
-L8B82:
+ILP:
     iny
     cmp (zpLINE),Y
-    bne L8B82         ; Loop until <cr> found
-L8B87:
+    bne ILP          ; Loop until <cr> found
+ENDEDL:
     cmp #tknELSE
-    beq REM         ; If 'ELSE', jump to skip to end of line
+    beq REM          ; If 'ELSE', jump to skip to end of line
     lda zpLINE+1
     cmp #>BUFFER
-    beq L8B41       ; Program in command buffer, jump back to immediate loop
+    beq LEAVE        ; Program in command buffer, jump back to immediate loop
     jsr LINO
     bne STMT         ; Check for end of program, step past <cr>
 
@@ -2237,11 +2250,11 @@ SUNK:
 DONEXT:
     jsr DONE
 
-L8B9B:
+NXT:
     ldy #$00
-    lda (zpLINE),Y      ; Get current character
+    lda (zpLINE),Y    ; Get current character
     cmp #':'
-    bne L8B87         ; Not <colon>, check for ELSE
+    bne ENDEDL         ; Not <colon>, check for ELSE
 
 STMT:
     ldy zpCURSOR
@@ -2255,7 +2268,7 @@ STMT:
 ; Dispatch function/command
 ; -------------------------
 DISPATCH:
-    tax               ; Index into dispatch table
+    tax                 ; Index into dispatch table
     lda ADTABL-$8E,X
     sta zpWORK          ; Get routine address from table
     lda ADTABH-$8E,X
@@ -2268,24 +2281,25 @@ DISPATCH:
 ; -------------------------------------------------------
 LETST:
     ldx zpLINE
-    stx zpAELINE          ; Copy PtrA to PtrB
+    stx zpAELINE    ; Copy LINE to AELINE
     ldx zpLINE+1
     stx zpAELINE+1
     sty zpAECUR
-    jsr L95DD         ; Check if variable or indirection
-    bne L8BE9         ; NE - jump for existing variable or indirection assignment
-    bcs OTSTMT         ; CS - not variable assignment, try =, *, [ commands
+
+    jsr LVCONT      ; Check if variable or indirection
+    bne GOTLT       ; NE - jump for existing variable or indirection assignment
+    bcs OTSTMT      ; CS - not variable assignment, try =, *, [ commands
 
 ; Variable not found, create a new one
 ; ------------------------------------
     stx zpAECUR
-    jsr L9841         ; Check for and step past '='
-    jsr L94FC         ; Create new variable
+    jsr EQEAT         ; Check for and step past '='
+    jsr CREATE        ; Create new variable
     ldx #$05          ; X=$05 = float
     cpx zpIACC+2
-    bne L8BDF         ; Jump if dest. not a float
+    bne LETSZ         ; Jump if dest. not a float
     inx               ; X=$06
-L8BDF:
+LETSZ:
     jsr L9531
     dec zpCURSOR
 
@@ -2293,25 +2307,25 @@ L8BDF:
 ; =========================
 LET:
     jsr CRAELV
-    beq L8C0B
-L8BE9:
-    bcc L8BFB
-    jsr LBD94         ; Stack integer (address of data)
-    jsr L9813         ; Check for end of statement
-    lda zpTYPE          ; Get evaluation type
-    bne LETM         ; If not string, error
-    jsr L8C1E         ; Assign the string
-    jmp L8B9B         ; Return to execution loop
+    beq NOLET
+GOTLT:
+    bcc LETED
+    jsr PHACC         ; Stack integer (address of data)
+    jsr EQEXPR        ; Check for end of statement
+    lda zpTYPE        ; Get evaluation type
+    bne LETM          ; If not string, error
+    jsr STSTOR        ; Assign the string
+    jmp NXT           ; Return to execution loop
 
-L8BFB:
-    jsr LBD94         ; Stack integer (address of data)
-    jsr L9813         ; Check for end of statement
-    lda zpTYPE          ; Get evaluation type
-    beq LETM         ; If not number, error
+LETED:
+    jsr PHACC         ; Stack integer (address of data)
+    jsr EQEXPR        ; Check for end of statement
+    lda zpTYPE        ; Get evaluation type
+    beq LETM          ; If not number, error
     jsr STORE         ; Assign the number
-    jmp L8B9B         ; Return to execution loop
+    jmp NXT           ; Return to execution loop
 
-L8C0B:
+NOLET:
     jmp STDED
 
 LETM:
@@ -2324,73 +2338,86 @@ LETM:
     .endif
     brk
 
-L8C1E:
-    jsr LBDEA         ; Unstack integer (address of data)
-L8C21:
+STSTOR:
+    jsr POPACC         ; Unstack integer (address of data)
+
+STSTRE:
     lda zpIACC+2
     cmp #$80
-    beq L8CA2         ; Jump if absolute string $addr
+    beq NSTR         ; Jump if absolute string $addr
+
     ldy #$02
     lda (zpIACC),Y
     cmp zpCLEN
-    bcs L8C84
+    bcs ALLOCX       ; old mlen >= to new len
+
     lda zpFSA
     sta zpIACC+2
     lda zpFSA+1
     sta zpIACC+3
+
     lda zpCLEN
-    cmp #$08
-    bcc L8C43
-    adc #$07
-    bcc L8C43
+    cmp #$08         ; if <8 characters then use this as mlen
+    bcc ALLOCU
+
+    adc #$07         ; add 8 because carry is set
+    bcc ALLOCU
+
     lda #$FF
-L8C43:
+ALLOCU:
     clc
     pha
     tax
-    lda (zpIACC),Y
+    lda (zpIACC),Y   ; is new space contiguous to old?
     ldy #$00
     adc (zpIACC),Y
     eor zpFSA
-    bne L8C5F
+    bne ALLJIM
+
     iny
     adc (zpIACC),Y
     eor zpFSA+1
-    bne L8C5F
-    sta zpIACC+3
+    bne ALLJIM
+
+    sta zpIACC+3    ; new space is, so reduce amount needed
     txa
     iny
     sec
     sbc (zpIACC),Y
     tax
-L8C5F:
+
+ALLJIM:
     txa
     clc
     adc zpFSA
     tay
     lda zpFSA+1
     adc #$00
-    cpy zpAESTKP
+    cpy zpAESTKP    ; are we hitting our heads on the roof?
     tax
     sbc zpAESTKP+1
     bcs ALLOCR
+
     sty zpFSA
     stx zpFSA+1
     pla
     ldy #$02
-    sta (zpIACC),Y
+    sta (zpIACC),Y  ; new mlen
     dey
     lda zpIACC+3
-    beq L8C84
+    beq ALLOCX      ; we were contiguous
+
     sta (zpIACC),Y
     dey
     lda zpIACC+2
     sta (zpIACC),Y
-L8C84:
+
+ALLOCX:
     ldy #$03
     lda zpCLEN
     sta (zpIACC),Y
-    beq L8CA1
+    beq STDONE
+
     dey
     dey
     lda (zpIACC),Y
@@ -2398,28 +2425,36 @@ L8C84:
     dey
     lda (zpIACC),Y
     sta zpIACC+2
-L8C97:
+
+LTCVRM:
     lda STRACC,Y
     sta (zpIACC+2),Y
     iny
     cpy zpCLEN
-    bne L8C97
-L8CA1:
+    bne LTCVRM
+
+STDONE:
     rts
 
-L8CA2:
+; ----------------------------------------------------------------------------
+
+NSTR:
     jsr LBEBA
     cpy #$00
-    beq L8CB4
-L8CA9:
+    beq NSTRX
+
+NSLOOP:
     lda STRACC,Y
     sta (zpIACC),Y
     dey
-    bne L8CA9
+    bne NSLOOP
+
     lda STRACC
-L8CB4:
+NSTRX:
     sta (zpIACC),Y
     rts
+
+; ----------------------------------------------------------------------------
 
 ALLOCR:
     brk
@@ -2431,63 +2466,72 @@ ALLOCR:
     .endif
     brk
 
-L8CC1:
-    lda zp39
+; ----------------------------------------------------------------------------
+
+STORST:
+    lda zpWORK+2
     cmp #$80
-    beq L8CEE
-    bcc L8D03
+    beq STORSX
+    bcc STORIT
+
     ldy #$00
     lda (zpAESTKP),Y
     tax
-    beq L8CE5
+    beq STORSY
+
     lda (zpWORK),Y
     sbc #$01
-    sta zp39
+    sta zpWORK+2
     iny
     lda (zpWORK),Y
     sbc #$00
-    sta zp3A
-L8CDD:
+    sta zpWORK+3
+
+STORSL:
     lda (zpAESTKP),Y
-    sta (zp39),Y
+    sta (zpWORK+2),Y
     iny
     dex
-    bne L8CDD
-L8CE5:
+    bne STORSL
+
+STORSY:
     lda (zpAESTKP,X)
     ldy #$03
-L8CE9:
+STORSW:
     sta (zpWORK),Y
-    jmp LBDDC
+    jmp POPSTX
 
-L8CEE:
+STORSX:
     ldy #$00
     lda (zpAESTKP),Y
     tax
-    beq L8CFF
-L8CF5:
+    beq STORSZ
+
+STORSV:
     iny
     lda (zpAESTKP),Y
     dey
     sta (zpWORK),Y
     iny
     dex
-    bne L8CF5
-L8CFF:
+    bne STORSV
+
+STORSZ:
     lda #$0D
-    bne L8CE9
-L8D03:
+    bne STORSW
+
+STORIT:
     ldy #$00
     lda (zpAESTKP),Y
     sta (zpWORK),Y
     .if version < 3
         iny
-        cpy zp39
-        bcs L8D26
+        cpy zpWORK+2
+        bcs STORIY
     .elseif version >= 3
         ldy #4
-        lda zp39
-        beq L8D26
+        lda zpWORK+2
+        beq STORIY
         ldy #$01
     .endif
     lda (zpAESTKP),Y
@@ -2499,135 +2543,156 @@ L8D03:
     lda (zpAESTKP),Y
     sta (zpWORK),Y
     iny
-    cpy zp39
-    bcs L8D26
+    cpy zpWORK+2
+    bcs STORIY
+
     lda (zpAESTKP),Y
     sta (zpWORK),Y
     iny
-L8D26:
+STORIY:
     tya
     clc
-    jmp LBDE1
+    jmp POPN
+
+; ----------------------------------------------------------------------------
 
 ; PRINT#
-L8D2B:
+
+PRINTH:
     dec zpCURSOR
     jsr LBFA9
-L8D30:
+
+PRINHL:
     tya
     pha
     jsr AESPAC
-    cmp #$2C
-    bne L8D77
-    jsr L9B29
-    jsr LA385
+    cmp #','
+    bne PRINHX
+
+    jsr EXPR
+    jsr STARGA
+
     pla
     tay
     lda zpTYPE
     jsr OSBPUT
+
     tax
-    beq L8D64
-    bmi L8D57
+    beq PRINHS
+    bmi PRINHF
+
     ldx #$03
-L8D4D:
+PRINHQ:
     lda zpIACC,X
     jsr OSBPUT
     dex
-    bpl L8D4D
-    bmi L8D30
-L8D57:
+    bpl PRINHQ
+    bmi PRINHL
+
+PRINHF:
     ldx #$04
-L8D59:
+
+PRINHP:
     lda FWSA,X
     jsr OSBPUT
     dex
-    bpl L8D59
-    bmi L8D30
-L8D64:
+    bpl PRINHP
+    bmi PRINHL      ; branch always
+
+PRINHS:
     lda zpCLEN
     jsr OSBPUT
     tax
-    beq L8D30
-L8D6C:
+    beq PRINHL
+
+PRINHO:
     lda STRACC-1,X
     jsr OSBPUT
     dex
-    bne L8D6C
-    beq L8D30
-L8D77:
+    bne PRINHO
+    beq PRINHL
+
+PRINHX:
     pla
     sty zpCURSOR
     jmp DONEXT
 
 ; End of PRINT statement
 ; ----------------------
-L8D7D:
+DEDPRC:
     jsr NLINE         ; Output new line and set COUNT to zero
-L8D80:
-    jmp SUNK         ; Check end of statement, return to execution loop
+DEDPR:
+    jmp SUNK          ; Check end of statement, return to execution loop
 
-L8D83:
+PRFUNY:
     lda #$00
     sta zpPRINTS
-    sta zpPRINTF          ; Set current field to zero, hex/dec flag to decimal
-    jsr SPACES         ; Get next non-space character
+    sta zpPRINTF      ; Set current field to zero, hex/dec flag to decimal
+    jsr SPACES        ; Get next non-space character
     cmp #':'
-    beq L8D80         ; <colon> found, finish printing
+    beq DEDPR         ; <colon> found, finish printing
     cmp #$0D
-    beq L8D80         ; <cr> found, finish printing
+    beq DEDPR         ; <cr> found, finish printing
     cmp #tknELSE
-    beq L8D80         ; 'ELSE' found, finish printing
-    bne L8DD2         ; Otherwise, continue into main loop
+    beq DEDPR         ; 'ELSE' found, finish printing
+    bne CONTPR        ; Otherwise, continue into main loop
 
 ; PRINT [~][print items]['][,][;]
 ; ===============================
 PRINT:
     jsr SPACES         ; Get next non-space char
     cmp #'#'
-    beq L8D2B         ; If '#' jump to do PRINT#
+    beq PRINTH         ; If '#' jump to do PRINT#
+
     dec zpCURSOR
-    jmp L8DBB         ; Jump into PRINT loop
+    jmp STRTPR         ; Jump into PRINT loop
 
 ; Print a comma
 ; -------------
-L8DA6:
+PRCOMM:
     lda VARL_AT
-    beq L8DBB         ; If field width zero, no padding needed, jump back into main loop
-    lda zpTALLY          ; Get COUNT
-L8DAD:
-    beq L8DBB         ; Zero, just started a new line, no padding, jump back into main loop
+    beq STRTPR       ; If field width zero, no padding needed
+                     ; jump back into main loop
+
+    lda zpTALLY      ; Get COUNT
+
+PRCOML:
+    beq STRTPR       ; Zero, just started a new line, no padding
+                     ; jump back into main loop
+
     sbc VARL_AT      ; Get COUNT-field width
-    bcs L8DAD         ; Loop to reduce until (COUNT MOD fieldwidth)<0
-    tay               ; Y=number of spaces to get back to (COUNT MOD width)=zero
-L8DB5:
+    bcs PRCOML       ; Loop to reduce until (COUNT MOD fieldwidth)<0
+
+    tay              ; Y=number of spaces to get back to (COUNT MOD width)=zero
+PRCOMO:
     jsr LISTPT
     iny
-    bne L8DB5         ; Loop to print required spaces
+    bne PRCOMO         ; Loop to print required spaces
 
-L8DBB:
+STRTPR:
     clc               ; Prepare to print decimal
     lda VARL_AT
     sta zpPRINTS          ; Set current field width from @%
-L8DC1:
+AMPER:
     ror zpPRINTF          ; Set hex/dec flag from Carry
-L8DC3:
+ENDPRI:
     jsr SPACES         ; Get next non-space character
     cmp #':'
-    beq L8D7D         ; End of statement if <colon> found
+    beq DEDPRC         ; End of statement if <colon> found
     cmp #$0D
-    beq L8D7D         ; End if statement if <cr> found
+    beq DEDPRC         ; End if statement if <cr> found
     cmp #tknELSE
-    beq L8D7D         ; End of statement if 'ELSE' found
+    beq DEDPRC         ; End of statement if 'ELSE' found
 
-L8DD2:
+CONTPR:
     cmp #'~'
-    beq L8DC1         ; Jump back to set hex/dec flag from Carry
+    beq AMPER         ; Jump back to set hex/dec flag from Carry
     cmp #','
-    beq L8DA6         ; Jump to pad to next print field
+    beq PRCOMM         ; Jump to pad to next print field
     cmp #';'
-    beq L8D83         ; Jump to check for end of print statement
-    jsr L8E70
-    bcc L8DC3         ; Check for ' TAB SPC, if print token found return to outer main loop
+    beq PRFUNY         ; Jump to check for end of print statement
+    jsr PRSPEC
+    bcc ENDPRI         ; Check for ' TAB SPC, if print token found return to outer main loop
 
 ; All print formatting have been checked, so it now must be an expression
 ; -----------------------------------------------------------------------
@@ -2637,47 +2702,54 @@ L8DD2:
     pha               ; Save field width and flags, as evaluator
                       ;  may call PRINT (eg FN, STR$, etc.)
     dec zpAECUR
-    jsr L9B29         ; Evaluate expression
+    jsr EXPR          ; Evaluate expression
+
     pla
     sta zpPRINTF
     pla
-    sta zpPRINTS          ; Restore field width and flags
+    sta zpPRINTS      ; Restore field width and flags
+
     lda zpAECUR
-    sta zpCURSOR          ; Update program pointer
+    sta zpCURSOR      ; Update program pointer
     tya
-    beq L8E0E         ; If type=0, jump to print string
-    jsr FCON         ; Convert numeric value to string
-    lda zpPRINTS          ; Get current field width
+    beq PSTR         ; If type=0, jump to print string
+
+    jsr FCON          ; Convert numeric value to string
+
+    lda zpPRINTS      ; Get current field width
     sec
-    sbc zpCLEN          ; A=width-stringlength
-    bcc L8E0E         ; length>width - print it
-    beq L8E0E         ; length=width - print it
+    sbc zpCLEN        ; A=width-stringlength
+    bcc PSTR          ; length>width - print it
+    beq PSTR          ; length=width - print it
+
     tay               ; Otherwise, Y=number of spaces to pad with
-L8E08:
+FPRNL:
     jsr LISTPT
     dey
-    bne L8E08         ; Loop to print required spaces to pad the number
+    bne FPRNL         ; Loop to print required spaces to pad the number
 
 ; Print string in string buffer
 ; -----------------------------
-L8E0E:
+PSTR:
     lda zpCLEN
-    beq L8DC3         ; Null string, jump back to main loop
+    beq ENDPRI        ; Null string, jump back to main loop
+
     ldy #$00          ; Point to start of string
-L8E14:
+LOOP:
     lda STRACC,Y
-    jsr LB558         ; Print character from string buffer
+    jsr CHOUT         ; Print character from string buffer
     iny
     cpy zpCLEN
-    bne L8E14         ; Increment pointer, loop for full string
-    beq L8DC3         ; Jump back for next print item
+    bne LOOP          ; Increment pointer, loop for full string
 
-L8E21:
+    beq ENDPRI        ; Jump back for next print item, branch always
+
+TABCOM:
     jmp COMERR
 
-L8E24:
+TAB2:
     cmp #','
-    bne L8E21         ; No comma, jump to TAB(x)
+    bne TABCOM         ; No comma, jump to TAB(x)
     lda zpIACC
     pha               ; Save X
     jsr LAE56
@@ -2687,24 +2759,27 @@ L8E24:
 ; -------------------------------
     .ifdef MOS_ATOM
         lda #$1E
-        jsr OSWRCH    ; Home cursor
+        jsr OSWRCH                ; Home cursor
         ldy zpIACC
-        beq XADDC     ; Y=0, no movement needed
+        beq NO_YMOVEMENT          ; Y=0, no movement needed
+
         lda #$0A
-XADD6:
-        jsr OSWRCH    ; Move cursor down
+MOVEY_CURSOR_LOOP:
+        jsr OSWRCH                ; Move cursor down
         dey
-        bne XADD6     ; Loop until Y position reached
-XADDC:
+        bne MOVEY_CURSOR_LOOP     ; Loop until Y position reached
+
+NO_YMOVEMENT:
         pla
-        beq XADE8     ; X=0, no movement needed
+        beq NO_XMOVEMENT          ; X=0, no movement needed
+
         tay
         lda #$09
-XADE2:
-        jsr OSWRCH    ; Move cursor right
+MOVEX_CURSOR_LOOP:
+        jsr OSWRCH                ; Move cursor right
         dey
-        bne XADE2     ; Loop until X position reached
-XADE8:
+        bne MOVEX_CURSOR_LOOP     ; Loop until X position reached
+NO_XMOVEMENT:
     .endif
 
 ; BBC - send VDU 31,x,y sequence
@@ -2714,80 +2789,91 @@ XADE8:
         jsr OSWRCH    ; TAB()
         pla
         jsr OSWRCH    ; X coord
-        jsr L9456     ; Y coord
+        jsr WRIACC     ; Y coord
     .endif
 
-    jmp L8E6A         ; Continue to next PRINT item
+    jmp PRTSTM         ; Continue to next PRINT item
 
-L8E40:
+TAB:
     jsr L92DD
     jsr AESPAC
     cmp #')'
-    bne L8E24
+    bne TAB2
+
     lda zpIACC
     sbc zpTALLY
-    beq L8E6A
+    beq PRTSTM
     .if version < 3
         tay
     .elseif version >= 3
         tax
     .endif
-    bcs L8E5F
+    bcs SPCLOP
     jsr NLINE
-    beq L8E5B
-L8E58:
+    beq SPCT
+
+SPC:
     jsr L92E3
-L8E5B:
+
+SPCT:
     .if version < 3
         ldy zpIACC
     .elseif version >= 3
         ldx zpIACC
     .endif
-    beq L8E6A
-L8E5F:
+    beq PRTSTM
+
+SPCLOP:
     .if version < 3
         jsr LISTPT
         dey
-        bne L8E5F
+        bne SPCLOP
     .elseif version >= 3
         jsr LISTPL
     .endif
-    beq L8E6A
-L8E67:
+    beq PRTSTM
+
+PRCR:
     jsr NLINE
-L8E6A:
+
+PRTSTM:
     clc
     ldy zpAECUR
     sty zpCURSOR
     rts
 
-L8E70:
+PRSPEC:
     ldx zpLINE
     stx zpAELINE
     ldx zpLINE+1
     stx zpAELINE+1
     ldx zpCURSOR
     stx zpAECUR
-    cmp #$27
-    beq L8E67
-    cmp #$8A
-    beq L8E40
-    cmp #$89
-    beq L8E58
+
+    cmp #$27            ; '
+    beq PRCR
+
+    cmp #tknTAB
+    beq TAB
+
+    cmp #tknSPC
+    beq SPC
+
     sec
-L8E89:
+PRTSTO:
     rts
 
-L8E8A:
+PRTSTN:
     jsr SPACES         ; Skip spaces
-    jsr L8E70
-    bcc L8E89
-    cmp #$22
-    beq L8EA7
+    jsr PRSPEC
+    bcc PRTSTO
+
+    cmp #'"'
+    beq PRSTRN
     sec
     rts
 
-L8E98:
+NSTNG:
     brk
     dta 9
     .if foldup == 1
@@ -2795,24 +2881,28 @@ L8E98:
     .else
         dta 'Missing '
     .endif
-    dta 0x22          ; "
+    dta '"'
     brk
 
-L8EA4:
-    jsr LB558
-L8EA7:
+PCH:
+    jsr CHOUT
+PRSTRN:
     iny
     lda (zpAELINE),Y
     cmp #$0D
-    beq L8E98
-    cmp #$22
-    bne L8EA4
+    beq NSTNG
+
+    cmp #'"'
+    bne PCH
+
     iny
     sty zpAECUR
     lda (zpAELINE),Y
-    cmp #$22
-    bne L8E6A
-    beq L8EA4
+    cmp #'"'
+    bne PRTSTM
+    beq PCH                 ; branch always
+
+; ----------------------------------------------------------------------------
 
 ; CLG
 ; ===
@@ -2829,14 +2919,14 @@ CLS:
     lda #$0C          ; Do VDU 12
 L8ECC:
     jsr OSWRCH
-    jmp L8B9B         ; Send A to OSWRCH, jump to execution loop
+    jmp NXT         ; Send A to OSWRCH, jump to execution loop
 
 ; CALL numeric [,items ... ]
 ; ==========================
 CALL:
     jsr AEEXPR
     jsr INTEG
-    jsr LBD94
+    jsr PHACC
     ldy #$00
     sty STRACC
 L8EE0:
@@ -2863,10 +2953,10 @@ L8EE0:
 L8F0C:
     dec zpAECUR
     jsr L9852         ; Check for end of statement
-    jsr LBDEA         ; Pop integer to IntA
+    jsr POPACC         ; Pop integer to IntA
     jsr L8F1E         ; Set up registers and call code at IntA
     cld               ; Ensure Binary mode on return
-    jmp L8B9B         ; Jump back to program loop
+    jmp NXT         ; Jump back to program loop
 
 L8F1B:
     jmp LAE43
@@ -2892,20 +2982,20 @@ L8F2E:
 ; DELETE linenum, linenum
 ; =======================
 DELETE:
-    jsr L97DF
+    jsr SPTSTN
     bcc L8F2E
-    jsr LBD94
+    jsr PHACC
     jsr SPACES
     cmp #','
     bne L8F2E
-    jsr L97DF
+    jsr SPTSTN
     bcc L8F2E
     jsr DONE
     lda zpIACC
     sta zp39
     lda zpIACC+1
     sta zp3A
-    jsr LBDEA
+    jsr POPACC
 L8F53:
     jsr LBC2D
     jsr TSTBRK
@@ -2915,7 +3005,7 @@ L8F53:
     lda zp3A
     sbc zpIACC+1
     bcs L8F53
-    jmp L8AF3
+    jmp FSASET
 
 ; Called by RENUMBER and AUTO
 L8F69:
@@ -2925,8 +3015,8 @@ L8F69:
     .elseif version >= 3
         jsr XAED3
     .endif
-    jsr L97DF
-    jsr LBD94
+    jsr SPTSTN
+    jsr PHACC
     lda #$0A
     .if version < 3
         jsr LAED8
@@ -2936,7 +3026,7 @@ L8F69:
     jsr SPACES
     cmp #$2C
     bne L8F8D
-    jsr L97DF
+    jsr SPTSTN
     lda zpIACC+1
     bne L8FDF
     lda zpIACC
@@ -2965,7 +3055,7 @@ RENUM:
     jsr L8F69
     ldx #zpWORK+2
     jsr LBE0D
-    jsr LBE6F
+    jsr ENDER
     jsr L8F92
 ; Build up table of line numbers
 L8FB1:
@@ -3027,7 +3117,7 @@ PROC:
         jsr LB197     ; Call PROC/FN dispatcher
                       ; Will return here after ENDPROC
         jsr L9852     ; Check for end of statement
-        jmp L8B9B     ; Return to execution loop
+        jmp NXT     ; Return to execution loop
     .endif
 
 ; Look for renumber references
@@ -3089,7 +3179,7 @@ L901C:
     bcs L901A
 L903A:
     .if version < 3
-        jmp L8AF3
+        jmp FSASET
     .endif
 
 L903D:
@@ -3169,15 +3259,15 @@ AUTO:
     jsr L8F69
     lda zpIACC
     pha
-    jsr LBDEA
+    jsr POPACC
 L90B5:
-    jsr LBD94
+    jsr PHACC
     jsr L9923
     lda #$20
-    jsr LBC02
-    jsr LBDEA
+    jsr BUFF
+    jsr POPACC
     jsr MATCH
-    jsr LBC8D
+    jsr INSRT
     jsr LBD20
     pla
     pha
@@ -3188,7 +3278,7 @@ L90B5:
     inc zpIACC+1
     bpl L90B5
 L90D9:
-    jmp L8AF3
+    jmp FSASET
 
 L90DC:
     jmp L9218
@@ -3198,7 +3288,7 @@ L90DF:
     jsr CRAELV
     beq L9127
     bcs L9127
-    jsr LBD94
+    jsr PHACC
     jsr L92DD
     jsr L9222
     lda zpIACC+3
@@ -3284,7 +3374,7 @@ L916B:
     stx zpCURSOR
     jsr L9469
     bne L9127
-    jsr L94FC
+    jsr CREATE
     ldx #$01
     jsr L9531
     lda zp3F
@@ -3297,7 +3387,7 @@ L916B:
         jsr XAED3
     .endif
 L9185:
-    jsr LBD94
+    jsr PHACC
     jsr ASEXPR
     lda zpIACC+1
     and #$C0
@@ -3446,7 +3536,7 @@ LHIMM:
     lda zpIACC+1
     sta zpHIMEM+1
     sta zpAESTKP+1
-    jmp L8B9B         ; Jump back to execution loop
+    jmp NXT         ; Jump back to execution loop
 
 ; ----------------------------------------------------------------------------
 
@@ -3472,7 +3562,7 @@ LPAGE:
     lda zpIACC+1
     sta zpTXTP          ; Set PAGE
 L928A:
-    jmp L8B9B         ; Jump to execution loop
+    jmp NXT         ; Jump to execution loop
 
 ; ----------------------------------------------------------------------------
 
@@ -3488,7 +3578,7 @@ CLEAR:
 ; TRACE ON | OFF | numeric
 ; ========================
 TRACE:
-    jsr L97DF
+    jsr SPTSTN
     bcs L92A5         ; If line number, jump for TRACE linenum
     cmp #tknON
     beq L92B7         ; Jump for TRACE ON
@@ -3508,7 +3598,7 @@ L92AE:
     lda #$FF          ; Set trace limit high byte, set TRACE ON
 L92B2:
     sta zpTRFLAG
-    jmp L8B9B         ; Set TRACE flag, return to execution loop
+    jmp NXT         ; Set TRACE flag, return to execution loop
 
 ; ----------------------------------------------------------------------------
 
@@ -3543,7 +3633,7 @@ LTIME:
         lda #$02
         jsr OSWORD    ; Call OSWORD $02 to do TIME=
     .endif
-    jmp L8B9B         ; Jump to execution loop
+    jmp NXT         ; Jump to execution loop
 
 ; ----------------------------------------------------------------------------
 
@@ -3552,7 +3642,7 @@ LTIME:
 L92DA:
     jsr COMEAT         ; Check for and step past comma
 L92DD:
-    jsr L9B29
+    jsr EXPR
     jmp INTEGB
 
 L92E3:
@@ -3606,7 +3696,7 @@ PROC:
         jsr LB197     ; Call PROC/FN dispatcher
                       ; Will return here after ENDPROC
         jsr L9852     ; Check for end of statement
-        jmp L8B9B     ; Return to execution loop
+        jmp NXT     ; Return to execution loop
     .endif
 
 ; Make string zero length
@@ -3628,7 +3718,7 @@ LOCAL:
     jsr LB30D         ; Push value on stack, push variable info on stack
     ldy zpIACC+2
     bmi L931B         ; If a string, jump to make zero length
-    jsr LBD94         ; 
+    jsr PHACC         ; 
     lda #$00          ; Set IntA to zero
     .if version < 3
         jsr LAED8
@@ -3773,8 +3863,8 @@ L93D7:
 L93DA:
     pla
     jsr OSWRCH        ; Send stacked byte to OSWRCH
-    jsr L9456
-    jmp L8B9B         ; Send IntA to OSWRCH, jump to execution loop
+    jsr WRIACC
+    jmp NXT         ; Send IntA to OSWRCH, jump to execution loop
 
 ; ----------------------------------------------------------------------------
 
@@ -3804,10 +3894,10 @@ PLOT:
     lda zpIACC
     pha               ; Evaluate integer
     jsr COMEAT
-    jsr L9B29         ; Step past comma, evaluate expression
+    jsr EXPR         ; Step past comma, evaluate expression
 L93FD:
     jsr INTEG         ; Confirm numeric and ensure is integer
-    jsr LBD94         ; Stack integer
+    jsr PHACC         ; Stack integer
     jsr L92DA         ; Step past command and evaluate integer
     jsr L9852         ; Update program pointer, check for end of statement
     lda #$19
@@ -3819,10 +3909,10 @@ L93FD:
     jsr OSWRCH        ; Send first coordinate to OSWRCH
     lda zpWORK+1
     jsr OSWRCH
-    jsr L9456         ; Send IntA to OSWRCH, second coordinate
+    jsr WRIACC         ; Send IntA to OSWRCH, second coordinate
     lda zpIACC+1
     jsr OSWRCH        ; Send IntA high byte to OSWRCH
-    jmp L8B9B         ; Jump to execution loop
+    jmp NXT         ; Jump to execution loop
 
 
 L942A:
@@ -3844,7 +3934,7 @@ L9432:
     beq L9453
     dec zpCURSOR          ; Step back to current character
     jsr ASEXPR
-    jsr L9456         ; Evaluate integer and output low byte
+    jsr WRIACC         ; Evaluate integer and output low byte
     jsr SPACES         ; Get next character
     cmp #','
     beq VDU         ; Comma, loop to read another number
@@ -3855,9 +3945,9 @@ L9453:
     jmp SUNK         ; Jump to execution loop
 
 
-; Send IntA to OSWRCH via WRCHV
+; Send IACC to OSWRCH via WRCHV
 ; =============================
-L9456:
+WRIACC:
     lda zpIACC
     .if WRCHV != 0
         jmp (WRCHV)
@@ -3985,7 +4075,12 @@ LOOKFN:
     lda #$F8
     bne L9501
 
-L94FC:
+; ----------------------------------------------------------------------------
+
+;  CREATE takes the same parameters as LOOKUP and adds the
+;  data item to the linked list. It is not optimised.
+
+CREATE:
     ldy #$01
     lda (zpWORK),Y
     asl
@@ -4093,7 +4188,7 @@ CRAELV:
     jsr L95C9
     bne L95A4
     bcs L95A4
-    jsr L94FC
+    jsr CREATE
     ldx #$05
     cpx zpIACC+2
     bne CRAELT
@@ -4152,8 +4247,8 @@ L95D5:
     lda (zpAELINE),Y
     cmp #$20
     beq L95D4
-L95DD:
-    cmp #$40
+LVCONT:
+    cmp #'@'
     bcc L9595
     cmp #$5B
     bcs L95FF
@@ -4355,7 +4450,7 @@ L96DF:
     lda #$01
     sta zpIACC+3
 L96FF:
-    jsr LBD94
+    jsr PHACC
     jsr L92DD
     inc zpAECUR
     cpx #$2C
@@ -4390,7 +4485,7 @@ L96FF:
     sbc zpIACC+3
     cmp #$03
     bcs L96FF
-    jsr LBD94
+    jsr PHACC
     jsr LAE56
     jsr INTEGB
     pla
@@ -4480,15 +4575,21 @@ L97D1:
         dta 'Subscript'
     .endif
     brk
-L97DD:
+
+; ----------------------------------------------------------------------------
+
+SPTSTM:
     inc zpCURSOR
-L97DF:
+
+SPTSTN:
     ldy zpCURSOR
     lda (zpLINE),Y
     cmp #$20
-    beq L97DD
+    beq SPTSTM
+
     cmp #$8D
     bne L9805
+
 L97EB:
     iny
     lda (zpLINE),Y
@@ -4521,14 +4622,17 @@ L9807:
     sta zpAELINE+1
     lda zpCURSOR
     sta zpAECUR
-L9813:
+
+EQEXPR:
     ldy zpAECUR
     inc zpAECUR
     lda (zpAELINE),Y
-    cmp #$20
-    beq L9813
-    cmp #$3D
+    cmp #' '
+    beq EQEXPR
+
+    cmp #'='
     beq L9849
+
 L9821:
     brk
     dta 4
@@ -4573,14 +4677,14 @@ L9838:
     .endif
     brk
 
-L9841:
+EQEAT:
     jsr AESPAC
     cmp #'='
     bne L9821
     rts
 
 L9849:
-    jsr L9B29
+    jsr EXPR
 
 FDONE:
     txa
@@ -4708,7 +4812,7 @@ NOTRDE:
     rts
 
 LEAVER:
-    jmp L8AF6
+    jmp CLRSTK
 
 ; IF numeric
 ; ==========
@@ -4736,7 +4840,7 @@ L98DE:
 L98E1:
     inc zpCURSOR
 L98E3:
-    jsr L97DF
+    jsr SPTSTN
     bcc L98DE
     jsr LB9AF
     jsr SECUR
@@ -4754,7 +4858,7 @@ L98F3:
     sty zpCURSOR
     beq L98E3
 L9902:
-    jmp L8B87
+    jmp ENDEDL
 
 L9905:
     lda zpIACC
@@ -4764,10 +4868,10 @@ L9905:
     bcs NOTRDE
     lda #$5B
 L9911:
-    jsr LB558
+    jsr CHOUT
     jsr L991F
     lda #$5D
-    jsr LB558
+    jsr CHOUT
     jmp LISTPT
 
 ; Print 16-bit decimal number
@@ -4825,7 +4929,7 @@ L995A:
 L9960:
     lda zp3F,X
     ora #$30
-    jsr LB558
+    jsr CHOUT
     dex
     bpl L9960
     rts
@@ -4961,7 +5065,7 @@ L9A38:
 
 L9A39:
     stx zpTYPE
-    jsr LBDEA
+    jsr POPACC
     jsr LBD51
     jsr LA2BE
     jsr FTOW
@@ -5027,7 +5131,7 @@ L9A9D:
 L9A9E:
     beq L9AE7         ; Jump if current is string
     bmi L9A50         ; Jump if current is float
-    jsr LBD94         ; Stack integer
+    jsr PHACC         ; Stack integer
     jsr L9C42
     tay               ; Evaluate next expression
     beq L9A9A         ; Error if string
@@ -5106,7 +5210,7 @@ L9B11:
     cmp zpCLEN
 L9B15:
     php
-    jsr LBDDC
+    jsr POPSTX
     ldx zpWORK
     plp
     rts
@@ -5131,7 +5235,7 @@ AEEXPR:
 ;
 ; Evaluator Level 7 - OR, EOR
 ; ---------------------------
-L9B29:
+EXPR:
     jsr L9B72         ; Call Evaluator Level 6 - AND
                       ; Returns A=type, value in IntA/FPA/StrA, X=next char
 L9B2C:
@@ -5158,7 +5262,7 @@ L9B43:
     dey
     bpl L9B43         ; Store result in IntA
 L9B4E:
-    jsr LBDFF         ; Drop integer from stack
+    jsr POPINC         ; Drop integer from stack
     lda #$40
     bne L9B2C         ; Return type=Int, jump to check for more OR/EOR
 
@@ -5182,7 +5286,7 @@ L9B5E:
 L9B6B:
     tay
     jsr INTEGB
-    jsr LBD94         ; If float, convert to integer, push into stack
+    jsr PHACC         ; If float, convert to integer, push into stack
 
 ; Evaluator Level 6 - AND
 ; -----------------------
@@ -5198,7 +5302,7 @@ L9B75:
 L9B7A:
     tay
     jsr INTEGB
-    jsr LBD94         ; If float, convert to integer, push onto stack
+    jsr PHACC         ; If float, convert to integer, push onto stack
     jsr L9B9C         ; Call Evaluator Level 5, < <= = >= > <>
     tay
     jsr INTEGB
@@ -5209,7 +5313,7 @@ L9B8A:
     sta zpIACC,Y              ; abs,y (!)
     dey
     bpl L9B8A         ; Store result in IntA
-    jsr LBDFF         ; Drop integer from stack
+    jsr POPINC         ; Drop integer from stack
     lda #$40
     bne L9B75         ; Return type=Int, jump to check for another AND
 
@@ -5419,7 +5523,7 @@ L9CA1:
 ; -----------
 L9CA7:
     stx zpTYPE
-    jsr LBDEA         ; Unstack integer to IntA
+    jsr POPACC         ; Unstack integer to IntA
     jsr LBD51
     jsr LA2BE         ; Stack float, convert integer in IntA to float in FPA1
     jmp L9C9B         ; Jump to do float + <stacked float>
@@ -5474,7 +5578,7 @@ L9CF1:
 ; -----------
 L9CFA:
     stx zpTYPE
-    jsr LBDEA         ; Unstack integer to IntA
+    jsr POPACC         ; Unstack integer to IntA
     jsr LBD51
     jsr LA2BE         ; Stack float, convert integer in IntA to float in FPA1
     jsr LBD7E         ; Pop float from stack, point FPTR to it
@@ -5484,7 +5588,7 @@ L9CFA:
 L9D0E:
     jsr LA2BE
 L9D11:
-    jsr LBDEA
+    jsr POPACC
     jsr LBD51
     jsr LA2BE
     jmp L9D2C
@@ -5544,7 +5648,7 @@ L9D69:
     jsr LAD71
     ldx #$39
     jsr LBE44
-    jsr LBDEA
+    jsr POPACC
     pla
     eor zpIACC+3
     sta zpWORK
@@ -5605,7 +5709,7 @@ L9DCB:
 ; Stack current value and continue in Evaluator Level 3
 ; ------------------------------------------------------- 
 L9DCE:
-    jsr LBD94
+    jsr PHACC
 
 ; Evaluator Level 3, * / DIV MOD
 ; ------------------------------
@@ -5663,7 +5767,7 @@ L9E0A:
 ; Stack current integer and evaluate another Level 2
 ; --------------------------------------------------
 L9E1D:
-    jsr LBD94         ; Stack integer
+    jsr PHACC         ; Stack integer
 
 ; Evaluator Level 2, ^
 ; --------------------
@@ -5864,7 +5968,7 @@ L9F34:
 L9F39:
     lda zpFACCMG
     sta zpTYPE
-    jsr LA385         ; Copy FloatA to FloatTemp at $27/$046C
+    jsr STARGA         ; Copy FloatA to FloatTemp at $27/$046C
     lda zpFDIGS
     sta zpWORK+1          ; Get number of digits
     ldx zpWORK          ; Get print format
@@ -6579,7 +6683,7 @@ LA381:
     lda #<FWSC
     bne LA387
 
-LA385:
+STARGA:
     lda #<FWSA
 
 LA387:
@@ -7100,7 +7204,7 @@ LA698:
 ; ----------------------------------------------------------------------------
 
 .proc FRECIP
-    jsr LA385
+    jsr STARGA
     jsr FONE
     bne LA6E7           ; branch always, FONE returns with !Z
 .endp
@@ -7273,7 +7377,7 @@ LA7B7:
     jsr LA1DA
     beq LA7E6
     bmi LA7A9
-    jsr LA385
+    jsr STARGA
     lda zpFACCX
     lsr
     adc #$40
@@ -7367,7 +7471,7 @@ LA82C:
     jsr FMUL
     jsr FMUL
     jsr LA500
-    jsr LA385
+    jsr STARGA
     pla
     sec
     sbc #$81
@@ -7415,7 +7519,7 @@ FLOGTC:
 FCF:
     sta zpCOEFP
     sty zpCOEFP+1
-    jsr LA385
+    jsr STARGA
     ldy #$00
     lda (zpCOEFP),Y
     sta zp48
@@ -7573,7 +7677,7 @@ LA9AA:
     bcc LA9C3
     jsr LA9C3
 LA9B1:
-    jsr LA385
+    jsr STARGA
     jsr FMUL
     jsr LA38D
     jsr FONE
@@ -7592,7 +7696,7 @@ LA9D3:
     lda zpFACCX
     cmp #$98
     bcs LAA38
-    jsr LA385
+    jsr STARGA
     jsr LAA55
     jsr LA34E
     lda zpFACCS
@@ -7791,7 +7895,7 @@ FEXPCO:
     pla             ; recover exponent
 FIPOWA:
     pha
-    jsr LA385       ; STARGA
+    jsr STARGA       ; STARGA
     jsr FONE
 FIPOWB:
     pla
@@ -7834,7 +7938,7 @@ ADVAL:
 ; ========================
 POINT:
         jsr L92DD
-        jsr LBD94
+        jsr PHACC
         jsr COMEAT
         jsr LAE56
         jsr INTEGB
@@ -7842,7 +7946,7 @@ POINT:
         pha
         lda zpIACC+1
         pha
-        jsr LBDEA
+        jsr POPACC
         pla
         sta zpIACC+3
         pla
@@ -8051,8 +8155,8 @@ LAC0F:
     iny
     sty zpAECUR          ; Point PTRB offset back to start
     jsr MATCEV         ; Tokenise string on stack at GPTR
-    jsr L9B29         ; Call expression evaluator
-    jsr LBDDC         ; Drop string from stack
+    jsr EXPR         ; Call expression evaluator
+    jsr POPSTX         ; Drop string from stack
 LAC23:
     pla
     sta zpAECUR          ; Restore PTRB
@@ -8276,14 +8380,14 @@ XACC1:
 ; ========================
 POINT:
         jsr L92DD
-        jsr LBD94
+        jsr PHACC
         jsr COMEAT
         jsr LAE56
         jsr INTEGB
         lda zpIACC
         pha
         ldx zpIACC+1
-        jsr LBDEA
+        jsr POPACC
         stx zpIACC+3
         pla
         sta zpIACC+2
@@ -8319,7 +8423,7 @@ LACD6:
 ; =INSTR(string$, string$ [, numeric])
 ; ====================================
 INSTR:
-    jsr L9B29
+    jsr EXPR
     .if version < 3
         ; BASIC II for Atom and System do not branch to LAC9B with this code
         ; this seems broken... XXX: fix
@@ -8333,7 +8437,7 @@ INSTR:
     bne LAD03
     inc zpAECUR
     jsr LBDB2
-    jsr L9B29
+    jsr EXPR
     .if version < 3
         bne INSTR-$47     ; dest=LAC9B
     .elseif version >= 3
@@ -8378,7 +8482,7 @@ LAD1A:
     bcc LAD52
     adc #$00
     sta zpIACC+1
-    jsr LBDDC
+    jsr POPSTX
 LAD3C:
     ldy #$00
     ldx zpCLEN
@@ -8400,7 +8504,7 @@ LAD4F:
     .endif
 
 LAD52:
-    jsr LBDDC
+    jsr POPSTX
 LAD55:
     lda #$00
     beq LAD4F
@@ -8527,7 +8631,7 @@ LADE1:
     .endif
 
 LADE9:
-    jmp L8E98
+    jmp NSTNG
 
 ; Evaluator Level 1, - + NOT function ( ) ? ! $ | "
 ; -------------------------------------------------
@@ -8565,7 +8669,7 @@ LAE10:
     beq LAE56         ; Jump with brackets
 LAE20:
     dec zpAECUR
-    jsr L95DD
+    jsr LVCONT
     beq ERRFAC         ; Jump with undefined variable or bad name
     jmp LB32C
 
@@ -8624,8 +8728,8 @@ LAE55:
 
 ; ----------------------------------------------------------------------------
 
-LAE56:
-    jsr L9B29
+LAE56:          ; BRA
+    jsr EXPR
     inc zpAECUR
     cpx #')'
     .if version < 3
@@ -9162,7 +9266,7 @@ LAFC2:
 ; =LEFT$(string$, numeric)
 ; ========================
 LEFTD:
-    jsr L9B29
+    jsr EXPR
     bne LB033
     cpx #$2C
     bne LB036
@@ -9184,7 +9288,7 @@ LAFEB:
 ; =RIGHT$(string$, numeric)
 ; =========================
 RIGHTD:
-    jsr L9B29
+    jsr EXPR
     bne LB033
     cpx #$2C
     bne LB036
@@ -9240,7 +9344,7 @@ LB036:
 ; =MID$(string$, numeric [, numeric] )
 ; ====================================
 MIDD:
-    jsr L9B29
+    jsr EXPR
     bne LB033
     cpx #$2C
     bne LB036
@@ -9332,11 +9436,11 @@ LB0BF:
 ; ==========================
 STRND:
     jsr L92DD
-    jsr LBD94
+    jsr PHACC
     jsr COMEAT
     jsr LAE56
     bne LB0BF
-    jsr LBDEA
+    jsr POPACC
     ldy zpCLEN
     beq LB0F5
     lda zpIACC
@@ -9567,7 +9671,7 @@ LB202:
     sta zp3F
 LB21C:
     jsr LBE0B
-    jsr L8CC1
+    jsr STORST
     dec zp3F
     bne LB21C
 LB226:
@@ -9638,11 +9742,11 @@ LB24D:
     cmp #'('
     bne LB2B5
 LB28E:
-    jsr L9B29
+    jsr EXPR
     jsr LBD90
     lda zpTYPE
     sta zpIACC+3
-    jsr LBD94
+    jsr PHACC
     pla
     tax
     inx
@@ -9676,7 +9780,7 @@ LB2B5:
     brk
 
 LB2CA:
-    jsr LBDEA
+    jsr POPACC
     pla
     sta zpIACC
     pla
@@ -9696,7 +9800,7 @@ LB2CA:
     jmp LB2F3
 
 LB2F0:
-    jsr LBDEA
+    jsr POPACC
 LB2F3:
     jsr STORF
     jmp LB303
@@ -9705,7 +9809,7 @@ LB2F9:
     lda zpIACC+3
     bne LB2B5
     jsr LBDCB
-    jsr L8C21
+    jsr STSTRE
 LB303:
     dec zpCOEFP
     bne LB2CA
@@ -9736,7 +9840,7 @@ LB318:
     ldx #$37
     jsr LAF56
 LB329:
-    jmp LBD94
+    jmp PHACC
 
 LB32C:
     ldy zpIACC+2
@@ -9912,16 +10016,16 @@ LB402:
     sty zpTRFLAG
     lda (FAULT),Y
     bne LB413         ; If ERR<>0, skip past ON ERROR OFF
-    lda #<LB433
+    lda #<BASERR
     sta zpERRORLH          ; ON ERROR OFF
-    lda #>LB433
+    lda #>BASERR
     sta zpERRORLH+1
 LB413:          ; BREKA
     lda zpERRORLH
     sta zpLINE          ; Point program point to ERROR program
     lda zpERRORLH+1
     sta zpLINE+1
-    jsr LBD3A         ; Clear DATA and stack
+    jsr SETVAR         ; Clear DATA and stack
     tax
     stx zpCURSOR
     .ifdef MOS_BBC
@@ -9954,7 +10058,7 @@ LD428:
 ; Default ERROR program
 ; ---------------------
 ; REPORT IF ERL PRINT " at line ";ERL END ELSE PRINT END
-LB433:
+BASERR:
     dta tknREPORT
     dta ':'
     dta tknIF
@@ -10047,7 +10151,7 @@ LB48F:
         ldy #$00      ; XY=>control block
         jsr OSWORD
     .endif
-    jmp L8B9B         ; Return to execution loop
+    jmp NXT         ; Return to execution loop
 
 ; ----------------------------------------------------------------------------
 
@@ -10059,7 +10163,7 @@ WIDTH:
     ldy zpIACC
     dey
     sty zpWIDTHV
-    jmp L8B9B
+    jmp NXT
 
 ; ----------------------------------------------------------------------------
 
@@ -10069,7 +10173,7 @@ STORER:
 ; Store byte or word integer
 ; ==========================
 LB4B1:
-    jsr L9B29         ; Evaluate expression
+    jsr EXPR         ; Evaluate expression
 STORE:
     jsr LBE0B         ; Unstack integer (address of data)
 STORF:
@@ -10136,7 +10240,7 @@ LB4E9:
 TOKOUT:
     sta zpWORK
     cmp #$80
-    bcc LB558
+    bcc CHOUT
     lda #<TOKENS
     sta zpWORK+1          ; Point to token table
     lda #>TOKENS
@@ -10168,7 +10272,7 @@ GOTTOK:
 PRTTOK:
     lda (zpWORK+1),Y
     bmi ENDTOK
-    jsr LB558
+    jsr CHOUT
 
     iny
     bne PRTTOK
@@ -10196,7 +10300,7 @@ DIG:
     adc #$06
 DIGR:
     adc #$30
-LB558:
+CHOUT:
     cmp #$0D
     bne NCH
     jsr OSWRCH
@@ -10237,7 +10341,7 @@ LISTPS:
 LISTPL:
     jsr LISTPT
     .if version < 3
-        jsr LB558
+        jsr CHOUT
     .endif
     dex
     bne LISTPL
@@ -10251,7 +10355,7 @@ LB58A:
     jsr INTEG
     lda zpIACC
     sta zpLISTOP
-    jmp L8AF6
+    jmp CLRSTK
 
 ; LIST [linenum [,linenum]]
 ; =========================
@@ -10268,9 +10372,9 @@ LIST:
     .elseif version >= 3
         jsr XAED3
     .endif
-    jsr L97DF
+    jsr SPTSTN
     php
-    jsr LBD94
+    jsr PHACC
     lda #$FF
     sta zpIACC
     lda #$7F
@@ -10280,8 +10384,8 @@ LIST:
     jsr SPACES
     cmp #','
     beq LB5D8
-    jsr LBDEA
-    jsr LBD94
+    jsr POPACC
+    jsr PHACC
     dec zpCURSOR
     bpl LB5DB
 LB5CF:
@@ -10290,15 +10394,15 @@ LB5CF:
     beq LB5D8
     dec zpCURSOR
 LB5D8:
-    jsr L97DF
+    jsr SPTSTN
 LB5DB:
     lda zpIACC
     sta zpFACCMA
     lda zpIACC+1
     sta zpFACCMB
     jsr DONE
-    jsr LBE6F
-    jsr LBDEA
+    jsr ENDER
+    jsr POPACC
     jsr L9970
     lda zp3D
     sta zpLINE
@@ -10327,7 +10431,7 @@ LB60F:
     lda zpIACC+1
     sbc zpFACCMB
     bcc LB61D
-    jmp L8AF6
+    jmp CLRSTK
 
 LB61D:
     jsr L9923
@@ -10354,7 +10458,7 @@ LB639:
     sta zpCOEFP
     lda #$22
 LB64B:
-    jsr LB558
+    jsr CHOUT
     iny
     bne LB639
 LB651:
@@ -10586,8 +10690,8 @@ FOR:
     jsr CRAELV
     beq LB7A4
     bcs LB7A4
-    jsr LBD94
-    jsr L9841
+    jsr PHACC
+    jsr EQEAT
     jsr LB4B1
     ldy zpFORSTP
     cpy #$96
@@ -10650,7 +10754,7 @@ LB837:
     jmp STMT
 
 LB84F:
-    jsr L9B29
+    jsr EXPR
     jsr L92FD
     lda zpFORSTP
     clc
@@ -10663,7 +10767,7 @@ LB84F:
     jsr AESPAC
     cmp #$88
     bne LB875
-    jsr L9B29
+    jsr EXPR
     jsr L92FD
     ldy zpAECUR
 LB875:
@@ -10725,7 +10829,7 @@ RETURN:
     lda ws+$05E5,X
     sty zpLINE
     sta zpLINE+1          ; Set line pointer
-    jmp L8B9B         ; Jump back to execution loop
+    jmp NXT         ; Jump back to execution loop
 
 ; ----------------------------------------------------------------------------
 
@@ -10752,11 +10856,11 @@ LB8DD:
 ; ------------
 LB8E4:
     jsr DONE         ; Check end of statement
-    lda #<LB433
+    lda #<BASERR
     sta zpERRORLH          ; ON ERROR OFF
-    lda #>LB433
+    lda #>BASERR
     sta zpERRORLH+1
-    jmp L8B9B         ; Jump to execution loop
+    jmp NXT         ; Jump to execution loop
 
 ; ----------------------------------------------------------------------------
 
@@ -10881,7 +10985,7 @@ LB995:
     jmp L98E3         ; Store line index and jump to GOSUB
 
 LB99A:
-    jsr L97DF
+    jsr SPTSTN
     bcs LB9AF         ; Embedded line number found
     jsr AEEXPR
     jsr INTEGB         ; Evaluate expression, ensure integer
@@ -10937,7 +11041,7 @@ LB9DA:
     pla
     sta zpCOEFP
     php
-    jsr LBD94
+    jsr PHACC
     ldy zpCOEFP
     jsr OSBGET
     sta zpTYPE
@@ -10955,7 +11059,7 @@ LBA0A:
     dex
     bne LBA0A
 LBA13:
-    jsr L8C1E
+    jsr STSTOR
     jmp LB9DA
 
 LBA19:
@@ -11004,10 +11108,10 @@ LBA52:
     lda #$FF
     sta zpCOEFP+1
 LBA5A:
-    jsr L8E8A
+    jsr PRTSTN
     bcs LBA69         ; Process ' " TAB SPC, jump if none found
 LBA5F:
-    jsr L8E8A
+    jsr PRTSTN
     bcc LBA5F         ; Keep processing any print items
     ldx #$FF
     stx zpCOEFP+1
@@ -11044,7 +11148,7 @@ LBA99:
     bit zpCOEFP
     bpl LBAA2
     lda #'?'
-    jsr LB558
+    jsr CHOUT
 LBAA2:
     jsr LBBFC         ; Call MOS to input line, set COUNT=0
     sty zpCLEN
@@ -11073,7 +11177,7 @@ LBACA:
 LBACD:
     plp
     bcs LBADC
-    jsr LBD94
+    jsr PHACC
     jsr LAC34
     jsr STORE
     jmp LBA5A
@@ -11081,7 +11185,7 @@ LBACD:
 LBADC:
     lda #$00
     sta zpTYPE
-    jsr L8C21
+    jsr STSTRE
     jmp LBA5A
 
 ; RESTORE [linenum]
@@ -11108,7 +11212,7 @@ LBB07:
     sta zpDATAP
     lda zp3E
     sta zpDATAP+1
-    jmp L8B9B
+    jmp NXT
 
 LBB15:
     jsr SPACES
@@ -11123,16 +11227,16 @@ READ:
     beq LBB15
     bcs LBB32
     jsr LBB50
-    jsr LBD94
+    jsr PHACC
     jsr LB4B1
     jmp LBB40
 
 LBB32:
     jsr LBB50
-    jsr LBD94
+    jsr PHACC
     jsr LADAD
     sta zpTYPE
-    jsr L8C1E
+    jsr STSTOR
 LBB40:
     clc
     lda zpAECUR
@@ -11229,7 +11333,7 @@ UNTIL:
     ora zpIACC+3
     beq LBBCD
     dec zpDOSTKP
-    jmp L8B9B
+    jmp NXT
 
 LBBCD:
     ldy ws+$05A3,X
@@ -11277,14 +11381,14 @@ LBBFC:
 
 ; Print character, read input line
 ; --------------------------------
-LBC02:
-    jsr LB558         ; Print character
+BUFF:
+    jsr CHOUT         ; Print character
     ldy #<BUFFER
     lda #>BUFFER
 
 LBC09:
     sty zpWORK
-    sta zpWORK+1          ; $37/8=>input buffer
+    sta zpWORK+1      ; zpWORK=>input buffer
 
 ; Manually implement RDLINE (OSWORD 0)
 ; ------------------------------------
@@ -11418,7 +11522,9 @@ LBC88:
     sta (zpTOP),Y
     rts
 
-LBC8D:
+; ----------------------------------------------------------------------------
+
+INSRT:
     sty zpWORK+4
     jsr LBC2D
     ldy #>BUFFER
@@ -11427,6 +11533,7 @@ LBC8D:
     lda #$0D
     cmp (zpWORK+4),Y
     beq LBD10
+
 LBC9E:
     iny
     cmp (zpWORK+4),Y
@@ -11450,7 +11557,7 @@ LBC9E:
     lda zpHIMEM+1
     sbc zpTOP+1
     bcs MOVEUP
-    jsr LBE6F
+    jsr ENDER
     jsr LBD20
 
     brk
@@ -11515,7 +11622,9 @@ RUNNER:
     lda zpTXTP
     sta zpLINE+1          ; Point PtrA to PAGE
     stx zpLINE
-    jmp L8B0B
+    jmp RUNTHG
+
+; ----------------------------------------------------------------------------
 
 ; Clear BASIC heap, stack and DATA pointer
 ; ========================================
@@ -11526,7 +11635,7 @@ LBD20:
     lda zpTOP+1
     sta zpLOMEM+1
     sta zpFSA+1
-    jsr LBD3A         ; Clear DATA and stack
+    jsr SETVAR         ; Clear DATA and stack
 LBD2F:
     ldx #$80
     lda #$00
@@ -11536,9 +11645,11 @@ LBD33:
     bne LBD33
     rts               ; Clear dynamic variables list
 
+; ----------------------------------------------------------------------------
+
 ; Clear DATA pointer and BASIC stack
 ; ==================================
-LBD3A:
+SETVAR:
     lda zpTXTP
     sta zpDATAP+1          ; DATA pointer hi=PAGE hi
     lda zpHIMEM
@@ -11551,6 +11662,8 @@ LBD3A:
     sta zpSUBSTP; Clear REPEAT, FOR, GOSUB stacks
     sta zpDATAP
     rts               ; DATA pointer=PAGE
+
+; ----------------------------------------------------------------------------
 
 LBD51:
     lda zpAESTKP
@@ -11591,11 +11704,15 @@ LBD7E:
     sta zpAESTKP+1
     rts
 
+; ----------------------------------------------------------------------------
+
 LBD90:
     beq LBDB2
     bmi LBD51
 
-LBD94:
+; Push Integer ACC to stack
+
+PHACC:
     lda zpAESTKP
     sec
     sbc #$04
@@ -11634,37 +11751,43 @@ LBDC6:
     sta (zpAESTKP),Y      ; Copy string length
     rts
 
+; ----------------------------------------------------------------------------
+
 ; Unstack a string
 ; ================
 LBDCB:
     ldy #$00
     lda (zpAESTKP),Y      ; Get stacked string length
     sta zpCLEN
-    beq LBDDC
+    beq POPSTX
     tay               ; If zero length, just unstack length
+
 LBDD4:
     lda (zpAESTKP),Y
     sta STRACC-1,Y    ; Copy string to string buffer
     dey
     bne LBDD4         ; Loop for all characters
-LBDDC:
+
+POPSTX:
     ldy #$00
     lda (zpAESTKP),Y      ; Get string length again
     sec
-LBDE1:
+POPN:
     adc zpAESTKP
     sta zpAESTKP          ; Update stack pointer
-    bcc LBE0A
+    bcc POPACI
     inc zpAESTKP+1
     rts
 
-; Unstack an integer to IntA
-; --------------------------
-LBDEA:
+; ----------------------------------------------------------------------------
+
+; Pop Integer ACC (zpIACC)
+
+POPACC:
     ldy #$03
     lda (zpAESTKP),Y
     sta zpIACC+3
-    dey               ; Copy to IntA
+    dey
     lda (zpAESTKP),Y
     sta zpIACC+2
     dey
@@ -11673,14 +11796,16 @@ LBDEA:
     dey
     lda (zpAESTKP),Y
     sta zpIACC
-LBDFF:
+
+POPINC:
     clc
-    lda zpAESTKP
+    lda zpAESTKP          ; Adjust stack pointer, drop 4 bytes
     adc #$04
-    sta zpAESTKP          ; Drop 4 bytes from stack
-    bcc LBE0A
+    sta zpAESTKP
+    bcc POPACI
     inc zpAESTKP+1
-LBE0A:
+
+POPACI:
     rts
 
 ; Unstack an integer to zero page
@@ -11704,7 +11829,7 @@ LBE0D:
     lda zpAESTKP
     adc #$04
     sta zpAESTKP          ; Drop 4 bytes from stack
-    bcc LBE0A
+    bcc POPACI
     inc zpAESTKP+1
     rts
 
@@ -11772,7 +11897,7 @@ LBE62:
 
 ; Scan program to check consistancy and find TOP
 ; ----------------------------------------------
-LBE6F:
+ENDER:
     lda zpTXTP
     sta zpTOP+1
     ldy #$00
@@ -11821,7 +11946,7 @@ LBE9E:
     .endif
     dta 13
     nop
-    jmp L8AF6         ; Jump to immediate mode
+    jmp CLRSTK         ; Jump to immediate mode
 
 ; Point $37/8 to <cr>-terminated string in string buffer
 ; ------------------------------------------------------
@@ -11846,7 +11971,7 @@ OSCL:
 
     .ifdef MOS_ATOM
         jsr cmdStar1
-        jmp L8B9B     ; Call Atom OSCLI and return to execution loop
+        jmp NXT     ; Call Atom OSCLI and return to execution loop
      
 
     ; Embedded star command
@@ -11876,7 +12001,7 @@ cmdStarLp2:
         ldx #$00
         ldy #>(STRACC)
         jsr OS_CLI
-        jmp L8B9B     ; Call OSCLI and return to execution loop
+        jmp NXT     ; Call OSCLI and return to execution loop
     .endif
 
 LBECF:
@@ -11931,7 +12056,7 @@ LBEE7:
 ;  SAVE string$
 ; =============
 SAVE:
-    jsr LBE6F         ; Check program, set TOP
+    jsr ENDER         ; Check program, set TOP
 
     .if version < 3
         lda zpTOP
@@ -12003,7 +12128,7 @@ SAVE:
     .ifdef MOS_BBC
         jsr OSFILE    
     .endif
-    jmp L8B9B
+    jmp NXT
 
 ; ----------------------------------------------------------------------------
 
@@ -12011,7 +12136,7 @@ SAVE:
 ; ============
 LOAD:
     jsr LBE62
-    jmp L8AF3         ; Do LOAD, jump to immediate mode
+    jmp FSASET         ; Do LOAD, jump to immediate mode
 
 ; ----------------------------------------------------------------------------
 
@@ -12028,7 +12153,7 @@ CHAIN:
 LPTR:
     jsr LBFA9
     pha               ; Evaluate #handle
-    jsr L9813
+    jsr EQEXPR
     jsr INTEG         ; Step past '=', evaluate integer
     pla
     tay
@@ -12040,7 +12165,7 @@ LPTR:
         lda #$01
         jsr OSARGS
     .endif
-    jmp L8B9B         ; Jump to execution loop
+    jmp NXT         ; Jump to execution loop
 
 ; ----------------------------------------------------------------------------
 
@@ -12084,7 +12209,7 @@ BPUT:
     tay
     lda zpIACC
     jsr OSBPUT
-    jmp L8B9B         ; Call OSBPUT, jump to execution loop
+    jmp NXT         ; Call OSBPUT, jump to execution loop
 
 ; ----------------------------------------------------------------------------
 
@@ -12184,7 +12309,7 @@ CLOSE:
         lda #$00
         jsr OSFIND
     .endif
-    jmp L8B9B         ; Jump back to execution loop
+    jmp NXT         ; Jump back to execution loop
 
 ; Copy PtrA to PtrB, then get handle
 ; ==================================
@@ -12253,7 +12378,7 @@ LBFEC:
     iny
     bne LBFEC         ; Print character or token, loop for next
 LBFF6:
-    jmp L8B9B         ; Jump to main execution loop
+    jmp NXT         ; Jump to main execution loop
 
     .if version >= 3
 LBFF4:
