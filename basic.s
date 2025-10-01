@@ -6411,189 +6411,231 @@ FPRTF:
     sta zpWORK+1      ; Get number of digits
     ldx zpWORK        ; Get print format
     cpx #$02
-    bne L9F5C         ; Not fixed format, jump to do exponent/general
+    bne FPRTFH        ; Not fixed format, jump to do exponent/general
 
-    adc zpFPRTDX
-    bmi L9FA0
+    adc zpFPRTDX      ; fix up the precision
+    bmi FPRTZR
 
     sta zpWORK+1
     cmp #$0B
-    bcc L9F5C
+    bcc FPRTFH        ; precision still reasonable
 
     lda #$0A
     sta zpWORK+1
     lda #$00
-    sta zpWORK
+    sta zpWORK        ; treat as G format
 
-L9F5C:
-    jsr LA686         ; Clear FloatA
+FPRTFH:
+    jsr FCLR         ; Clear FloatA
 
     lda #$A0
     sta zpFACCMA
     lda #$83
-    sta zpFACCX
+    sta zpFACCX       ;  5.0 --> FACC
     ldx zpWORK+1
-    beq L9F71
+    beq FPRTGJ
 
-L9F6B:
-    jsr FTENFQ         ; FloatA=FloatA/10
+FPRTGG:
+    jsr FTENFQ        ; divide FACC by 10.0
     dex
-    bne L9F6B
+    bne FPRTGG        ; create .00,,005 const
 
-L9F71:
-    jsr ARGA         ; Point to $46C
-    jsr FLDW         ; Unpack to FloatB
+FPRTGJ:
+    jsr ARGA         ; Point to workspace FP temp A
+    jsr FLDW         ; Unpack to FWRK
+
     lda zpTYPE
-    sta zp42
-    jsr LA50B        ; Add
+    sta zpFWRKMG
+    jsr FADDW1       ; Add
 
-L9F7E:
+FPRTFF:
     lda zpFACCX
     cmp #$84
-    bcs L9F92
-    ror zpFACCMA
+    bcs FPRTG
+
+    ror zpFACCMA     ; could call end of FTENFX
     ror zpFACCMB
     ror zpFACCMC
     ror zpFACCMD
     ror zpFACCMG
     inc zpFACCX
-    bne L9F7E
-L9F92:
+    bne FPRTFF
+
+FPRTG:
     lda zpFACCMA
-    cmp #$A0
-    bcs FPRTEE
+    cmp #$A0         ; see if unnormalized
+    bcs FPRTEE       ; fix up if so
     lda zpWORK+1
-    bne L9FAD
+    bne FPRTH
 
 ; Output zero in Exponent or Fixed format
 ; ---------------------------------------
 FPRTHH:
     cmp #$01
-    beq L9FE6
-L9FA0:
-    jsr LA686         ; Clear FloatA
+    beq FPRTK
+
+FPRTZR:
+    jsr FCLR         ; Clear FACC
     lda #$00
-    sta zp49
+    sta zpFPRTDX
     lda zpFDIGS
     sta zpWORK+1
     inc zpWORK+1
-L9FAD:
+
+;  The exponent is $84, so the top digit of FACC is the first digit to print
+
+FPRTH:
     lda #$01
     cmp zpWORK
-    beq L9FE6
-    ldy zp49
-    bmi L9FC3
+    beq FPRTK
+
+    ldy zpFPRTDX
+    bmi FPRTKK
+
     cpy zpWORK+1
-    bcs L9FE6
+    bcs FPRTK       ; use scientific is <1.0 or > 10^digits
+
     lda #$00
-    sta zp49
+    sta zpFPRTDX    ; use F type format
     iny
     tya
-    bne L9FE6
-L9FC3:
+    bne FPRTK
+
+FPRTKK:
     lda zpWORK
     cmp #$02
-    beq L9FCF
+    beq FPRTKL      ; F format case
+
     lda #$01
     cpy #$FF
-    bne L9FE6
-L9FCF:
-    lda #'0'
-    jsr CHTOBF         ; Output '0'
-    lda #'.'
-    jsr CHTOBF         ; Output '.'
-    lda #'0'          ; Prepare '0'
-L9FDB:
-    inc zp49
-    beq L9FE4
-    jsr CHTOBF         ; Output
-    bne L9FDB
+    bne FPRTK       ; set E format
 
-L9FE4:
+FPRTKL:
+    lda #'0'
+    jsr CHTOBF      ; Output '0'
+
+    lda #'.'
+    jsr CHTOBF      ; Output '.'
+
+    lda #'0'        ; Prepare '0'
+FPRTKM:
+    inc zpFPRTDX
+    beq FPRTKN
+
+    jsr CHTOBF      ; Output
+    bne FPRTKM
+
+FPRTKN:
     lda #$80
-L9FE6:
+
+FPRTK:
     sta zpFPRTWN
-L9FE8:
-    jsr LA040
+
+FPRTI:
+    jsr FPRTNN
     dec zpFPRTWN
-    bne L9FF4
-    lda #$2E
+    bne FPRTL
+
+    lda #'.'
     jsr CHTOBF
-L9FF4:
+
+FPRTL:
     dec zpWORK+1
-    bne L9FE8
+    bne FPRTI
+
     ldy zpWORK
     dey
-    beq LA015
+    beq FPRTTX
+
     dey
-    beq LA011
+    beq FPRTTYp2
+
     ldy zpCLEN
-LA002:
+FPRTTZ:
     dey
     lda STRACC,Y
     cmp #'0'
-    beq LA002
+    beq FPRTTZ
+
     cmp #'.'
-    beq LA00F
+    beq FPRTTY
+
     iny
-LA00F:
+FPRTTY:
     sty zpCLEN
-LA011:
-    lda zp49
-    beq LA03F
-LA015:
+FPRTTYp2:
+    lda zpFPRTDX
+    beq FPRTX          ; exponent=0
+
+FPRTTX:
     lda #'E'
     jsr CHTOBF         ; Output 'E'
-    lda zp49
-    bpl LA028
+
+    lda zpFPRTDX
+    bpl FPRTJ
+
     lda #'-'
     jsr CHTOBF         ; Output '-'
+
     sec
     lda #$00
-    sbc zp49          ; Negate
-LA028:
-    jsr LA052
+    sbc zpFPRTDX       ; Negate
+
+FPRTJ:
+    jsr IPRT
     lda zpWORK
-    beq LA03F
-    lda #$20
-    ldy zp49
-    bmi LA038
+    beq FPRTX
+
+    lda #' '
+    ldy zpFPRTDX
+    bmi FPRTTW
+
     jsr CHTOBF
-LA038:
+FPRTTW:
     cpx #$00
-    bne LA03F
+    bne FPRTX
     jmp CHTOBF
 
-LA03F:
+FPRTX:
     rts
 
-LA040:
+FPRTNN:
     lda zpFACCMA
     lsr
     lsr
     lsr
     lsr
-    jsr LA064
+    jsr FPRTDG
+
     lda zpFACCMA
     and #$0F
     sta zpFACCMA
-    jmp LA197
+    jmp FTENX
 
-LA052:
+; ----------------------------------------------------------------------------
+
+; Print AC in decimal unsigned
+
+IPRT:
     ldx #$FF
     sec
-LA055:
+
+IPRTA:
     inx
     sbc #$0A
-    bcs LA055
+    bcs IPRTA
+
     adc #$0A
     pha
     txa
-    beq LA063
-    jsr LA064
-LA063:
+    beq IPRTB
+
+    jsr FPRTDG
+
+IPRTB:
     pla
-LA064:
+
+FPRTDG:
     ora #'0'
 
 ; Store character in string buffer
@@ -6606,7 +6648,11 @@ CHTOBF:
     inc zpCLEN
     rts               ; Increment string length
 
-LA072:
+; ----------------------------------------------------------------------------
+
+; READ ROUTINES
+
+FRDDXX:
     clc
     stx zpFACCMG
     jsr FTST
@@ -6615,192 +6661,237 @@ LA072:
 
 ; Scan decimal number
 ; -------------------
-LA07B:
+FRDD:
     ldx #$00
-    stx zpFACCMA
-    stx zpFACCMB          ; Clear FloatA
+    stx zpFACCMA        ; Clear FACC
+    stx zpFACCMB
     stx zpFACCMC
     stx zpFACCMD
     stx zpFACCMG
-    stx zp48          ; Clear 'Decimal point' flag
-    stx zp49          ; Set exponent to zero
+    stx zpFRDDDP        ; Clear 'Decimal point' flag
+    stx zpFRDDDX        ; Set exponent to zero
     cmp #'.'
-    beq LA0A0         ; Leading decimal point
-    cmp #'9'+1
-    bcs LA072         ; Not a decimal digit, finish
-    sbc #'0'-1
-    bmi LA072         ; Convert to binary, if not digit finish
-    sta zpFACCMG          ; Store digit
-LA099:
-    iny
-    lda (zpAELINE),Y      ; Get next character
-    cmp #'.'
-    bne LA0A8         ; Not decimal point
-LA0A0:
-    lda zp48
-    bne LA0E8         ; Already got decimal point, 
-    inc zp48
-    bne LA099         ; Set Decimal Point flag, loop for next
-LA0A8:
-    cmp #'E'
-    beq LA0E1         ; Jump to scan exponent
-    cmp #'9'+1
-    bcs LA0E8         ; Not a digit, jump to finish
-    sbc #'0'-1
-    bcc LA0E8         ; Not a digit, jump to finish
-    ldx zpFACCMA          ; Get mantissa top byte
-    cpx #$18
-    bcc LA0C2         ; If <25, still small enough to add to
-    ldx zp48
-    bne LA099         ; Decimal point found, skip digits to end of number
-    inc zp49
-    bcs LA099         ; No decumal point, increment exponent and skip digits
+    beq FRDDDD          ; Leading decimal point
 
-LA0C2:
-    ldx zp48
-    beq LA0C8 
-    dec zp49          ; Decimal point found, decrement exponent
-LA0C8:
-    jsr LA197         ; Multiply FloatA by 10
+    cmp #'9'+1
+    bcs FRDDXX          ; Not a decimal digit, finish
+
+    sbc #'0'-1          ; carry is clear
+    bmi FRDDXX          ; Convert to binary, if not digit finish
+
+    sta zpFACCMG        ; Store digit
+
+FRDDC:
+    iny
+    lda (zpAELINE),Y  ; Get next character
+    cmp #'.'
+    bne FRDDD         ; Not decimal point
+
+FRDDDD:
+    lda zpFRDDDP      ; seen before?
+    bne FRDDQ         ; Already got decimal point, 
+
+    inc zpFRDDDP      ; Set decimal point flag
+    bne FRDDC         ; loop for next
+
+FRDDD:
+    cmp #'E'
+    beq FRDDEX         ; Jump to scan exponent
+
+    cmp #'9'+1
+    bcs FRDDQ         ; Not a digit, jump to finish
+
+    sbc #'0'-1
+    bcc FRDDQ         ; Not a digit, jump to finish, end of number
+
+    ldx zpFACCMA      ; Get mantissa top byte
+    cpx #$18
+    bcc FRDDE         ; If <25, still small enough to add to
+
+    ldx zpFRDDDP
+    bne FRDDC         ; Decimal point found, skip digits to end of number
+
+    inc zpFRDDDX      ; Otherwise, increment tens
+    bcs FRDDC         ; and skip digits
+
+FRDDE:
+    ldx zpFRDDDP
+    beq FRDDF         ; No . yet
+
+    dec zpFRDDDX      ; Decimal point found, decrement exponent
+
+FRDDF:
+    jsr FTENX         ; Multiply mantissa by 10
+
     adc zpFACCMG
-    sta zpFACCMG          ; Add digit to mantissa low byte
-    bcc LA099         ; No overflow
-    inc zpFACCMD
-    bne LA099         ; Add carry through mantissa
+    sta zpFACCMG      ; Add digit to mantissa low byte
+    bcc FRDDC         ; No overflow
+
+    inc zpFACCMD      ; Add carry through mantissa
+    bne FRDDC
+
     inc zpFACCMC
-    bne LA099
+    bne FRDDC
+
     inc zpFACCMB
-    bne LA099
+    bne FRDDC
+
     inc zpFACCMA
-    bne LA099         ; Loop to check next digit
+    bne FRDDC         ; Loop to check next digit
 
 ; Deal with Exponent in scanned number
 ; ------------------------------------
-LA0E1:
-    jsr LA140         ; Scan following number
-    adc zp49
-    sta zp49          ; Add to current exponent
+FRDDEX:
+    jsr IRDD          ; Scan following number
+    adc zpFRDDDX      ; Add to current exponent
+    sta zpFRDDDX
 
 ; End of number found
 ; -------------------
-LA0E8:
-    sty zpAECUR          ; Store PtrB offset
-    lda zp49
-    ora zp48          ; Check exponent and 'decimal point' flag
-    beq LA11F         ; No exponent, no decimal point, return integer
-    jsr FTST
-    beq LA11B
-LA0F5:
+FRDDQ:
+    sty zpAECUR       ; Store AELINE offset
+    lda zpFRDDDX
+    ora zpFRDDDP      ; Check exponent and 'decimal point' flag
+    beq FRINT         ; No exponent, no decimal point, return integer
+
+    jsr FTST          ; was it zero?
+    beq FRDDZZ        ; if so, exit at once
+
+FRFP:
     lda #$A8
     sta zpFACCX
     lda #$00
     sta zpFACCXH
     sta zpFACCS
-    jsr LA303
-    lda zp49
-    bmi LA111
-    beq LA118
-LA108:
-    jsr FTENFX
-    dec zp49
-    bne LA108
-    beq LA118
-LA111:
-    jsr FTENFQ
-    inc zp49
-    bne LA111
-LA118:
-    jsr LA65C
-LA11B:
+    jsr FNRM
+
+; Now I have to MUL or DIV by power of ten given in zpFRDDDX
+
+    lda zpFRDDDX
+    bmi FRDDM
+    beq FRDDZ
+
+FRDDP:
+    jsr FTENFX          ; times 10.0
+    dec zpFRDDDX
+    bne FRDDP
+    beq FRDDZ
+
+FRDDM:
+    jsr FTENFQ          ; divider 10.0
+    inc zpFRDDDX
+    bne FRDDM
+
+FRDDZ:
+    jsr FTIDY           ; round, check overflow
+
+FRDDZZ:
     sec
     lda #$FF
     rts
 
-LA11F:
+FRINT:
     lda zpFACCMB
     sta zpIACC+3
     and #$80
     ora zpFACCMA
-    bne LA0F5
+    bne FRFP
+
     lda zpFACCMG
     sta zpIACC
     lda zpFACCMD
     sta zpIACC+1
     lda zpFACCMC
     sta zpIACC+2
+
     lda #$40
     sec
     rts
 
-LA139:
-    jsr LA14B         ; Scan following number
+IRDDB:
+    jsr IRDDC         ; Scan following number
     eor #$FF
     sec
     rts               ; Negate it, return CS=Ok
 
 ; Scan exponent, allows E E+ E- followed by one or two digits
 ; -----------------------------------------------------------
-LA140:
+IRDD:
     iny
-    lda (zpAELINE),Y      ; Get next character
+    lda (zpAELINE),Y  ; Get next character
     cmp #'-'
-    beq LA139         ; If '-', jump to scan and negate
+    beq IRDDB         ; If '-', jump to scan and negate
+
     cmp #'+'
-    bne LA14E         ; If '+', just step past
-LA14B:
+    bne IRDDA         ; If '+', just step past
+
+IRDDC:
     iny
-    lda (zpAELINE),Y      ; Get next character
-LA14E:
+    lda (zpAELINE),Y  ; Get next character
+
+IRDDA:
     cmp #'9'+1
-    bcs LA174         ; Not a digit, exit with CC and A=0
+    bcs IRDDOW        ; Not a digit, exit with CC and A=0
+
     sbc #'0'-1
-    bcc LA174         ; Not a digit, exit with CC and A=0
-    sta zp4A          ; Store exponent digit
+    bcc IRDDOW        ; Not a digit, exit with CC and A=0
+
+    sta zpFRDDW       ; Store exponent digit
     iny
-    lda (zpAELINE),Y      ; Get next character
+    lda (zpAELINE),Y  ; Get next character
     cmp #'9'+1
-    bcs LA170         ; Not a digit, exit with CC and A=exp
+    bcs IRDDQ         ; Not a digit, exit with CC and A=exp
+
     sbc #'0'-1
-    bcc LA170         ; Not a digit, exit with CC and A=exp
+    bcc IRDDQ         ; Not a digit, exit with CC and A=exp
+
     iny
-    sta zp43          ; Step past digit, store current digit
-    lda zp4A          ; Get current exponent
+    sta zpFTMPMA      ; Step past digit, store current digit
+    lda zpFRDDW       ; Get current exponent
     asl
-    asl
-    adc zp4A          ; exp=exp*10
-    asl
-    adc zp43          ; exp=exp*10+digit
+    asl               ; exp *= 4
+    adc zpFRDDW       ; exp += exp (total *5
+    asl               ; exp *= 2   (total *10)
+    adc zpFTMPMA      ; exp=exp*10+digit
     rts
 
-LA170:
-    lda zp4A
+IRDDQ:
+    lda zpFRDDW
     clc
     rts               ; Get exp and return CC=Ok
 
-LA174:
+IRDDOW:
     lda #$00
     clc
     rts               ; Return exp=0 and CC=Ok
 
+; ----------------------------------------------------------------------------
+
+; Add FWRK mantissa to FACC mantisa, result in FACC
+
 LA178:
     lda zpFACCMG
-    adc zp42
+    adc zpFWRKMG
     sta zpFACCMG
     lda zpFACCMD
-    adc zp41
+    adc zpFWRKMD
     sta zpFACCMD
     lda zpFACCMC
-    adc zp40
+    adc zpFWRKMC
     sta zpFACCMC
     lda zpFACCMB
-    adc zp3F
+    adc zpFWRKMB
     sta zpFACCMB
     lda zpFACCMA
-    adc zp3E
+    adc zpFWRKMA
     sta zpFACCMA
     rts
 
-LA197:
+; ----------------------------------------------------------------------------
+
+; Multiply FACC MANTISSA by 10
+
+FTENX:
     pha
     ldx zpFACCMD
     lda zpFACCMA
@@ -6841,6 +6932,8 @@ LA197:
     sta zpFACCMA
     pla
     rts
+
+; ----------------------------------------------------------------------------
 
 FTST:
     lda zpFACCMA
@@ -7028,7 +7121,7 @@ LA2CD:
     sta zpFACCMA
     lda #$A0
     sta zpFACCX
-    jmp LA303
+    jmp FNRM
 
 LA2E6:
     sta zpFACCS
@@ -7039,7 +7132,7 @@ LA2EC:
 
 LA2ED:
     pha
-    jsr LA686
+    jsr FCLR
     pla
     beq LA2EC
     bpl LA2FD
@@ -7051,7 +7144,7 @@ LA2FD:
     sta zpFACCMA
     lda #$88
     sta zpFACCX
-LA303:
+FNRM:
     lda zpFACCMA
     bmi LA2EC
     ora zpFACCMB
@@ -7093,33 +7186,35 @@ LA33A:
     bcs LA336
     dec zpFACCXH
     bcc LA336
+
 FLDW:
     ldy #$04
     lda (zpARGP),Y
-    sta zp41
+    sta zpFWRKMD
     dey
     lda (zpARGP),Y
-    sta zp40
+    sta zpFWRKMC
     dey
     lda (zpARGP),Y
-    sta zp3F
+    sta zpFWRKMB
     dey
     lda (zpARGP),Y
-    sta zp3B
+    sta zpFWRKS
     dey
-    sty zp42
-    sty zp3C
+    sty zpFWRKMG
+    sty zpFWRKXH
     lda (zpARGP),Y
-    sta zp3D
-    ora zp3B
-    ora zp3F
-    ora zp40
-    ora zp41
-    beq LA37A
-    lda zp3B
+    sta zpFWRKX
+    ora zpFWRKS
+    ora zpFWRKMB
+    ora zpFWRKMC
+    ora zpFWRKMD
+    beq FLDWX
+
+    lda zpFWRKS
     ora #$80
-LA37A:
-    sta zp3E
+FLDWX:
+    sta zpFWRKMA
     rts
 
 ; ----------------------------------------------------------------------------
@@ -7223,7 +7318,7 @@ COPY_FACC_TO_IACC:
 
 FFIXQ:
     jsr FTOW         ; Copy FloatA to FloatB
-    jmp LA686         ; Set FloatA to zero and return
+    jmp FCLR         ; Set FloatA to zero and return
 
 FFIX:
     lda zpFACCX
@@ -7334,7 +7429,7 @@ LA4AE:
 LA4B0:
     jsr LA46C
 LA4B3:
-    jmp LA303
+    jmp FNRM
 
 LA4B6:
     inc zpFACCMD
@@ -7378,19 +7473,20 @@ LA4E8:
     sta zpFACCMD
     lda zp42
     sta zpFACCMG
-LA4FC:
+FADDZ:
     rts
 
 FXSUB:
     jsr LAD7E
 FADD:
     jsr FLDW
-    beq LA4FC
-LA505:
-    jsr LA50B
-    jmp LA65C
+    beq FADDZ       ; A+0.0=A
 
-LA50B:
+FADDW:
+    jsr FADDW1
+    jmp FTIDY
+
+FADDW1:
     jsr FTST
     beq LA4DC
     ldy #$00
@@ -7400,7 +7496,7 @@ LA50B:
     beq LA590
     bcc LA552
     cmp #$25
-    bcs LA4FC
+    bcs FADDZ
     pha
     and #$38
     beq LA53D
@@ -7494,7 +7590,7 @@ LA590:
     lda zpFACCMG
     cmp zp42
     bne LA5B7
-    jmp LA686
+    jmp FCLR
 
 LA5B7:
     bcs LA5E3
@@ -7516,7 +7612,7 @@ LA5B7:
     sta zpFACCMA
     lda zp3B
     sta zpFACCS
-    jmp LA303
+    jmp FNRM
 
 LA5DF:
     clc
@@ -7539,7 +7635,7 @@ LA5E3:
     lda zpFACCMA
     sbc zp3E
     sta zpFACCMA
-    jmp LA303
+    jmp FNRM
 
 LA605:
     rts
@@ -7549,7 +7645,7 @@ LA606:
     beq LA605
     jsr FLDW
     bne LA613
-    jmp LA686
+    jmp FCLR
 
 LA613:
     clc
@@ -7597,8 +7693,9 @@ LA652:
 FMUL:
     jsr LA606       ; IFMUL
 LA659:
-    jsr LA303       ; FNRM
-LA65C:
+    jsr FNRM       ; FNRM
+
+FTIDY:
     lda zpFACCMG
     cmp #$80
     bcc LA67C
@@ -7624,9 +7721,12 @@ LA67C:
     lda #$00
     sta zpFACCMG
     lda zpFACCXH
-    beq LA698
+    beq FADDZ2
     bpl LA66C
-LA686:
+
+; Clear FACC
+
+FCLR:
     lda #$00
     sta zpFACCS
     sta zpFACCXH
@@ -7636,13 +7736,13 @@ LA686:
     sta zpFACCMC
     sta zpFACCMD
     sta zpFACCMG
-LA698:
+FADDZ2:
     rts
 
 ; ----------------------------------------------------------------------------
 
 FONE:
-    jsr LA686           ; FCLR
+    jsr FCLR           ; FCLR
     ldy #$80
     sty zpFACCMA
     iny
@@ -7695,7 +7795,7 @@ TAN:
 
 LA6E7:
     jsr FTST
-    beq LA698
+    beq FADDZ2
     jsr FLDW
     beq FDIVZ
 LA6F1:
@@ -7911,7 +8011,7 @@ LA82C:
     txa
     pha
     sty zpFACCX
-    jsr LA505
+    jsr FADDW
     lda #<FWSD
     jsr FSTAP
     lda #<FLOGTC
@@ -8075,7 +8175,7 @@ FATANB:
     sta zp3D
     sta zp3E
     sta zp3B
-    jsr LA505           ; FADDW
+    jsr FADDW           ; FADDW
     lda #<FATANC
     ldy #>FATANC
     jsr FCF
@@ -8152,7 +8252,7 @@ LA9D3:
     lda zpFACCS
     sta zp3B
     dec zp3D
-    jsr LA505
+    jsr FADDW
     jsr LA6E7
     jsr FFIX
     lda zpFACCMD
@@ -8170,7 +8270,7 @@ LA9D3:
     bpl LAA0E
     jsr LA46C
 LAA0E:
-    jsr LA303
+    jsr FNRM
     jsr STARGB
     jsr LAA48
     jsr FMUL
@@ -8269,7 +8369,7 @@ LAA9C:
 LAAA2:
     lda zpFACCS
     bpl LAAAC
-    jsr LA686
+    jsr FCLR
     lda #$FF
     rts
 
@@ -8651,13 +8751,13 @@ LAC34:
     jsr AESPAC
 LAC5E:
     dec zpAECUR
-    jsr LA07B
+    jsr FRDD
     jmp LAC73
 
 LAC66:
     jsr AESPAC
     dec zpAECUR
-    jsr LA07B
+    jsr FRDD
     bcc LAC73
     jsr LAD8F
 LAC73:
@@ -9104,7 +9204,7 @@ LAE20:
     jmp VARIND
 
 LAE2A:
-    jsr LA07B
+    jsr FRDD
     bcc FACERR
     rts
 
@@ -9462,7 +9562,7 @@ LAF24:
     jsr LAF69
     jsr POPSET
     jsr LA606
-    jsr LA303
+    jsr FNRM
     jsr IFIX
     jsr INCACC
     lda #$40

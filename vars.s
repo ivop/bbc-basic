@@ -74,6 +74,7 @@ zpFWRKMC  = zp + $40    ; WorkSpace Floating Point Accumulator, MANTISSA
 zpFWRKMD  = zp + $41    ; WorkSpace Floating Point Accumulator, MANTISSA
 zpFWRKMG  = zp + $42    ; WorkSpace Floating Point Accumulator, ROUNDING
 
+zpFTMPMA  = zp + $43
 ; ...
 
 zpFRDDDP  = zp + $48    ; Decimal Point flag
