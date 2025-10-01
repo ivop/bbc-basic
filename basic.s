@@ -6869,7 +6869,7 @@ IRDDOW:
 
 ; Add FWRK mantissa to FACC mantisa, result in FACC
 
-LA178:
+FPLW:
     lda zpFACCMG
     adc zpFWRKMG
     sta zpFACCMG
@@ -6935,50 +6935,73 @@ FTENX:
 
 ; ----------------------------------------------------------------------------
 
+; FTST sets N,Z flags on FACC, tidies up if zero
+
 FTST:
     lda zpFACCMA
     ora zpFACCMB
     ora zpFACCMC
     ora zpFACCMD
     ora zpFACCMG
-    beq LA1ED
+    beq FTSTZ       ; it is zero
+
     lda zpFACCS
-    bne LA1F3
-    lda #$01
+    bne FTSTR
+
+    lda #$01        ; non-zero if sign byte
     rts
 
-LA1ED:
+FTSTZ:
     sta zpFACCS
     sta zpFACCX
     sta zpFACCXH
-LA1F3:
+FTSTR:
     rts
 
+; ----------------------------------------------------------------------------
+
 ; FACC times 10.0
+;
+;   FX:=FX+3
+;   FW:=FACC
+;   FW:=FW>>2
+;   FACC:=FACC+FW
+;   IF CARRY THEN {
+;     FACC:=FACC>>1;
+;     FX:=FX+1 }
+
 FTENFX:
     clc
     lda zpFACCX
     adc #$03
     sta zpFACCX
-    bcc LA1FF
+    bcc FTENFA
+
     inc zpFACCXH
-LA1FF:
-    jsr FTOW
+
+FTENFA:
+    jsr FTOW        ; copy to FWRK
     jsr FASRW
     jsr FASRW
-LA208:
-    jsr LA178
-LA20B:
-    bcc LA21D
+
+FPLWF:
+    jsr FPLW
+
+;   CY is set on carry out of FACCMA and FWRKMA
+
+FRENRM:
+    bcc FRENX
     ror zpFACCMA
     ror zpFACCMB
     ror zpFACCMC
     ror zpFACCMD
     ror zpFACCMG
     inc zpFACCX
-    bne LA21D
+    bne FRENX
+
     inc zpFACCXH
-LA21D:
+
+FRENX:
     rts
 
 ; ----------------------------------------------------------------------------
@@ -7040,15 +7063,16 @@ FTENFQ:
     sbc #$04
     sta zpFACCX
     bcs FTENB
+
     dec zpFACCXH
 FTENB:
     jsr FTOWAS
-    jsr LA208           ; * 0.00011
+    jsr FPLWF           ; * 0.00011
     jsr FTOWAS
     jsr FASRW
     jsr FASRW
     jsr FASRW
-    jsr LA208           ; * 0.000110011
+    jsr FPLWF           ; * 0.000110011
 
     lda #$00
     sta zpFWRKMA
@@ -7063,9 +7087,9 @@ FTENB:
 
     lda zpFACCMG
     rol                 ; set carry bit properly
-    jsr LA208           ; OK to 16 bits
+    jsr FPLWF           ; OK to 16 bits
     lda #$00
-    sta zpFWRKMA        ; later BASICS skip this, because FWRKMA is already 0
+    sta zpFWRKMA        ; later BASICs skip this, because FWRKMA is already 0
     sta zpFWRKMB
 
     lda zpFACCMA
@@ -7077,7 +7101,7 @@ FTENB:
 
     lda zpFACCMD
     rol
-    jsr LA208
+    jsr FPLWF
     lda zpFACCMB
     rol
     lda zpFACCMA
@@ -7086,15 +7110,20 @@ FPLNF:
     adc zpFACCMG
     sta zpFACCMG
     bcc FPLNY
+
     inc zpFACCMD
     bne FPLNY
+
     inc zpFACCMC
     bne FPLNY
+
     inc zpFACCMB
     bne FPLNY
+
     inc zpFACCMA
     bne FPLNY
-    jmp LA20B
+
+    jmp FRENRM
 
 FPLNY:
     rts
@@ -7106,10 +7135,11 @@ IFLT:
     stx zpFACCMG
     stx zpFACCXH
     lda zpIACC+3
-    bpl LA2CD
+    bpl IFLTA
+
     jsr COMPNO
     ldx #$FF
-LA2CD:
+IFLTA:
     stx zpFACCS
     lda zpIACC
     sta zpFACCMD
@@ -7123,40 +7153,52 @@ LA2CD:
     sta zpFACCX
     jmp FNRM
 
-LA2E6:
+; ----------------------------------------------------------------------------
+
+FNRMZ:
     sta zpFACCS
     sta zpFACCX
     sta zpFACCXH
-LA2EC:
+
+FNRMX:
     rts
 
-LA2ED:
+FLTACC:
     pha
     jsr FCLR
     pla
-    beq LA2EC
-    bpl LA2FD
+    beq FNRMX       ; done if 0.0
+    bpl FLTAA       ; >0.0
+
     sta zpFACCS
     lda #$00
     sec
     sbc zpFACCS
-LA2FD:
+
+FLTAA:
     sta zpFACCMA
     lda #$88
     sta zpFACCX
+
+; FNRM normalizes the FACC using 16 bit exponent, so no worry about
+; exponent overflow
+
 FNRM:
     lda zpFACCMA
-    bmi LA2EC
+    bmi FNRMX
+
     ora zpFACCMB
     ora zpFACCMC
     ora zpFACCMD
     ora zpFACCMG
-    beq LA2E6
+    beq FNRMZ
+
     lda zpFACCX
-LA313:
+FNRMA:
     ldy zpFACCMA
-    bmi LA2EC
-    bne LA33A
+    bmi FNRMX
+    bne FNRMC
+
     ldx zpFACCMB
     stx zpFACCMA
     ldx zpFACCMC
@@ -7169,13 +7211,16 @@ LA313:
     sec
     sbc #$08
     sta zpFACCX
-    bcs LA313
+    bcs FNRMA
+
     dec zpFACCXH
-    bcc LA313
-LA336:
+    bcc FNRMA
+
+FNRMB:
     ldy zpFACCMA
-    bmi LA2EC
-LA33A:
+    bmi FNRMX           ; fully normalized
+
+FNRMC:
     asl zpFACCMG
     rol zpFACCMD
     rol zpFACCMC
@@ -7183,9 +7228,14 @@ LA33A:
     rol zpFACCMA
     sbc #$00
     sta zpFACCX
-    bcs LA336
+    bcs FNRMB
+
     dec zpFACCXH
-    bcc LA336
+    bcc FNRMB           ; branch always
+
+; ----------------------------------------------------------------------------
+
+; FLDW -- Load FWRK via zpARGP
 
 FLDW:
     ldy #$04
@@ -7219,6 +7269,8 @@ FLDWX:
 
 ; ----------------------------------------------------------------------------
 
+; Store FACC to one of the workspace FP temps via ARGP
+
 STARGB:
     lda #<FWSB
     bne FSTAP
@@ -7232,13 +7284,14 @@ STARGA:
 
 FSTAP:
     sta zpARGP
-    lda #$04+(ws/256)   ; MSB of all FWS / FP TEMP variables
+    lda #>FWSA   ; MSB of all FWS / FP TEMP variables
     sta zpARGP+1
 
-LA38D:
+FSTA:
     ldy #$00
     lda zpFACCX
     sta (zpARGP),Y
+
     iny
     lda zpFACCS            ; tidy up sign bit
     and #$80
@@ -7247,48 +7300,63 @@ LA38D:
     and #$7F
     ora zpFACCS
     sta (zpARGP),Y
+
     lda zpFACCMB
     iny
     sta (zpARGP),Y
+
     lda zpFACCMC
     iny
     sta (zpARGP),Y
+
     lda zpFACCMD
     iny
     sta (zpARGP),Y
     rts
 
-LA3B2:
+; ----------------------------------------------------------------------------
+
+LDARGA:
     jsr ARGA
+
+; Load FACC via ARGP
 
 FLDA:
     ldy #$04
     lda (zpARGP),Y
     sta zpFACCMD
+
     dey
     lda (zpARGP),Y
     sta zpFACCMC
+
     dey
     lda (zpARGP),Y
     sta zpFACCMB
+
     dey
     lda (zpARGP),Y
     sta zpFACCS
+
     dey
     lda (zpARGP),Y
     sta zpFACCX
+
     sty zpFACCMG
     sty zpFACCXH
     ora zpFACCS
     ora zpFACCMB
     ora zpFACCMC
     ora zpFACCMD
-    beq LA3E1
+    beq FLDAX
+
     lda zpFACCS
     ora #$80
-LA3E1:
+FLDAX:
     sta zpFACCMA
     rts
+
+; ----------------------------------------------------------------------------
 
 ; Convert real to integer
 ; =======================
@@ -7323,6 +7391,7 @@ FFIXQ:
 FFIX:
     lda zpFACCX
     bpl FFIXQ         ; Exponent<$80, number<1, jump to return 0
+
     jsr LA453         ; Set $3B-$42 to zero
     jsr FTST
     bne LA43C
@@ -7454,7 +7523,7 @@ FSUB:
 
 LA4D6:
     jsr FLDW
-    jsr LA38D
+    jsr FSTA
 LA4DC:
     lda zp3B
     sta zpFACCS
@@ -7616,7 +7685,7 @@ LA5B7:
 
 LA5DF:
     clc
-    jmp LA208
+    jmp FPLWF
 
 LA5E3:
     sec
@@ -7684,7 +7753,7 @@ LA63A:
     rol zp43
     bcc LA652
     clc
-    jsr LA178
+    jsr FPLW
 LA652:
     dey
     bne LA63A
@@ -7780,7 +7849,7 @@ TAN:
     lda zp4A
     pha
     jsr ARGD
-    jsr LA38D
+    jsr FSTA
     inc zp4A
     jsr LA99E
     jsr ARGD
@@ -7932,7 +8001,7 @@ LA7B7:
     sta zp4A
     jsr ARGB
 LA7CF:
-    jsr LA38D
+    jsr FSTA
     lda #<FWSA
     sta zpARGP
     jsr FXDIV
@@ -8025,7 +8094,7 @@ LA82C:
     pla
     sec
     sbc #$81
-    jsr LA2ED
+    jsr FLTACC
     lda #<LOGTWO
     sta zpARGP
     lda #>LOGTWO
@@ -8229,7 +8298,7 @@ LA9AA:
 LA9B1:
     jsr STARGA
     jsr FMUL
-    jsr LA38D
+    jsr FSTA
     jsr FONE
     jsr FSUB
     jmp LA7B7
@@ -8276,7 +8345,7 @@ LAA0E:
     jsr FMUL
     jsr ARGA
     jsr FADD
-    jsr LA38D
+    jsr FSTA
     jsr ARGB
     jsr FLDA
     jsr LAA4C
@@ -8285,7 +8354,7 @@ LAA0E:
     jmp FADD
 
 LAA35:
-    jmp LA3B2
+    jmp LDARGA
 
 LAA38:
     brk
@@ -11286,7 +11355,7 @@ LB84F:
     sta zpARGP
     lda #$05+(ws/256)
     sta zpARGP+1
-    jsr LA38D
+    jsr FSTA
     jsr FONE
     jsr AESPAC
     cmp #$88
@@ -11302,7 +11371,7 @@ LB875:
     sta zpARGP
     lda #$05+(ws/256)
     sta zpARGP+1
-    jsr LA38D
+    jsr FSTA
     jmp LB837
 
 ; GOSUB numeric
@@ -11604,7 +11673,7 @@ LBA2D:
     sta FWSA,X
     dex
     bpl LBA2D
-    jsr LA3B2
+    jsr LDARGA
 LBA39:
     jsr STORE
     jmp LB9DA
