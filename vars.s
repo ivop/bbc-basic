@@ -39,9 +39,9 @@ zpFACCMC  = zp + $33    ; Floating Point Accumulator, MANTISSA
 zpFACCMD  = zp + $34    ; Floating Point Accumulator, MANTISSA
 zpFACCMG  = zp + $35    ; Floating Point Accumulator, ROUNDING
 zpCLEN    = zp + $36    ; Length of string buffer
-zpWORK    = zp + $37    ; General work area, 2 bytes for now, probably 4
+zpWORK    = zp + $37    ; General work area
 
-; WORK+x seem to match Cmos, not Basic128 (is one off (!))
+; WORK+x seem to match Cmos, not Basic128 (is one off sometimes)
 ; remove this list once all zp38-zp4a are replaced with WORK or FWRK refs.
 zp38 = zp + $38 ; WORK+1    ok.
 zp39 = zp + $39 ; WORK+2    ok.
@@ -78,9 +78,9 @@ zpFWRKMG  = zp + $42    ; WorkSpace Floating Point Accumulator, ROUNDING
 
 zpFRDDDP  = zp + $48    ; Decimal Point flag
 zpFRDDDX  = zp + $49    ; Exponent
-zpFPRTDX  = zpFRDDDX    ; Alt.
+zpFPRTDX  = zp + $49    ; Alt.
 zpFRDDW   = zp + $4a
-zpFQUAD   = zpFRDDW     ; Alt.
+zpFQUAD   = zp + $4a    ; Alt.
 
 zpARGP    = zp + $4b
 zpCOEFP   = zp + $4d    ; ptr

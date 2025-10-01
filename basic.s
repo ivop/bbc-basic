@@ -1,10 +1,11 @@
+; ----------------------------------------------------------------------------
 ;
 ; BBC BASIC II/III -- NMOS 6502
 ;
 ; Conversion to mads, labelling, bug fixes, and more comments by
 ; Ivo van Poorten, September 2025
 ;
-; Based on source reconstruction and commentary © 2018 J.G.Harston
+; Based on source reconstruction and commentary © 2018 J.G. Harston
 ; https://mdfs.net/Software/BBCBasic/BBC/
 ;
 ; BBC BASIC Copyright © 1982/1983 Acorn Computer and Roger Wilson
@@ -16,8 +17,15 @@
 ;   AcornBasic128 (github.com/stardot/AcornBasic128)
 ;   BBC Micro Compendium (not really used yet)
 ;
+; ----------------------------------------------------------------------------
+
 
     opt h-            ; No Atari header
+
+; ----------------------------------------------------------------------------
+
+; Important for future ports, ws MUST be page aligned, or a lot of things
+; will break (i.e. testing MSB for end of STRACC)
 
 ; ----------------------------------------------------------------------------
 
@@ -1526,7 +1534,8 @@ EQUB:
     pha
     jsr ASEXPR
     ldx #zpOPCODE
-    jsr LBE44
+    jsr ACCTOM
+
     pla
     tay
 EQUSX:
@@ -4825,7 +4834,7 @@ SPTSTN:
     beq SPTSTM
 
     cmp #tknCONST
-    bne L9805
+    bne FDA
 
 SPGETN:
     iny
@@ -4848,7 +4857,7 @@ SPGETN:
     sec
     rts
 
-L9805:
+FDA:
     clc
     rts
 
@@ -4868,9 +4877,9 @@ EQEXPR:
     beq EQEXPR
 
     cmp #'='
-    beq L9849
+    beq EXPRDN
 
-L9821:
+EQERRO:
     brk
     dta 4
     .if foldup == 1
@@ -4893,16 +4902,16 @@ STDED:
 
 ; Escape error
 ; ------------
-L9838:
+DOBRK:
     .ifdef TARGET_ATOM
         lda ESCFLG
         and #$20
-        beq L9838     ; Loop until Escape not pressed
+        beq DOBRK     ; Loop until Escape not pressed
     .endif
 
     .ifdef TARGET_SYSTEM
         cmp ESCFLG
-        beq L9838     ; Loop until key no longer pressed
+        beq DOBRK     ; Loop until key no longer pressed
     .endif
 
     BRK               ; doubles as end of Syntax error on TARGET_BBC
@@ -4917,10 +4926,10 @@ L9838:
 EQEAT:
     jsr AESPAC
     cmp #'='
-    bne L9821
+    bne EQERRO
     rts
 
-L9849:
+EXPRDN:
     jsr EXPR
 
 FDONE:
@@ -4943,6 +4952,7 @@ BLINK:
     lda (zpLINE),Y      ; Get next character
     cmp #' '
     beq BLINK         ; Skip spaces
+
 DONET:
     cmp #':'
     beq CLYADP         ; Colon, jump to update program pointer
@@ -4974,7 +4984,7 @@ TSTBRK:
         pha           ; Save A
         lda ESCFLG
         and #$20      ; Check keyboard matrix
-        beq L9838     ; Escape key pressed, jump to error
+        beq DOBRK     ; Escape key pressed, jump to error XXX: A is not popped?
         pla           ; Restore A
     .endif
 
@@ -4982,11 +4992,11 @@ TSTBRK:
 ; -------------------------------
     .ifdef TARGET_SYSTEM
         bit ESCFLG
-        bmi SECEND     ; Nothing pressed
+        bmi SECEND    ; Nothing pressed
         pha
         lda ESCFLG    ; Save A, get keypress
         cmp #$1B
-        beq L9838     ; If Escape, jump to error
+        beq DOBRK     ; If Escape, jump to error, XXX: A is not popped?
         pla           ; Restore A
     .endif
 
@@ -4994,7 +5004,7 @@ TSTBRK:
 ; -----------------------------------
     .ifdef MOS_BBC
         bit ESCFLG
-        bmi L9838     ; If Escape set, jump to give error
+        bmi DOBRK     ; If Escape set, jump to give error
     .endif
 
 SECEND:
@@ -5004,7 +5014,7 @@ FORR:
     jsr DONE
     dey
     lda (zpLINE),Y
-    cmp #$3A
+    cmp #':'
     beq SECEND
 
     lda zpLINE+1
@@ -5015,8 +5025,10 @@ LINO:
     iny
     lda (zpLINE),Y
     bmi LEAVER
+
     lda zpTRFLAG
     beq NOTR
+
     tya
     pha
     iny
@@ -5026,10 +5038,13 @@ LINO:
     lda (zpLINE),Y
     tay
     pla
+
     jsr AYACC
-    jsr L9905
+    jsr TRJOBA
+
     pla
     tay
+
 NOTR:
     iny
     sec
@@ -5037,10 +5052,12 @@ NOTR:
     adc zpLINE
     sta zpLINE
     bcc LINOIN
+
     inc zpLINE+1
 LINOIN:
     ldy #$01
     sty zpCURSOR
+
 NOTRDE:
     rts
 
@@ -5055,55 +5072,63 @@ IFE:
 IF:
     jsr AEEXPR
     beq IFE
-    bpl L98CC
+    bpl IFX
+
     jsr IFIX
-L98CC:
+IFX:
     ldy zpAECUR
     sty zpCURSOR
     lda zpIACC
     ora zpIACC+1
     ora zpIACC+2
     ora zpIACC+3
-    beq L98F1
-    cpx #$8C
-    beq L98E1
-L98DE:
+    beq ELSE
+
+    cpx #tknTHEN
+    beq THEN
+
+THENST:
     jmp STMT
 
-L98E1:
+THEN:
     inc zpCURSOR
-L98E3:
-    jsr SPTSTN
-    bcc L98DE
-    jsr LB9AF
-    jsr SECUR
-    jmp LB8D2
 
-L98F1:
-    ldy zpCURSOR
-L98F3:
+THENLN:
+    jsr SPTSTN
+    bcc THENST
+    jsr GOTGO
+    jsr SECUR
+    jmp GODONE
+
+ELSE:
+    ldy zpCURSOR        ; try to find else clause
+
+ELSELP:
     lda (zpLINE),Y
     cmp #$0D
-    beq L9902
+    beq ENDED
+
     iny
-    cmp #$8B
-    bne L98F3
+    cmp #tknELSE
+    bne ELSELP
+
     sty zpCURSOR
-    beq L98E3
-L9902:
+    beq THENLN
+
+ENDED:
     jmp ENDEDL
 
-L9905:
+TRJOBA:
     lda zpIACC
     cmp zpTRNUM
     lda zpIACC+1
     sbc zpTRNUM+1
     bcs NOTRDE
-    lda #$5B
-L9911:
+
+    lda #'['
     jsr CHOUT
     jsr POSITE
-    lda #$5D
+    lda #']'
     jsr CHOUT
     jmp LISTPT
 
@@ -5131,7 +5156,8 @@ NUMLP:
     tay
     lda zpIACC+1
     sbc VALM,X       ; Subtract 10s high byte
-    bcc OUTNUM        ; Result<0, no more for this digit
+    bcc OUTNUM       ; Result<0, no more for this digit
+
     sta zpIACC+1
     sty zpIACC       ; Update number
     inc zpWORK+8,X
@@ -5287,11 +5313,10 @@ DIVOP:              ; divide with remainder
 DIVJUS:
     dey
     beq DIVRET
-    asl zp39
-    rol zp3A
-
-    rol zp3B
-    rol zp3C
+    asl zpWORK+2
+    rol zpWORK+3
+    rol zpWORK+4
+    rol zpWORK+5
     bpl DIVJUS
 
 DIVER:
@@ -5335,7 +5360,7 @@ NOSUB:
     dey
     bne DIVER
 
-; Later BASICs have this check, disabled for now because it failse for
+; Later BASICs have this check, disabled for now because it fails for
 ; Atom and System targets...
 ;    .if .hi(DIVER) != .hi(*)
 ;        .error "ASSERT: page crossing in DIVOP loop"
@@ -5353,72 +5378,80 @@ FCOMPS:
     jsr IFLT
     jsr FTOW
     jsr POPSET
-    jsr LA3B5
-    jmp L9A62
+    jsr FLDA
+    jmp FCMPA
 
-L9A50:
+FCOMPR:
     jsr PHFACC
-    jsr L9C42
+    jsr ADDER
     stx zpTYPE
     tay
     jsr FLOATI
     jsr POPSET
-L9A5F:
-    jsr LA34E
 
-; Compare FPA = FPB
-; -----------------
-L9A62:
+FCMP:
+    jsr FLDW
+
+; Compare FACC with FWRK
+; ----------------------
+FCMPA:
     ldx zpTYPE
     ldy #$00
-    lda zp3B
+    lda zpFWRKS
     and #$80
-    sta zp3B
+    sta zpFWRKS
     lda zpFACCS
     and #$80
-    cmp zp3B
-    bne L9A92
-    lda zp3D
+    cmp zpFWRKS
+    bne FCMPZ
+
+    lda zpFWRKX
     cmp zpFACCX
-    bne L9A93
-    lda zp3E
+    bne FCMPZZ
+
+    lda zpFWRKMA
     cmp zpFACCMA
-    bne L9A93
-    lda zp3F
+    bne FCMPZZ
+
+    lda zpFWRKMB
     cmp zpFACCMB
-    bne L9A93
-    lda zp40
+    bne FCMPZZ
+
+    lda zpFWRKMC
     cmp zpFACCMC
-    bne L9A93
-    lda zp41
+    bne FCMPZZ
+
+    lda zpFWRKMD
     cmp zpFACCMD
-    bne L9A93
-L9A92:
+    bne FCMPZZ
+
+FCMPZ:
     rts
 
-L9A93:
+FCMPZZ:
     ror
-    eor zp3B
+    eor zpFWRKS
     rol
     lda #$01
     rts
 
-L9A9A:
+COMPRE:
     jmp LETM         ; Jump to 'Type mismatch' error
-
 
 ; Evaluate next expression and compare with previous
 ; --------------------------------------------------
-L9A9D:
+COMPR:
     txa
-L9A9E:
-    beq L9AE7         ; Jump if current is string
-    bmi L9A50         ; Jump if current is float
+
+COMPRP1:
+    beq STNCMP        ; Jump if current is string
+    bmi FCOMPR        ; Jump if current is float
+
     jsr PHACC         ; Stack integer
-    jsr L9C42
+    jsr ADDER
     tay               ; Evaluate next expression
-    beq L9A9A         ; Error if string
-    bmi FCOMPS         ; Float, jump to compare floats
+    beq COMPRE        ; Error if string
+    bmi FCOMPS        ; Float, jump to compare floats
 
 ; Compare IACC with top of stack
 ; ------------------------------
@@ -5446,52 +5479,61 @@ L9A9E:
     ora zpIACC
     ora zpIACC+1
     ora zpIACC+2
-    php
+
+    php                   ; save flags
     clc
     lda #$04
     adc zpAESTKP          ; Drop integer from stack
     sta zpAESTKP
-    bcc L9AE5
+    bcc COMPRX
+
     inc zpAESTKP+1
-L9AE5:
-    plp
+COMPRX:
+    plp                   ; restore flags
     rts
 
 ; Compare string with next expression
 ; -----------------------------------
-L9AE7:
-    jsr LBDB2
-    jsr L9C42
+STNCMP:
+    jsr PHSTR
+    jsr ADDER
+
     tay
-    bne L9A9A
+    bne COMPRE
+
     stx zpWORK
     ldx zpCLEN
     .if version < 3 || (version == 3 && minorversion < 10)
         ldy #$00
     .endif
     lda (zpAESTKP),Y
-    sta zp39
+    sta zpWORK+2
     cmp zpCLEN
-    bcs L9AFF
+    bcs COMPRF
+
     tax
-L9AFF:
-    stx zp3A
+COMPRF:
+    stx zpWORK+3
 
     .if version < 3 || (version == 3 && minorversion < 10)
         ldy #$00
     .endif
-L9B03:
-    cpy zp3A
-    beq L9B11
+
+COMPRG:
+    cpy zpWORK+3
+    beq COMPRH
+
     iny
     lda (zpAESTKP),Y
     cmp STRACC-1,Y
-    beq L9B03
-    bne L9B15
-L9B11:
-    lda zp39
+    beq COMPRG
+    bne COMPRI
+
+COMPRH:
+    lda zpWORK+2
     cmp zpCLEN
-L9B15:
+
+COMPRI:
     php
     jsr POPSTX
     ldx zpWORK
@@ -5518,180 +5560,202 @@ AEEXPR:
 ;
 ; Evaluator Level 7 - OR, EOR
 ; ---------------------------
+
+; EXPR reads a rhs. If status is eq then it returned a string.
+; If status is neq and plus then it returned a word.
+; If status is neq and minus then it returned an fp.
+
 EXPR:
-    jsr L9B72         ; Call Evaluator Level 6 - AND
+    jsr ANDER         ; Call Evaluator Level 6 - AND
                       ; Returns A=type, value in IACC/FPA/StrA, X=next char
-L9B2C:
+EXPRQ:
     cpx #tknOR
-    beq L9B3A         ; Jump if next char is OR
+    beq OR            ; Jump if next char is OR
+
     cpx #tknEOR
-    beq L9B55         ; Jump if next char is EOR
-    dec zpAECUR          ; Step PtrB back to last char
+    beq EOR_          ; Jump if next char is EOR
+
+    dec zpAECUR       ; Step PtrB back to last char
     tay
     sta zpTYPE
     rts               ; Set flags from type, store type in $27 and return
 
 ; OR numeric
 ; ----------
-L9B3A:
-    jsr L9B6B
+OR:
+    jsr PHANDR
     tay               ; Stack as integer, call Evaluator Level 6
     jsr INTEGB
+
     ldy #$03          ; If float, convert to integer
-L9B43:
+ORLP:
     lda (zpAESTKP),Y
-    ora zpIACC,Y        ; OR IACC with top of stack    ; abs,y (!)
-    sta zpIACC,Y              ; abs,y (!)
+    ora zpIACC,Y      ; OR IACC with top of stack    ; abs,y (!)
+    sta zpIACC,Y      ; abs,y (!)
     dey
-    bpl L9B43         ; Store result in IACC
-L9B4E:
-    jsr POPINC         ; Drop integer from stack
+    bpl ORLP          ; Store result in IACC
+
+EXPRP:
+    jsr POPINC        ; Drop integer from stack
     lda #$40
-    bne L9B2C         ; Return type=Int, jump to check for more OR/EOR
+    bne EXPRQ         ; Return type=Int, check for more OR/EOR, branch always
 
 ; EOR numeric
 ; -----------
-L9B55:
-    jsr L9B6B
+EOR_:
+    jsr PHANDR
     tay
     jsr INTEGB
+
     ldy #$03          ; If float, convert to integer
-L9B5E:
+EORLP:
     lda (zpAESTKP),Y
-    eor zpIACC,Y        ; EOR IACC with top of stack       ; abs,y (!)
-    sta zpIACC,Y                  ; abs,y (!)
+    eor zpIACC,Y      ; EOR IACC with top of stack       ; abs,y (!)
+    sta zpIACC,Y      ; abs,y (!)
     dey
-    bpl L9B5E         ; Store result in IACC
-    bmi L9B4E         ; Jump to drop from stack and continue
+    bpl EORLP         ; Store result in IACC
+    bmi EXPRP         ; Jump to drop from stack and continue
 
 ; Stack current as integer, evaluate another Level 6
 ; --------------------------------------------------
-L9B6B:
+PHANDR:
     tay
-    jsr INTEGB
-    jsr PHACC         ; If float, convert to integer, push into stack
+    jsr INTEGB        ; convert to integer
+    jsr PHACC         ; push to stack
 
 ; Evaluator Level 6 - AND
 ; -----------------------
-L9B72:
-    jsr L9B9C         ; Call Evaluator Level 5, < <= = >= > <>
-L9B75:
+ANDER:
+    jsr RELATE         ; Call Evaluator Level 5, < <= = >= > <>
+
+ANDERQ:
     cpx #tknAND
-    beq L9B7A
+    beq AND
     rts               ; Return if next char not AND
 
 ; AND numeric
 ; -----------
-L9B7A:
+AND:
     tay
     jsr INTEGB
     jsr PHACC         ; If float, convert to integer, push onto stack
-    jsr L9B9C         ; Call Evaluator Level 5, < <= = >= > <>
+    jsr RELATE        ; Call Evaluator Level 5, < <= = >= > <>
+
     tay
     jsr INTEGB
+
     ldy #$03          ; If float, convert to integer
-L9B8A:
+ANDLP:
     lda (zpAESTKP),Y
-    and zpIACC,Y        ; AND IACC with top of stack   ; abs,y (!)
-    sta zpIACC,Y              ; abs,y (!)
+    and zpIACC,Y      ; AND IACC with top of stack   ; abs,y (!)
+    sta zpIACC,Y      ; abs,y (!)
     dey
-    bpl L9B8A         ; Store result in IACC
-    jsr POPINC         ; Drop integer from stack
+    bpl ANDLP         ; Store result in IACC
+
+    jsr POPINC        ; Drop integer from stack
     lda #$40
-    bne L9B75         ; Return type=Int, jump to check for another AND
+    bne ANDERQ        ; Return type=Int, jump to check for another AND
 
 ; Evaluator Level 5 - >... =... or <...
 ; -------------------------------------
-L9B9C:
-    jsr L9C42         ; Call Evaluator Level 4, + -
+RELATE:
+    jsr ADDER         ; Call Evaluator Level 4, + -
     cpx #'>'+1
-    bcs L9BA7         ; Larger than '>', return
+    bcs RELATX         ; Larger than '>', return
+
     cpx #'<'
-    bcs L9BA8         ; Smaller than '<', return
-L9BA7:
+    bcs RELTS         ; Smaller than '<', return
+
+RELATX:
     rts
 
 ; >... =... or <...
 ; -----------------
-L9BA8:
-    beq L9BC0         ; Jump with '<'
+RELTS:
+    beq RELTLT        ; Jump with '<'
     cpx #'>'
-    beq L9BE8         ; Jump with '>'
+    beq RELTGT        ; Jump with '>'
                       ; Must be '='
 ; = numeric
 ; ---------
     tax
-    jsr L9A9E
-    bne L9BB5         ; Jump with result=0 for not equal
-L9BB4:
+    jsr COMPRP1
+    bne FAIL          ; Jump with result=0 for not equal
+
+PASS:
     dey               ; Decrement to $FF for equal
-L9BB5:
-    sty zpIACC
+
+FAIL:
+    sty zpIACC        ; Store 0/-1 in IACC
     sty zpIACC+1
-    sty zpIACC+2          ; Store 0/-1 in IACC
+    sty zpIACC+2
     sty zpIACC+3
     lda #$40
     rts               ; Return type=Int
 
 ; < <= <>
 ; -------
-L9BC0:
+RELTLT:               ; RELate Less Than
     tax
     ldy zpAECUR
-    lda (zpAELINE),Y      ; Get next char from PtrB
+    lda (zpAELINE),Y  ; Get next char from zpAELINE
     cmp #'='
-    beq L9BD4         ; Jump for <=
+    beq LTOREQ         ; Jump for <=
+
     cmp #'>'
-    beq L9BDF         ; Jump for <>
+    beq NEQUAL         ; Jump for <>
 
 ; Must be < numeric
 ; -----------------
-    jsr L9A9D         ; Evaluate next and compare
-    bcc L9BB4
-    bcs L9BB5         ; Jump to return TRUE if <, FALSE if not <
+    jsr COMPR         ; test less than, evaluate next and compare
+    bcc PASS          ; Jump to return TRUE if <
+    bcs FAIL          ; return FALSE if not <
 
 ; <= numeric
 ; ----------
-L9BD4:
+LTOREQ:
     inc zpAECUR
-    jsr L9A9D         ; Step past '=', evaluate next and compare
-    beq L9BB4
-    bcc L9BB4         ; Jump to return TRUE if =, TRUE if <
-    bcs L9BB5         ; Jump to return FALSE otherwise
+    jsr COMPR         ; Step past '=', evaluate next and compare
+    beq PASS
+    bcc PASS          ; Jump to return TRUE if =, TRUE if <
+    bcs FAIL          ; Jump to return FALSE otherwise
 
 ; <> numeric
 ; ----------
-L9BDF:
+NEQUAL:
     inc zpAECUR
-    jsr L9A9D         ; Step past '>', evaluate next and compare
-    bne L9BB4
-    beq L9BB5         ; Jump to return TRUE if <>, FALSE if =
+    jsr COMPR         ; Step past '>', evaluate next and compare
+    bne PASS
+    beq FAIL          ; Jump to return TRUE if <>, FALSE if =
 
 ; > >=
 ; ----
-L9BE8:
+RELTGT:               ; RELate Greater Than
     tax
     ldy zpAECUR
-    lda (zpAELINE),Y      ; Get next char from PtrB
+    lda (zpAELINE),Y  ; Get next char from zpAELINE
     cmp #'='
-    beq L9BFA         ; Jump for >=
+    beq GTOREQ         ; Jump for >=
 
 ; > numeric
 ; ---------
-    jsr L9A9D         ; Evaluate next and compare
-    beq L9BB5
-    bcs L9BB4         ; Jump to return FALSE if =, TRUE if >
-    bcc L9BB5         ; Jump to return FALSE if <
+    jsr COMPR         ; test greater than, evaluate next and compare
+    beq FAIL
+    bcs PASS          ; Jump to return FALSE if =, TRUE if >
+    bcc FAIL          ; Jump to return FALSE if <
 
 ; >= numeric
 ; ----------
-L9BFA:
+GTOREQ:
     inc zpAECUR
-    jsr L9A9D         ; Step past '=', evaluate next and compare
-    bcs L9BB4
-    bcc L9BB5         ; Jump to return TRUE if >=, FALSE if <
+    jsr COMPR         ; Step past '=', evaluate next and compare
+    bcs PASS
+    bcc FAIL          ; Jump to return TRUE if >=, FALSE if <
+                      ; branch always
 
-L9C03:
+; ----------------------------------------------------------------------------
+
+STROVR:
     brk
     dta $13
     .if foldup == 1
@@ -5701,68 +5765,76 @@ L9C03:
     .endif
     brk
 
-; String addition
-; ---------------
-L9C15:
-    jsr LBDB2
-    jsr L9E20         ; Stack string, call Evaluator Level 2
+; String addition / concatenation
+; -------------------------------
+STNCON:
+    jsr PHSTR         ; Stack string
+    jsr POWER         ; call Evaluator Level 2
     tay
-    bne L9C88         ; string + number, jump to 'Type mismatch' error
+    bne ADDERE        ; string + number, jump to 'Type mismatch' error
+
     clc
     stx zpWORK
     ldy #$00
-    lda (zpAESTKP),Y      ; Get stacked string length
+    lda (zpAESTKP),Y  ; Get stacked string length
     adc zpCLEN
-    bcs L9C03         ; If added string length >255, jump to error
+    bcs STROVR        ; If added string length >255, jump to error
+
     tax
     pha
-    ldy zpCLEN          ; Save new string length
-L9C2D:
+    ldy zpCLEN        ; Save new string length
+CONLOP:
     lda STRACC-1,Y
     sta STRACC-1,X    ; Move current string up in string buffer
     dex
     dey
-    bne L9C2D
+    bne CONLOP
+
     jsr LBDCB         ; Unstack string to start of string buffer
+
     pla
     sta zpCLEN
-    ldx zpWORK          ; Set new string length
+    ldx zpWORK        ; Set new string length
     tya
-    beq L9C45         ; Set type=string, jump to check for more + or -
+    beq ADDERQ        ; Set type=string, jump to check for more + or -
 
 ; Evaluator Level 4, + -
 ; ----------------------
-L9C42:
-    jsr L9DD1         ; Call Evaluator Level 3, * / DIV MOD
-L9C45:
+ADDER:
+    jsr TERM         ; Call Evaluator Level 3, * / DIV MOD
+
+ADDERQ:
     cpx #'+'
-    beq L9C4E         ; Jump with addition
+    beq PLUS         ; Jump with addition
+
     cpx #'-'
-    beq L9CB5         ; Jump with subtraction
+    beq MINUS         ; Jump with subtraction
+
     rts               ; Return otherwise
 
 ; + <value>
 ; ---------
-L9C4E:
+PLUS:
     tay
-    beq L9C15         ; Jump if current value is a string
-    bmi L9C8B         ; Jump if current value is a float
+    beq STNCON        ; Jump if current value is a string
+    bmi FPLUS         ; Jump if current value is a float
 
 ; Integer addition
 ; ----------------
-    jsr L9DCE         ; Stack current and call Evaluator Level 3
+    jsr PHTERM         ; Stack current and call Evaluator Level 3
     tay
-    beq L9C88         ; If int + string, jump to 'Type mismatch' error
-    bmi L9CA7         ; If int + float, jump ...
+    beq ADDERE         ; If int + string, jump to 'Type mismatch' error
+    bmi FPLUST         ; If int + float, jump ...
+
     ldy #$00
     clc
     lda (zpAESTKP),Y
-    adc zpIACC
-    sta zpIACC          ; Add top of stack to IACC
+    adc zpIACC          ; Add top of stack to IACC
+    sta zpIACC          ; Store result in IACC
     iny
     lda (zpAESTKP),Y
     adc zpIACC+1
-    sta zpIACC+1          ; Store result in IACC
+    sta zpIACC+1
     iny
     lda (zpAESTKP),Y
     adc zpIACC+2
@@ -5770,181 +5842,206 @@ L9C4E:
     iny
     lda (zpAESTKP),Y
     adc zpIACC+3
-L9C77:
+
+ADDERP:
     sta zpIACC+3
     clc
     lda zpAESTKP
     adc #$04
-    sta zpAESTKP          ; Drop integer from stack
+    sta zpAESTKP       ; Drop integer from stack
     lda #$40
-    bcc L9C45         ; Set result=integer, jump to check for more + or -
-    inc zpAESTKP+1
-    bcs L9C45         ; Jump to check for more + or -
+    bcc ADDERQ         ; Set result=integer, jump to check for more + or -
 
-L9C88:
-    jmp LETM         ; Jump to 'Type mismatch' error
+    inc zpAESTKP+1
+    bcs ADDERQ         ; Jump to check for more + or -
+
+ADDERE:
+    jmp LETM           ; Jump to 'Type mismatch' error
 
 ; Real addition
 ; -------------
-L9C8B:
+FPLUS:
     jsr PHFACC
-    jsr L9DD1         ; Stack float, call Evaluator Level 3
+    jsr TERM           ; Stack float, call Evaluator Level 3
     tay
-    beq L9C88         ; float + string, jump to 'Type mismatch' error
+    beq ADDERE         ; float + string, jump to 'Type mismatch' error
     stx zpTYPE
-    bmi L9C9B         ; float + float, skip conversion
-    jsr IFLT         ; float + int, convert int to float
-L9C9B:
+    bmi FPLUSS          ; float + float, skip conversion
+
+    jsr IFLT           ; float + int, convert int to float
+
+FPLUSS:
     jsr POPSET         ; Pop float from stack, point FPTR to it
-    jsr LA500         ; Unstack float to FPA2 and add to FPA1
-L9CA1:
-    ldx zpTYPE          ; Get nextchar back
+    jsr FADD           ; Unstack float to FPA2 and add to FPA1
+
+FFFFA:
+    ldx zpTYPE         ; Get nextchar back
     lda #$FF
-    bne L9C45         ; Set result=float, loop to check for more + or -
+    bne ADDERQ         ; Set result=float, loop to check for more + or -
 
 ; int + float
 ; -----------
-L9CA7:
+FPLUST:
     stx zpTYPE
     jsr POPACC         ; Unstack integer to IACC
     jsr PHFACC
-    jsr IFLT         ; Stack float, convert integer in IACC to float in FPA1
-    jmp L9C9B         ; Jump to do float + <stacked float>
+    jsr IFLT           ; Stack float, convert integer in IACC to float in FPA1
+    jmp FPLUSS         ; Jump to do float + <stacked float>
 
 ; - numeric
 ; ---------
-L9CB5:
+MINUS:
     tay
-    beq L9C88         ; If current value is a string, jump to error
-    bmi L9CE1         ; Jump if current value is a float
+    beq ADDERE         ; If current value is a string, jump to error
+    bmi FMINUS         ; Jump if current value is a float
 
 ; Integer subtraction
 ; -------------------
-    jsr L9DCE         ; Stack current and call Evaluator Level 3
+    jsr PHTERM         ; Stack current and call Evaluator Level 3
     tay
-    beq L9C88         ; int + string, jump to error
-    bmi L9CFA         ; int + float, jump to convert and do real subtraction
+    beq ADDERE         ; int + string, jump to error
+    bmi FMINUT         ; int + float, jump to convert and do real subtraction
+
     sec
     ldy #$00
     lda (zpAESTKP),Y
-    sbc zpIACC
-    sta zpIACC
+    sbc zpIACC         ; Subtract IACC from top of stack
+    sta zpIACC         ; Store in IACC
     iny
     lda (zpAESTKP),Y
     sbc zpIACC+1
-    sta zpIACC+1          ; Subtract IACC from top of stack
+    sta zpIACC+1
     iny
     lda (zpAESTKP),Y
     sbc zpIACC+2
-    sta zpIACC+2          ; Store in IACC
+    sta zpIACC+2
     iny
     lda (zpAESTKP),Y
     sbc zpIACC+3
-    jmp L9C77         ; Jump to pop stack and loop for more + or -
+    jmp ADDERP         ; Jump to pop stack and loop for more + or -
 
 ; Real subtraction
 ; ----------------
-L9CE1:
+FMINUS:
     jsr PHFACC
-    jsr L9DD1         ; Stack float, call Evaluator Level 3
+    jsr TERM           ; Stack float, call Evaluator Level 3
+
     tay
-    beq L9C88         ; float - string, jump to 'Type mismatch' error
+    beq ADDERE         ; float - string, jump to 'Type mismatch' error
     stx zpTYPE
-    bmi L9CF1         ; float - float, skip conversion
-    jsr IFLT         ; float - int, convert int to float
-L9CF1:
+    bmi FMINUR         ; float - float, skip conversion
+
+    jsr IFLT           ; float - int, convert int to float
+
+FMINUR:
     jsr POPSET         ; Pop float from stack and point FPTR to it
-    jsr LA4FD         ; Unstack float to FPA2 and subtract it from FPA1
-    jmp L9CA1         ; Jump to set result and loop for more + or -
+    jsr FXSUB          ; Unstack float to FWRK and subtract it from FACC
+    jmp FFFFA          ; Jump to set result and loop for more + or -
 
 ; int - float
 ; -----------
-L9CFA:
+FMINUT:
     stx zpTYPE
     jsr POPACC         ; Unstack integer to IACC
     jsr PHFACC
-    jsr IFLT         ; Stack float, convert integer in IACC to float in FPA1
+    jsr IFLT           ; Stack float, convert integer in IACC to float in FACC
     jsr POPSET         ; Pop float from stack, point FPTR to it
-    jsr LA4D0         ; Subtract FPTR float from FPA1 float
-    jmp L9CA1         ; Jump to set result and loop for more + or -
+    jsr FSUB           ; Subtract FPTR float from FPA1 float
+    jmp FFFFA          ; Jump to set result and loop for more + or -
 
-L9D0E:
+FTIMLF:
     jsr IFLT
-L9D11:
+
+FTIML:
     jsr POPACC
     jsr PHFACC
     jsr IFLT
-    jmp L9D2C
+    jmp FTIMR
 
-L9D1D:
+FTIMFL:
     jsr IFLT
-L9D20:
+
+FTIM:
     jsr PHFACC
-    jsr L9E20
+    jsr POWER
     stx zpTYPE
     tay
     jsr FLOATI
-L9D2C:
+
+FTIMR:
     jsr POPSET
     jsr FMUL
     lda #$FF
     ldx zpTYPE
-    jmp L9DD4
+    jmp TERMQ
 
-L9D39:
+FTIME:
     jmp LETM
 
 ; * <value>
 ; ---------
-L9D3C:
+TIMES:
     tay
-    beq L9D39         ; If current value is string, jump to error
-    bmi L9D20         ; Jump if current valus ia a float
+    beq FTIME         ; If current value is string, jump to error
+    bmi FTIM          ; Jump if current valus ia a float
+
     lda zpIACC+3
     cmp zpIACC+2
-    bne L9D1D
-    tay
-    beq L9D4E
-    cmp #$FF
-    bne L9D1D
+    bne FTIMFL
 
-L9D4E:
+    tay
+    beq TIMESA
+    cmp #$FF
+    bne FTIMFL
+
+TIMESA:
     eor zpIACC+1
-    bmi L9D1D
+    bmi FTIMFL
+
     jsr PHPOW
+
     stx zpTYPE
     tay
-    beq L9D39
-    bmi L9D11
+    beq FTIME
+    bmi FTIML
+
     lda zpIACC+3
     cmp zpIACC+2
-    bne L9D0E
+    bne FTIMLF
+
     tay
-    beq L9D69
+    beq TIMESB
+
     cmp #$FF
-    bne L9D0E
-L9D69:
+    bne FTIMLF
+
+TIMESB:
     eor zpIACC+1
-    bmi L9D0E
+    bmi FTIMLF
+
     lda zpIACC+3
     pha
     jsr ABSCOM
-    ldx #$39
-    jsr LBE44
+
+    ldx #zpWORK+2
+    jsr ACCTOM
     jsr POPACC
+
     pla
     eor zpIACC+3
     sta zpWORK
     jsr ABSCOM
+
     ldy #$00
     ldx #$00
-    sty zp3F
-    sty zp40
-L9D8B:
-    lsr zp3A
+    sty zpWORK+8
+    sty zpWORK+9
 
-    ror zp39
-    bcc L9DA6
+NUL:
+    lsr zpWORK+3
+    ror zpWORK+2
+    bcc NAD
+
     clc
     tya
     adc zpIACC
@@ -5952,100 +6049,114 @@ L9D8B:
     txa
     adc zpIACC+1
     tax
-    lda zp3F
+    lda zpWORK+8
     adc zpIACC+2
-    sta zp3F
-    lda zp40
+    sta zpWORK+8
+    lda zpWORK+9
     adc zpIACC+3
-    sta zp40
-L9DA6:
+    sta zpWORK+9
+
+NAD:
     asl zpIACC
     rol zpIACC+1
     rol zpIACC+2
     rol zpIACC+3
-    lda zp39
-    ora zp3A
+    lda zpWORK+2
+    ora zpWORK+3
+    bne NUL
 
-    bne L9D8B
-    sty zp3D
-    stx zp3E
+    sty zpWORK+6
+    stx zpWORK+7
     lda zpWORK
     php
 
-L9DBB:
-    ldx #$3D
-L9DBD:
-    jsr LAF56
+REMIN:
+    ldx #zpWORK+6
+
+DIVIN:
+    jsr MTOACC
+
     plp
-    bpl L9DC6
-    jsr LAD93
-L9DC6:
+    bpl TERMA
+
+    jsr COMPNO
+
+TERMA:
     ldx zpTYPE
-    jmp L9DD4
+    jmp TERMQ
 
 ; * <value>
 ; ---------
-L9DCB:
-    jmp L9D3C         ; Bounce back to multiply code
+TIMESJ:
+    jmp TIMES         ; Bounce back to multiply code
 
+; ----------------------------------------------------------------------------
 
 ; Stack current value and continue in Evaluator Level 3
 ; ------------------------------------------------------- 
-L9DCE:
+PHTERM:
     jsr PHACC
 
 ; Evaluator Level 3, * / DIV MOD
 ; ------------------------------
-L9DD1:
-    jsr L9E20         ; Call Evaluator Level 2, ^
-L9DD4:
+TERM:
+    jsr POWER         ; Call Evaluator Level 2, ^
+
+TERMQ:
     cpx #'*'
-    beq L9DCB         ; Jump with multiply
+    beq TIMESJ        ; Jump with multiply
+
     cpx #'/'
-    beq L9DE5         ; Jump with divide
+    beq DIVIDE         ; Jump with divide
+
     cpx #tknMOD
-    beq L9E01         ; Jump with MOD
+    beq REMAIN         ; Jump with MOD
+
     cpx #tknDIV
-    beq L9E0A
-    rts               ; Jump with DIV
+    beq INTDIV         ; Jump with DIV
+
+    rts
 
 ; / <value>
 ; ---------
-L9DE5:
+DIVIDE:
     tay
     jsr FLOATI         ; Ensure current value is real
     jsr PHFACC
-    jsr L9E20         ; Stack float, call Evaluator Level 2
+    jsr POWER          ; Stack float, call Evaluator Level 2
+
     stx zpTYPE
     tay
     jsr FLOATI         ; Ensure current value is real
     jsr POPSET
-    jsr FXDIV         ; Unstack to FPTR, call divide routine
+    jsr FXDIV          ; Unstack to FPTR, call divide routine
+
     ldx zpTYPE
     lda #$FF
-    bne L9DD4; Set result, loop for more * / MOD DIV
+    bne TERMQ; Set result, loop for more * / MOD DIV
 
 ; MOD <value>
 ; -----------
-L9E01:
+REMAIN:
     jsr DIVOP         ; Ensure current value is integer
     lda zpWORK+1
     php
-    jmp L9DBB         ; Jump to MOD routine
+    jmp REMIN         ; Jump to MOD routine
 
 ; DIV <value>
 ; -----------
-L9E0A:
+INTDIV:
     jsr DIVOP         ; Ensure current value is integer
-    rol zp39
-    rol zp3A
-    rol zp3B          ; Multiply IACC by 2
-    rol zp3C
+    rol zpWORK+2      ; Multiply by 2
+    rol zpWORK+3
+    rol zpWORK+4
+    rol zpWORK+5
     bit zpWORK
     php
-    ldx #$39
-    jmp L9DBD         ; Jump to DIV routine
+    ldx #zpWORK+2
+    jmp DIVIN         ; Jump to DIV routine
 
+; ----------------------------------------------------------------------------
 
 ; Stack current integer and evaluate another Level 2
 ; --------------------------------------------------
@@ -6054,236 +6165,288 @@ PHPOW:
 
 ; Evaluator Level 2, ^
 ; --------------------
-L9E20:
+POWER:
     jsr FACTOR         ; Call Evaluator Level 1, - + NOT function ( ) ? ! $ | "
-L9E23:
+
+POWERB:
     pha
-L9E24:
+
+POWERA:
     ldy zpAECUR
     inc zpAECUR
     lda (zpAELINE),Y      ; Get character
-    cmp #$20
-    beq L9E24         ; Skip spaces
+    cmp #' '
+    beq POWERA            ; Skip spaces
+
     tax
     pla
     cpx #'^'
-    beq L9E35
+    beq POW
+
     rts               ; Return if not ^
 
 ; ^ <value>
 ; ---------
-L9E35:
+POW:
     tay
     jsr FLOATI         ; Ensure current value is a float
     jsr PHFACC
     jsr FLTFAC         ; Stack float, evaluate a real
+
     lda zpFACCX
     cmp #$87
-    bcs L9E88
-    jsr LA486
-    bne L9E59
-    jsr POPSET
-    jsr LA3B5
-    lda zp4A
-    jsr FIPOW
-    lda #$FF
-    bne L9E23         ; Set result=real, loop to check for more ^
+    bcs FPOWA          ; abs(n) >= 64
 
-L9E59:
-    jsr LA381
+    jsr FFRAC
+    bne FPOWE
+
+    jsr POPSET
+    jsr FLDA
+
+    lda zpFQUAD
+    jsr FIPOW
+
+    lda #$FF
+    bne POWERB         ; Set result=real, loop to check for more ^
+
+FPOWE:
+    jsr STARGC
+
     lda zpAESTKP
     sta zpARGP
     lda zpAESTKP+1
     sta zpARGP+1
-    jsr LA3B5
-    lda zp4A
+    jsr FLDA
+
+    lda zpFQUAD
     jsr FIPOW
-L9E6C:
-    jsr LA37D
+
+FPOWC:
+    jsr STARGB
     jsr POPSET
-    jsr LA3B5
-    jsr LA801
-    jsr LAAD1
+    jsr FLDA
+    jsr FLOG
+    jsr ACMUL
     jsr FEXP
-    jsr LA7ED
+    jsr ARGB
     jsr FMUL
     lda #$FF
-    bne L9E23         ; Set result=real, loop to check for more ^
+    bne POWERB         ; Set result=real, loop to check for more ^
 
-L9E88:
-    jsr LA381
+FPOWA:
+    jsr STARGC
     jsr FONE
-    bne L9E6C
+    bne FPOWC          ; branch always
 
+; ----------------------------------------------------------------------------
 
-; Convert number to hex string
-; ----------------------------
+; Convert number to hex string in STRACC
+; --------------------------------------
 FCONHX:
     tya
-    bpl L9E96
+    bpl FCONHF
     jsr IFIX         ; Convert real to integer
-L9E96:
+
+FCONHF:
     ldx #$00
     ldy #$00
-L9E9A:
-    lda zpIACC,Y        ; abs,y (!)
+
+HEXPLP:
+    lda zpIACC,Y      ; abs,y (!)
     pha               ; Expand four bytes into eight digits
     and #$0F
-    sta zp3F,X
+    sta zpWORK+8,X
     pla
     lsr
     lsr
     lsr
     lsr
     inx
-    sta zp3F,X
+    sta zpWORK+8,X
     inx
     iny
     cpy #$04
-    bne L9E9A         ; Loop for four bytes
-L9EB0:
+    bne HEXPLP         ; Loop for four bytes
+
+HEXLZB:
     dex
-    beq L9EB7         ; No digits left, output a single zero
-    lda zp3F,X
-    beq L9EB0         ; Skip leading zeros
-L9EB7:
-    lda zp3F,X
-    cmp #$0A          ; Get byte from workspace
-    bcc L9EBF
-    adc #$06          ; Convert byte to hex
-L9EBF:
-    adc #'0'
-    jsr LA066         ; Convert to digit and store in buffer
+    beq HEXP          ; No digits left, output a single zero
+
+    lda zpWORK+8,X
+    beq HEXLZB        ; Skip leading zeros
+
+HEXP:
+    lda zpWORK+8,X
+    cmp #$0A
+    bcc NOTHX         ; less than 10
+
+    adc #$06          ; >= 10, convert byte to hex (A-F after '0' is added)
+
+NOTHX:
+    adc #'0'          ; to ASCII
+    jsr CHTOBF         ; store in buffer
     dex
-    bpl L9EB7
+    bpl HEXP
+
     rts               ; Loop for all digits
+
+; ----------------------------------------------------------------------------
 
 ; Output nonzero real number
 ; --------------------------
-L9EC8:
-    bpl L9ED1         ; Jump forward if positive
+FPRTA:
+    bpl FPRTC          ; Jump forward if positive
+
     lda #'-'
-    sta zpFACCS          ; A='-', clear sign flag
-    jsr LA066         ; Add '-' to string buffer
-L9ED1:
-    lda zpFACCX          ; Get exponent
-    cmp #$81
-    bcs L9F25         ; If m*2^1 or larger, number>=1, jump to output it
-    jsr LA1F4         ; FloatA=FloatA*10
-    dec zp49
-    jmp L9ED1         ; Loop until number is >=1
+    sta zpFACCS        ; A='-', clear sign flag
+    jsr CHTOBF         ; Add '-' to string buffer
+
+FPRTC:
+    lda zpFACCX       ; Get exponent
+    cmp #$81          ; get into range 1.0000 to 9.9999
+    bcs FPRTD         ; If m*2^1 or larger, number>=1, jump to output it
+
+    jsr FTENFX        ; FACC=FACC*10
+
+    dec zpFPRTDX
+    jmp FPRTC         ; Loop until number is >=1
 
 ; Convert numeric value to string
 ; ===============================
-; On entry, FloatA ($2E-$35)  = number
+; On entry, FACC ($2E-$35)    = number
 ;           or IACC ($2A-$2D) = number
 ;                           Y = type
 ;                          @% = print format
 ;                     $15.b7 set if hex
-; Uses,     $37=format type 0/1/2=G/E/F
-;           $38=max digits
-;           $49
+; Uses,     zpWORK=format type 0/1/2=G/E/F
+;           zpWORK+1=max digits
+;           zpFPRTDX
 ; On exit,  StrA contains string version of number
-;           $36=string length
+;           zpCLEN=string length
 ;
 FCON:
-    ldx VARL_AT+2      ; Get format byte
+    ldx VARL_AT+2      ; Get format byte, flag forcing E
     cpx #$03
-    bcc L9EE8         ; If <3, ok - use it
+    bcc FCONOK         ; If <3, ok - use it
+
     ldx #$00          ; If invalid, $00 for General format
-L9EE8:
+FCONOK:
     stx zpWORK          ; Store format type
     lda VARL_AT+1
-    beq L9EF5         ; If digits=0, jump to check format
-    cmp #$0A
-    bcs L9EF9         ; If 10+ digits, jump to use 10 digits
-    bcc L9EFB         ; If <10 digits, use specified number
-L9EF5:
-    cpx #$02
-    beq L9EFB         ; If fixed format, use zero digits
+    beq FCONC         ; If digits=0, jump to check format
 
-; STR$ enters here to use general format
-; --------------------------------------
-L9EF9:
+    cmp #$0A
+    bcs FCONA         ; If 10+ digits, jump to use 10 digits
+
+;  In G,E formats varl is no. of sig figs >0
+;  In F format it is no. of decimals and can e >=0
+
+    bcc FCONB         ; If <10 digits, use specified number
+
+FCONC:
+    cpx #$02
+    beq FCONB         ; If fixed format, use zero digits
+
+; STR$ enters here to use general format, having set zpWORK to 0
+; --------------------------------------------------------------
+FCONA:
     lda #$0A          ; Otherwise, default to ten digits
-L9EFB:
+
+FCONB:
     sta zpWORK+1
-    sta zpFDIGS          ; Store digit length
+    sta zpFDIGS        ; Store digit length
     lda #$00
     sta zpCLEN
-    sta zp49          ; Set initial output length to 0, initial exponent to 0
+    sta zpFPRTDX       ; Set initial output length to 0, initial exponent to 0
     bit zpPRINTF
     bmi FCONHX         ; Jump for hex conversion if $15.b7 set
+
     tya
-    bmi L9F0F
-    jsr IFLT         ; Convert integer to real
-L9F0F:
-    jsr LA1DA
-    bne L9EC8         ; Get -1/0/+1 sign, jump if not zero to output nonzero number
+    bmi FCONFX
+
+    jsr IFLT           ; Convert integer to real
+
+FCONFX:
+    jsr FTST
+    bne FPRTA     ; Get -1/0/+1 sign, jump if not zero to output nonzero number
+
     lda zpWORK
-    bne L9F1D         ; If not General format, output fixed or exponential zero
+    bne FPRTHJ    ; If not General format, output fixed or exponential zero
+
     lda #'0'
-    jmp LA066         ; Store single '0' into string buffer and return
-L9F1D:
-    jmp L9F9C         ; Jump to output zero in fixed or exponential format
+    jmp CHTOBF    ; Store single '0' into string buffer and return
 
-L9F20:
+FPRTHJ:
+    jmp FPRTHH     ; Jump to output zero in fixed or exponential format
+
+FPRTEE:
     jsr FONE
-    bne L9F34         ; FloatA=1.0
+    bne FPRTEP3    ; FACC=1.0
 
-; FloatA now is >=1, check that it is <10
-; ---------------------------------------
-L9F25:
-    cmp #$84
-    bcc L9F39         ; Exponent<4, FloatA<10, jump to convert it
-    bne L9F31         ; Exponent<>4, need to divide it
-    lda zpFACCMA          ; Get mantissa top byte
+; FACC now is >=1, check that it is <10
+; -------------------------------------
+FPRTD:
+    cmp #$84        ; exponent of 9.99
+    bcc FPRTF       ; 1.0 to 7.999999 all OK
+    bne FPRTE       ; exponent 85 or more
+    lda zpFACCMA    ; fine check if exponent=84
     cmp #$A0
-    bcc L9F39         ; Less than $A0, less than ten, jump to convert it
-L9F31:
-    jsr FTENFQ         ; FloatA=FloatA / 10
-L9F34:
-    inc zp49
-    jmp L9ED1         ; Jump back to get the number >=1 again
+    bcc FPRTF       ; 8.0000 to 9.9999
+
+FPRTE:
+    jsr FTENFQ      ; divide FACC by 10.0
+
+FPRTEP3:
+    inc zpFPRTDX
+    jmp FPRTC         ; Jump back to get the number >=1 again
 
 ; FloatA is now between 1 and 9.999999999
 ; ---------------------------------------
-L9F39:
+FPRTF:
     lda zpFACCMG
     sta zpTYPE
     jsr STARGA         ; Copy FloatA to FloatTemp at $27/$046C
+
     lda zpFDIGS
-    sta zpWORK+1          ; Get number of digits
-    ldx zpWORK          ; Get print format
+    sta zpWORK+1      ; Get number of digits
+    ldx zpWORK        ; Get print format
     cpx #$02
     bne L9F5C         ; Not fixed format, jump to do exponent/general
-    adc zp49
+
+    adc zpFPRTDX
     bmi L9FA0
+
     sta zpWORK+1
     cmp #$0B
     bcc L9F5C
+
     lda #$0A
     sta zpWORK+1
     lda #$00
     sta zpWORK
+
 L9F5C:
     jsr LA686         ; Clear FloatA
+
     lda #$A0
     sta zpFACCMA
     lda #$83
     sta zpFACCX
     ldx zpWORK+1
     beq L9F71
+
 L9F6B:
     jsr FTENFQ         ; FloatA=FloatA/10
     dex
     bne L9F6B
+
 L9F71:
-    jsr LA7F5         ; Point to $46C
-    jsr LA34E         ; Unpack to FloatB
+    jsr ARGA         ; Point to $46C
+    jsr FLDW         ; Unpack to FloatB
     lda zpTYPE
     sta zp42
-    jsr LA50B; Add
+    jsr LA50B        ; Add
+
 L9F7E:
     lda zpFACCX
     cmp #$84
@@ -6298,13 +6461,13 @@ L9F7E:
 L9F92:
     lda zpFACCMA
     cmp #$A0
-    bcs L9F20
+    bcs FPRTEE
     lda zpWORK+1
     bne L9FAD
 
 ; Output zero in Exponent or Fixed format
 ; ---------------------------------------
-L9F9C:
+FPRTHH:
     cmp #$01
     beq L9FE6
 L9FA0:
@@ -6336,14 +6499,14 @@ L9FC3:
     bne L9FE6
 L9FCF:
     lda #'0'
-    jsr LA066         ; Output '0'
+    jsr CHTOBF         ; Output '0'
     lda #'.'
-    jsr LA066         ; Output '.'
+    jsr CHTOBF         ; Output '.'
     lda #'0'          ; Prepare '0'
 L9FDB:
     inc zp49
     beq L9FE4
-    jsr LA066         ; Output
+    jsr CHTOBF         ; Output
     bne L9FDB
 
 L9FE4:
@@ -6355,7 +6518,7 @@ L9FE8:
     dec zpFPRTWN
     bne L9FF4
     lda #$2E
-    jsr LA066
+    jsr CHTOBF
 L9FF4:
     dec zpWORK+1
     bne L9FE8
@@ -6380,11 +6543,11 @@ LA011:
     beq LA03F
 LA015:
     lda #'E'
-    jsr LA066         ; Output 'E'
+    jsr CHTOBF         ; Output 'E'
     lda zp49
     bpl LA028
     lda #'-'
-    jsr LA066         ; Output '-'
+    jsr CHTOBF         ; Output '-'
     sec
     lda #$00
     sbc zp49          ; Negate
@@ -6395,11 +6558,11 @@ LA028:
     lda #$20
     ldy zp49
     bmi LA038
-    jsr LA066
+    jsr CHTOBF
 LA038:
     cpx #$00
     bne LA03F
-    jmp LA066
+    jmp CHTOBF
 
 LA03F:
     rts
@@ -6435,18 +6598,18 @@ LA064:
 
 ; Store character in string buffer
 ; --------------------------------
-LA066:
-    stx zp3B
+CHTOBF:
+    stx zpWORK+4
     ldx zpCLEN
     sta STRACC,X    ; Store character
-    ldx zp3B
+    ldx zpWORK+4
     inc zpCLEN
     rts               ; Increment string length
 
 LA072:
     clc
     stx zpFACCMG
-    jsr LA1DA
+    jsr FTST
     lda #$FF
     rts
 
@@ -6525,7 +6688,7 @@ LA0E8:
     lda zp49
     ora zp48          ; Check exponent and 'decimal point' flag
     beq LA11F         ; No exponent, no decimal point, return integer
-    jsr LA1DA
+    jsr FTST
     beq LA11B
 LA0F5:
     lda #$A8
@@ -6538,7 +6701,7 @@ LA0F5:
     bmi LA111
     beq LA118
 LA108:
-    jsr LA1F4
+    jsr FTENFX
     dec zp49
     bne LA108
     beq LA118
@@ -6679,7 +6842,7 @@ LA197:
     pla
     rts
 
-LA1DA:
+FTST:
     lda zpFACCMA
     ora zpFACCMB
     ora zpFACCMC
@@ -6698,7 +6861,8 @@ LA1ED:
 LA1F3:
     rts
 
-LA1F4:
+; FACC times 10.0
+FTENFX:
     clc
     lda zpFACCX
     adc #$03
@@ -6850,7 +7014,7 @@ IFLT:
     stx zpFACCXH
     lda zpIACC+3
     bpl LA2CD
-    jsr LAD93
+    jsr COMPNO
     ldx #$FF
 LA2CD:
     stx zpFACCS
@@ -6929,7 +7093,7 @@ LA33A:
     bcs LA336
     dec zpFACCXH
     bcc LA336
-LA34E:
+FLDW:
     ldy #$04
     lda (zpARGP),Y
     sta zp41
@@ -6960,18 +7124,18 @@ LA37A:
 
 ; ----------------------------------------------------------------------------
 
-LA37D:
+STARGB:
     lda #<FWSB
-    bne LA387
+    bne FSTAP
 
-LA381:
+STARGC:
     lda #<FWSC
-    bne LA387
+    bne FSTAP
 
 STARGA:
     lda #<FWSA
 
-LA387:
+FSTAP:
     sta zpARGP
     lda #$04+(ws/256)   ; MSB of all FWS / FP TEMP variables
     sta zpARGP+1
@@ -7000,8 +7164,9 @@ LA38D:
     rts
 
 LA3B2:
-    jsr LA7F5
-LA3B5:
+    jsr ARGA
+
+FLDA:
     ldy #$04
     lda (zpARGP),Y
     sta zpFACCMD
@@ -7064,7 +7229,7 @@ FFIX:
     lda zpFACCX
     bpl FFIXQ         ; Exponent<$80, number<1, jump to return 0
     jsr LA453         ; Set $3B-$42 to zero
-    jsr LA1DA
+    jsr FTST
     bne LA43C
     beq LA468
 
@@ -7142,12 +7307,12 @@ LA46C:
 LA485:
     rts
 
-LA486:
+FFRAC:
     lda zpFACCX
     bmi LA491
     lda #$00
     sta zp4A
-    jmp LA1DA
+    jmp FTST
 
 LA491:
     jsr FFIX
@@ -7188,12 +7353,12 @@ LA4C7:
     jsr LA4B6
     jmp LA46C
 
-LA4D0:
-    jsr LA4FD
+FSUB:
+    jsr FXSUB
     jmp LAD7E
 
 LA4D6:
-    jsr LA34E
+    jsr FLDW
     jsr LA38D
 LA4DC:
     lda zp3B
@@ -7216,17 +7381,17 @@ LA4E8:
 LA4FC:
     rts
 
-LA4FD:
+FXSUB:
     jsr LAD7E
-LA500:
-    jsr LA34E
+FADD:
+    jsr FLDW
     beq LA4FC
 LA505:
     jsr LA50B
     jmp LA65C
 
 LA50B:
-    jsr LA1DA
+    jsr FTST
     beq LA4DC
     ldy #$00
     sec
@@ -7380,9 +7545,9 @@ LA605:
     rts
 
 LA606:
-    jsr LA1DA
+    jsr FTST
     beq LA605
-    jsr LA34E
+    jsr FLDW
     bne LA613
     jmp LA686
 
@@ -7495,10 +7660,10 @@ FRECIP:
 ; ----------------------------------------------------------------------------
 
 FXDIV:
-    jsr LA1DA
+    jsr FTST
     beq FDIVZ
     jsr FTOW
-    jsr LA3B5
+    jsr FLDA
     bne LA6F1
     rts
 
@@ -7514,24 +7679,24 @@ TAN:
     jsr LA9D3
     lda zp4A
     pha
-    jsr LA7E9
+    jsr ARGD
     jsr LA38D
     inc zp4A
     jsr LA99E
-    jsr LA7E9
+    jsr ARGD
     jsr LA4D6
     pla
     sta zp4A
     jsr LA99E
-    jsr LA7E9
+    jsr ARGD
     jsr LA6E7
     lda #$FF
     rts
 
 LA6E7:
-    jsr LA1DA
+    jsr FTST
     beq LA698
-    jsr LA34E
+    jsr FLDW
     beq FDIVZ
 LA6F1:
     lda zpFACCS
@@ -7655,7 +7820,7 @@ LA7A9:
 SQR:
     jsr FLTFAC
 LA7B7:
-    jsr LA1DA
+    jsr FTST
     beq LA7E6
     bmi LA7A9
     jsr STARGA
@@ -7665,7 +7830,7 @@ LA7B7:
     sta zpFACCX
     lda #$05
     sta zp4A
-    jsr LA7ED
+    jsr ARGB
 LA7CF:
     jsr LA38D
     lda #<FWSA
@@ -7673,7 +7838,7 @@ LA7CF:
     jsr FXDIV
     lda #<FWSB
     sta zpARGP
-    jsr LA500
+    jsr FADD
     dec zpFACCX
     dec zp4A
     bne LA7CF
@@ -7681,24 +7846,27 @@ LA7E6:
     lda #$FF
     rts
 
-; Point $4B/C to a floating point temp
-; ------------------------------------
-LA7E9:
+; Point zpARGP to a workspace floating point temps
+; ------------------------------------------------
+ARGD:
     lda #<FWSD
-    bne LA7F7
-LA7ED:
+    bne ARGCOM
+
+ARGB:
     lda #<FWSB
-    bne LA7F7
-LA7F1:
+    bne ARGCOM
+
+ARGC:
     lda #<FWSC
-    bne LA7F7
-LA7F5:
+    bne ARGCOM
+
+ARGA:
     lda #<FWSA
 
 
-LA7F7:
+ARGCOM:
     sta zpARGP
-    lda #>FWSA          ; MSB the same for all four temp registers
+    lda #>FWSD          ; MSB the same for all four temp registers
     sta zpARGP+1
     rts
 
@@ -7706,8 +7874,9 @@ LA7F7:
 ; ===========
 LN:
     jsr FLTFAC
-LA801:
-    jsr LA1DA
+
+FLOG:
+    jsr FTST
     beq LA808
     bpl LA814
 LA808:
@@ -7744,14 +7913,14 @@ LA82C:
     sty zpFACCX
     jsr LA505
     lda #<FWSD
-    jsr LA387
+    jsr FSTAP
     lda #<FLOGTC
     ldy #>FLOGTC
     jsr FCF
-    jsr LA7E9
+    jsr ARGD
     jsr FMUL
     jsr FMUL
-    jsr LA500
+    jsr FADD
     jsr STARGA
     pla
     sec
@@ -7762,8 +7931,8 @@ LA82C:
     lda #>LOGTWO
     sta zpARGP+1
     jsr FMUL
-    jsr LA7F5
-    jsr LA500
+    jsr ARGA
+    jsr FADD
     lda #$FF
     rts
 
@@ -7812,9 +7981,9 @@ LA8AA:
     sta zpARGP
     lda zpCOEFP+1
     sta zpARGP+1
-    jsr LA3B5
+    jsr FLDA
 LA8B5:
-    jsr LA7F5
+    jsr ARGA
     jsr FXDIV
     clc
     lda zpCOEFP
@@ -7825,7 +7994,7 @@ LA8B5:
     adc #$00
     sta zpCOEFP+1
     sta zpARGP+1
-    jsr LA500
+    jsr FADD
     dec zp48
     bne LA8B5
     rts
@@ -7844,24 +8013,24 @@ ACS:
 ; ============
 ASN:
     jsr FLTFAC
-    jsr LA1DA
+    jsr FTST
     bpl LA8EA
     lsr zpFACCS
     jsr LA8EA
     jmp LA916
 
 LA8EA:
-    jsr LA381
+    jsr STARGC
     jsr LA9B1
-    jsr LA1DA
+    jsr FTST
     beq LA8FE
-    jsr LA7F1
+    jsr ARGC
     jsr FXDIV
     jmp LA90A
 
 LA8FE:
     jsr LAA55
-    jsr LA3B5
+    jsr FLDA
 LA904:
     lda #$FF
     rts
@@ -7873,7 +8042,7 @@ LA904:
 ATN:
     jsr FLTFAC
 LA90A:
-    jsr LA1DA
+    jsr FTST
     beq LA904
     bpl LA91B
     lsr zpFACCS
@@ -7891,16 +8060,16 @@ LA91B:
     jsr FATANB
 LA927:
     jsr LAA48
-    jsr LA500
+    jsr FADD
     jsr LAA4C
-    jsr LA500
+    jsr FADD
     jmp LAD7E
 
 FATANB:
     lda zpFACCX
     cmp #$73
     bcc LA904
-    jsr LA381           ; STARGC
+    jsr STARGC           ; STARGC
     jsr LA453           ; FCLRW+6
     lda #$80
     sta zp3D
@@ -7910,7 +8079,7 @@ FATANB:
     lda #<FATANC
     ldy #>FATANC
     jsr FCF
-    jsr LAAD1
+    jsr ACMUL
     lda #$FF
     rts
 
@@ -7962,16 +8131,16 @@ LA9B1:
     jsr FMUL
     jsr LA38D
     jsr FONE
-    jsr LA4D0
+    jsr FSUB
     jmp LA7B7
 
 LA9C3:
-    jsr LA381
+    jsr STARGC
     jsr FMUL
     lda #<FSINC
     ldy #>FSINC
     jsr FCF
-    jmp LAAD1
+    jmp ACMUL
 
 LA9D3:
     lda zpFACCX
@@ -7979,7 +8148,7 @@ LA9D3:
     bcs LAA38
     jsr STARGA
     jsr LAA55
-    jsr LA34E
+    jsr FLDW
     lda zpFACCS
     sta zp3B
     dec zp3D
@@ -8002,18 +8171,18 @@ LA9D3:
     jsr LA46C
 LAA0E:
     jsr LA303
-    jsr LA37D
+    jsr STARGB
     jsr LAA48
     jsr FMUL
-    jsr LA7F5
-    jsr LA500
+    jsr ARGA
+    jsr FADD
     jsr LA38D
-    jsr LA7ED
-    jsr LA3B5
+    jsr ARGB
+    jsr FLDA
     jsr LAA4C
     jsr FMUL
-    jsr LA7F5
-    jmp LA500
+    jsr ARGA
+    jmp FADD
 
 LAA35:
     jmp LA3B2
@@ -8118,18 +8287,19 @@ LAAAC:
         brk
     .endif
 LAAB8:
-    jsr LA486
+    jsr FFRAC
     jsr LAADA
-    jsr LA381
+    jsr STARGC
     lda #<FNUME
     sta zpARGP
     lda #>FNUME
     sta zpARGP+1
-    jsr LA3B5
+    jsr FLDA
     lda zp4A
     jsr FIPOW
-LAAD1:
-    jsr LA7F1
+
+ACMUL:
+    jsr ARGC
     jsr FMUL
     lda #$FF
     rts
@@ -8280,7 +8450,7 @@ VPOS:
 ; ============
     .if version < 3
 LAB7F:
-        jsr LA1DA
+        jsr FTST
         beq LABA2
         bpl LABA0
         bmi LAB9D
@@ -8402,7 +8572,7 @@ EVAL:
     ldy zpCLEN          ; Increment string length to add a <cr>
     lda #$0D
     sta STRACC-1,Y    ; Put in terminating <cr>
-    jsr LBDB2         ; Stack the string
+    jsr PHSTR         ; Stack the string
                       ; String has to be stacked as otherwise would
                       ;  be overwritten by any string operations
                       ;  called by Evaluator
@@ -8613,7 +8783,7 @@ FALSE:
         beq LACC6       ; branch always
 
 XACA1:
-        jsr LA1DA
+        jsr FTST
         beq FALSE
         bpl XACBF
         bmi TRUE
@@ -8700,7 +8870,7 @@ INSTR:
     cpx #$2C
     bne LAD03
     inc zpAECUR
-    jsr LBDB2
+    jsr PHSTR
     jsr EXPR
     .if version < 3
         bne INSTR-$47     ; dest=LAC9B
@@ -8718,7 +8888,7 @@ LAD03:
     jmp COMERR
 
 LAD06:
-    jsr LBDB2
+    jsr PHSTR
     jsr BRA
     jsr INTEGB
     jsr LBDCB
@@ -8790,14 +8960,14 @@ ABS:
     bmi LAD77
 ABSCOM:
     bit zpIACC+3
-    bmi LAD93
+    bmi COMPNO
     bpl LADAA
 LAD77:
-    jsr LA1DA
+    jsr FTST
     bpl LAD89
     bmi LAD83
 LAD7E:
-    jsr LA1DA
+    jsr FTST
     beq LAD89
 LAD83:
     lda zpFACCS
@@ -8812,7 +8982,7 @@ LAD8C:
 LAD8F:
     beq LAD67
     bmi LAD7E
-LAD93:
+COMPNO:
     sec
     lda #$00
     tay
@@ -9300,7 +9470,7 @@ LAF24:
 
 LAF3F:
     ldx #$0D
-    jsr LBE44
+    jsr ACCTOM
     lda #$40
     sta zpSEED+4
     rts
@@ -9314,9 +9484,11 @@ RND:
     beq LAF0A         ; Jump with RND(numeric)
     jsr LAF87         ; Get random number
     ldx #$0D
-LAF56:
+
+; XXX check if all calls have X set with proper ZP offset
+MTOACC:
     lda zp+0,X
-    sta zpIACC          ; Copy random number to IACC
+    sta zpIACC          ; Copy number pointed to by X to IACC
     lda zp+1,X
     sta zpIACC+1
     lda zp+2,X
@@ -9524,7 +9696,7 @@ LEFTD:
     cpx #$2C
     bne LB036
     inc zpAECUR
-    jsr LBDB2
+    jsr PHSTR
     jsr BRA
     jsr INTEGB
     jsr LBDCB
@@ -9546,7 +9718,7 @@ RIGHTD:
     cpx #$2C
     bne LB036
     inc zpAECUR
-    jsr LBDB2
+    jsr PHSTR
     jsr BRA
     jsr INTEGB
     jsr LBDCB
@@ -9601,7 +9773,7 @@ MIDD:
     bne LB033
     cpx #$2C
     bne LB036
-    jsr LBDB2
+    jsr PHSTR
     inc zpAECUR
     jsr INEXPR
     lda zpIACC
@@ -9671,7 +9843,7 @@ LB0A1:
     lda VARL_AT+3
     bne LB0B9         ; Top byte of @%, STR$ uses @%
     sta zpWORK          ; Store 'General format'
-    jsr L9EF9         ; Convert using general format
+    jsr FCONA         ; Convert using general format
     lda #$00
     rts               ; Return string
 
@@ -9722,7 +9894,7 @@ LB0F8:
     rts
 
 LB0FB:
-    jmp L9C03
+    jmp STROVR
 
 LB0FE:
     pla
@@ -10045,11 +10217,11 @@ LB2CA:
     beq LB2B5
     sta zpTYPE
     ldx #$37
-    jsr LBE44
+    jsr ACCTOM
     lda zpTYPE
     bpl LB2F0
     jsr POPSET
-    jsr LA3B5
+    jsr FLDA
     jmp LB2F3
 
 LB2F0:
@@ -10084,7 +10256,7 @@ RETINF:
         bcs LB318
     .endif
     ldx #zpWORK
-    jsr LBE44
+    jsr ACCTOM
 
 LB318:
     jsr VARIND
@@ -10094,7 +10266,7 @@ LB318:
     beq LB329
     bmi LB329
     ldx #$37
-    jsr LAF56
+    jsr MTOACC
 LB329:
     jmp PHACC
 
@@ -10883,7 +11055,7 @@ LB766:
     sta zpARGP
     lda #$05+(ws/256)
     sta zpARGP+1
-    jsr LA500
+    jsr FADD
     lda zpIACC
     sta zpWORK
     lda zpIACC+1
@@ -10896,7 +11068,7 @@ LB766:
     sta zpARGP
     lda #$05+(ws/256)
     sta zpARGP+1
-    jsr L9A5F
+    jsr FCMP
     beq LB741
     lda FORSPM-$f,X
     bmi LB79D
@@ -11047,7 +11219,7 @@ LB88B:
     lda zpLINE+1
     sta ws+$05E6,Y
     inc zpSUBSTP
-    bcc LB8D2
+    bcc GODONE
 
 LB8A2:
     brk
@@ -11090,10 +11262,10 @@ RETURN:
 GOTO:
     jsr LB99A
     jsr DONE         ; Find destination line, check for end of statement
-LB8D2:
+GODONE:
     lda zpTRFLAG
     beq LB8D9
-    jsr L9905; If TRACE ON, print current line number
+    jsr TRJOBA; If TRACE ON, print current line number
 LB8D9:
     ldy zp3D
     lda zp3E          ; Get destination line address
@@ -11192,7 +11364,7 @@ LB95C:
     cmp #tknGOSUB
     beq LB96A         ; Jump to do GOSUB
     jsr SECUR         ; Update line index and check Escape
-    jmp LB8D2         ; Jump to do GOTO
+    jmp GODONE         ; Jump to do GOTO
 
 ; Update line pointer so RETURN comes back to next statement
 ; ----------------------------------------------------------
@@ -11234,11 +11406,11 @@ LB980:
 
 LB995:
     sty zpCURSOR
-    jmp L98E3         ; Store line index and jump to GOSUB
+    jmp THENLN         ; Store line index and jump to GOSUB
 
 LB99A:
     jsr SPTSTN
-    bcs LB9AF         ; Embedded line number found
+    bcs GOTGO         ; Embedded line number found
     jsr AEEXPR
     jsr INTEGB         ; Evaluate expression, ensure integer
     lda zpAECUR
@@ -11247,7 +11419,7 @@ LB99A:
     and #$7F
     sta zpIACC+1          ; Line number high byte
                       ; Note - this makes goto $8000+10 the same as goto 10
-LB9AF:
+GOTGO:
     jsr FNDLNO
     bcs LB9B5
     rts               ; Look for line, error if not found
@@ -11701,7 +11873,7 @@ LDC21:
         jsr OSWORD    ; Call OSWORD 0 to read line of text
         bcc BUFEND     ; CC, Escape not pressed, exit and set COUNT=0
     .endif
-    jmp L9838         ; Escape
+    jmp DOBRK         ; Escape
 
 ; ----------------------------------------------------------------------------
 
@@ -11964,7 +12136,7 @@ POPSET:
 ; ----------------------------------------------------------------------------
 
 LBD90:
-    beq LBDB2
+    beq PHSTR
     bmi PHFACC
 
 ; Push Integer ACC to stack
@@ -11991,7 +12163,7 @@ LBD99:
 
 ; Stack the current string
 ; ========================
-LBDB2:
+PHSTR:
     clc
     lda zpAESTKP
     sbc zpCLEN          ; stackbot=stackbot-length-1
@@ -12071,6 +12243,7 @@ POPWRK:
     ldx #zpWORK
 
 ; Use X as Index, jsr here to override X (i.e. ldx #zpWORK+8, jsr POPX)
+; XXX: check all calls have X set with ZP offset
 
 POPX:
     ldy #$03
@@ -12114,7 +12287,8 @@ HIDECE:
 
 ; ----------------------------------------------------------------------------
 
-LBE44:
+; XXX: check all calls have X set with ZP offset
+ACCTOM:
     lda zpIACC
     sta zp+0,X
     lda zpIACC+1
@@ -12466,7 +12640,7 @@ BPUT:
     jsr LBFA9
     pha               ; Evaluate #handle
     jsr COMEAT
-    jsr L9849
+    jsr EXPRDN
     jsr INTEG
     pla
     tay
