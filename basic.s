@@ -8655,27 +8655,39 @@ FSINC:
 
 ; ----------------------------------------------------------------------------
 
+; FEXP algorithm:
+; (A) If ABS(ARG) > 89.5 (Approx.) THEN GIVE UNDER/OVERFLOW.
+; (B) LET P=nearest integer to ARG, and F be residue.
+;   (If ABS(X)<0.5 to start with compute this quickly)
+; (C) Compute EXP(P) as power of e=2.71828...
+; (D) Note ABS(F)<=0.5, compute EXP(F) by continued fraction
+; (E) Combine partial results
+
 ; = EXP numeric
 ; =============
 EXP:
     jsr FLTFAC
+
 FEXP:
     lda zpFACCX
     cmp #$87
-    bcc LAAB8
-    bne LAAA2
-LAA9C:
+    bcc FEXPA       ; certainly in range
+    bne FEXPB       ; certainly not
+
     ldy zpFACCMA
     cpy #$B3
-    bcc LAAB8
-LAAA2:
+    bcc FEXPA       ; in range, at least nearly
+
+FEXPB:
     lda zpFACCS
-    bpl LAAAC
+    bpl FEXPC       ; overflow case
+
     jsr FCLR
+
     lda #$FF
     rts
 
-LAAAC:
+FEXPC:
     .if foldup == 0
         brk
         dta $18
@@ -8688,28 +8700,33 @@ LAAAC:
         dta ' RANGE'
         brk
     .endif
-LAAB8:
-    jsr FFRAC
-    jsr LAADA
-    jsr STARGC
+
+FEXPA:
+    jsr FFRAC       ; get fractional part
+    jsr FEXPS       ; EXP(fraction)
+    jsr STARGC      ; save it away
+
     lda #<FNUME
     sta zpARGP
     lda #>FNUME
     sta zpARGP+1
     jsr FLDA
-    lda zp4A
-    jsr FIPOW
+
+    lda zpFQUAD
+    jsr FIPOW       ; X**N
 
 ACMUL:
     jsr ARGC
     jsr FMUL
+
     lda #$FF
     rts
 
-LAADA:
+FEXPS:
     lda #<FEXPCO
     ldy #>FEXPCO
-    jsr FCF
+    jsr FCF         ; sum continued fraction
+
     lda #$FF
     rts
 
@@ -8740,19 +8757,23 @@ FEXPCO:
 FIPOW:
     tax
     bpl FIPOWA
+
     dex
     txa
     eor #$FF        ; complement
     pha
     jsr FRECIP
     pla             ; recover exponent
+
 FIPOWA:
     pha
     jsr STARGA       ; STARGA
     jsr FONE
+
 FIPOWB:
     pla
     beq FIPOWZ      ; exit condition
+
     sec
     sbc #$01
     pha
@@ -8781,6 +8802,8 @@ ADVAL:
     txa
     jmp AYACC
 
+; ----------------------------------------------------------------------------
+
     .if version < 3
 ; =POINT(numeric, numeric)
 ; ========================
@@ -8790,34 +8813,41 @@ POINT:
         jsr COMEAT
         jsr BRA
         jsr INTEGB
+
         lda zpIACC
         pha
         lda zpIACC+1
         pha
         jsr POPACC
+
         pla
         sta zpIACC+3
         pla
         sta zpIACC+2
+
         ldx #$2A
         lda #$09
         jsr OSWORD
+
         lda zpFACCS
-        bmi LAB9D
+        bmi SGNJMPTRUE
+
         jmp SINSTK
     .elseif version >= 3
 ; =NOT
 ; ====
 NOT:
         jsr INTFAC
-XAB5E:
+
         ldx #$03
-XAB60:
+
+NOTLOP:
         lda zpIACC,X
         eor #$FF
         sta zpIACC,X
         dex
-        bpl XAB60
+        bpl NOTLOP
+
         lda #$40
         rts
     .endif
@@ -8848,35 +8878,40 @@ VPOS:
     tya
     jmp SINSTK          ; tail call
 
+; ----------------------------------------------------------------------------
+
 ; =SGN numeric
 ; ============
     .if version < 3
-LAB7F:
+SGNFLT:
         jsr FTST
-        beq LABA2
-        bpl LABA0
-        bmi LAB9D
-     
+        beq SGNSIN
+        bpl SGNPOS
+        bmi SGNJMPTRUE
+
 SGN:
         jsr FACTOR
-        beq LABE6
-        bmi LAB7F
+        beq FACTE
+        bmi SGNFLT
+
         lda zpIACC+3
         ora zpIACC+2
         ora zpIACC+1
         ora zpIACC
-        beq LABA5
+        beq SGNINT
+
         lda zpIACC+3
-        bpl LABA0
-LAB9D:
+        bpl SGNPOS
+
+SGNJMPTRUE:
         jmp TRUE
 
-LABA0:
+SGNPOS:
         lda #$01
-LABA2:
+SGNSIN:
         jmp SINSTK
 
-LABA5:
+SGNINT:
         lda #$40
         rts
     .endif          ;  version < 3
@@ -8891,7 +8926,9 @@ LOG:
     .if version < 3
         lda #>RPLN10
     .endif
-    bne LABB8
+    bne CX
+
+; ----------------------------------------------------------------------------
 
 ; =RAD numeric
 ; ============
@@ -8901,13 +8938,15 @@ RAD:
     .if version < 3
         lda #>FPIs18
     .endif
-LABB8:
+
+CX:
     .if version >= 3
         lda #>FPIs18       ; identical to version < 3
     .endif
     sty zpARGP
     sta zpARGP+1
     jsr FMUL
+
     lda #$FF
     rts
 
@@ -8925,7 +8964,7 @@ DEG:
         lda #>F180sP
         .error >F180sP == 0
     .endif
-    bne LABB8               ; branch always
+    bne CX               ; branch always
 
 ; ----------------------------------------------------------------------------
 
@@ -8942,20 +8981,22 @@ PI:
 ; =USR numeric
 ; ============
 USR:
-    jsr INTFAC         ; Evaluate integer
-    jsr USER         ; Set up registers and call code at IACC
+    jsr INTFAC          ; Evaluate integer
+    jsr USER            ; Set up registers and call code at IACC
     sta zpIACC
-    stx zpIACC+1          ; Store returned A,X in IACC
-    sty zpIACC+2          ; Store returned Y
+    stx zpIACC+1        ; Store returned A,X in IACC
+    sty zpIACC+2        ; Store returned Y
+
     php
     pla
-    sta zpIACC+3          ; Store returned flags in IACC
-    cld               ; Ensure in binary mode on return
+    sta zpIACC+3        ; Store returned flags in IACC
+    cld                 ; Ensure in binary mode on return
+
     lda #$40
     rts               ; Return INTEGER
 
     .if version < 3
-LABE6:
+FACTE:
         jmp LETM
     .endif
 
@@ -8966,44 +9007,50 @@ LABE6:
 EVAL:
     jsr FACTOR         ; Evaluate value
     .if version < 3
-        bne LABE6
+        bne FACTE
     .elseif version >= 3
-        bne LAC2C
+        bne EVALE
     .endif
+
     inc zpCLEN
-    ldy zpCLEN          ; Increment string length to add a <cr>
+    ldy zpCLEN        ; Increment string length to add a <cr>
     lda #$0D
     sta STRACC-1,Y    ; Put in terminating <cr>
     jsr PHSTR         ; Stack the string
                       ; String has to be stacked as otherwise would
-                      ;  be overwritten by any string operations
-                      ;  called by Evaluator
+                      ; be overwritten by any string operations
+                      ; called by Evaluator
     lda zpAELINE
     pha               ; Save PTRB
     lda zpAELINE+1
     pha
     lda zpAECUR
     pha
+
     ldy zpAESTKP
-    ldx zpAESTKP+1          ; YX=>stackbottom (wrong way around)
+    ldx zpAESTKP+1    ; YX=>stackbottom (wrong way around)
     iny               ; Step over length byte
-    sty zpAELINE          ; PTRB=>stacked string
-    sty zpWORK          ; GPTR=>stacked string
-    bne LAC0F
+    sty zpAELINE      ; AELINE=>stacked string
+    sty zpWORK        ; WORK=>stacked string
+    bne EVALX
+
     inx               ; Inc high byte if next page
-LAC0F:
+
+EVALX:
     stx zpAELINE+1
-    stx zpWORK+1          ; PTRB and GPTR high bytes
+    stx zpWORK+1      ; AELINE and WORK high bytes
     ldy #$FF
-    sty zp3B
+    sty zpWORK+4
     iny
-    sty zpAECUR          ; Point PTRB offset back to start
-    jsr MATCEV         ; Tokenise string on stack at GPTR
-    jsr EXPR         ; Call expression evaluator
+    sty zpAECUR        ; Point AELINE offset back to start
+
+    jsr MATCEV         ; Tokenise string on stack
+    jsr EXPR           ; Call expression evaluator
     jsr POPSTX         ; Drop string from stack
-LAC23:
+
+VALOUT:
     pla
-    sta zpAECUR          ; Restore PTRB
+    sta zpAECUR          ; Restore AELINE
     pla
     sta zpAELINE+1
     pla
@@ -9012,7 +9059,7 @@ LAC23:
     rts               ; And return
 
     .if version >= 3
-LAC2C:
+EVALE:
         jmp LETM
     .endif
 
@@ -9023,78 +9070,101 @@ LAC2C:
 VAL:
     jsr FACTOR
     .if version < 3
-        bne LAC9B
+        bne EVALE
     .elseif version >= 3
-        bne LAC2C
+        bne EVALE
     .endif
-LAC34:
+
+VALSTR:
     ldy zpCLEN
     lda #$00
     sta STRACC,Y
+
     lda zpAELINE
     pha
     lda zpAELINE+1
     pha
     lda zpAECUR
     pha
+
     lda #$00
     sta zpAECUR
+
     .if version < 3
-        lda #<STRACC
+        lda #<STRACC        ; of course <STRACC = 0
     .endif
     sta zpAELINE
     lda #>STRACC
     sta zpAELINE+1
-    jsr AESPAC
-    cmp #$2D
-    beq LAC66
-    cmp #$2B
-    bne LAC5E
-    jsr AESPAC
-LAC5E:
-    dec zpAECUR
-    jsr FRDD
-    jmp LAC73
 
-LAC66:
     jsr AESPAC
+
+    cmp #'-'
+    beq VALMIN
+
+    cmp #'+'
+    bne VALNUB
+
+    jsr AESPAC
+
+VALNUB:
     dec zpAECUR
     jsr FRDD
-    bcc LAC73
-    jsr LAD8F
-LAC73:
+
+    jmp VALTOG
+
+VALMIN:
+    jsr AESPAC
+
+    dec zpAECUR
+    jsr FRDD
+
+    bcc VALTOG
+
+    jsr VALCMP
+
+VALTOG:
     sta zpTYPE
-    jmp LAC23
+    jmp VALOUT
 
 ; =INT numeric
 ; ============
 INT:
     jsr FACTOR
+
     .if version < 3
-        beq LAC9B
+        beq EVALE
     .elseif version >= 3
-        beq XAC81
+        beq FACTE
     .endif
-    bpl LAC9A
+
+    bpl INTX
+
     lda zpFACCS
     php
+
     jsr FFIX
+
     plp
-    bpl LAC95
-    lda zp3E
-    ora zp3F
-    ora zp40
-    ora zp41
-    beq LAC95
+    bpl INTF
+
+    lda zpFWRKMA
+    ora zpFWRKMB
+    ora zpFWRKMC
+    ora zpFWRKMD
+    beq INTF
+
     jsr FNEARP
-LAC95:
+
+INTF:
     jsr COPY_FACC_TO_IACC
     lda #$40
-LAC9A:
+
+INTX:
     rts
 
     .if version < 3
-LAC9B:
+EVALE:
         jmp LETM
     .endif
 
@@ -9105,14 +9175,16 @@ LAC9B:
 ASC:
     jsr FACTOR
     .if version < 3
-        bne LAC9B
+        bne EVALE
     .elseif version >= 3
-        bne XAC81
+        bne FACTE
     .endif
     lda zpCLEN
     beq TRUE
+
     lda STRACC
-LACAA:
+
+ASCX:
     jmp SINSTK          ; tail call
 
 ; ----------------------------------------------------------------------------
@@ -9120,20 +9192,23 @@ LACAA:
 ; =INKEY numeric
 ; ==============
 INKEY:
-    jsr LAFAD
+    jsr INKEA
     .if version < 3
         cpy #$00
     .elseif version >= 3
         tya     
     .endif
     bne TRUE
+
     txa
     jmp AYACC
 
     .if version >= 3
-XAC81:
+FACTE:
         jmp LETM
     .endif
+
+; ----------------------------------------------------------------------------
 
 ; =EOF#numeric
 ; ============
@@ -9146,10 +9221,12 @@ EOF:
     .endif
     txa
     .if version < 3
-        beq LACAA
+        beq ASCX
     .elseif version >= 3
-        beq LACC6
+        beq TRUTWO
     .endif
+
+; ----------------------------------------------------------------------------
 
 ; =TRUE
 ; =====
@@ -9159,7 +9236,7 @@ TRUE:
     .elseif version >= 3
         ldx #$FF
     .endif
-LACC6:
+TRUTWO:
     .if version < 3
         sta zpIACC
         sta zpIACC+1
@@ -9170,8 +9247,8 @@ LACC6:
         stx zpIACC+1
         stx zpIACC+2
         stx zpIACC+3
+SGNINT:
     .endif
-LACC8:
     lda #$40
     rts
 
@@ -9182,12 +9259,12 @@ LACC8:
 ; ======
 FALSE:
         ldx #$00
-        beq LACC6       ; branch always
+        beq TRUTWO       ; branch always
 
-XACA1:
+SGNFLT:
         jsr FTST
         beq FALSE
-        bpl XACBF
+        bpl SGNPOS
         bmi TRUE
 
 ; ----------------------------------------------------------------------------
@@ -9196,18 +9273,21 @@ XACA1:
 ; ============
 SGN:
         jsr FACTOR
-        beq XAC81
-        bmi XACA1
+        beq FACTE
+        bmi SGNFLT
+
         lda zpIACC+3
         ora zpIACC+2
         ora zpIACC+1
         ora zpIACC
-        beq LACC8
+        beq SGNINT
+
         lda zpIACC+3
         bmi TRUE
-XACBF:
+
+SGNPOS:
         lda #$01
-XACC1:
+SGNSIN:
         jmp SINSTK
 
 ; ----------------------------------------------------------------------------
@@ -9220,19 +9300,22 @@ POINT:
         jsr COMEAT
         jsr BRA
         jsr INTEGB
+
         lda zpIACC
         pha
         ldx zpIACC+1
         jsr POPACC
+
         stx zpIACC+3
         pla
         sta zpIACC+2
         ldx #$2A
         lda #$09
         jsr OSWORD
+
         lda zpFACCS
         bmi TRUE
-        bpl XACC1
+        bpl SGNSIN
 
     .endif              ; version >= 3
 
@@ -9244,12 +9327,13 @@ POINT:
 NOT:
         jsr INTFAC
         ldx #$03
-LACD6:
+NOTLOP:
         lda zpIACC,X
         eor #$FF
         sta zpIACC,X
         dex
-        bpl LACD6
+        bpl NOTLOP
+
         lda #$40
         rts
     .endif
@@ -9261,95 +9345,116 @@ LACD6:
 INSTR:
     jsr EXPR
     .if version < 3
-        ; BASIC II for Atom and System do not branch to LAC9B with this code
+        ; BASIC II for Atom and System do not branch to EVALE with this code
         ; this seems broken... XXX: fix
         ; .print "INSTR-$47 = ", INSTR-$47
-        ; .print "LAC9B = ", LAC9B
-        bne INSTR-$47     ; dest=LAC9B
+        ; .print "EVALE = ", EVALE
+        bne INSTR-$47     ; dest=EVALE
     .elseif version >= 3
-        bne XAC81
+        bne FACTE
     .endif
-    cpx #$2C
-    bne LAD03
+    cpx #','
+    bne INSTRE
+
     inc zpAECUR
     jsr PHSTR
     jsr EXPR
+
     .if version < 3
-        bne INSTR-$47     ; dest=LAC9B
+        bne INSTR-$47     ; dest=EVALE, see above
     .elseif version >= 3
-        bne XAC81
+        bne FACTE
     .endif
+
     lda #$01
     sta zpIACC
     inc zpAECUR
     cpx #')'
-    beq LAD12
-    cpx #$2C
-    beq LAD06
-LAD03:
+    beq INSTRG
+
+    cpx #','
+    beq INSTRH
+
+INSTRE:
     jmp COMERR
 
-LAD06:
+INSTRH:
     jsr PHSTR
     jsr BRA
     jsr INTEGB
     jsr LBDCB
-LAD12:
+
+INSTRG:
     ldy #$00
     ldx zpIACC
-    bne LAD1A
+    bne INSTRF
+
     ldx #$01
-LAD1A:
+INSTRF:
     stx zpIACC
     txa
     dex
     stx zpIACC+3
+
     clc
     adc zpAESTKP
     sta zpWORK
+
     tya
     adc zpAESTKP+1
     sta zpWORK+1
+
     lda (zpAESTKP),Y
     sec
     sbc zpIACC+3
-    bcc LAD52
+    bcc INSTRY
+
     sbc zpCLEN
-    bcc LAD52
+    bcc INSTRY
+
     adc #$00
     sta zpIACC+1
     jsr POPSTX
-LAD3C:
+
+INSTRL:
     ldy #$00
     ldx zpCLEN
-    beq LAD4D
-LAD42:
+    beq INSTRO
+
+INSTRM:
     lda (zpWORK),Y
     cmp STRACC,Y
-    bne LAD59
+    bne INSTRN
+
     iny
     dex
-    bne LAD42
-LAD4D:
+    bne INSTRM
+
+INSTRO:
     lda zpIACC
-LAD4F:
+
+INSTRP:
     jmp SINSTK      ; tail call
 
-LAD52:
+INSTRY:
     jsr POPSTX
-LAD55:
-    lda #$00
-    beq LAD4F
 
-LAD59:
+INSTRZ:
+    lda #$00
+    beq INSTRP
+
+INSTRN:
     inc zpIACC
     dec zpIACC+1
-    beq LAD55
+    beq INSTRZ
+
     inc zpWORK
-    bne LAD3C
+    bne INSTRL
+
     inc zpWORK+1
-    bne LAD3C
-LAD67:
+    bne INSTRL
+
+ABSE:
     jmp LETM
 
 ; ----------------------------------------------------------------------------
@@ -9358,71 +9463,89 @@ LAD67:
 ; ============
 ABS:
     jsr FACTOR       ; FACTOR
-    beq LAD67
-    bmi LAD77
+    beq ABSE
+    bmi FABS
+
 ABSCOM:
     bit zpIACC+3
     bmi COMPNO
-    bpl LADAA
-LAD77:
+    bpl COMPDN
+
+FABS:
     jsr FTST
-    bpl LAD89
-    bmi LAD83
+    bpl FNEGX
+    bmi NEGACC
+
 FNEG:
     jsr FTST
-    beq LAD89
-LAD83:
+    beq FNEGX
+
+NEGACC:
     lda zpFACCS
     eor #$80
     sta zpFACCS
-LAD89:
+
+FNEGX:
     lda #$FF
     rts
 
-LAD8C:
+; unary minus
+
+UNMINS:
     jsr LAE02
-LAD8F:
-    beq LAD67
+
+VALCMP:
+    beq ABSE
     bmi FNEG
+
 COMPNO:
     sec
     lda #$00
     tay
     sbc zpIACC
     sta zpIACC
+
     tya
     sbc zpIACC+1
     sta zpIACC+1
+
     tya
     sbc zpIACC+2
     sta zpIACC+2
+
     tya
     sbc zpIACC+3
     sta zpIACC+3
-LADAA:
+
+COMPDN:
     lda #$40
     rts
 
-LADAD:
+; ----------------------------------------------------------------------------
+
+DATAST:
     jsr AESPAC
-    cmp #$22
-    beq LADC9
+    cmp #'"'
+    beq QSTR
+
     ldx #$00
-LADB6:
+DATASL:
     lda (zpAELINE),Y
     sta STRACC,X
     iny
     inx
     cmp #$0D
-    beq LADC5
-    cmp #$2C
-    bne LADB6
-LADC5:
+    beq QSTRF
+
+    cmp #','
+    bne DATASL
+
+QSTRF:
     dey
     .if version < 3
-        jmp LADE1
+        jmp QSTRE
     .elseif version >= 3
-LADC8:
+QSTRE:
         dex
         stx zpCLEN
         sty zpAECUR
@@ -9430,14 +9553,17 @@ LADC8:
         rts
     .endif
 
-LADC9:
+QSTR:
     ldx #$00
-LADCB:
+
+QSTRP:
     iny
-LADCC:
+
+QSTRL:
     lda (zpAELINE),Y
     cmp #$0D
-    beq LADE9
+    beq QSTREG
+
     .if version < 3
         iny
         sta STRACC,X
@@ -9445,48 +9571,60 @@ LADCC:
         sta STRACC,X
         iny
     .endif
+
     inx
-    cmp #$22
-    bne LADCC
+    cmp #'"'
+    bne QSTRL
+
     lda (zpAELINE),Y
-    cmp #$22
-    beq LADCB
+    cmp #'"'
+    beq QSTRP
+
     .if version < 3
-LADE1:
+QSTRE:
         dex
         stx zpCLEN
         sty zpAECUR
         lda #$00
         rts
     .elseif version >= 3
-        bne LADC8
+        bne QSTRE
     .endif
 
-LADE9:
+QSTREG:
     jmp NSTNG
+
+; ----------------------------------------------------------------------------
 
 ; Evaluator Level 1, - + NOT function ( ) ? ! $ | "
 ; -------------------------------------------------
 FACTOR:
     ldy zpAECUR
     inc zpAECUR
-    lda (zpAELINE),Y      ; Get next character
-    cmp #$20
+    lda (zpAELINE),Y   ; Get next character
+    cmp #' '
     beq FACTOR         ; Loop to skip spaces
+
     cmp #'-'
-    beq LAD8C         ; Jump with unary minus
+    beq UNMINS         ; Jump with unary minus
+
     cmp #'"'
-    beq LADC9         ; Jump with string
+    beq QSTR           ; Jump with string
+
     cmp #'+'
-    bne LAE05         ; Jump with unary plus
+    bne LAE05          ; Jump with unary plus
+
 LAE02:
     jsr AESPAC         ; Get current character
+
 LAE05:
     cmp #$8E
-    bcc LAE10         ; Lowest function token, test for indirections
+    bcc LAE10          ; Lowest function token, test for indirections
+
     cmp #$C6
     bcs FACERR         ; Highest function token, jump to error
-    jmp DISPATCH         ; Jump via function dispatch table
+
+    jmp DISPATCH       ; Jump via function dispatch table
 
 ; Indirection, hex, brackets
 ; --------------------------
@@ -9662,7 +9800,7 @@ LEN:
         jsr FACTOR
         bne LENB
         lda zpCLEN
-    
+
 ; Return 8-bit integer
 ; --------------------
 SINSTK:
@@ -9998,7 +10136,7 @@ ERR:
 
 ; INKEY
 ; =====
-LAFAD:
+INKEA:
     jsr INTFAC         ; Evaluate <numeric>
 
 ; Atom/System - Manually implement INKEY(num)
@@ -10151,7 +10289,7 @@ LB025:
 ; =INKEY$ numeric
 ; ===============
 INKED:
-    jsr LAFAD
+    jsr INKEA
     txa
     cpy #$00
     beq LAFC2
@@ -11989,7 +12127,7 @@ LBAB0:
     sta zpAELINE
     lda #>STRACC
     sta zpAELINE+1
-    jsr LADAD
+    jsr DATAST
 LBABD:
     jsr AESPAC
     cmp #','
@@ -12004,7 +12142,7 @@ LBACD:
     plp
     bcs LBADC
     jsr PHACC
-    jsr LAC34
+    jsr VALSTR
     jsr STORE
     jmp LBA5A
 
@@ -12060,7 +12198,7 @@ READ:
 LBB32:
     jsr LBB50
     jsr PHACC
-    jsr LADAD
+    jsr DATAST
     sta zpTYPE
     jsr STSTOR
 LBB40:
