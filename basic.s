@@ -7941,137 +7941,167 @@ FDIVZ:
 
 TAN:
     jsr FLTFAC
-    jsr LA9D3
+    jsr FRANGE
 
     lda zpFQUAD
     pha
     jsr ARGD
     jsr FSTA
-    inc zp4A
-    jsr LA99E
+
+    inc zpFQUAD
+
+    jsr FSC
     jsr ARGD
     jsr FSWOP
+
     pla
-    sta zp4A
-    jsr LA99E
+    sta zpFQUAD
+
+    jsr FSC
     jsr ARGD
     jsr FDIV
+
     lda #$FF
     rts
 
+; ----------------------------------------------------------------------------
+
 FDIV:
     jsr FTST
-    beq FTIDYZ
+    beq FTIDYZ      ; 0.0/anything = 0.0 (including 0.0/0.0)
+
     jsr FLDW
-    beq FDIVZ
+    beq FDIVZ       ; divide by zero
+
 FDIVA:
     lda zpFACCS
-    eor zp3B
-    sta zpFACCS
+    eor zpFWRKS
+    sta zpFACCS     ; sign correct
     sec
     lda zpFACCX
-    sbc zp3D
-    bcs LA701
+    sbc zpFWRKX     ; difference of exponents
+    bcs FDIVB
+
     dec zpFACCXH
     sec
-LA701:
-    adc #$80
+FDIVB:
+    adc #$80        ; $81 because carry is set
     sta zpFACCX
-    bcc LA70A
+    bcc FDIVC
+
     inc zpFACCXH
     clc
-LA70A:
+FDIVC:
     ldx #$20
-LA70C:
-    bcs LA726
+
+FDIVE:
+    bcs FDIVH
+
     lda zpFACCMA
-    cmp zp3E
-    bne LA724
+    cmp zpFWRKMA
+    bne FDIVF
+
     lda zpFACCMB
-    cmp zp3F
-    bne LA724
+    cmp zpFWRKMB
+    bne FDIVF
+
     lda zpFACCMC
-    cmp zp40
-    bne LA724
+    cmp zpFWRKMC
+    bne FDIVF
+
     lda zpFACCMD
-    cmp zp41
-LA724:
-    bcc LA73F
-LA726:
+    cmp zpFWRKMD
+FDIVF:
+    bcc FDIVG       ; won't go
+
+; FACC guard on basis of the comparison, carry already set for sbc
+
+FDIVH:
     lda zpFACCMD
-    sbc zp41
+    sbc zpFWRKMD
     sta zpFACCMD
     lda zpFACCMC
-    sbc zp40
+    sbc zpFWRKMC
     sta zpFACCMC
     lda zpFACCMB
-    sbc zp3F
+    sbc zpFWRKMB
     sta zpFACCMB
     lda zpFACCMA
-    sbc zp3E
+    sbc zpFWRKMA
     sta zpFACCMA
     sec
-LA73F:
-    rol zp46
-    rol zp45
-    rol zp44
-    rol zp43
+
+FDIVG:
+    rol zpFTMPMD
+    rol zpFTMPMC
+    rol zpFTMPMB
+    rol zpFTMPMA
     asl zpFACCMD
     rol zpFACCMC
     rol zpFACCMB
     rol zpFACCMA
     dex
-    bne LA70C
+    bne FDIVE
+
     ldx #$07
-LA754:
-    bcs LA76E
+FDIVJ:
+    bcs FDIVL       ; now generate seven guard bits
     lda zpFACCMA
-    cmp zp3E
-    bne LA76C
+    cmp zpFWRKMA
+    bne FDIVK
+
     lda zpFACCMB
-    cmp zp3F
-    bne LA76C
+    cmp zpFWRKMB
+    bne FDIVK
+
     lda zpFACCMC
-    cmp zp40
-    bne LA76C
+    cmp zpFWRKMC
+    bne FDIVK
+
     lda zpFACCMD
-    cmp zp41
-LA76C:
-    bcc LA787
-LA76E:
+    cmp zpFWRKMD
+FDIVK:
+    bcc FDIVM
+
+FDIVL:
     lda zpFACCMD
-    sbc zp41
+    sbc zpFWRKMD
     sta zpFACCMD
     lda zpFACCMC
-    sbc zp40
+    sbc zpFWRKMC
     sta zpFACCMC
     lda zpFACCMB
-    sbc zp3F
+    sbc zpFWRKMB
     sta zpFACCMB
     lda zpFACCMA
-    sbc zp3E
+    sbc zpFWRKMA
     sta zpFACCMA
     sec
-LA787:
+
+FDIVM:
     rol zpFACCMG
     asl zpFACCMD
     rol zpFACCMC
     rol zpFACCMB
     rol zpFACCMA
     dex
-    bne LA754
+    bne FDIVJ
+
     asl zpFACCMG
-    lda zp46
+    lda zpFTMPMD
     sta zpFACCMD
-    lda zp45
+    lda zpFTMPMC
     sta zpFACCMC
-    lda zp44
+    lda zpFTMPMB
     sta zpFACCMB
-    lda zp43
+    lda zpFTMPMA
     sta zpFACCMA
+
     jmp NRMTDY
 
-LA7A9:
+; ----------------------------------------------------------------------------
+
+FSQRTE:
     brk
     dta $15
     .if foldup == 1
@@ -8085,32 +8115,42 @@ LA7A9:
 ; ============
 SQR:
     jsr FLTFAC
-LA7B7:
+
+FSQRT:
     jsr FTST
-    beq LA7E6
-    bmi LA7A9
+    beq FSQRTZ      ; SQRT(0.0) easy
+    bmi FSQRTE      ; bad -ve
+
     jsr STARGA
+
     lda zpFACCX
     lsr
     adc #$40
     sta zpFACCX
     lda #$05
-    sta zp4A
+    sta zpFRDDW
     jsr ARGB
-LA7CF:
+
+FSQRTA:
     jsr FSTA
+
     lda #<FWSA
     sta zpARGP
     jsr FXDIV
+
     lda #<FWSB
     sta zpARGP
     jsr FADD
+
     dec zpFACCX
-    dec zp4A
-    bne LA7CF
-LA7E6:
+    dec zpFRDDW
+    bne FSQRTA
+
+FSQRTZ:
     lda #$FF
     rts
+
+; ----------------------------------------------------------------------------
 
 ; Point zpARGP to a workspace floating point temps
 ; ------------------------------------------------
@@ -8136,6 +8176,21 @@ ARGCOM:
     sta zpARGP+1
     rts
 
+; ----------------------------------------------------------------------------
+
+;   FLOG sets FACC= LOG(FACC)
+;   (base e). works by
+;   (A) Check for acc <= 0.0
+;   (B) Strip exponent to put FACC in range 1.0 - 2.0
+;       and renormalize to .707 TO 1.414
+;   (B2) Extra care with smallest possible exponent
+;   (C) Approximate log using (x-1)+(x-1)^2*cf(x-1)
+;       where cf is a minimax continued fraction
+;   (D) Add result to exponent * LOG(2.0)
+;   N.B. Result can not overflow so no worry there.
+;   The series approximation used for LOGs is a continued
+;   fraction: F(X)=C(0)+X/(C(1)+X/(...
+
 ; =LN numeric
 ; ===========
 LN:
@@ -8143,9 +8198,10 @@ LN:
 
 FLOG:
     jsr FTST
-    beq LA808
-    bpl LA814
-LA808:
+    beq FLOGA   ; LOG(0) is illegal
+    bpl FLOGB   ; LOG(>0.0) is OK
+
+FLOGA:
     .if foldup == 0
         brk
         dta $16
@@ -8158,47 +8214,59 @@ LA808:
         dta ' RANGE'
         brk
     .endif
-LA814:
+
+FLOGB:
     jsr FCLRW
+
     ldy #$80
-    sty zp3B
-    sty zp3E
+    sty zpFWRKS
+    sty zpFWRKMA
     iny
-    sty zp3D
+    sty zpFWRKX         ; FWRK = -1
+
     ldx zpFACCX
-    beq LA82A
+    beq FLOGC
+
     lda zpFACCMA
     cmp #$B5
-    bcc LA82C
-LA82A:
+    bcc FLOGD
+
+FLOGC:
     inx
     dey
-LA82C:
+
+FLOGD:
     txa
     pha
     sty zpFACCX
     jsr FADDW
+
     lda #<FWSD
     jsr FSTAP
+
     lda #<FLOGTC
     ldy #>FLOGTC
-    jsr FCF
+    jsr FCF         ; evaluate continued fraction
     jsr ARGD
     jsr FMUL
     jsr FMUL
     jsr FADD
-    jsr STARGA
-    pla
+    jsr STARGA      ; save partial result
+
+    pla             ; recover exponent byte
     sec
     sbc #$81
     jsr FLTACC
+
     lda #<LOGTWO
     sta zpARGP
     lda #>LOGTWO
     sta zpARGP+1
+
     jsr FMUL
     jsr ARGA
     jsr FADD
+
     lda #$FF
     rts
 
@@ -8224,6 +8292,8 @@ FLOGTC:
         .error "Table FLOGTC crosses page!"
     .endif
 
+; ----------------------------------------------------------------------------
+
 ; FCF - Evaluates a rational function of the form
 ;       A0 + X/(A1+X/(A2+X/ ...
 ;       i.e. a continued fraction.
@@ -8235,22 +8305,26 @@ FLOGTC:
 FCF:
     sta zpCOEFP
     sty zpCOEFP+1
-    jsr STARGA
+    jsr STARGA          ; save x
+
     ldy #$00
-    lda (zpCOEFP),Y
-    sta zp48
+    lda (zpCOEFP),Y     ; length of series - always downstairs
+    sta zpFRDDDP
     inc zpCOEFP
-    bne LA8AA
+    bne FCFA
+
     inc zpCOEFP+1
-LA8AA:
+FCFA:
     lda zpCOEFP
     sta zpARGP
     lda zpCOEFP+1
     sta zpARGP+1
     jsr FLDA
-LA8B5:
+
+FCFLP:
     jsr ARGA
     jsr FXDIV
+
     clc
     lda zpCOEFP
     adc #$05
@@ -8260,9 +8334,12 @@ LA8B5:
     adc #$00
     sta zpCOEFP+1
     sta zpARGP+1
+
     jsr FADD
-    dec zp48
-    bne LA8B5
+
+    dec zpFRDDDP
+    bne FCFLP
+
     rts
 
 ; ----------------------------------------------------------------------------
@@ -8271,7 +8348,7 @@ LA8B5:
 ; ============
 ACS:
     jsr ASN
-    jmp LA927
+    jmp PISUB
 
 ; ----------------------------------------------------------------------------
 
@@ -8280,52 +8357,72 @@ ACS:
 ASN:
     jsr FLTFAC
     jsr FTST
-    bpl LA8EA
-    lsr zpFACCS
-    jsr LA8EA
-    jmp LA916
+    bpl ASNA
 
-LA8EA:
+    lsr zpFACCS
+    jsr ASNA
+    jmp SETNEG
+
+ASNA:
     jsr STARGC
-    jsr LA9B1
+    jsr SQRONE
     jsr FTST
-    beq LA8FE
+    beq ASINAA
+
     jsr ARGC
     jsr FXDIV
-    jmp LA90A
+    jmp FATAN
 
-LA8FE:
-    jsr LAA55
+ASINAA:
+    jsr ARGHPI
     jsr FLDA
-LA904:
+
+FATANZ:
     lda #$FF
     rts
 
 ; ----------------------------------------------------------------------------
 
+;   FATAN computes arctangent
+;   Method:
+;   (A) ATAN(-X) = - ATAN(X)
+;   (B) IF X>1.0 use
+;       ATAN(X)=PI/2 - ATAN(1/X)
+;   (C0) IF X<0.0001 result is X
+;     ELSE ...
+;   (C1) LET Y=(X-0.5), so Y is in range -0.5 TO 0.5
+;   (D) Compute series in Y so that it gives ATAN(X)/X
+;   (E) Multiply by X to get result
+;   (F) (Put back PI/2 and '-')
+
 ; =ATN numeric
 ; ============
 ATN:
     jsr FLTFAC
-LA90A:
+
+FATAN:
     jsr FTST
-    beq LA904
-    bpl LA91B
-    lsr zpFACCS
-    jsr LA91B
-LA916:
+    beq FATANZ
+    bpl FATANA
+
+    lsr zpFACCS     ; force +ve
+    jsr FATANA      ; ATAN(-X)
+
+SETNEG:
     lda #$80
-    sta zpFACCS
+    sta zpFACCS     ; negate at end
     rts
 
-LA91B:
+FATANA:
     lda zpFACCX
-    cmp #$81
-    bcc FATANB
+    cmp #$81        ; is FACC >= 1.0 ?
+    bcc FATANB      ; no it isn't
+
     jsr FRECIP
-    jsr FATANB
-LA927:
-    jsr LAA48
+    jsr FATANB      ; ATAN(1/X)
+
+PISUB:
+    jsr AHPIHI      ; PI/2-A
     jsr FADD
     jsr LAA4C
     jsr FADD
@@ -8334,18 +8431,25 @@ LA927:
 FATANB:
     lda zpFACCX
     cmp #$73
-    bcc LA904
-    jsr STARGC
+    bcc FATANZ      ; very small number
+
+    jsr STARGC      ; save arg away
     jsr FCLRW
+
     lda #$80
-    sta zp3D
-    sta zp3E
-    sta zp3B
-    jsr FADDW           ; FADDW
+    sta zpFWRKX
+    sta zpFWRKMA
+    sta zpFWRKS
+
+    jsr FADDW       ; W = -0.5
+
+; Now FACC is in (-0.5,0.5)
+
     lda #<FATANC
     ldy #>FATANC
-    jsr FCF
-    jsr ACMUL
+    jsr FCF         ; sum magic series
+    jsr ACMUL       ; multiply by arg, exit
+
     lda #$FF
     rts
 
@@ -8371,74 +8475,96 @@ FATANC:
 ; =COS numeric
 ; ============
 COS:
-    jsr FLTFAC         ; Evaluate float
-    jsr LA9D3
-    inc zp4A
-    jmp LA99E
+    jsr FLTFAC      ; evaluate float
+    jsr FRANGE      ; reduce to <PI/2
+    inc zpFQUAD     ; quadrant counter
+    jmp FSC         ; common code SIN/COS
 
 ; =SIN numeric
 ; ============
 SIN:
     jsr FLTFAC
-    jsr LA9D3
-LA99E:
-    lda zp4A
+    jsr FRANGE
+
+FSC:
+    lda zpFQUAD
     and #$02
-    beq LA9AA
-    jsr LA9AA
+    beq FSCA
+    jsr FSCA
     jmp FNEG
 
-LA9AA:
-    lsr zp4A
-    bcc LA9C3
-    jsr LA9C3
-LA9B1:
-    jsr STARGA
+FSCA:
+    lsr zpFQUAD
+    bcc FSCB        ; 1st or 2nd (+ve)
+
+    jsr FSCB
+
+SQRONE:
+    jsr STARGA      ; SQR(1-FACC^2)
     jsr FMUL
     jsr FSTA
     jsr FONE
     jsr FSUB
-    jmp LA7B7
+    jmp FSQRT
 
-LA9C3:
+FSCB:
     jsr STARGC
     jsr FMUL
     lda #<FSINC
     ldy #>FSINC
-    jsr FCF
-    jmp ACMUL
+    jsr FCF         ; evaluate approximation
+    jmp ACMUL       ; X*(SIN(X)/X)
 
-LA9D3:
+; ----------------------------------------------------------------------------
+
+; FRANGE subtracts an integral multiple of PI/2 from FACC,
+; and sets FQUAD to indicate (MOD 4, at least) what the
+; integer was. Note that the subtraction is done with a
+; certain degree of care so that large arguments still give
+; decent accuracy.
+
+FRANGE:
     lda zpFACCX
     cmp #$98
-    bcs LAA38
-    jsr STARGA
-    jsr LAA55
+    bcs FRNGQQ      ; arg too big
+
+    jsr STARGA      ; save arg away
+    jsr ARGHPI      ; PI/2
     jsr FLDW
+
     lda zpFACCS
-    sta zp3B
-    dec zp3D
+    sta zpFWRKS
+    dec zpFWRKX     ; PI/4*SGN(INPUT)
+
     jsr FADDW
     jsr FDIV
+
+; Note that the above division only has to get its result about right to
+; the nearest integer.
+
     jsr FFIX
+
     lda zpFACCMD
-    sta zp4A
+    sta zpFQUAD
     ora zpFACCMC
     ora zpFACCMB
     ora zpFACCMA
-    beq LAA35
+    beq FRNGD       ; FIX(A/(PI/2))=0
+
     lda #$A0
     sta zpFACCX
     ldy #$00
     sty zpFACCMG
     lda zpFACCMA
     sta zpFACCS
-    bpl LAA0E
+    bpl FFLOTA
+
     jsr FINEG
-LAA0E:
+
+FFLOTA:
     jsr FNRM
     jsr STARGB
-    jsr LAA48
+    jsr AHPIHI
     jsr FMUL
     jsr ARGA
     jsr FADD
@@ -8450,10 +8576,12 @@ LAA0E:
     jsr ARGA
     jmp FADD
 
-LAA35:
+FRNGD:
     jmp LDARGA
 
-LAA38:
+; ----------------------------------------------------------------------------
+
+FRNGQQ:
     brk
     dta $17
     .if foldup == 1
@@ -8462,7 +8590,10 @@ LAA38:
         dta 'Accuracy lost'
     .endif
     brk
-LAA48:
+
+; ----------------------------------------------------------------------------
+
+AHPIHI:
     lda #<HPIHI
     .if (HPIHI & 0xff) == 0
         .error "BNE as BRA will not be taken!"
@@ -8476,14 +8607,17 @@ LAA4E:
     sta zpARGP+1
     rts
 
-LAA55:
+ARGHPI:
     lda #<HALFPI
     .if (HALFPI & 0xff) == 0
         .error "BNE as BRA will not be taken!"
     .endif
     bne LAA4E         ; AA57= D0 F5       Pu
 
+; ----------------------------------------------------------------------------
+
 ; HPIHI + HPILO = -PI/2
+; Done this way for accuracy to 1.5 precision approx.
 
 HPIHI:
     dta $81, $c9, $10, $00, $00         ; -1.57080078
@@ -8503,6 +8637,8 @@ RPLN10:
     .if .hi(*) != .hi(HPIHI)
         .error "PI table crosses page!"
     .endif
+
+; ----------------------------------------------------------------------------
 
 FSINC:
     dta $05                         ; Length -1
@@ -8796,7 +8932,7 @@ DEG:
 ; =PI
 ; ===
 PI:
-    jsr LA8FE
+    jsr ASINAA
     inc zpFACCX
     tay
     rts

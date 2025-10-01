@@ -84,7 +84,7 @@ zpFRDDDP  = zp + $48    ; Decimal Point flag
 zpFRDDDX  = zp + $49    ; Exponent
 zpFPRTDX  = zp + $49    ; Alt.
 zpFRDDW   = zp + $4a
-zpFQUAD   = zp + $4a    ; Alt.
+zpFQUAD   = zp + $4a    ; Alt. Quadrant
 
 zpARGP    = zp + $4b
 zpCOEFP   = zp + $4d    ; ptr
