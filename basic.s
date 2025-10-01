@@ -7392,27 +7392,29 @@ FFIX:
     lda zpFACCX
     bpl FFIXQ         ; Exponent<$80, number<1, jump to return 0
 
-    jsr LA453         ; Set $3B-$42 to zero
+    jsr FCLRW         ; Set $3B-$42 to zero
     jsr FTST
-    bne LA43C
-    beq LA468
+    bne FFIXG         ; Always shift at least once
+    beq FFIXY         ; except for 0
 
 FFIXB:
     lda zpFACCX    ; Get exponent
     cmp #$A0
-    bcs LA466      ; Exponent is +32, float has been denormalised to an integer
+    bcs FFIXC      ; Exponent is +32, float has been denormalised to an integer
+
     cmp #$99
-    bcs LA43C      ; Loop to keep dividing
+    bcs FFIXG      ; Loop to keep dividing
+
     adc #$08
     sta zpFACCX    ; Increment exponent by 8
-    lda zp40
-    sta zp41
-    lda zp3F
-    sta zp40
-    lda zp3E
-    sta zp3F
+    lda zpFWRKMC
+    sta zpFWRKMD
+    lda zpFWRKMB
+    sta zpFWRKMC
+    lda zpFWRKMA
+    sta zpFWRKMB
     lda zpFACCMD
-    sta zp3E
+    sta zpFWRKMA
     lda zpFACCMC
     sta zpFACCMD          ; Divide mantissa by 2^8
     lda zpFACCMB
@@ -7421,40 +7423,49 @@ FFIXB:
     sta zpFACCMB
     lda #$00
     sta zpFACCMA
-    beq FFIXB         ; Loop to keep dividing
+    beq FFIXB         ; Loop to keep dividing, branch always
 
-LA43C:
+FFIXG:
     lsr zpFACCMA
     ror zpFACCMB
     ror zpFACCMC
     ror zpFACCMD
-    ror zp3E
-    ror zp3F
-    ror zp40
-    ror zp41
+    ror zpFWRKMA
+    ror zpFWRKMB
+    ror zpFWRKMC
+    ror zpFWRKMD      ; rotate into FWRK
     inc zpFACCX
     bne FFIXB
-LA450:
-    jmp LA66C
 
-LA453:
+; Here I have overflow
+
+FFIXV:
+    jmp FOVR
+
+; ----------------------------------------------------------------------------
+
+FCLRW:
     lda #$00
-    sta zp3B
-    sta zp3C
-    sta zp3D
-    sta zp3E
-    sta zp3F
-    sta zp40
-    sta zp41
-    sta zp42
+    sta zpFWRKS
+    sta zpFWRKXH
+    sta zpFWRKX
+    sta zpFWRKMA
+    sta zpFWRKMB
+    sta zpFWRKMC
+    sta zpFWRKMD
+    sta zpFWRKMG
     rts
 
-LA466:
-    bne LA450         ; Exponent>32, jump to 'Too big' error
-LA468:
+; ----------------------------------------------------------------------------
+
+FFIXC:
+    bne FFIXV         ; Exponent>32, jump to 'Too big' error
+
+FFIXY:
     lda zpFACCS
-    bpl LA485         ; If positive, jump to return
-LA46C:
+    bpl FFIXZ         ; If positive, jump to return
+
+FINEG:
     sec               ; Negate the mantissa to get integer
     lda #$00
     sbc zpFACCMD
@@ -7468,85 +7479,108 @@ LA46C:
     lda #$00
     sbc zpFACCMA
     sta zpFACCMA
-LA485:
+
+FFIXZ:
     rts
+
+; ----------------------------------------------------------------------------
+
+; FFRAC sets FQUAD to the integer part of
+; FACC, and FACCC to its fractional part. Returns with
+; condition code set zero if fraction is zero.
+; Assumes that on input FIX(FACC) < 128.
 
 FFRAC:
     lda zpFACCX
-    bmi LA491
+    bmi FFRACA      ; normal case
+
     lda #$00
-    sta zp4A
+    sta zpFQUAD
     jmp FTST
 
-LA491:
+FFRACA:
     jsr FFIX
     lda zpFACCMD
-    sta zp4A
-    jsr LA4E8
+    sta zpFQUAD
+    jsr FMWTOA
+
     lda #$80
     sta zpFACCX
     ldx zpFACCMA
-    bpl LA4B3
-    eor zpFACCS
-    sta zpFACCS
-    bpl LA4AE
-    inc zp4A
-    jmp LA4B0
+    bpl FNEARN      ; fraction part < 0.5
 
-LA4AE:
+    eor zpFACCS
+    sta zpFACCS     ; change sign of fraction part
+    bpl FNEARQ
+
+    inc zpFQUAD
+    jmp FNEARR
+
+FNEARQ:
     dec zp4A
-LA4B0:
-    jsr LA46C
-LA4B3:
+
+FNEARR:
+    jsr FINEG       ; achieves fract = 1 - fract
+
+FNEARN:
     jmp FNRM
 
-LA4B6:
+FINC:
     inc zpFACCMD
-    bne LA4C6
+    bne FNEARZ
+
     inc zpFACCMC
-    bne LA4C6
+    bne FNEARZ
+
     inc zpFACCMB
-    bne LA4C6
+    bne FNEARZ
+
     inc zpFACCMA
-    beq LA450
-LA4C6:
+    beq FFIXV       ; overflow
+
+FNEARZ:
     rts
 
-LA4C7:
-    jsr LA46C
-    jsr LA4B6
-    jmp LA46C
+FNEARP:
+    jsr FINEG
+    jsr FINC
+    jmp FINEG
+
+; ----------------------------------------------------------------------------
 
 FSUB:
     jsr FXSUB
-    jmp LAD7E
+    jmp FNEG
 
-LA4D6:
+FSWOP:
     jsr FLDW
     jsr FSTA
-LA4DC:
-    lda zp3B
+
+FWTOA:
+    lda zpFWRKS
     sta zpFACCS
-    lda zp3C
+    lda zpFWRKXH
     sta zpFACCXH
-    lda zp3D
+    lda zpFWRKX
     sta zpFACCX
-LA4E8:
-    lda zp3E
+
+FMWTOA:
+    lda zpFWRKMA
     sta zpFACCMA
-    lda zp3F
+    lda zpFWRKMB
     sta zpFACCMB
-    lda zp40
+    lda zpFWRKMC
     sta zpFACCMC
-    lda zp41
+    lda zpFWRKMD
     sta zpFACCMD
-    lda zp42
+    lda zpFWRKMG
     sta zpFACCMG
 FADDZ:
     rts
 
 FXSUB:
-    jsr LAD7E
+    jsr FNEG
+
 FADD:
     jsr FLDW
     beq FADDZ       ; A+0.0=A
@@ -7556,63 +7590,79 @@ FADDW:
     jmp FTIDY
 
 FADDW1:
-    jsr FTST
-    beq LA4DC
+    jsr FTST        ; see if adding to 0
+    beq FWTOA       ; load with FWRK
+
+    ; Here I have non-trivial add
+
     ldy #$00
     sec
     lda zpFACCX
-    sbc zp3D
-    beq LA590
-    bcc LA552
+    sbc zpFWRKX
+    beq FADDA
+    bcc FADDB       ; X(FACC) < X(FWRK)
+
     cmp #$25
-    bcs FADDZ
+    bcs FADDZ       ; shift too large for significance
+
     pha
     and #$38
-    beq LA53D
+    beq FADDCA
+
     lsr
     lsr
     lsr
     tax
-LA528:
-    lda zp41
-    sta zp42
-    lda zp40
-    sta zp41
-    lda zp3F
-    sta zp40
-    lda zp3E
-    sta zp3F
-    sty zp3E
+
+FADDCB:
+    lda zpFWRKMD
+    sta zpFWRKMG
+    lda zpFWRKMC
+    sta zpFWRKMD
+    lda zpFWRKMB
+    sta zpFWRKMC
+    lda zpFWRKMA
+    sta zpFWRKMB
+    sty zpFWRKMA
     dex
-    bne LA528
-LA53D:
+    bne FADDCB
+
+FADDCA:
     pla
     and #$07
-    beq LA590
+    beq FADDA
+
     tax
-LA543:
-    lsr zp3E
-    ror zp3F
-    ror zp40
-    ror zp41
-    ror zp42
+
+FADDC:
+    lsr zpFWRKMA
+    ror zpFWRKMB
+    ror zpFWRKMC
+    ror zpFWRKMD
+    ror zpFWRKMG
     dex
-    bne LA543
-    beq LA590
-LA552:
+    bne FADDC
+    beq FADDA       ; alligned
+
+FADDB:
     sec
-    lda zp3D
-    sbc zpFACCX
+    lda zpFWRKX
+    sbc zpFACCX     ; amounto to shift FACC
     cmp #$25
-    bcs LA4DC
+    bcs FWTOA       ; FACC not significant
+
+; Now shift FACC right
+
     pha
     and #$38
-    beq LA579
+    beq FADDDA
+
     lsr
     lsr
     lsr
     tax
-LA564:
+
+FADDDB:
     lda zpFACCMD
     sta zpFACCMG
     lda zpFACCMC
@@ -7623,157 +7673,193 @@ LA564:
     sta zpFACCMB
     sty zpFACCMA
     dex
-    bne LA564
-LA579:
+    bne FADDDB
+
+FADDDA:
     pla
     and #$07
-    beq LA58C
+    beq FADDAL
+
     tax
-LA57F:
+
+FADDD:
     lsr zpFACCMA
     ror zpFACCMB
     ror zpFACCMC
     ror zpFACCMD
     ror zpFACCMG
     dex
-    bne LA57F
-LA58C:
-    lda zp3D
-    sta zpFACCX
-LA590:
-    lda zpFACCS
-    eor zp3B
-    bpl LA5DF
-    lda zpFACCMA
-    cmp zp3E
-    bne LA5B7
-    lda zpFACCMB
-    cmp zp3F
-    bne LA5B7
-    lda zpFACCMC
-    cmp zp40
-    bne LA5B7
-    lda zpFACCMD
-    cmp zp41
-    bne LA5B7
-    lda zpFACCMG
-    cmp zp42
-    bne LA5B7
-    jmp FCLR
+    bne FADDD
 
-LA5B7:
-    bcs LA5E3
+FADDAL:
+    lda zpFWRKX
+    sta zpFACCX
+
+FADDA:
+    lda zpFACCS
+    eor zpFWRKS
+    bpl FADDE       ; both same sign
+
+    lda zpFACCMA
+    cmp zpFWRKMA
+    bne FADDF
+
+    lda zpFACCMB
+    cmp zpFWRKMB
+    bne FADDF
+
+    lda zpFACCMC
+    cmp zpFWRKMC
+    bne FADDF
+
+    lda zpFACCMD
+    cmp zpFWRKMD
+    bne FADDF
+
+    lda zpFACCMG
+    cmp zpFWRKMG
+    bne FADDF
+
+    jmp FCLR        ; FACC=FWRK in difference case
+
+FADDF:
+    bcs FADDG       ; abs(FACC) > abs(FWRK)
+
     sec
-    lda zp42
+    lda zpFWRKMG
     sbc zpFACCMG
     sta zpFACCMG
-    lda zp41
+    lda zpFWRKMD
     sbc zpFACCMD
     sta zpFACCMD
-    lda zp40
+    lda zpFWRKMC
     sbc zpFACCMC
     sta zpFACCMC
-    lda zp3F
+    lda zpFWRKMB
     sbc zpFACCMB
     sta zpFACCMB
-    lda zp3E
+    lda zpFWRKMA
     sbc zpFACCMA
     sta zpFACCMA
-    lda zp3B
+    lda zpFWRKS
     sta zpFACCS
     jmp FNRM
 
-LA5DF:
+FADDE:
     clc
-    jmp FPLWF
+    jmp FPLWF       ; add FWRK to FACC
 
-LA5E3:
+FADDG:
     sec
     lda zpFACCMG
-    sbc zp42
+    sbc zpFWRKMG
     sta zpFACCMG
     lda zpFACCMD
-    sbc zp41
+    sbc zpFWRKMD
     sta zpFACCMD
     lda zpFACCMC
-    sbc zp40
+    sbc zpFWRKMC
     sta zpFACCMC
     lda zpFACCMB
-    sbc zp3F
+    sbc zpFWRKMB
     sta zpFACCMB
     lda zpFACCMA
-    sbc zp3E
+    sbc zpFWRKMA
     sta zpFACCMA
     jmp FNRM
 
-LA605:
+; ----------------------------------------------------------------------------
+
+FMULZ:
     rts
 
-LA606:
+IFMUL:
     jsr FTST
-    beq LA605
-    jsr FLDW
-    bne LA613
+    beq FMULZ       ; 0.0 * something
+    jsr FLDW        ; get other arg
+    bne FMULA       ; non-zero, so real work
     jmp FCLR
 
-LA613:
+FMULA:
     clc
     lda zpFACCX
-    adc zp3D
-    bcc LA61D
+    adc zpFWRKX     ; add exponents
+    bcc FMULB
+
     inc zpFACCXH
+
+    ; Subtract $80 bias from exponent, do not check over/underflow yet
+    ; in case renormalisation fixes things
+
     clc
-LA61D:
-    sbc #$7F
+FMULB:
+    sbc #$7F        ; carry subtracts extra 1
     sta zpFACCX
-    bcs LA625
+    bcs FMULC
+
     dec zpFACCXH
-LA625:
+
+; Copy FACC to FTMP, clear FACC then I can do FACC:=FWRK*FTMP
+; as a fixed point operation.
+
+FMULC:
     ldx #$05
-    ldy #$00
-LA629:
-    lda zpFACCX,X
-    sta zp42,X
-    sty zpFACCX,X
+    ldy #$00        ; to preset FACC to 0.0
+
+FMULD:
+    lda zpFACCMA-1,X
+    sta zpFTMPMA-1,X
+    sty zpFACCMA-1,X
     dex
-    bne LA629
+    bne FMULD
+
     lda zpFACCS
-    eor zp3B
-    sta zpFACCS
+    eor zpFWRKS
+    sta zpFACCS      ; get sign right
+
+; Now for 1:32 do {
+;   IF MSB(FTMP)=1 FACC:=FACC+FWRK
+;   FTMP:=FTMP<<1
+;   FWRK:=FWRK>>1 }
+
     ldy #$20
-LA63A:
-    lsr zp3E
-    ror zp3F
-    ror zp40
-    ror zp41
-    ror zp42
-    asl zp46
-    rol zp45
-    rol zp44
-    rol zp43
-    bcc LA652
+FMULE:
+    lsr zpFWRKMA
+    ror zpFWRKMB
+    ror zpFWRKMC
+    ror zpFWRKMD
+    ror zpFWRKMG
+    asl zpFTMPMD    ; FTMPG cannot affect answer
+    rol zpFTMPMC
+    rol zpFTMPMB
+    rol zpFTMPMA
+    bcc FMULF
+
     clc
     jsr FPLW
-LA652:
+
+FMULF:
     dey
-    bne LA63A
+    bne FMULE
     rts
 
 FMUL:
-    jsr LA606       ; IFMUL
-LA659:
-    jsr FNRM       ; FNRM
+    jsr IFMUL
+
+NRMTDY:
+    jsr FNRM
 
 FTIDY:
     lda zpFACCMG
     cmp #$80
-    bcc LA67C
-    beq LA676
+    bcc FTRNDZ
+    beq FTRNDA
+
     lda #$FF
     jsr FPLNF
-    jmp LA67C       ; FTRNDZ
+    jmp FTRNDZ
 
-LA66C:
+FOVR:
     brk
     dta $14
     .if foldup == 1
@@ -7782,16 +7868,18 @@ LA66C:
         dta 'Too big'
     .endif
     brk
-LA676:
+
+FTRNDA:
     lda zpFACCMD
     ora #$01
     sta zpFACCMD
-LA67C:
+
+FTRNDZ:
     lda #$00
     sta zpFACCMG
     lda zpFACCXH
-    beq FADDZ2
-    bpl LA66C
+    beq FTIDYZ
+    bpl FOVR
 
 ; Clear FACC
 
@@ -7805,13 +7893,14 @@ FCLR:
     sta zpFACCMC
     sta zpFACCMD
     sta zpFACCMG
-FADDZ2:
+
+FTIDYZ:
     rts
 
 ; ----------------------------------------------------------------------------
 
 FONE:
-    jsr FCLR           ; FCLR
+    jsr FCLR
     ldy #$80
     sty zpFACCMA
     iny
@@ -7821,20 +7910,24 @@ FONE:
 
 ; ----------------------------------------------------------------------------
 
+; 1/X
+
 FRECIP:
     jsr STARGA
     jsr FONE
-    bne LA6E7           ; branch always, FONE returns with !Z
+    bne FDIV           ; branch always, FONE returns with !Z
 
 ; ----------------------------------------------------------------------------
 
 FXDIV:
     jsr FTST
     beq FDIVZ
+
     jsr FTOW
     jsr FLDA
-    bne LA6F1
-    rts
+    bne FDIVA
+
+    rts             ; result is zero
 
 FDIVZ:
     jmp ZDIVOR      ; Divide by zero error
@@ -7843,31 +7936,35 @@ FDIVZ:
 
 ; =TAN numeric
 ; ============
+
+; FTAN works as FSIN(X)/FCOS(X)
+
 TAN:
     jsr FLTFAC
     jsr LA9D3
-    lda zp4A
+
+    lda zpFQUAD
     pha
     jsr ARGD
     jsr FSTA
     inc zp4A
     jsr LA99E
     jsr ARGD
-    jsr LA4D6
+    jsr FSWOP
     pla
     sta zp4A
     jsr LA99E
     jsr ARGD
-    jsr LA6E7
+    jsr FDIV
     lda #$FF
     rts
 
-LA6E7:
+FDIV:
     jsr FTST
-    beq FADDZ2
+    beq FTIDYZ
     jsr FLDW
     beq FDIVZ
-LA6F1:
+FDIVA:
     lda zpFACCS
     eor zp3B
     sta zpFACCS
@@ -7972,7 +8069,7 @@ LA787:
     sta zpFACCMB
     lda zp43
     sta zpFACCMA
-    jmp LA659
+    jmp NRMTDY
 
 LA7A9:
     brk
@@ -8062,7 +8159,7 @@ LA808:
         brk
     .endif
 LA814:
-    jsr LA453
+    jsr FCLRW
     ldy #$80
     sty zp3B
     sty zp3E
@@ -8232,14 +8329,14 @@ LA927:
     jsr FADD
     jsr LAA4C
     jsr FADD
-    jmp LAD7E
+    jmp FNEG
 
 FATANB:
     lda zpFACCX
     cmp #$73
     bcc LA904
-    jsr STARGC           ; STARGC
-    jsr LA453           ; FCLRW+6
+    jsr STARGC
+    jsr FCLRW
     lda #$80
     sta zp3D
     sta zp3E
@@ -8289,7 +8386,7 @@ LA99E:
     and #$02
     beq LA9AA
     jsr LA9AA
-    jmp LAD7E
+    jmp FNEG
 
 LA9AA:
     lsr zp4A
@@ -8322,7 +8419,7 @@ LA9D3:
     sta zp3B
     dec zp3D
     jsr FADDW
-    jsr LA6E7
+    jsr FDIV
     jsr FFIX
     lda zpFACCMD
     sta zp4A
@@ -8337,7 +8434,7 @@ LA9D3:
     lda zpFACCMA
     sta zpFACCS
     bpl LAA0E
-    jsr LA46C
+    jsr FINEG
 LAA0E:
     jsr FNRM
     jsr STARGB
@@ -8853,7 +8950,7 @@ INT:
     ora zp40
     ora zp41
     beq LAC95
-    jsr LA4C7
+    jsr FNEARP
 LAC95:
     jsr COPY_FACC_TO_IACC
     lda #$40
@@ -9135,7 +9232,7 @@ LAD77:
     jsr FTST
     bpl LAD89
     bmi LAD83
-LAD7E:
+FNEG:
     jsr FTST
     beq LAD89
 LAD83:
@@ -9150,7 +9247,7 @@ LAD8C:
     jsr LAE02
 LAD8F:
     beq LAD67
-    bmi LAD7E
+    bmi FNEG
 COMPNO:
     sec
     lda #$00
@@ -9630,7 +9727,7 @@ LAF24:
     jsr PHFACC
     jsr LAF69
     jsr POPSET
-    jsr LA606
+    jsr IFMUL
     jsr FNRM
     jsr IFIX
     jsr INCACC
@@ -9682,7 +9779,7 @@ LAF78:
     inx
     cpx #$04
     bne LAF78
-    jsr LA659
+    jsr NRMTDY
     lda #$FF
     rts
 

@@ -65,17 +65,20 @@ zp4A = zp + $4a ; WORK+19
 
 ; zp3B onwards are also used as zpWORK+4 etc..., need manual replace!
 
-zpFWRKS   = zp + $3b    ; WorkSpace Floating Point Accumulator, SIGN
-zpFWRKXH  = zp + $3c    ; WorkSpace Floating Point Accumulator, OVER/UNDERFLOW
-zpFWRKX   = zp + $3d    ; WorkSpace Floating Point Accumulator, EXPONENT
-zpFWRKMA  = zp + $3e    ; WorkSpace Floating Point Accumulator, MANTISSA
-zpFWRKMB  = zp + $3f    ; WorkSpace Floating Point Accumulator, MANTISSA
-zpFWRKMC  = zp + $40    ; WorkSpace Floating Point Accumulator, MANTISSA
-zpFWRKMD  = zp + $41    ; WorkSpace Floating Point Accumulator, MANTISSA
-zpFWRKMG  = zp + $42    ; WorkSpace Floating Point Accumulator, ROUNDING
+zpFWRKS   = zp + $3b    ; Work Floating Point Accumulator, SIGN
+zpFWRKXH  = zp + $3c    ; Work Floating Point Accumulator, OVER/UNDERFLOW
+zpFWRKX   = zp + $3d    ; Work Floating Point Accumulator, EXPONENT
+zpFWRKMA  = zp + $3e    ; Work Floating Point Accumulator, MANTISSA
+zpFWRKMB  = zp + $3f    ; Work Floating Point Accumulator, MANTISSA
+zpFWRKMC  = zp + $40    ; Work Floating Point Accumulator, MANTISSA
+zpFWRKMD  = zp + $41    ; Work Floating Point Accumulator, MANTISSA
+zpFWRKMG  = zp + $42    ; Work Floating Point Accumulator, ROUNDING
 
-zpFTMPMA  = zp + $43
-; ...
+zpFTMPMA  = zp + $43    ; Temp Floating Point Accumulator, MANTISSA
+zpFTMPMB  = zp + $44    ; Temp Floating Point Accumulator, MANTISSA
+zpFTMPMC  = zp + $45    ; Temp Floating Point Accumulator, MANTISSA
+zpFTMPMD  = zp + $46    ; Temp Floating Point Accumulator, MANTISSA
+zpFTMPMG  = zp + $47    ; Temp Floating Point Accumulator, ROUNDING
 
 zpFRDDDP  = zp + $48    ; Decimal Point flag
 zpFRDDDX  = zp + $49    ; Exponent
