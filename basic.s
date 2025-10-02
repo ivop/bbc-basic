@@ -1118,12 +1118,15 @@ RDOUT:
 SRCHM:
     cmp MNEML-1,X
     bne NOTGOT        ; Low half doesn't match
+
     ldy MNEMH-1,X     ; Check high half
-    cpy zp3E
+    cpy zpWORK+7
     beq RDOPGT        ; Mnemonic matches
+
 NOTGOT:
     dex
     bne SRCHM         ; Loop through opcode lookup table
+
 ASSDED:
     jmp STDED         ; Mnemonic not matched, Mistake
 
@@ -1181,7 +1184,7 @@ MMMMLP:
     bpl MMMMCL        ; Opcode - jump to store it
     lda STRACC,Y      ; Get EQU byte
 MMMMCL:
-    sta (zp3A),Y      ; Store byte
+    sta (zpWORK+3),Y      ; Store byte
     inc PC            ; Increment P%
     bne MMMMLQ
     inc PC+1
@@ -1426,7 +1429,7 @@ JSRA:
 NGPSX:
     cpx #PSEUDO + 1
     bcs OPTION
-    lda zp3D
+    lda zpWORK+6
     eor #$01
     and #$1F
     pha
@@ -1573,7 +1576,7 @@ INTOK:
     sta (zpWORK),Y
 INTOKA:
     iny             ; Replace
-    lda (zp39),Y
+    lda (zpWORK+2),Y
     sta (zpWORK),Y
     cmp #$0D
     bne INTOKA
@@ -1636,10 +1639,10 @@ CONSTX:
     jsr INTOK
     lda zpWORK
     adc #$02
-    sta zp39
+    sta zpWORK+2
     lda zpWORK+1
     adc #$00
-    sta zp3A
+    sta zpWORK+3
 
 CONSTL:
     lda (zpWORK),Y
@@ -1892,7 +1895,7 @@ MMATCH:
     sta zpWORK+2
     bcc NMATCH
 
-    inc zp3A
+    inc zpWORK+3
 NMATCH:
     ldy #$00
     lda (zpWORK),Y
@@ -3256,10 +3259,12 @@ NUMBI:
     .if version >= 3
         clc
     .endif
+
     jsr STEPON
+
     lda zpWORK+4
     adc #$02
-    sta zp3B
+    sta zpWORK+4
     bcc NUMBH
 
     inc zpWORK+5
@@ -4639,7 +4644,7 @@ LVSTR:
 
 LVSTRA:
     inx
-    sty zp39
+    sty zpWORK+2
     dec zpIACC+2
     jsr ARRAY
     lda #$81
@@ -7521,7 +7526,7 @@ FFRACA:
     jmp FNEARR
 
 FNEARQ:
-    dec zp4A
+    dec zpFQUAD
 
 FNEARR:
     jsr FINEG       ; achieves fract = 1 - fract

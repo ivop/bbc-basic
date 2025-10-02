@@ -39,31 +39,7 @@ zpFACCMC  = zp + $33    ; Floating Point Accumulator, MANTISSA
 zpFACCMD  = zp + $34    ; Floating Point Accumulator, MANTISSA
 zpFACCMG  = zp + $35    ; Floating Point Accumulator, ROUNDING
 zpCLEN    = zp + $36    ; Length of string buffer
-zpWORK    = zp + $37    ; General work area
-
-; WORK+x seem to match Cmos, not Basic128 (is one off sometimes)
-; remove this list once all zp38-zp4a are replaced with WORK or FWRK refs.
-zp38 = zp + $38 ; WORK+1    ok.
-zp39 = zp + $39 ; WORK+2    ok.
-zp3A = zp + $3a ; WORK+3    ok.
-zp3B = zp + $3b ; WORK+4    ok.
-zp3C = zp + $3c ; WORK+5    ok.
-zp3D = zp + $3d ; WORK+6    ok.
-zp3E = zp + $3e ; WORK+7    ok.
-zp3F = zp + $3f ; WORK+8    ok.
-zp40 = zp + $40 ; WORK+9    ok
-zp41 = zp + $41 ; WORK+10   ok
-zp42 = zp + $42 ; WORK+11   ok
-zp43 = zp + $43 ; WORK+12
-zp44 = zp + $44 ; WORK+13   ok.
-zp45 = zp + $45 ; WORK+14
-zp46 = zp + $46 ; WORK+15
-zp47 = zp + $47 ; WORK+16
-zp48 = zp + $48 ; WORK+17
-zp49 = zp + $49 ; WORK+18
-zp4A = zp + $4a ; WORK+19
-
-; zp3B onwards are also used as zpWORK+4 etc..., need manual replace!
+zpWORK    = zp + $37    ; General work area, used as zpWORK+n up to n=13
 
 zpFWRKS   = zp + $3b    ; Work Floating Point Accumulator, SIGN
 zpFWRKXH  = zp + $3c    ; Work Floating Point Accumulator, OVER/UNDERFLOW
