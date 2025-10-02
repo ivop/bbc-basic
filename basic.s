@@ -4130,44 +4130,46 @@ CREATF:
     lda VARL+1,Y
     sta zpWORK+4
 
-L9479:
+CREATLP:
     lda zpWORK+4
-    beq L94B2         ; End of list
+    beq CREAEOLST         ; End of list
 
     ldy #$00
     lda (zpWORK+3),Y
     sta zpWORK+5
+
     iny
     lda (zpWORK+3),Y
     sta zpWORK+6
+
     iny
     lda (zpWORK+3),Y
-    bne L949A         ; Jump if not null name
+    bne CREATG         ; Jump if not null name
 
     dey
     cpy zpWORK+2
-    bne L94B3
+    bne CREATH
 
     iny
-    bcs L94A7
+    bcs CREATI
 
-L9495:
+CREATL:
     iny
     lda (zpWORK+3),Y
-    beq L94B3
+    beq CREATH
 
-L949A:
+CREATG:
     cmp (zpWORK),Y
-    bne L94B3
+    bne CREATH
 
     cpy zpWORK+2
-    bne L9495
+    bne CREATL
 
     iny
     lda (zpWORK+3),Y
-    bne L94B3
+    bne CREATH
 
-L94A7:
+CREATI:
     tya
     adc zpWORK+3
     sta zpIACC
@@ -4175,47 +4177,49 @@ L94A7:
     adc #$00
     sta zpIACC+1
 
-L94B2:
+CREAEOLST:
     rts
 
-L94B3:
+CREATH:
     lda zpWORK+6
-    beq L94B2
+    beq CREAEOLST
 
     ldy #$00
     lda (zpWORK+5),Y
     sta zpWORK+3
+
     iny
     lda (zpWORK+5),Y
     sta zpWORK+4
+
     iny
     lda (zpWORK+5),Y
-    bne L94D4
+    bne CREATK
 
     dey
     cpy zpWORK+2
-    bne L9479
+    bne CREATLP
 
     iny
-    bcs L94E1
+    bcs CREATM
 
-L94CF:
+CREATJ:
     iny
     lda (zpWORK+5),Y
-    beq L9479
+    beq CREATLP
 
-L94D4:
+CREATK:
     cmp (zpWORK),Y
-    bne L9479
+    bne CREATLP
 
     cpy zpWORK+2
-    bne L94CF
+    bne CREATJ
 
     iny
     lda (zpWORK+5),Y
-    bne L9479
+    bne CREATLP
 
-L94E1:
+CREATM:
     tya
     adc zpWORK+5
     sta zpIACC
