@@ -45,13 +45,13 @@ c64basic2.rom: basic.s
 #  Compare with reference ROMs
 #
 compares2: sbasic2.rom
-	@tools/compare.sh ref/SBasic2.fixed $<
+	@tools/compare.sh ref/SBasic2.fixed2 $<
 
 compares310: sbasic310.rom
 	@tools/compare.sh ref/SBasic310.fixed $<
 
 compareat2: atbasic2.rom
-	@tools/compare.sh ref/AtBasic2.fixed $<
+	@tools/compare.sh ref/AtBasic2.fixed2 $<
 
 compareat310: atbasic310.rom
 	@tools/compare.sh ref/AtBasic310.fixed $<
