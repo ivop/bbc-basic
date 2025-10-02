@@ -4993,7 +4993,7 @@ TSTBRK:
         pha           ; Save A
         lda ESCFLG
         and #$20      ; Check keyboard matrix
-        beq DOBRK     ; Escape key pressed, jump to error XXX: A is not popped?
+        beq DOBRK     ; Escape key pressed, jump to error
         pla           ; Restore A
     .endif
 
@@ -5005,7 +5005,7 @@ TSTBRK:
         pha
         lda ESCFLG    ; Save A, get keypress
         cmp #$1B
-        beq DOBRK     ; If Escape, jump to error, XXX: A is not popped?
+        beq DOBRK     ; If Escape, jump to error
         pla           ; Restore A
     .endif
 

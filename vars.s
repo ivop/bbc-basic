@@ -117,8 +117,12 @@ FORADH  = FORADL + 1
 
 ; (there's a hole between offset cFORTOP and DOADL)
 
+; DO Stack
+
 DOADL   = ws + $05a4        ; $14 bytes
 DOADH   = DOADL + $14       ; $14 bytes
+
+; SUB Stack
 
 SUBADL  = ws + $05cc        ; $1a bytes
 SUBADH  = SUBADL + $1a      ; $1a bytes
@@ -138,4 +142,3 @@ BUFFER  = ws + $0700
 cFORTOP = $96       ; 10 frames
 cSUBTOP = $1a       ; 26 entries
 cDOTOP  = $14       ; 20 entries
-
