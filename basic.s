@@ -13730,8 +13730,8 @@ LBF82:
 
     .ifdef MOS_BBC
         jsr LBEBA     ; Terminate string with <cr>
-        ldx #$00      ; XXX <STRACC  (hidden bug if ws is moved)
-        ldy #$06      ; XXX >STRACC
+        ldx #<STRACC
+        ldy #>STRACC
         pla           ; Point to string buffer, get action back
     .endif
 
