@@ -55,7 +55,7 @@ zp40 = zp + $40 ; WORK+9    ok
 zp41 = zp + $41 ; WORK+10   ok
 zp42 = zp + $42 ; WORK+11   ok
 zp43 = zp + $43 ; WORK+12
-zp44 = zp + $44 ; WORK+13
+zp44 = zp + $44 ; WORK+13   ok.
 zp45 = zp + $45 ; WORK+14
 zp46 = zp + $46 ; WORK+15
 zp47 = zp + $47 ; WORK+16
@@ -145,8 +145,8 @@ FORADH  = FORADL + 1
 ;
 ;FORINL  = ws + $0528
 ;
-;SUBADL  = ws + $05cc
-;SUBADH  = SUBADL + $1a
+SUBADL  = ws + $05cc
+SUBADH  = SUBADL + $1a
 
 ; String Work Area
 
@@ -155,3 +155,12 @@ STRACC  = ws + $0600
 ; BASIC Line Input Buffer
 
 BUFFER  = ws + $0700
+
+; ----------------------------------------------------------------------------
+
+; Constants
+
+cFORTOP = $96
+cSUBTOP = $1a
+cDOTOP  = $14
+
