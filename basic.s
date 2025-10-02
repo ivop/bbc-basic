@@ -5790,7 +5790,7 @@ CONLOP:
     dey
     bne CONLOP
 
-    jsr LBDCB         ; Unstack string to start of string buffer
+    jsr POPSTR         ; Unstack string to start of string buffer
 
     pla
     sta zpCLEN
@@ -6153,7 +6153,7 @@ INTDIV:
     rol zpWORK+5
     bit zpWORK
     php
-    ldx #zpWORK+2
+    ldx #zpWORK+2     ; for MTOACC
     jmp DIVIN         ; Jump to DIV routine
 
 ; ----------------------------------------------------------------------------
@@ -8794,7 +8794,7 @@ ADVAL:
 
     .if .def MOS_BBC
         .if .def TARGET_C64
-            jsr LAFB2
+            jsr C64_XY_OSBYTE
         .else
             jsr OSBYTE
         .endif
@@ -9382,7 +9382,7 @@ INSTRH:
     jsr PHSTR
     jsr BRA
     jsr INTEGB
-    jsr LBDCB
+    jsr POPSTR
 
 INSTRG:
     ldy #$00
@@ -9492,7 +9492,7 @@ FNEGX:
 ; unary minus
 
 UNMINS:
-    jsr LAE02
+    jsr UNPLUS
 
 VALCMP:
     beq ABSE
@@ -9612,38 +9612,43 @@ FACTOR:
     beq QSTR           ; Jump with string
 
     cmp #'+'
-    bne LAE05          ; Jump with unary plus
+    bne DOPLUS         ; Jump with unary plus
 
-LAE02:
+UNPLUS:
     jsr AESPAC         ; Get current character
 
-LAE05:
-    cmp #$8E
-    bcc LAE10          ; Lowest function token, test for indirections
+DOPLUS:
+    cmp #tknOPENIN
+    bcc TSTVAR          ; Lowest function token, test for indirections
 
-    cmp #$C6
+    cmp #tknEOF+1
     bcs FACERR         ; Highest function token, jump to error
 
     jmp DISPATCH       ; Jump via function dispatch table
 
 ; Indirection, hex, brackets
 ; --------------------------
-LAE10:
+TSTVAR:
     cmp #'?'
-    bcs LAE20         ; Jump with ?numeric or higher
+    bcs TSTVB         ; Jump with ?numeric or higher
+
     cmp #'.'
-    bcs LAE2A         ; Jump with .numeric or higher
+    bcs TSTN          ; Jump with .numeric or higher
+
     cmp #'&'
-    beq LAE6D         ; Jump with hex number
+    beq HEXIN         ; Jump with hex number
+
     cmp #'('
-    beq BRA         ; Jump with brackets
-LAE20:
+    beq BRA           ; Jump with brackets
+
+TSTVB:
     dec zpAECUR
     jsr LVCONT
-    beq ERRFAC         ; Jump with undefined variable or bad name
+    beq ERRFAC        ; Jump with undefined variable or bad name
+
     jmp VARIND
 
-LAE2A:
+TSTN:
     jsr FRDD
     bcc FACERR
     rts
@@ -9651,12 +9656,13 @@ LAE2A:
 ERRFAC:
     lda zpBYTESM      ; Check assembler option
     and #$02          ; Is 'ignore undefiened variables' set?
-    bne FACERR         ; b1=1, jump to give No such variable
-    bcs FACERR         ; Jump with bad variable name
+    bne FACERR        ; b1=1, jump to give No such variable
+    bcs FACERR        ; Jump with bad variable name
+
     stx zpAECUR
 
 GETPC:
-    lda PC      ; Use P% for undefined variable
+    lda PC        ; Use P% for undefined variable
     ldy PC+1
     jmp AYACC     ; Jump to return 16-bit integer, tail call
 
@@ -9681,7 +9687,7 @@ BKTERR = * -1               ; include previous BRK
             dta 'Missing )'
         .endif
 
-LAE55:
+HEXDED:
         brk
         dta $1C
         .if foldup == 1
@@ -9714,7 +9720,7 @@ BKTERR:
         brk
     .endif
 
-LAE6D:
+HEXIN:
     .if version < 3
         ldx #$00
         stx zpIACC
@@ -9726,40 +9732,45 @@ LAE6D:
         jsr FALSE
         iny
     .endif
-LAE79:
+
+HEXIP:
     lda (zpAELINE),Y
-    cmp #$30
-    bcc LAEA2
-    cmp #$3A
-    bcc LAE8D
-    sbc #$37
+    cmp #'0'
+    bcc HEXEND
+
+    cmp #'9'+1
+    bcc OKHEX       ; '0'-'9' ok
+
+    sbc #$37        ; carry is set
     cmp #$0A
-    bcc LAEA2
+    bcc HEXEND
+
     cmp #$10
-    bcs LAEA2
-LAE8D:
+    bcs HEXEND      ; branch if > 'F'
+
+OKHEX:
     asl
     asl
     asl
     asl
     ldx #$03
-LAE93:
+
+INLOOP:
     asl
     rol zpIACC
     rol zpIACC+1
     rol zpIACC+2
     rol zpIACC+3
     dex
-    bpl LAE93
+    bpl INLOOP
+
     iny
-    bne LAE79
-LAEA2:
+    bne HEXIP
+
+HEXEND:
     txa
-    .if version < 3
-        bpl LAEAA
-    .elseif version >= 3
-        bpl LAE55
-    .endif
+    bpl HEXDED
+
     sty zpAECUR
     lda #$40
     rts
@@ -9775,6 +9786,7 @@ TO:
         lda (zpAELINE),Y
         cmp #'P'
         bne FACERR
+
         inc zpAECUR
         lda zpTOP
         ldy zpTOP+1
@@ -9866,7 +9878,7 @@ ERR:
 ; ----------------------------------------------------------------------------
 
     .if version < 3
-LAEAA:
+HEXDED:
         brk
         dta $1C
         .if foldup == 1
@@ -9880,7 +9892,7 @@ LAEAA:
 ; =TIME - Read system TIME
 ; ========================
 RTIME:
-    ldx #$2A
+    ldx #zpIACC
     ldy #$00          ; Point to integer accumulator
     lda #$01          ; Read TIME to IACC via OSWORD $01
     .ifdef MOS_BBC
@@ -9900,7 +9912,7 @@ RPAGE:
         ldy zpTXTP
         jmp AYACC
      
-LAEC7:
+JMPFACERR:
         jmp FACERR
      
 ; ----------------------------------------------------------------------------
@@ -9935,7 +9947,8 @@ TO:
         ldy zpAECUR
         lda (zpAELINE),Y
         cmp #'P'
-        bne LAEC7
+        bne JMPFACERR
+
         inc zpAECUR
         lda zpTOP
         ldy zpTOP+1
@@ -9983,49 +9996,57 @@ RHIMEM:
 
 ; =RND(numeric)
 ; -------------
-LAF0A:
+RNDB:
     inc zpAECUR
     jsr BRA
     jsr INTEGB
+
     lda zpIACC+3
-    bmi LAF3F
+    bmi RNDSET
+
     ora zpIACC+2
     ora zpIACC+1
-    bne LAF24
+    bne RNDBB
+
     lda zpIACC
-    beq LAF6C
+    beq FRND
+
     cmp #$01
-    beq LAF69
-LAF24:
+    beq FRNDAA
+
+RNDBB:
     jsr IFLT
     jsr PHFACC
-    jsr LAF69
+    jsr FRNDAA
     jsr POPSET
     jsr IFMUL
     jsr FNRM
     jsr IFIX
     jsr INCACC
+
     lda #$40
     rts
 
-LAF3F:
-    ldx #$0D
+RNDSET:
+    ldx #zpSEED
     jsr ACCTOM
     lda #$40
     sta zpSEED+4
+
     rts
 
 ; RND [(numeric)]
 ; ===============
 RND:
     ldy zpAECUR
-    lda (zpAELINE),Y      ; Get current character
+    lda (zpAELINE),Y  ; Get current character
     cmp #'('
-    beq LAF0A         ; Jump with RND(numeric)
-    jsr LAF87         ; Get random number
-    ldx #$0D
+    beq RNDB          ; Jump with RND(numeric)
 
-; XXX check if all calls have X set with proper ZP offset
+    jsr FRNDAB         ; Get random number
+
+    ldx #zpSEED
+
 MTOACC:
     lda zp+0,X
     sta zpIACC          ; Copy number pointed to by X to IACC
@@ -10035,35 +10056,40 @@ MTOACC:
     sta zpIACC+2
     lda zp+3,X
     sta zpIACC+3
+
     lda #$40
     rts               ; Return Integer
 
-LAF69:
-    jsr LAF87
-LAF6C:
+FRNDAA:
+    jsr FRNDAB
+
+FRND:
     ldx #$00
     stx zpFACCS
     stx zpFACCXH
     stx zpFACCMG
     lda #$80
     sta zpFACCX
-LAF78:
+
+MTOFACC:
     lda zpSEED,X
     sta zpFACCMA,X
     inx
     cpx #$04
-    bne LAF78
+    bne MTOFACC
+
     jsr NRMTDY
+
     lda #$FF
     rts
 
 ; ----------------------------------------------------------------------------
 
-LAF87:
+FRNDAB:
 
     .if version >= 3
         ldy #$04      ; Rotate through four bytes, faster but bigger
-LAF89:
+RTOP:
         ror zpSEED+4
         lda zpSEED+3
         pha
@@ -10090,13 +10116,12 @@ LAF89:
         sta zpSEED
         pla
         sta zpSEED+4
-LAFB1:
         dey
-        bne LAF89
+        bne RTOP
         rts
     .elseif version < 3
         ldy #$20      ; Rotate through 32 bits, shorter but slower
-LAF89:
+RTOP:
         lda zpSEED+2
         lsr
         lsr
@@ -10109,7 +10134,7 @@ LAF89:
         rol zpSEED+3
         rol zpSEED+4
         dey
-        bne LAF89
+        bne RTOP
         rts
  
 ; ----------------------------------------------------------------------------
@@ -10141,50 +10166,50 @@ INKEA:
 
 ; Atom/System - Manually implement INKEY(num)
 ; -------------------------------------------
-LCF8D:
+INKEALP:
     .ifdef TARGET_ATOM
         jsr $FE71
-        bcc LCFAB     ; Key pressed
+        bcc INKEB     ; Key pressed
     .endif
     .ifdef TARGET_SYSTEM
         lda ESCFLG
-        bpl LCFAB     ; Key pressed
+        bpl INKEB     ; Key pressed
     .endif
     .ifdef MOS_ATOM
         lda zpIACC
         ora zpIACC+3
-        beq LCFB4     ; Timeout=0
+        beq INKEAX     ; Timeout=0
         ldy #$08      ; $0800 gives 1cs delay
-LCF9A:
+WAITLP:
         dex
-        bne LCF9A
+        bne WAITLP
         dey
-        bne LCF9A     ; Wait 1cs
+        bne WAITLP     ; Wait 1cs
         lda zpIACC
-        bne LCFA6
+        bne INKEATIMEOUT
         dec zpIACC+3      ; Decrement timeout
-LCFA6:
+INKEATIMEOUT:
         dec zpIACC
-        jmp LCF8D     ; Loop to keep waiting
-LCFAB:
+        jmp INKEALP     ; Loop to keep waiting
+INKEB:
     .endif
     .ifdef TARGET_ATOM
-        jsr LCFB7     ; Convert keypress
+        jsr CONVKEY     ; Convert keypress
     .endif
     .ifdef TARGET_SYSTEM
         ldy ESCFLG
-        bpl LCFAB     ; Loop until key released
+        bpl INKEB     ; Loop until key released
     .endif
     .ifdef MOS_ATOM
         ldy #$00
         tax
         rts           ; Y=0, X=key, return
-LCFB4:
+INKEAX:
         ldy #$FF
         rts           ; Y=$FF for no keypress
     .endif
     .ifdef TARGET_ATOM
-LCFB7:
+CONVKEY:
         php
         jmp $FEA4     ; Convert Atom keypress
     .endif
@@ -10193,7 +10218,7 @@ LCFB7:
 ; -----------------------------------
     .ifdef MOS_BBC
         lda #$81
-LAFB2:
+C64_XY_OSBYTE:
         ldx zpIACC
         ldy zpIACC+1
         jmp OSBYTE
@@ -10205,11 +10230,7 @@ LAFB2:
 ; ====
 GET:
     jsr OSRDCH
-    .if version < 3
-        jmp SINSTK
-    .elseif version >= 3
-        jmp SINSTK
-    .endif
+    jmp SINSTK
 
 ; ----------------------------------------------------------------------------
 
@@ -10217,7 +10238,7 @@ GET:
 ; =====
 GETD:
     jsr OSRDCH
-LAFC2:
+SINSTR:
     sta STRACC
     lda #$01
     sta zpCLEN
@@ -10232,19 +10253,25 @@ LAFC2:
 ; ========================
 LEFTD:
     jsr EXPR
-    bne LB033
-    cpx #$2C
-    bne LB036
+    bne LEFTE
+
+    cpx #','
+    bne MIDC
+
     inc zpAECUR
+
     jsr PHSTR
     jsr BRA
     jsr INTEGB
-    jsr LBDCB
+    jsr POPSTR
+
     lda zpIACC
     cmp zpCLEN
-    bcs LAFEB
+    bcs LEFTX
+
     sta zpCLEN
-LAFEB:
+
+LEFTX:
     lda #$00
     rts
 
@@ -10254,34 +10281,43 @@ LAFEB:
 ; =========================
 RIGHTD:
     jsr EXPR
-    bne LB033
-    cpx #$2C
-    bne LB036
+    bne LEFTE
+
+    cpx #','
+    bne MIDC
+
     inc zpAECUR
+
     jsr PHSTR
     jsr BRA
     jsr INTEGB
-    jsr LBDCB
+    jsr POPSTR
+
     lda zpCLEN
     sec
     sbc zpIACC
-    bcc LB023
-    beq LB025
+    bcc RALL
+    beq RIGHTX
+
     tax
     lda zpIACC
     sta zpCLEN
-    beq LB025
+    beq RIGHTX
+
     ldy #$00
-LB017:
+
+RGHLOP:
     lda STRACC,X
     sta STRACC,Y
     inx
     iny
     dec zpIACC
-    bne LB017
-LB023:
+    bne RGHLOP
+
+RALL:
     lda #$00
-LB025:
+
+RIGHTX:
     rts
 
 ; ----------------------------------------------------------------------------
@@ -10292,16 +10328,17 @@ INKED:
     jsr INKEA
     txa
     cpy #$00
-    beq LAFC2
-LB02E:
+    beq SINSTR
+
+RNUL:
     lda #$00
     sta zpCLEN
     rts
 
-LB033:
+LEFTE:
     jmp LETM
 
-LB036:
+MIDC:
     jmp COMERR
 
 ; ----------------------------------------------------------------------------
@@ -10310,34 +10347,44 @@ LB036:
 ; ====================================
 MIDD:
     jsr EXPR
-    bne LB033
-    cpx #$2C
-    bne LB036
+    bne LEFTE
+
+    cpx #','
+    bne MIDC
+
     jsr PHSTR
+
     inc zpAECUR
     jsr INEXPR
+
     lda zpIACC
     pha
     lda #$FF
     sta zpIACC
     inc zpAECUR
     cpx #')'
-    beq LB061
-    cpx #$2C
-    bne LB036
+    beq MIDTWO
+
+    cpx #','
+    bne MIDC
+
     jsr BRA
     jsr INTEGB
-LB061:
-    jsr LBDCB
+
+MIDTWO:
+    jsr POPSTR
     pla
     tay
     clc
-    beq LB06F
+    beq MIDLB
+
     sbc zpCLEN
-    bcs LB02E
+    bcs RNUL
+
     dey
     tya
-LB06F:
+
+MIDLB:
     sta zpIACC+2
     tax
     ldy #$00
@@ -10345,18 +10392,22 @@ LB06F:
     sec
     sbc zpIACC+2
     cmp zpIACC
-    bcs LB07F
+    bcs MIDLA
+
     sta zpIACC
-LB07F:
+
+MIDLA:
     lda zpIACC
-    beq LB02E
-LB083:
+    beq RNUL
+
+MIDLP:
     lda STRACC,X
     sta STRACC,Y
     iny
     inx
     cpy zpIACC
-    bne LB083
+    bne MIDLP
+
     sty zpCLEN
     lda #$00
     rts
@@ -10366,34 +10417,39 @@ LB083:
 ; =STR$ [~] numeric
 ; =================
 STRD:
-    jsr AESPAC         ; Skip spaces
+    jsr AESPAC        ; Skip spaces
     ldy #$FF          ; Y=$FF for decimal
     cmp #'~'
-    beq LB0A1
+    beq STRDT
+
     ldy #$00
-    dec zpAECUR          ; Y=$00 for hex, step past ~
-LB0A1:
+    dec zpAECUR       ; Y=$00 for hex, step past ~
+
+STRDT:
     tya
     pha               ; Save format
     jsr FACTOR
-    beq LB0BF         ; Evaluate, error if not number
+    beq STRE          ; Evaluate, error if not number
+
     tay
     pla
-    sta zpPRINTF          ; Get format back
+    sta zpPRINTF      ; Get format back
     lda VARL_AT+3
-    bne LB0B9         ; Top byte of @%, STR$ uses @%
-    sta zpWORK          ; Store 'General format'
+    bne STRDM         ; Top byte of @%, STR$ uses @%
+
+    sta zpWORK        ; Store 'General format'
     jsr FCONA         ; Convert using general format
+
     lda #$00
     rts               ; Return string
 
-LB0B9:
-    jsr FCON         ; Convert using @% format
+STRDM:
+    jsr FCON          ; Convert using @% format
     lda #$00
     rts               ; Return string
 
-LB0BF:
-    jmp LETM         ; Jump to Type mismatch error
+STRE:
+    jmp LETM          ; Jump to Type mismatch error
 
 ; ----------------------------------------------------------------------------
 
@@ -10404,43 +10460,55 @@ STRND:
     jsr PHACC
     jsr COMEAT
     jsr BRA
-    bne LB0BF
+    bne STRE
+
     jsr POPACC
     ldy zpCLEN
-    beq LB0F5
+    beq STRNX
+
     lda zpIACC
-    beq LB0F8
+    beq STRNY
+
     dec zpIACC
-    beq LB0F5
-LB0DF:
+    beq STRNX
+
+STRNL:
     ldx #$00
-LB0E1:
+
+STRNLP:
     lda STRACC,X
     sta STRACC,Y
     inx
     iny
-    beq LB0FB
+    beq STRNOV
+
     cpx zpCLEN
-    bcc LB0E1
+    bcc STRNLP
+
     dec zpIACC
-    bne LB0DF
+    bne STRNL
+
     sty zpCLEN
-LB0F5:
+
+STRNX:
     lda #$00
     rts
 
-LB0F8:
+STRNY:
     sta zpCLEN
     rts
 
-LB0FB:
+STRNOV:
     jmp STROVR
 
-LB0FE:
+; ----------------------------------------------------------------------------
+
+FNMISS:
     pla
     sta zpLINE+1
     pla
     sta zpLINE
+
     brk
     dta $1D
     .if foldup == 1
@@ -10453,70 +10521,86 @@ LB0FE:
 
 ; Look through program for FN/PROC
 ; --------------------------------
-LB112:
+FNDEF:
     lda zpTXTP
     sta zpLINE+1          ; Start at PAGE
     lda #$00
     sta zpLINE
-LB11A:
+
+FNFIND:
     ldy #$01
     lda (zpLINE),Y      ; Get line number high byte
-    bmi LB0FE         ; End of program, jump to 'No such FN/PROC' error
+    bmi FNMISS          ; End of program, jump to 'No such FN/PROC' error
+
     ldy #$03
-LB122:
+
+FNFINS:
     iny
     lda (zpLINE),Y
-    cmp #$20
-    beq LB122         ; Skip past spaces
+    cmp #' '
+    beq FNFINS         ; Skip past spaces
+
     cmp #tknDEF
-    beq LB13C         ; Found DEF at start of line
-LB12D:
+    beq DEFFND         ; Found DEF at start of line
+
+NEXLIN:
     ldy #$03
     lda (zpLINE),Y      ; Get line length
     clc
     adc zpLINE
     sta zpLINE          ; Point to next line
-    bcc LB11A
-    inc zpLINE+1
-    bcs LB11A         ; Loop back to check next line
+    bcc FNFIND
 
-LB13C:
+    inc zpLINE+1
+    bcs FNFIND         ; Loop back to check next line
+
+DEFFND:
     iny
     sty zpCURSOR
     jsr SPACES
+
     tya
     tax
     clc
     adc zpLINE
     ldy zpLINE+1
-    bcc LB14D
+    bcc FNFDIN
+
     iny
     clc
-LB14D:
+
+FNFDIN:
     sbc #$00
-    sta zp3C
+    sta zpWORK+5
     tya
     sbc #$00
-    sta zp3D
+    sta zpWORK+6
+
     ldy #$00
-LB158:
+
+FNFDLK:
     iny
     inx
-    lda (zp3C),Y
+    lda (zpWORK+5),Y
     cmp (zpWORK),Y
-    bne LB12D
-    cpy zp39
-    bne LB158
+    bne NEXLIN
+
+    cpy zpWORK+2
+    bne FNFDLK
+
     iny
-    lda (zp3C),Y
+    lda (zpWORK+5),Y
     jsr WORDCQ
-    bcs LB12D
+    bcs NEXLIN
+
     txa
     tay
     jsr CLYADP
     jsr LOOKFN
+
     ldx #$01
     jsr CREAX
+
     ldy #$00
     lda zpLINE
     sta (zpFSA),Y
@@ -10524,9 +10608,10 @@ LB158:
     lda zpLINE+1
     sta (zpFSA),Y
     jsr FSAPY
-    jmp LB1F4
 
-LB18A:
+    jmp FNGO
+
+FNCALL:
     brk
     dta $1E
     .if foldup == 1
@@ -10545,86 +10630,100 @@ FN:
 
 ; Call subroutine
 ; ---------------
-; A=FN or PROC
-; PtrA=>start of FN/PROC name
+; A=tknFN or tknPROC
+; zpLINE=>start of FN/PROC name
 ;
 FNBODY:
-    sta zpTYPE          ; Save PROC/FN token
+    sta zpTYPE        ; Save PROC/FN token
     tsx
     txa
     clc
-    adc zpAESTKP          ; Drop BASIC stack by size of 6502 stack
+    adc zpAESTKP      ; Drop BASIC stack by size of 6502 stack
     jsr HIDEC         ; Store new BASIC stack pointer, check for No Room
+
     ldy #$00
     txa
-    sta (zpAESTKP),Y      ; Store 6502 Stack Pointer on BASIC stack
-LB1A6:
+    sta (zpAESTKP),Y  ; Store 6502 Stack Pointer on BASIC stack
+
+FNPHLP:
     inx
     iny
     lda $0100,X
-    sta (zpAESTKP),Y      ; Copy 6502 stack onto BASIC stack
+    sta (zpAESTKP),Y  ; Copy 6502 stack onto BASIC stack
     cpx #$FF
-    bne LB1A6
+    bne FNPHLP
+
     txs               ; Clear 6502 stack
     lda zpTYPE
     pha               ; Push PROC/FN token
     lda zpCURSOR
-    pha
+    pha               ; Push line pointer offset
     lda zpLINE
-    pha               ; Push PtrA line pointer
+    pha               ; Push zpLINE pointer
     lda zpLINE+1
-    pha               ; Push PtrA line pointer offset
+    pha
     lda zpAECUR
     tax
     clc
     adc zpAELINE
     ldy zpAELINE+1
-    bcc LB1CA
-LB1C8:
+    bcc FNNOIC
+
     iny
     clc
-LB1CA:
+
+FNNOIC:
     sbc #$01
     sta zpWORK
     tya
     sbc #$00
-    sta zpWORK+1          ; $37/8=>PROC token
+    sta zpWORK+1       ; (zpWORK)=>PROC token
+
     ldy #$02
     jsr WORDLP         ; Check name is valid
+
     cpy #$02
-    beq LB18A         ; No valid characters, jump to 'Bad call' error
-    stx zpAECUR          ; Line pointer offset => after valid FN/PROC name
+    beq FNCALL         ; No valid characters, jump to 'Bad call' error
+
+    stx zpAECUR        ; Line pointer offset => after valid FN/PROC name
     dey
-    sty zp39
+    sty zpWORK+2
+
     jsr CREAFN
-    bne LB1E9         ; Look for FN/PROC name in heap, if found, jump to it
-    jmp LB112         ; Not in heap, jump to look through program
+    bne FNGOA         ; Look for FN/PROC name in heap, if found, jump to it
+
+    jmp FNDEF         ; Not in heap, jump to look through program
 
 ; FN/PROC destination found
 ; -------------------------
-LB1E9:
+FNGOA:
     ldy #$00
     lda (zpIACC),Y
     sta zpLINE          ; Set PtrA to address from FN/PROC infoblock
     iny
     lda (zpIACC),Y
     sta zpLINE+1
-LB1F4:
+
+FNGO:
     lda #$00
     pha
     sta zpCURSOR          ; Push 'no parameters' (?)
     jsr SPACES
     cmp #'('
-    beq LB24D
+    beq FNARGS
+
     dec zpCURSOR
-LB202:
+
+DOFN:
     lda zpAECUR
     pha
     lda zpAELINE
     pha
     lda zpAELINE+1
     pha
-    jsr STMT
+
+    jsr STMT            ; type now contains type
+
     pla
     sta zpAELINE+1
     pla
@@ -10632,14 +10731,18 @@ LB202:
     pla
     sta zpAECUR
     pla
-    beq LB226
-    sta zp3F
-LB21C:
+    beq DNARGS
+
+    sta zpWORK+8
+
+GTARGS:
     jsr POPWRK
     jsr STORST
-    dec zp3F
-    bne LB21C
-LB226:
+
+    dec zpWORK+8
+    bne GTARGS
+
+DNARGS:
     pla
     sta zpLINE+1
     pla
@@ -10647,94 +10750,119 @@ LB226:
     pla
     sta zpCURSOR
     pla
+
     ldy #$00
     lda (zpAESTKP),Y
     tax
     txs
-LB236:
+
+FNPLLP:
     iny
     inx
     lda (zpAESTKP),Y
     sta $0100,X       ; Copy stacked 6502 stack back onto 6502 stack
     cpx #$FF
-    bne LB236
+    bne FNPLLP
+
     tya
     adc zpAESTKP
-    sta zpAESTKP          ; Adjust BASIC stack pointer
-    bcc LB24A
+    sta zpAESTKP      ; Adjust BASIC stack pointer
+    bcc FNPL
+
     inc zpAESTKP+1
-LB24A:
+
+FNPL:
     lda zpTYPE
     rts
 
-LB24D:
-    lda zpAECUR
+FNARGS:
+    lda zpAECUR         ; parse arglist - first hpush AELINE
     pha
     lda zpAELINE
     pha
     lda zpAELINE+1
     pha
+
     jsr CRAELV
-    beq LB2B5
+    beq ARGMAT
+
     lda zpAECUR
     sta zpCURSOR
-    pla
+
+    pla                 ; hpull AELINE
     sta zpAELINE+1
     pla
     sta zpAELINE
     pla
     sta zpAECUR
     pla
-    tax
-    lda zpIACC+2
+    tax                 ; hpull args
+
+    lda zpIACC+2        ; hpush lvalue
     pha
     lda zpIACC+1
     pha
     lda zpIACC
     pha
-    inx
+
+    inx                 ; args=args+1
     txa
-    pha
+    pha                 ; hpush args
+
     jsr RETINF
     jsr SPACES
+
     cmp #','
-    beq LB24D
+    beq FNARGS
+
     cmp #')'
-    bne LB2B5
+    bne ARGMAT
+
     lda #$00
-    pha
+    pha                 ; hpush 0
     jsr AESPAC
+
     cmp #'('
-    bne LB2B5
-LB28E:
+    bne ARGMAT
+
+FNARGP:
     jsr EXPR
-    jsr LBD90
+    jsr PHTYPE          ; bpush val
+
     lda zpTYPE
     sta zpIACC+3
-    jsr PHACC
-    pla
+
+    jsr PHACC           ; bpush type
+
+    pla                 ; hpull args, inc args, hpush args
     tax
     inx
     txa
     pha
+
     jsr AESPAC
+
     cmp #','
-    beq LB28E
+    beq FNARGP
+
     cmp #')'
-    bne LB2B5
+    bne ARGMAT
+
     pla
     pla
     sta zpCOEFP
     sta zpCOEFP+1
     cpx zpCOEFP
-    beq LB2CA
-LB2B5:
+    beq FNARGZ
+
+ARGMAT:
     ldx #$FB
     txs
     pla
     sta zpLINE+1
     pla
     sta zpLINE
+
     brk
     dta $1F
     .if foldup == 1
@@ -10744,43 +10872,53 @@ LB2B5:
     .endif
     brk
 
-LB2CA:
+FNARGZ:
     jsr POPACC
+
     pla
     sta zpIACC
     pla
     sta zpIACC+1
     pla
     sta zpIACC+2
-    bmi LB2F9
+
+    bmi FNARGY
+
     lda zpIACC+3
-    beq LB2B5
+    beq ARGMAT
+
     sta zpTYPE
-    ldx #$37
+    ldx #zpWORK
     jsr ACCTOM
+
     lda zpTYPE
-    bpl LB2F0
+    bpl FNARPO
+
     jsr POPSET
     jsr FLDA
-    jmp LB2F3
 
-LB2F0:
+    jmp FNAROP
+
+FNARPO:
     jsr POPACC
-LB2F3:
-    jsr STORF
-    jmp LB303
 
-LB2F9:
+FNAROP:
+    jsr STORF
+    jmp FNARGW
+
+FNARGY:
     lda zpIACC+3
-    bne LB2B5
-    jsr LBDCB
+    bne ARGMAT
+
+    jsr POPSTR
     jsr STSTRE
-LB303:
+
+FNARGW:
     dec zpCOEFP
-    bne LB2CA
+    bne FNARGZ
     lda zpCOEFP+1
     pha
-    jmp LB202
+    jmp DOFN
 
 ; ----------------------------------------------------------------------------
 
@@ -10801,11 +10939,11 @@ RETINF:
 LB318:
     jsr VARIND
     php
-    jsr LBD90
+    jsr PHTYPE
     plp
     beq LB329
     bmi LB329
-    ldx #$37
+    ldx #zpWORK
     jsr MTOACC
 LB329:
     jmp PHACC
@@ -10912,7 +11050,7 @@ CHRD:
     jsr INTFAC
 LB3C0:
     lda zpIACC
-    jmp LAFC2
+    jmp SINSTR
 
 LB3C5:
     ldy #$00
@@ -12675,7 +12813,7 @@ POPSET:
 
 ; ----------------------------------------------------------------------------
 
-LBD90:
+PHTYPE:
     beq PHSTR
     bmi PHFACC
 
@@ -12724,7 +12862,7 @@ LBDC6:
 
 ; Unstack a string
 ; ================
-LBDCB:
+POPSTR:
     ldy #$00
     lda (zpAESTKP),Y      ; Get stacked string length
     sta zpCLEN
@@ -12783,7 +12921,6 @@ POPWRK:
     ldx #zpWORK
 
 ; Use X as Index, jsr here to override X (i.e. ldx #zpWORK+8, jsr POPX)
-; XXX: check all calls have X set with ZP offset
 
 POPX:
     ldy #$03
@@ -12827,7 +12964,6 @@ HIDECE:
 
 ; ----------------------------------------------------------------------------
 
-; XXX: check all calls have X set with ZP offset
 ACCTOM:
     lda zpIACC
     sta zp+0,X
