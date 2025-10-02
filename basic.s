@@ -9356,11 +9356,7 @@ NOTLOP:
 INSTR:
     jsr EXPR
     .if version < 3
-        ; BASIC II for Atom and System do not branch to EVALE with this code
-        ; this seems broken... XXX: fix
-        ; .print "INSTR-$47 = ", INSTR-$47
-        ; .print "EVALE = ", EVALE
-        bne INSTR-$47     ; dest=EVALE
+        bne EVALE
     .elseif version >= 3
         bne FACTE
     .endif
@@ -9372,7 +9368,7 @@ INSTR:
     jsr EXPR
 
     .if version < 3
-        bne INSTR-$47     ; dest=EVALE, see above
+        bne EVALE
     .elseif version >= 3
         bne FACTE
     .endif
