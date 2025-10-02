@@ -371,7 +371,7 @@ tknOSCLI    = $FF
 
     org romstart
 
-L8000:
+START_OF_ROM:
 
 ; ----------------------------------------------------------------------------
 
@@ -941,15 +941,16 @@ WRTLPY:
     ldx zpWORK+8
 
     .if version < 3
-L8544:
+WRTLPZ:
         jsr LISTPT     ; Print a space
         dex
-        bne L8544     ; Loop to print spaces
+        bne WRTLPZ     ; Loop to print spaces
     .elseif version >= 3
         jsr LISTPL     ; Print multiple spaces
     .endif
 
     ldx #$fd
+
 WRTLPA:
     lda (zpWORK+3),Y
     jsr HEXSP
@@ -961,15 +962,14 @@ WRTLPA:
 RMOVE:
     .if version < 3
         inx
-        bpl L8565
+        bpl RMOVEB
         jsr LISTPT
         jsr CHOUT
         jsr CHOUT
         jmp RMOVE
-L8565:
+RMOVEB:
         ldy #0
     .elseif version >= 3
-; RMOVE:
         txa
         tay
 RMOVEL:
@@ -1356,14 +1356,14 @@ NOPSTA:
     cpx #DECINC+1
     bcs NGPFR
     cpx #ASLROR+1
-    bcs L8750
+    bcs NOTACC
 
     jsr SPACES         ; Skip spaces
     cmp #'A'
     beq ACCUMS         ; ins A -
 
     dec zpCURSOR
-L8750:
+NOTACC:
     jsr ASEXPR
     jsr SPACES         ; Skip spaces
     cmp #','
@@ -11146,7 +11146,7 @@ BREK:
         pla
         sbc #$00
         sta FAULT+1
-        cmp #>L8000
+        cmp #>START_OF_ROM
         bcc EXTERR              ; If outside BASIC, not a full error block
         cmp #[>END_OF_ROM]-1
         bcs EXTERR              ; So generate default error
@@ -12004,13 +12004,13 @@ FOR:
     jsr AESPAC
 
     cmp #tknSTEP
-    bne LB81F
+    bne FORSTW
 
     jsr INEXPR
 
     ldy zpAECUR
 
-LB81F:
+FORSTW:
     sty zpCURSOR
     ldy zpFORSTP
     lda zpIACC
