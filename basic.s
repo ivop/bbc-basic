@@ -2448,7 +2448,7 @@ STDONE:
 ; ----------------------------------------------------------------------------
 
 NSTR:
-    jsr LBEBA
+    jsr OSSTRT
     cpy #$00
     beq NSTRX
 
@@ -11139,17 +11139,17 @@ BREK:
         pla
         cld
         cli
-        pla           ; Drop flags, pop return low byte
+        pla             ; Drop flags, pop return low byte
         sec
         sbc #$01
-        sta FAULT+0       ; Point to error block
+        sta FAULT+0     ; Point to error block
         pla
         sbc #$00
         sta FAULT+1
         cmp #>L8000
-        bcc EXTERR     ; If outside BASIC, not a full error block
-        cmp #[>LC000]-1       ; syntax?
-        bcs EXTERR     ; So generate default error
+        bcc EXTERR              ; If outside BASIC, not a full error block
+        cmp #[>END_OF_ROM]-1
+        bcs EXTERR              ; So generate default error
     .endif
 
 
@@ -12891,10 +12891,13 @@ BUFEND:
     sta zpTALLY          ; Set COUNT to zero
     rts
 
+; Removes line whose number is in IACC
+
 REMOVE:
     jsr FNDLNO
-    bcs LBC80
-    lda zpWORK+6
+    bcs REMOVX
+
+    lda zpWORK+6    ; step WORK+6 back to line start
     sbc #$02
     sta zpWORK
     sta zpWORK+6
@@ -12904,52 +12907,64 @@ REMOVE:
     sta zpWORK+1
     sta zpTOP+1
     sta zpWORK+7
-    ldy #$03
+
+    ldy #$03        ; get length
     lda (zpWORK),Y
     clc
     adc zpWORK
     sta zpWORK
-    bcc LBC53
+    bcc MOVEA
 
     inc zpWORK+1
-LBC53:
+
+MOVEA:
     ldy #$00
-LBC55:
+
+MOVEB:
     lda (zpWORK),Y
     sta (zpTOP),Y
     cmp #$0D
-    beq LBC66
-LBC5D:
+    beq MOVED
+
+MOVEC:
     iny
-    bne LBC55
+    bne MOVEB
+
     inc zpWORK+1
     inc zpTOP+1
-    bne LBC55
-LBC66:
+    bne MOVEB
+
+MOVED:
     iny
-    bne LBC6D
+    bne MOVEE
+
     inc zpWORK+1
     inc zpTOP+1
-LBC6D:
+
+MOVEE:
     lda (zpWORK),Y
     sta (zpTOP),Y
-    bmi LBC7C
-    jsr LBC81
-    jsr LBC81
-    jmp LBC5D
+    bmi MOVEF
 
-LBC7C:
-    jsr LBE92
+    jsr MOVEG
+    jsr MOVEG
+    jmp MOVEC
+
+MOVEF:
+    jsr CLYADT
     clc
-LBC80:
+
+REMOVX:
     rts
 
-LBC81:
+MOVEG:
     iny
-    bne LBC88
+    bne MOVEH
+
     inc zpTOP+1
     inc zpWORK+1
-LBC88:
+
+MOVEH:
     lda (zpWORK),Y
     sta (zpTOP),Y
     rts
@@ -12958,18 +12973,20 @@ LBC88:
 
 INSRT:
     sty zpWORK+4
-    jsr REMOVE
+    jsr REMOVE          ; find old line and remove it
+
     ldy #>BUFFER
     sty zpWORK+5
     ldy #$00
     lda #$0D
     cmp (zpWORK+4),Y
-    beq LBD10
+    beq INSRTX
 
-LBC9E:
+LENGTH:
     iny
     cmp (zpWORK+4),Y
-    bne LBC9E
+    bne LENGTH
+
     iny
     iny
     iny
@@ -12979,7 +12996,8 @@ LBC9E:
     sta zpWORK+2
     lda zpTOP+1
     sta zpWORK+3
-    jsr LBE92       ; CLYADT
+    jsr CLYADT
+
     sta zpWORK
     lda zpTOP+1
     sta zpWORK+1
@@ -12989,6 +13007,7 @@ LBC9E:
     lda zpHIMEM+1
     sbc zpTOP+1
     bcs MOVEUP
+
     jsr ENDER
     jsr SETFSA
 
@@ -13001,6 +13020,7 @@ LBC9E:
         dta ' space'
     .endif
     brk
+
 ; ----------------------------------------------------------------------------
 
 MOVEUP:
@@ -13008,39 +13028,50 @@ MOVEUP:
     sta (zpWORK),Y
     tya
     bne LOW
+
     dec zpWORK+3
     dec zpWORK+1
+
 LOW:
     dey
     tya
     adc zpWORK+2
     ldx zpWORK+3
     bcc LOWW
+
     inx
+
 LOWW:
     cmp zpWORK+6
     txa
     sbc zpWORK+7
     bcs MOVEUP
+
     sec
     ldy #$01
     lda zpIACC+1
     sta (zpWORK+6),Y
+
     iny
     lda zpIACC
     sta (zpWORK+6),Y
+
     iny
     lda zpWORK+8
     sta (zpWORK+6),Y
+
     jsr CLYADWP1
+
     ldy #$FF
+
 INSLOP:
     iny
     lda (zpWORK+4),Y
     sta (zpWORK+6),Y
     cmp #$0D
     bne INSLOP
-LBD10:
+
+INSRTX:
     rts
 
 ; ----------------------------------------------------------------------------
@@ -13049,11 +13080,14 @@ LBD10:
 ; ===
 RUN:
     jsr DONE
+
 RUNNER:
     jsr SETFSA
+
     lda zpTXTP
-    sta zpLINE+1          ; Point PtrA to PAGE
+    sta zpLINE+1          ; Point zpLINE to PAGE
     stx zpLINE
+
     jmp RUNTHG
 
 ; ----------------------------------------------------------------------------
@@ -13067,11 +13101,13 @@ SETFSA:
     lda zpTOP+1
     sta zpLOMEM+1
     sta zpFSA+1
+
     jsr SETVAR         ; Clear DATA and stack
 
 SETVAL:
     ldx #$80
     lda #$00
+
 SETVRL:
     sta VARPTR-1,X
     dex
@@ -13086,16 +13122,18 @@ SETVRL:
 SETVAR:
     lda zpTXTP
     sta zpDATAP+1          ; DATA pointer hi=PAGE hi
+
     lda zpHIMEM
     sta zpAESTKP
     lda zpHIMEM+1
-    sta zpAESTKP+1          ; STACK=HIMEM
+    sta zpAESTKP+1         ; STACK=HIMEM
+
     lda #$00
     sta zpDOSTKP
     sta zpFORSTP
-    sta zpSUBSTP; Clear REPEAT, FOR, GOSUB stacks
+    sta zpSUBSTP           ; Clear REPEAT, FOR, GOSUB stacks
     sta zpDATAP
-    rts               ; DATA pointer=PAGE
+    rts
 
 ; ----------------------------------------------------------------------------
 
@@ -13104,23 +13142,29 @@ PHFACC:
     sec
     sbc #$05
     jsr HIDEC
+
     ldy #$00
     lda zpFACCX
     sta (zpAESTKP),Y
+
     iny
     lda zpFACCS
     and #$80
     sta zpFACCS
+
     lda zpFACCMA
     and #$7F
     ora zpFACCS
     sta (zpAESTKP),Y
+
     iny
     lda zpFACCMB
     sta (zpAESTKP),Y
+
     iny
     lda zpFACCMC
     sta (zpAESTKP),Y
+
     iny
     lda zpFACCMD
     sta (zpAESTKP),Y
@@ -13128,12 +13172,15 @@ PHFACC:
 
 ; ----------------------------------------------------------------------------
 
+; Pop the stack and set ARGP to point to the entry
+
 POPSET:
     lda zpAESTKP
     clc
     sta zpARGP
     adc #$05
     sta zpAESTKP
+
     lda zpAESTKP+1
     sta zpARGP+1
     adc #$00
@@ -13152,39 +13199,48 @@ PHACC:
     lda zpAESTKP
     sec
     sbc #$04
-LBD99:
+
     jsr HIDEC
+
     ldy #$03
     lda zpIACC+3
     sta (zpAESTKP),Y
+
     dey
     lda zpIACC+2
     sta (zpAESTKP),Y
+
     dey
     lda zpIACC+1
     sta (zpAESTKP),Y
+
     dey
     lda zpIACC
     sta (zpAESTKP),Y
     rts
+
+; ----------------------------------------------------------------------------
 
 ; Stack the current string
 ; ========================
 PHSTR:
     clc
     lda zpAESTKP
-    sbc zpCLEN          ; stackbot=stackbot-length-1
+    sbc zpCLEN        ; stackbot=stackbot-length-1
     jsr HIDEC         ; Check enough space
+
     ldy zpCLEN
-    beq LBDC6         ; Zero length, just stack length
-LBDBE:
+    beq PHSTRX        ; Zero length, just stack length
+
+PHSTRL:
     lda STRACC-1,Y
-    sta (zpAESTKP),Y      ; Copy string to stack
+    sta (zpAESTKP),Y  ; Copy string to stack
     dey
-    bne LBDBE         ; Loop for all characters
-LBDC6:
+    bne PHSTRL        ; Loop for all characters
+
+PHSTRX:
     lda zpCLEN
-    sta (zpAESTKP),Y      ; Copy string length
+    sta (zpAESTKP),Y  ; Copy string length
     rts
 
 ; ----------------------------------------------------------------------------
@@ -13193,25 +13249,28 @@ LBDC6:
 ; ================
 POPSTR:
     ldy #$00
-    lda (zpAESTKP),Y      ; Get stacked string length
+    lda (zpAESTKP),Y  ; Get stacked string length
     sta zpCLEN
     beq POPSTX
+
     tay               ; If zero length, just unstack length
 
-LBDD4:
+POPSTL:
     lda (zpAESTKP),Y
     sta STRACC-1,Y    ; Copy string to string buffer
     dey
-    bne LBDD4         ; Loop for all characters
+    bne POPSTL         ; Loop for all characters
 
 POPSTX:
     ldy #$00
     lda (zpAESTKP),Y      ; Get string length again
     sec
+
 POPN:
     adc zpAESTKP
     sta zpAESTKP          ; Update stack pointer
     bcc POPACI
+
     inc zpAESTKP+1
     rts
 
@@ -13223,12 +13282,15 @@ POPACC:
     ldy #$03
     lda (zpAESTKP),Y
     sta zpIACC+3
+
     dey
     lda (zpAESTKP),Y
     sta zpIACC+2
+
     dey
     lda (zpAESTKP),Y
     sta zpIACC+1
+
     dey
     lda (zpAESTKP),Y
     sta zpIACC
@@ -13255,20 +13317,25 @@ POPX:
     ldy #$03
     lda (zpAESTKP),Y
     sta zp+3,X
+
     dey
     lda (zpAESTKP),Y
     sta zp+2,X
+
     dey
     lda (zpAESTKP),Y
     sta zp+1,X
+
     dey
     lda (zpAESTKP),Y
     sta zp+0,X
+
     clc
     lda zpAESTKP
     adc #$04
     sta zpAESTKP          ; Drop 4 bytes from stack
     bcc POPACI
+
     inc zpAESTKP+1
     rts
 
@@ -13277,14 +13344,18 @@ POPX:
 HIDEC:
     sta zpAESTKP
     bcs HIDECA
+
     dec zpAESTKP+1
+
 HIDECA:
     ldy zpAESTKP+1
     cpy zpFSA+1
     bcc HIDECE
     bne HIDECX
+
     cmp zpFSA
     bcc HIDECE
+
 HIDECX:
     rts
 
@@ -13323,7 +13394,7 @@ CLYIDW:
 
 ; ----------------------------------------------------------------------------
 
-LBE62:
+LOADER:
     jsr OSTHIG
     tay
     lda #$FF          ; FILE.LOAD=PAGE
@@ -13344,45 +13415,55 @@ LBE62:
 ; Scan program to check consistancy and find TOP
 ; ----------------------------------------------
 ENDER:
-    lda zpTXTP
+    lda zpTXTP        ; TOP = PAGE
     sta zpTOP+1
     ldy #$00
     sty zpTOP
-    iny               ; Point TOP to PAGE
-LBE78:
+    iny
+
+; find new TOP
+
+FNDTOP:
     dey
-    lda (zpTOP),Y      ; Get byte preceding line
+    lda (zpTOP),Y     ; Get byte preceding line
     cmp #$0D
-    bne LBE9E         ; Not <cr>, jump to 'Bad program'
+    bne BADPRO        ; Not <cr>, jump to 'Bad program'
+
     iny               ; Step to line number/terminator
     lda (zpTOP),Y
-    bmi LBE90         ; b7 set, end of program
+    bmi SETTOP        ; b7 set, end of program
+
     ldy #$03          ; Point to line length
     lda (zpTOP),Y
-    beq LBE9E         ; Zero length, jump to 'Bad program'
+    beq BADPRO        ; Zero length, jump to 'Bad program'
+
     clc
-    jsr LBE93         ; Update TOP to point to next line
-    bne LBE78         ; Loop to check next line
+    jsr CLYADTP1      ; Update TOP to point to next line
+    bne FNDTOP        ; Loop to check next line
 
 ; End of program found, set TOP
 ; -----------------------------
-LBE90:
+SETTOP:
     iny
     clc
-LBE92:
+
+CLYADT:
     tya
-LBE93:
+
+CLYADTP1:
     adc zpTOP
     sta zpTOP          ; TOP=TOP+A
-    bcc LBE9B
+    bcc ENDADT
+
     inc zpTOP+1
-LBE9B:
+
+ENDADT:
     ldy #$01
     rts               ; Return Y=1, NE
 
 ; Report 'Bad program' and jump to immediate mode
 ; -----------------------------------------------
-LBE9E:
+BADPRO:
     jsr VSTRNG         ; Print inline text
     dta 13
     .if foldup == 1
@@ -13394,14 +13475,17 @@ LBE9E:
     nop
     jmp CLRSTK         ; Jump to immediate mode
 
-; Point $37/8 to <cr>-terminated string in string buffer
+; ----------------------------------------------------------------------------
+
+; Point zpWORK to <cr>-terminated string in string buffer
 ; ------------------------------------------------------
-LBEB2:
+OSSTRG:
     lda #<STRACC
     sta zpWORK
     lda #>STRACC
     sta zpWORK+1
-LBEBA:
+
+OSSTRT:
     ldy zpCLEN
     lda #$0D
     sta STRACC,Y
@@ -13412,7 +13496,7 @@ LBEBA:
 ; OSCLI string$ - Pass string to OSCLI to execute
 ; ===============================================
 OSCL:
-    jsr LBED2         ; $37/8=>cr-string
+    jsr OSTHIF         ; $37/8=>cr-string
 
 
     .ifdef MOS_ATOM
@@ -13450,13 +13534,13 @@ cmdStarLp2:
         jmp NXT     ; Call OSCLI and return to execution loop
     .endif
 
-LBECF:
+OSTHIE:
     jmp LETM
 
-LBED2:
+OSTHIF:
     jsr AEEXPR
-    bne LBECF         ; Evaluate expression, error if not string
-    jsr LBEB2
+    bne OSTHIE        ; Evaluate expression, error if not string
+    jsr OSSTRG
     jmp FDONE         ; Convert to <cr>-string, check end of statement
 
 ; ----------------------------------------------------------------------------
@@ -13464,7 +13548,7 @@ LBED2:
 ; Set FILE.LOAD to MEMHI.PAGE
 ; ---------------------------
 OSTHIG:
-    jsr LBED2
+    jsr OSTHIF
     dey
     sty F_LOAD+0      ; LOAD.lo=$00
     lda zpTXTP
@@ -13518,7 +13602,7 @@ SAVE:
         sta F_EXEC+1
         lda zpTXTP
         sta F_START+1     ; Set FILE.START to PAGE
-        jsr OSTHIG     ; Set FILE.LOAD to PAGE
+        jsr OSTHIG        ; Set FILE.LOAD to PAGE
     .endif
     .if version < 3
         .ifdef MOS_BBC
@@ -13584,7 +13668,7 @@ SAVE:
 ; LOAD string$
 ; ============
 LOAD:
-    jsr LBE62
+    jsr LOADER
     jmp FSASET         ; Do LOAD, jump to immediate mode
 
 ; ----------------------------------------------------------------------------
@@ -13592,7 +13676,7 @@ LOAD:
 ; CHAIN string$
 ; =============
 CHAIN:
-    jsr LBE62
+    jsr LOADER
     jmp RUNNER         ; Do LOAD, jump to execution loop
 
 ; ----------------------------------------------------------------------------
@@ -13601,10 +13685,12 @@ CHAIN:
 ; ===================
 LPTR:
     jsr AECHAN
+
     pha               ; Evaluate #handle
     jsr EQEXPR
     jsr INTEG         ; Step past '=', evaluate integer
     pla
+
     tay
     ldx #zpIACC
     .ifdef MOS_ATOM
@@ -13631,10 +13717,12 @@ RPTR:
     .ifdef MOS_BBC
         rol
     .endif
+
     pha               ; Atom - A=0/1, BBC - A=0/2
-    jsr CHANN
-    ldx #zpIACC
-    pla               ; Evaluate #handle, point to IACC
+    jsr CHANN         ; Evaluate #handle
+    ldx #zpIACC       ; point to IACC
+    pla
+
     .ifdef MOS_ATOM
         jsr OSRDAR
     .endif
@@ -13649,15 +13737,18 @@ RPTR:
 ; BPUT#numeric, numeric
 ; =====================
 BPUT:
-    jsr AECHAN
-    pha               ; Evaluate #handle
+    jsr AECHAN      ; Evaluate #handle
+
+    pha
     jsr COMEAT
     jsr EXPRDN
     jsr INTEG
     pla
+
     tay
     lda zpIACC
     jsr OSBPUT
+
     jmp NXT         ; Call OSBPUT, jump to execution loop
 
 ; ----------------------------------------------------------------------------
@@ -13665,8 +13756,8 @@ BPUT:
 ; =BGET#numeric
 ; =============
 BGET:
-    jsr CHANN
-    jsr OSBGET        ; Evaluate #handle
+    jsr CHANN         ; Evaluate #handle
+    jsr OSBGET
     jmp SINSTK        ; Jump to return 8-bit integer
 
 ; ----------------------------------------------------------------------------
@@ -13676,11 +13767,11 @@ BGET:
 OPENIN:
     .ifdef MOS_ATOM
         sec           ; SEC=OPENUP
-        bcs LBF82     
+        bcs F     
     .endif
     .ifdef MOS_BBC
         lda #$40      ; $40=OPENUP
-        bne LBF82
+        bne F
     .endif
 
 ; ----------------------------------------------------------------------------
@@ -13690,11 +13781,11 @@ OPENIN:
 OPENO:
     .ifdef MOS_ATOM
         clc           ; CLC=OPENOUT
-        bcc LBF82     
+        bcc F     
     .endif
     .ifdef MOS_BBC
         lda #$80      ; 80=OPENOUT
-        bne LBF82
+        bne F
     .endif
 
 ; ----------------------------------------------------------------------------
@@ -13708,7 +13799,7 @@ OPENI:
     .ifdef MOS_BBC
         lda #$C0      ; C0=OPENUP
     .endif
-LBF82:
+F:
     .ifdef MOS_ATOM
         php       
     .endif
@@ -13716,26 +13807,28 @@ LBF82:
         pha       
     .endif
     jsr FACTOR
-    bne LBF96         ; Evaluate, if not string, jump to error
+    bne OPENE          ; Evaluate, if not string, jump to error
 
     .ifdef MOS_ATOM
-        jsr LBEB2     ; Terminate string with <cr>, point $37/8=>string
+        jsr OSSTRG     ; Terminate string with <cr>, point $37/8=>string
         ldx #zpWORK
-        plp           ; Point to string pointer, get action back
+        plp            ; Point to string pointer, get action back
     .endif
 
     .ifdef MOS_BBC
-        jsr LBEBA     ; Terminate string with <cr>
+        jsr OSSTRT     ; Terminate string with <cr>
         ldx #<STRACC
         ldy #>STRACC
-        pla           ; Point to string buffer, get action back
+        pla            ; Point to string buffer, get action back
     .endif
 
-    jsr OSFIND        ; Pass to OSFIND, jump to return integer from A
+    jsr OSFIND         ; Pass to OSFIND, jump to return integer from A
     jmp SINSTK
 
-LBF96:
-    jmp LETM         ; Jump to 'Type mismatch' error
+OPENE:
+    jmp LETM           ; Jump to 'Type mismatch' error
+
+; ----------------------------------------------------------------------------
 
 ; CLOSE#numeric
 ; =============
@@ -13752,11 +13845,13 @@ CLOSE:
     .endif
     jmp NXT         ; Jump back to execution loop
 
-; Copy PtrA to PtrB, then get handle
-; ==================================
+; ----------------------------------------------------------------------------
+
+; Copy LINE to AELINE, then get handle
+; ====================================
 AECHAN:
     lda zpCURSOR
-    sta zpAECUR          ; Set PtrB to program pointer in PtrA
+    sta zpAECUR          ; copy cursor/offset
     lda zpLINE
     sta zpAELINE
     lda zpLINE+1
@@ -13765,21 +13860,20 @@ AECHAN:
 ; Check for '#', evaluate channel
 ; ===============================
 CHANN:
-    jsr AESPAC         ; Skip spaces
+    jsr AESPAC        ; Skip spaces
     cmp #'#'          ; If not '#', jump to give error
-    .if version < 3
-        bne LBFC3
-    .elseif version >= 3
-        bne LBFF4
-    .endif
-    jsr INTFAC         ; Evaluate as integer
+    bne CHANNE
+
+    jsr INTFAC        ; Evaluate as integer
+
     ldy zpIACC
     tya               ; Get low byte and return
+
 NULLRET:
     rts
 
     .if version < 3
-LBFC3:
+CHANNE:
         brk
         dta $2D
         .if foldup == 1
@@ -13790,39 +13884,51 @@ LBFC3:
         brk
     .endif
 
+; ----------------------------------------------------------------------------
+
 ; Print inline text
 ; =================
 VSTRNG:
     pla
     sta zpWORK
     pla
-    sta zpWORK+1          ; Pop return address to pointer
+    sta zpWORK+1      ; Pop return address to zpWORK
+
     ldy #$00
-    beq LBFDC         ; Jump into loop
-LBFD9:
+    beq VSTRLP         ; Jump into loop
+
+VSTRLM:
     jsr OSASCI        ; Print character
-LBFDC:
+
+VSTRLP:
     jsr GETWK2
-    bpl LBFD9         ; Update pointer, get character, loop if b7=0
-    jmp (zpWORK)        ; Jump back to program
+    bpl VSTRLM        ; Update pointer, get character, loop if b7=0
+    jmp (zpWORK)      ; Jump back to program
+
+; ----------------------------------------------------------------------------
 
 ; REPORT
 ; ======
 REPORT:
     jsr DONE
     jsr NLINE         ; Check end of statement, print newline, clear COUNT
+
     ldy #$01
-LBFEC:
+
+REPLOP:
     lda (FAULT),Y
-    beq LBFF6         ; Get byte, exit if $00 terminator
+    beq REPORX        ; Get byte, exit if $00 terminator
+
     jsr TOKOUT
+
     iny
-    bne LBFEC         ; Print character or token, loop for next
-LBFF6:
-    jmp NXT         ; Jump to main execution loop
+    bne REPLOP        ; Print character or token, loop for next
+
+REPORX:
+    jmp NXT           ; Jump to main execution loop
 
     .if version >= 3
-LBFF4:
+CHANNE:
         brk
         dta $2D
         .if foldup == 1
@@ -13863,4 +13969,4 @@ LBFF4:
     .endif
 
     .align romstart + $4000, 0
-LC000:
+END_OF_ROM:
