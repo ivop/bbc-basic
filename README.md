@@ -17,7 +17,7 @@ Currently, the following versions are supported:
 
 Notes:
 * The fixed reference ROMs contain the proper floating point value for 5.00000 in the FEXPCO table.
-See [this commit](https://github.com/ivop/bbc-basic/commit/5a7d6ff7deaeb792381d46ab6004b1abc9a0d855) for details.
+See [this commit](https://github.com/ivop/bbc-basic/commit/5a7d6ff7deaeb792381d46ab6004b1abc9a0d855) at line 7481 for details.
 * The fixed2 reference ROMs contain previous fix, and a fix in the INSTR instruction that branched to the wrong
 memory location on error. See [this commit](https://github.com/ivop/bbc-basic/commit/d0676f8ba5c34023562e5f5bba92a48514324571)
 for details.
