@@ -64,33 +64,8 @@
         F_START = F_LOAD+8
         F_END   = F_LOAD+12
 
-        ; MOS Entry Points
-
-        OS_CLI = $FFF7
-        OSBYTE = $FFF4
-        OSWORD = $FFF1
-        OSWRCH = $FFEE
-        OSWRCR = $FFEC
-        OSNEWL = $FFE7
-        OSASCI = $FFE3
-        OSRDCH = $FFE0
-        OSFILE = $FFDD
-        OSARGS = $FFDA
-        OSBGET = $FFD7
-        OSBPUT = $FFD4
-        OSGBPB = $FFD1
-        OSFIND = $FFCE
         BRKV   = $0202
         WRCHV  = $020E
-
-        ; Dummy variables for non-Atom code
-
-        OSECHO = 0
-        OSLOAD = 0
-        OSSAVE = 0
-        OSRDAR = 0
-        OSSTAR = 0
-        OSSHUT = 0
 
     .elseif .def BUILD_SYSTEM_BASIC2 || .def BUILD_SYSTEM_BASIC310 || .def BUILD_ATOM_BASIC2 || .def BUILD_ATOM_BASIC310
 
@@ -143,32 +118,11 @@
         F_START = F_LOAD+4
         F_END   = F_LOAD+6
 
-        ; MOS Entry Points
-
-        OS_CLI=$FFF7
-        OSWRCH=$FFF4
-        OSWRCR=$FFF2
-        OSNEWL=$FFED
-        OSASCI=$FFE9
-        OSECHO=$FFE6
-        OSRDCH=$FFE3
-        OSLOAD=$FFE0
-        OSSAVE=$FFDD
-        OSRDAR=$FFDA
-        OSSTAR=$FFD7
-        OSBGET=$FFD4
-        OSBPUT=$FFD1
-        OSFIND=$FFCE
-        OSSHUT=$FFCB
         BRKV=$0202
         WRCHV=$0208
       
-        ; Dummy variables for non-BBC code
-
         OSBYTE=NULLRET
         OSWORD=NULLRET
-        OSFILE=00000
-        OSARGS=00000
 
     .elseif .def BUILD_C64_BASIC2
 
@@ -198,35 +152,46 @@
         F_START = F_LOAD+8
         F_END   = F_LOAD+12
 
-        ; MOS Entry Points
-
-        OS_CLI=$FFF7
-        OSBYTE=$FFF4
-        OSWORD=$FFF1
-        OSWRCH=$FFEE
-        OSWRCR=$FFEC
-        OSNEWL=$FFE7
-        OSASCI=$FFE3
-        OSRDCH=$FFE0
-        OSFILE=$FFDD
-        OSARGS=$FFDA
-        OSBGET=$FFD7
-        OSBPUT=$FFD4
-        OSGBPB=$FFD1
-        OSFIND=$FFCE
         BRKV=$0316    ; Fixed
         WRCHV=0       ; Fixed
       
-        ; Dummy variables for non-Atom code
-
-        OSECHO = 0
-        OSLOAD = 0
-        OSSAVE = 0
-        OSRDAR = 0
-        OSSTAR = 0
-        OSSHUT = 0
     .else
         .error "Please specify your build (i.e. -d:BUILD_BBC_BASIC2=1)"
+    .endif
+
+    .if .def MOS_BBC
+        OS_CLI = $FFF7
+        OSBYTE = $FFF4
+        OSWORD = $FFF1
+        OSWRCH = $FFEE
+        OSWRCR = $FFEC
+        OSNEWL = $FFE7
+        OSASCI = $FFE3
+        OSRDCH = $FFE0
+        OSFILE = $FFDD
+        OSARGS = $FFDA
+        OSBGET = $FFD7
+        OSBPUT = $FFD4
+        OSGBPB = $FFD1
+        OSFIND = $FFCE
+    .elseif .def MOS_ATOM
+        OS_CLI=$FFF7
+        OSWRCH=$FFF4
+        OSWRCR=$FFF2
+        OSNEWL=$FFED
+        OSASCI=$FFE9
+        OSECHO=$FFE6
+        OSRDCH=$FFE3
+        OSLOAD=$FFE0
+        OSSAVE=$FFDD
+        OSRDAR=$FFDA
+        OSSTAR=$FFD7
+        OSBGET=$FFD4
+        OSBPUT=$FFD1
+        OSFIND=$FFCE
+        OSSHUT=$FFCB
+    .else
+        .error "No MOS API specified"
     .endif
 
 ; ----------------------------------------------------------------------------
