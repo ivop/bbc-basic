@@ -27,6 +27,10 @@
 ; Important for future ports, ws MUST be page aligned, or a lot of things
 ; will break (i.e. testing MSB for end of STRACC)
 
+; XXX fix ldx #val for the following MOS calls (I think all of them are marked
+; XXX already):
+; OSFILE OSWORD OSSAVE OSSTAR OSARGS OSRDAR OSFILE
+
 ; ----------------------------------------------------------------------------
 
     .if .def BUILD_BBC_BASIC2 || .def BUILD_BBC_BASIC3 || .def BUILD_BBC_BASIC310HI
@@ -2569,7 +2573,7 @@ STORIY:
 
 PRINTH:
     dec zpCURSOR
-    jsr LBFA9
+    jsr AECHAN
 
 PRINHL:
     tya
@@ -3728,7 +3732,7 @@ TOFF:
 LTIME:
     jsr INEQEX         ; Step past '=', evaluate integer
     .ifdef MOS_BBC
-        ldx #$2A
+        ldx #$2A        ;XXX pointer to zpIACC ???
         ldy #$00
         sty zpFACCS      ; Point to integer, set 5th byte to 0
         lda #$02
@@ -8825,7 +8829,7 @@ POINT:
         pla
         sta zpIACC+2
 
-        ldx #$2A
+        ldx #$2A        ; XXX pointer to zpIACC ???
         lda #$09
         jsr OSWORD
 
@@ -9309,7 +9313,7 @@ POINT:
         stx zpIACC+3
         pla
         sta zpIACC+2
-        ldx #$2A
+        ldx #$2A        ; XXX pointer to zpIACC?
         lda #$09
         jsr OSWORD
 
@@ -11312,7 +11316,7 @@ ENVELL:
         dex
         bpl ENVELL
         tya           ; Y=OSWORD number
-        ldx #$37
+        ldx #$37      ; XXX pointer to zpWORK
         ldy #$00      ; XY=>control block
         jsr OSWORD
     .endif
@@ -12362,15 +12366,15 @@ INPUHX:
 
 ; INPUT#channel, ...
 ; ------------------
-LB9CF:
+INPUTH:
     dec zpCURSOR
-    jsr LBFA9
+    jsr AECHAN
 
     lda zpAECUR
     sta zpCURSOR
     sty zpCOEFP
 
-LB9DA:
+INPUHL:
     jsr SPACES
     cmp #','
     bne INPUHX
@@ -12393,7 +12397,7 @@ LB9DA:
 
     sta zpTYPE
     plp
-    bcc LBA19
+    bcc INPUHN
 
     lda zpTYPE
     bne INPUHD
@@ -12402,50 +12406,51 @@ LB9DA:
 
     sta zpCLEN
     tax
-    beq LBA13
+    beq INPUHS
 
-LBA0A:
+INPUHT:
     jsr OSBGET
 
     sta STRACC-1,X
     dex
-    bne LBA0A
+    bne INPUHT
 
-LBA13:
+INPUHS:
     jsr STSTOR
-    jmp LB9DA
+    jmp INPUHL
 
-LBA19:
+INPUHN:
     lda zpTYPE
     beq INPUHD
-    bmi LBA2B
+    bmi INPUHF
 
     ldx #$03
 
-LBA21:
+INPUHI:
     jsr OSBGET
     sta zpIACC,X
     dex
-    bpl LBA21
-    bmi LBA39
+    bpl INPUHI
 
-LBA2B:
+    bmi INPUHJ
+
+INPUHF:
     ldx #$04
 
-LBA2D:
+INPUHR:
     jsr OSBGET
 
     sta FWSA,X
     dex
-    bpl LBA2D
+    bpl INPUHR
 
     jsr LDARGA
 
-LBA39:
+INPUHJ:
     jsr STORE
-    jmp LB9DA
+    jmp INPUHL
 
-LBA3F:
+INOUT:
     pla
     pla
     jmp DONEXT
@@ -12457,41 +12462,51 @@ LBA3F:
 INPUT:
     jsr SPACES         ; Get next non-space char
     cmp #'#'
-    beq LB9CF         ; If '#' jump to do INPUT#
+    beq INPUTH         ; If '#' jump to do INPUT#
+
     cmp #tknLINE
-    beq LBA52         ; If 'LINE', skip next with CS
+    beq INLIN          ; If 'LINE', skip next with CS
+
     dec zpCURSOR
-    clc               ; Step back to non-LINE char, set CC
-LBA52:
+    clc                ; Step back to non-LINE char, set CC
+
+INLIN:
     ror zpCOEFP
-    lsr zpCOEFP          ; bit7=0, bit6=notLINE/LINE
+    lsr zpCOEFP        ; bit7=0, bit6=notLINE/LINE
     lda #$FF
     sta zpCOEFP+1
-LBA5A:
+
+INPLP:
     jsr PRTSTN
-    bcs LBA69         ; Process ' " TAB SPC, jump if none found
-LBA5F:
+    bcs INPHP         ; Process ' " TAB SPC, jump if none found
+
+INPLO:
     jsr PRTSTN
-    bcc LBA5F         ; Keep processing any print items
+    bcc INPLO         ; Keep processing any print items
+
     ldx #$FF
     stx zpCOEFP+1
     clc
-LBA69:
+
+INPHP:
     php
     asl zpCOEFP
     plp
     ror zpCOEFP
     cmp #','
-    beq LBA5A         ; ',' - jump to do next item
+    beq INPLP         ; ',' - jump to do next item
+
     cmp #';'
-    beq LBA5A         ; ';' - jump to do next item
+    beq INPLP         ; ';' - jump to do next item
+
     dec zpCURSOR
     lda zpCOEFP
     pha
     lda zpCOEFP+1
     pha
     jsr CRAELV
-    beq LBA3F
+    beq INOUT
+
     pla
     sta zpCOEFP+1
     pla
@@ -12500,53 +12515,67 @@ LBA69:
     sta zpCURSOR
     php
     bit zpCOEFP
-    bvs LBA99
+    bvs INGET
+
     lda zpCOEFP+1
     cmp #$FF
-    bne LBAB0
-LBA99:
+    bne INGOT
+
+INGET:
     bit zpCOEFP
-    bpl LBAA2
+    bpl INGETA
+
     lda #'?'
     jsr CHOUT
-LBAA2:
-    jsr LBBFC         ; Call MOS to input line, set COUNT=0
+
+INGETA:
+    jsr INLINE         ; Call MOS to input line, set COUNT=0
+
     sty zpCLEN
     asl zpCOEFP
     clc
     ror zpCOEFP
     bit zpCOEFP
-    bvs LBACD
-LBAB0:
+    bvs INGETB
+
+INGOT:
     sta zpAECUR
     lda #<STRACC
     sta zpAELINE
     lda #>STRACC
     sta zpAELINE+1
     jsr DATAST
-LBABD:
+
+INTERM:
     jsr AESPAC
     cmp #','
-    beq LBACA
+    beq INGETC
+
     cmp #$0D
-    bne LBABD
+    bne INTERM
+
     ldy #$FE
-LBACA:
+INGETC:
     iny
     sty zpCOEFP+1
-LBACD:
+
+INGETB:
     plp
-    bcs LBADC
+    bcs INPSTR
+
     jsr PHACC
     jsr VALSTR
     jsr STORE
-    jmp LBA5A
 
-LBADC:
+    jmp INPLP
+
+INPSTR:
     lda #$00
     sta zpTYPE
     jsr STSTRE
-    jmp LBA5A
+    jmp INPLP
+
+; ----------------------------------------------------------------------------
 
 ; RESTORE [linenum]
 ; =================
@@ -12554,27 +12583,37 @@ RESTORE:
     ldy #$00
     sty zpWORK+6          ; Set DATA pointer to PAGE
     ldy zpTXTP
-    sty zp3E
+    sty zpWORK+7
     jsr SPACES
+
     dec zpCURSOR
     cmp #':'
-    beq LBB07
+    beq RESDON
+
     cmp #$0D
-    beq LBB07
+    beq RESDON
+
     cmp #tknELSE
-    beq LBB07
+    beq RESDON
+
     jsr GOFACT
+
     ldy #$01
-    jsr LBE55
-LBB07:
+    jsr CLYADW          ; 0 points to the hopeful DATA token
+
+RESDON:
     jsr DONE
-    lda zp3D
+
+    lda zpWORK+6
     sta zpDATAP
-    lda zp3E
+    lda zpWORK+7
     sta zpDATAP+1
+
     jmp NXT
 
-LBB15:
+; ----------------------------------------------------------------------------
+
+READS:
     jsr SPACES
     cmp #','
     beq READ
@@ -12584,20 +12623,26 @@ LBB15:
 ; ===================
 READ:
     jsr CRAELV
-    beq LBB15
-    bcs LBB32
-    jsr LBB50
+
+    beq READS
+    bcs READST
+
+    jsr DATAIT
     jsr PHACC
     jsr STEXPR
-    jmp LBB40
 
-LBB32:
-    jsr LBB50
+    jmp READEN
+
+READST:
+    jsr DATAIT
     jsr PHACC
     jsr DATAST
+
     sta zpTYPE
+
     jsr STSTOR
-LBB40:
+
+READEN:
     clc
     lda zpAECUR
     adc zpAELINE
@@ -12605,53 +12650,68 @@ LBB40:
     lda zpAELINE+1
     adc #$00
     sta zpDATAP+1
-    jmp LBB15
 
-LBB50:
+    jmp READS
+
+DATAIT:
     lda zpAECUR
     sta zpCURSOR
     lda zpDATAP
     sta zpAELINE
     lda zpDATAP+1
     sta zpAELINE+1
+
     ldy #$00
     sty zpAECUR
     jsr AESPAC
+
     cmp #','
-    beq LBBB0
+    beq DATAOK
+
     cmp #tknDATA
-    beq LBBB0
+    beq DATAOK
+
     cmp #$0D
-    beq LBB7A
-LBB6F:
+    beq DATANX
+
+DATALN:
     jsr AESPAC
+
     cmp #','
-    beq LBBB0
+    beq DATAOK
+
     cmp #$0D
-    bne LBB6F
-LBB7A:
+    bne DATALN
+
+DATANX:
     ldy zpAECUR
     lda (zpAELINE),Y
-    bmi LBB9C
+    bmi DATAOT
+
     iny
     iny
     lda (zpAELINE),Y
     tax
-LBB85:
+
+DATANS:
     iny
     lda (zpAELINE),Y
-    cmp #$20
-    beq LBB85
+    cmp #' '
+    beq DATANS
+
     cmp #tknDATA
-    beq LBBAD
+    beq DATAOL
+
     txa
     clc
     adc zpAELINE
     sta zpAELINE
-    bcc LBB7A
+    bcc DATANX
+
     inc zpAELINE+1
-    bcs LBB7A
-LBB9C:
+    bcs DATANX
+
+DATAOT:
     brk
     dta $2A
     .if foldup == 1
@@ -12660,7 +12720,8 @@ LBB9C:
         dta 'Out of '
     .endif
     dta tknDATA
-LBBA6:
+    ; brk overlap
+NODOS:
     brk
     dta $2B
     .if foldup == 1
@@ -12671,10 +12732,10 @@ LBBA6:
     dta tknREPEAT
     brk
 
-LBBAD:
+DATAOL:
     iny
     sty zpAECUR
-LBBB0:
+DATAOK:
     rts
 
 ; ----------------------------------------------------------------------------
@@ -12685,24 +12746,28 @@ UNTIL:
     jsr AEEXPR
     jsr FDONE
     jsr INTEG
+
     ldx zpDOSTKP
-    beq LBBA6
+    beq NODOS
+
     lda zpIACC
     ora zpIACC+1
     ora zpIACC+2
     ora zpIACC+3
-    beq LBBCD
+    beq REDO
+
     dec zpDOSTKP
     jmp NXT
 
-LBBCD:
-    ldy ws+$05A3,X
-    lda ws+$05B7,X
+REDO:
+    ldy DOADL-1,X
+    lda DOADH-1,X
+
     jmp JUMPAY
 
 ; ----------------------------------------------------------------------------
 
-LBBD6:
+DODP:
     brk
     dta $2C
     .if foldup == 1
@@ -12720,24 +12785,27 @@ LBBD6:
 ; ======
 REPEAT:
     ldx zpDOSTKP
-    cpx #$14
-    bcs LBBD6
+    cpx #cDOTOP
+    bcs DODP
+
     jsr CLYADP
+
     lda zpLINE
-    sta ws+$05A4,X
+    sta DOADL,X
     lda zpLINE+1
-    sta ws+$05B8,X
+    sta DOADH,X
     inc zpDOSTKP
+
     jmp STMT
 
 ; ----------------------------------------------------------------------------
 
 ; Input string to string buffer
 ; -----------------------------
-LBBFC:
+INLINE:
     ldy #<STRACC
     lda #>STRACC
-    bne LBC09
+    bne BUFFA
 
 ; Print character, read input line
 ; --------------------------------
@@ -12746,68 +12814,75 @@ BUFF:
     ldy #<BUFFER
     lda #>BUFFER
 
-LBC09:
-    sty zpWORK
+BUFFA:
+    sty zpWORK        ; 0 for both STRACC and BUFFER, could save a load here
     sta zpWORK+1      ; zpWORK=>input buffer
 
 ; Manually implement RDLINE (OSWORD 0)
 ; ------------------------------------
     .ifdef MOS_ATOM
-LDBE4:
-        jsr OSRDCH    ; Wait for character
+RDLINELP:
+        jsr OSRDCH       ; Wait for character
         cmp #$1B
-        beq LDC21     ; Escape
+        beq RDLINEX      ; Escape
+
         cmp #$7F
-        bne LDBFA     ; Not Delete
+        bne RDLINED      ; Not Delete
+
         cpy #$00
-        beq LDBE4     ; Nothing to delete
-        jsr OSWRCH    ; VDU 127
+        beq RDLINELP     ; Nothing to delete
+
+        jsr OSWRCH       ; VDU 127
         dey
-        jmp LDBE4     ; Dec. counter, loop back
+        jmp RDLINELP     ; Dec. counter, loop back
      
-LDBFA:
+RDLINED:
         cmp #$15
-        bne LDC0B     ; Not Ctrl-U
+        bne RDLINEC      ; Not Ctrl-U
         tya
-        beq LDBE4
+        beq RDLINELP
+
         lda #$7F
-LDC03:
+RDLINLP2:
         jsr OSWRCH
         dey
-        bne LDC03
-        beq LDBE4
+        bne RDLINLP2
+        beq RDLINELP
      
-LDC0B:
-        sta (zpWORK),Y      ; Store character
+RDLINEC:
+        sta (zpWORK),Y   ; Store character
         cmp #$0D
-        beq NLINE     ; Return - finish
+        beq NLINE        ; Return - finish
+
         cpy #$EE
-        bcs LDC1E     ; Maximum length
+        bcs RDLINEL      ; Maximum length
+
         cmp #$20
-        bcs LDC1A     ; Control character
+        bcs RDLINEG     ; Control character
         dey
-LDC1A:
+
+RDLINEG:
         iny
         jsr OSWRCH    ; Inc. counter, print character
-LDC1E:
-        jmp LDBE4     ; Loop for more
-LDC21:
+RDLINEL:
+        jmp RDLINELP     ; Loop for more
+RDLINEX:
     .endif
 
 ; BBC - Call MOS to read a line
 ; -----------------------------
     .ifdef MOS_BBC
         lda #$EE
-        sta zp39      ; Maximum length
+        sta zpWORK+2      ; Maximum length
         lda #$20
-        sta zp3A      ; Lowest acceptable character
+        sta zpWORK+3      ; Lowest acceptable character
         ldy #$FF
-        sty zp3B      ; Highest acceptable character
+        sty zpWORK+4      ; Highest acceptable character
         iny
-        ldx #$37      ; XY=>control block at $0037
+        ldx #zpWORK       ; XY=>control block at $0037
         tya
-        jsr OSWORD    ; Call OSWORD 0 to read line of text
-        bcc BUFEND     ; CC, Escape not pressed, exit and set COUNT=0
+        jsr OSWORD        ; Call OSWORD 0 to read line of text
+        bcc BUFEND        ; CC, Escape not pressed, exit and set COUNT=0
     .endif
     jmp DOBRK         ; Escape
 
@@ -12961,7 +13036,7 @@ LOWW:
     iny
     lda zpWORK+8
     sta (zpWORK+6),Y
-    jsr LBE56
+    jsr CLYADWP1
     ldy #$FF
 INSLOP:
     iny
@@ -13233,17 +13308,24 @@ ACCTOM:
     sta zp+3,X
     rts
 
-LBE55:
+; ----------------------------------------------------------------------------
+
+CLYADW:
     clc
-LBE56:
+
+CLYADWP1:
     tya
-    adc zp3D
-    sta zp3D
-    bcc LBE5F
-    inc zp3E
-LBE5F:
+    adc zpWORK+6
+    sta zpWORK+6
+    bcc CLYIDW
+
+    inc zpWORK+7
+
+CLYIDW:
     ldy #$01
     rts
+
+; ----------------------------------------------------------------------------
 
 LBE62:
     jsr OSTHIG
@@ -13252,14 +13334,16 @@ LBE62:
 
     .ifdef MOS_ATOM
         sta F_EXEC+0
-        ldx #$37      ; FILE.EXEC=$FF, romstart to specified address
+                      ; XXX pointer to zpWORK in X
+        ldx #$37      ; FILE.EXEC=$FF, load to specified address
         sec
         jsr OSLOAD
     .endif
 
     .ifdef MOS_BBC
         sty F_EXEC+0
-        ldx #$37      ; FILE.EXEC=0, romstart to specified address
+                      ; XXX pointer to zpWORK in X
+        ldx #$37      ; FILE.EXEC=0, load to specified address
         jsr OSFILE
     .endif
 
@@ -13491,7 +13575,7 @@ SAVE:
         stx F_START+1     ; High byte of FILE.START=PAGE
     .endif
     tay
-    ldx #$37
+    ldx #$37            ; XXX pointer to zpWORK
     .ifdef MOS_ATOM
         sec
         jsr OSSAVE
@@ -13522,13 +13606,13 @@ CHAIN:
 ; PTR#numeric=numeric
 ; ===================
 LPTR:
-    jsr LBFA9
+    jsr AECHAN
     pha               ; Evaluate #handle
     jsr EQEXPR
     jsr INTEG         ; Step past '=', evaluate integer
     pla
     tay
-    ldx #$2A          ; Get handle, point to IACC
+    ldx #$2A          ; Get handle, XXX pointer to zpIACC
     .ifdef MOS_ATOM
         jsr OSSTAR         
     .endif
@@ -13555,7 +13639,7 @@ RPTR:
     .endif
     pha               ; Atom - A=0/1, BBC - A=0/2
     jsr CHANN
-    ldx #$2A
+    ldx #$2A          ; XXX pointer to zpIACC
     pla               ; Evaluate #handle, point to IACC
     .ifdef MOS_ATOM
         jsr OSRDAR
@@ -13571,7 +13655,7 @@ RPTR:
 ; BPUT#numeric, numeric
 ; =====================
 BPUT:
-    jsr LBFA9
+    jsr AECHAN
     pha               ; Evaluate #handle
     jsr COMEAT
     jsr EXPRDN
@@ -13646,14 +13730,14 @@ LBF82:
 
     .ifdef MOS_ATOM
         jsr LBEB2     ; Terminate string with <cr>, point $37/8=>string
-        ldx #$37
+        ldx #$37      ; XXX pointer to zpWORK
         plp           ; Point to string pointer, get action back
     .endif
 
     .ifdef MOS_BBC
         jsr LBEBA     ; Terminate string with <cr>
-        ldx #$00
-        ldy #$06
+        ldx #$00      ; XXX <STRACC  (hidden bug if ws is moved)
+        ldy #$06      ; XXX >STRACC
         pla           ; Point to string buffer, get action back
     .endif
 
@@ -13670,7 +13754,7 @@ LBF96:
 ; CLOSE#numeric
 ; =============
 CLOSE:
-    jsr LBFA9
+    jsr AECHAN
     jsr AEDONE         ; Evaluate #handle, check end of statement
     ldy zpIACC         ; Get handle from IACC
     .ifdef MOS_ATOM
@@ -13684,7 +13768,7 @@ CLOSE:
 
 ; Copy PtrA to PtrB, then get handle
 ; ==================================
-LBFA9:
+AECHAN:
     lda zpCURSOR
     sta zpAECUR          ; Set PtrB to program pointer in PtrA
     lda zpLINE

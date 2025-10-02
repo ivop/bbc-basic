@@ -139,14 +139,13 @@ FORLME  = FORLMH + 1
 FORADL  = FORLME + 1
 FORADH  = FORADL + 1
 
-;CmosBasic, might be different for BASIC II/III
-;DOADL   = ws + $0500
-;DOADH   = DOADL + $14
-;
-;FORINL  = ws + $0528
-;
-SUBADL  = ws + $05cc
-SUBADH  = SUBADL + $1a
+; (there's a hole between offset cFORTOP and DOADL)
+
+DOADL   = ws + $05a4        ; $14 bytes
+DOADH   = DOADL + $14       ; $14 bytes
+
+SUBADL  = ws + $05cc        ; $1a bytes
+SUBADH  = SUBADL + $1a      ; $1a bytes
 
 ; String Work Area
 
@@ -160,7 +159,7 @@ BUFFER  = ws + $0700
 
 ; Constants
 
-cFORTOP = $96
-cSUBTOP = $1a
-cDOTOP  = $14
+cFORTOP = $96       ; 10 frames
+cSUBTOP = $1a       ; 26 entries
+cDOTOP  = $14       ; 20 entries
 
