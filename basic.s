@@ -27,10 +27,6 @@
 ; Important for future ports, ws MUST be page aligned, or a lot of things
 ; will break (i.e. testing MSB for end of STRACC)
 
-; XXX fix ldx #val for the following MOS calls (I think all of them are marked
-; XXX already):
-; OSFILE OSWORD OSSAVE OSSTAR OSARGS OSRDAR OSFILE
-
 ; ----------------------------------------------------------------------------
 
     .if .def BUILD_BBC_BASIC2 || .def BUILD_BBC_BASIC3 || .def BUILD_BBC_BASIC310HI
@@ -3732,7 +3728,7 @@ TOFF:
 LTIME:
     jsr INEQEX         ; Step past '=', evaluate integer
     .ifdef MOS_BBC
-        ldx #$2A        ;XXX pointer to zpIACC ???
+        ldx #zpIACC
         ldy #$00
         sty zpFACCS      ; Point to integer, set 5th byte to 0
         lda #$02
@@ -8829,7 +8825,7 @@ POINT:
         pla
         sta zpIACC+2
 
-        ldx #$2A        ; XXX pointer to zpIACC ???
+        ldx #zpIACC
         lda #$09
         jsr OSWORD
 
@@ -9313,7 +9309,7 @@ POINT:
         stx zpIACC+3
         pla
         sta zpIACC+2
-        ldx #$2A        ; XXX pointer to zpIACC?
+        ldx #zpIACC
         lda #$09
         jsr OSWORD
 
@@ -11316,8 +11312,8 @@ ENVELL:
         dex
         bpl ENVELL
         tya           ; Y=OSWORD number
-        ldx #$37      ; XXX pointer to zpWORK
-        ldy #$00      ; XY=>control block
+        ldx #zpWORK
+        ldy #$00      ; YX=>control block
         jsr OSWORD
     .endif
 
@@ -13334,16 +13330,14 @@ LBE62:
 
     .ifdef MOS_ATOM
         sta F_EXEC+0
-                      ; XXX pointer to zpWORK in X
-        ldx #$37      ; FILE.EXEC=$FF, load to specified address
+        ldx #zpWORK   ; FILE.EXEC=$FF, load to specified address
         sec
         jsr OSLOAD
     .endif
 
     .ifdef MOS_BBC
         sty F_EXEC+0
-                      ; XXX pointer to zpWORK in X
-        ldx #$37      ; FILE.EXEC=0, load to specified address
+        ldx #zpWORK   ; FILE.EXEC=0, load to specified address
         jsr OSFILE
     .endif
 
@@ -13575,7 +13569,7 @@ SAVE:
         stx F_START+1     ; High byte of FILE.START=PAGE
     .endif
     tay
-    ldx #$37            ; XXX pointer to zpWORK
+    ldx #zpWORK
     .ifdef MOS_ATOM
         sec
         jsr OSSAVE
@@ -13612,7 +13606,7 @@ LPTR:
     jsr INTEG         ; Step past '=', evaluate integer
     pla
     tay
-    ldx #$2A          ; Get handle, XXX pointer to zpIACC
+    ldx #zpIACC
     .ifdef MOS_ATOM
         jsr OSSTAR         
     .endif
@@ -13639,7 +13633,7 @@ RPTR:
     .endif
     pha               ; Atom - A=0/1, BBC - A=0/2
     jsr CHANN
-    ldx #$2A          ; XXX pointer to zpIACC
+    ldx #zpIACC
     pla               ; Evaluate #handle, point to IACC
     .ifdef MOS_ATOM
         jsr OSRDAR
@@ -13730,7 +13724,7 @@ LBF82:
 
     .ifdef MOS_ATOM
         jsr LBEB2     ; Terminate string with <cr>, point $37/8=>string
-        ldx #$37      ; XXX pointer to zpWORK
+        ldx #zpWORK
         plp           ; Point to string pointer, get action back
     .endif
 
