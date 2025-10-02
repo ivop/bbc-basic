@@ -24,7 +24,7 @@ for details.
 
 ### Credits
 
-Conversion to mads, improvements and bug fixes by Ivo van Poorten, 2025
+Conversion to mads, improvements and bug fixes by Ivo van Poorten, 2025  
 [ARM Basic 65 source reconstruction](https://mdfs.net/Software/BBCBasic/6502/) and commentary, Copyright © 2018 J.G.Harston  
 BBC BASIC Copyright © 1982,1983 Acorn Computer and Roger Wilson  
 Thanks to Paul Fellows for releasing the original [CmosBasic](https://github.com/stardot/AcornCmosBasic),
