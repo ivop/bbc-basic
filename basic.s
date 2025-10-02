@@ -13667,11 +13667,7 @@ BPUT:
 BGET:
     jsr CHANN
     jsr OSBGET        ; Evaluate #handle
-    .if version < 3
-        jmp SINSTK     ; Jump to return 8-bit integer
-    .elseif version >= 3
-        jmp SINSTK     ; Jump to return 8-bit integer
-    .endif
+    jmp SINSTK        ; Jump to return 8-bit integer
 
 ; ----------------------------------------------------------------------------
 
@@ -13736,11 +13732,7 @@ LBF82:
     .endif
 
     jsr OSFIND        ; Pass to OSFIND, jump to return integer from A
-    .if version < 3
-        jmp SINSTK
-    .elseif version >= 3
-        jmp SINSTK
-    .endif
+    jmp SINSTK
 
 LBF96:
     jmp LETM         ; Jump to 'Type mismatch' error
