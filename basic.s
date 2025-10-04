@@ -164,7 +164,6 @@
         OSBYTE = $FFF4
         OSWORD = $FFF1
         OSWRCH = $FFEE
-        OSWRCR = $FFEC
         OSNEWL = $FFE7
         OSASCI = $FFE3
         OSRDCH = $FFE0
@@ -172,15 +171,12 @@
         OSARGS = $FFDA
         OSBGET = $FFD7
         OSBPUT = $FFD4
-        OSGBPB = $FFD1
         OSFIND = $FFCE
     .elseif .def MOS_ATOM
         OS_CLI=$FFF7
         OSWRCH=$FFF4
-        OSWRCR=$FFF2
         OSNEWL=$FFED
         OSASCI=$FFE9
-        OSECHO=$FFE6
         OSRDCH=$FFE3
         OSLOAD=$FFE0
         OSSAVE=$FFDD
