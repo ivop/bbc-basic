@@ -2044,6 +2044,25 @@ STOP:
 
 ; ----------------------------------------------------------------------------
 
+    .if title != 0
+NEWTITLE:
+        lda #$0D
+        ldy zpTXTP
+        sty zpTOP+1     ; TOP hi=PAGE hi
+        ldy #0
+        sty zpTOP
+        sty zpTRFLAG    ; TOP=PAGE, TRACE OFF
+        sta (zpTOP),Y   ; ?(PAGE+0)=<cr>
+        lda $ff#
+        iny
+        sta (zpTOP),Y     ; ?(PAGE+1)=&FF
+        iny
+        sty zpTOP
+        rts             ; TOP=PAGE+2
+    .endif
+
+; ----------------------------------------------------------------------------
+
 ; NEW - Clear program, enter immediate mode
 ; =========================================
 ; NEW comand clears text and frees
@@ -2051,7 +2070,7 @@ STOP:
 NEW:
     jsr DONE          ; Check end of statement
     .if title != 0
-        jsr X8ADD     ; NEW program
+        jsr NEWTITLE  ; NEW program
     .endif
 
 ; Start up with NEW program
