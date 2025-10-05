@@ -13663,17 +13663,17 @@ LOAD:
 ; CHAIN string$
 ; =============
 CHAIN:
-    jsr LOADER
-    jmp RUNNER         ; Do LOAD, jump to execution loop
+    jsr LOADER         ; Do LOAD
+    jmp RUNNER         ; jump to execution loop
 
 ; ----------------------------------------------------------------------------
 
 ; PTR#numeric=numeric
 ; ===================
 LPTR:
-    jsr AECHAN
+    jsr AECHAN        ; Evaluate #handle
 
-    pha               ; Evaluate #handle
+    pha
     jsr EQEXPR
     jsr INTEG         ; Step past '=', evaluate integer
     pla
