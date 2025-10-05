@@ -509,7 +509,7 @@ TOKENS:
     dta 'GET'     , tknGET,         $00      ; 00000000
     dta 'GOSUB'   , tknGOSUB,       $12      ; 00010010
     dta 'GCOL'    , tknGCOL,        $02      ; 00000010
-    dta 'HIMEM'   , tknHIMEM,       $43      ; 00100011
+    dta 'HIMEM'   , tknHIMEM,       $43      ; 01000011
     dta 'INPUT'   , tknINPUT,       $02      ; 00000010
     dta 'IF'      , tknIF,          $02      ; 00000010
     dta 'INKEY$'  , tknINKEYD,      $00      ; 00000000
