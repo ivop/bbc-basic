@@ -50,7 +50,7 @@
         split   = 0
         foldup  = 0
         title   = 0
-        ws      = $0400-$0400   ; Offset from &400 to workspace
+        workspace = $0400
         membot  = 0             ; Use OSBYTE to find memory limits
         memtop  = 0             ; ...
 
@@ -98,12 +98,12 @@
 
         .if .def TARGET_SYSTEM
             romstart = $a000            ; Code start address
-            ws       = $2800-$0400      ; Offset from &400 to workspace
+            workspace = $2800
             membot   = $3000
             ESCFLG   = $0e21            ; Escape pending flag
         .elseif .def TARGET_ATOM
             romstart = $4000            ; Code start address
-            ws       = $9c00-$0400      ; Offset from &400 to workspace
+            workspace = $9c00
             membot   = $2800
             ESCFLG   = $b001            ; Escape pending flag
         .endif
@@ -136,7 +136,7 @@
         split   = 0
         foldup  = 0
         title   = 0
-        ws      = $0400-$0400   ; Offset from &400 to workspace
+        workspace = $0400
         membot  = 0             ; Use OSBYTE to find memory limits
         memtop  = 0             ; ...
 

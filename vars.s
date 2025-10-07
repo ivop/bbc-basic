@@ -71,9 +71,9 @@ zp4F      = zp + $4f
 
 ; ----------------------------------------------------------------------------
 
-; Workspace (for now, relative to ws)
+; Workspace
 
-WORKSPACE = ws
+ws = workspace - $0400
 
 VARL    = ws + $0400    ; VARiable List of resident integer variables
                         ; 4 bytes each [$0400-$046b] [@A-Z]
