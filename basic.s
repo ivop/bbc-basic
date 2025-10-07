@@ -59,11 +59,6 @@
         FAULT  = $fd            ; Pointer to error block
         ESCFLG = $ff            ; Escape pending flag
 
-        F_LOAD  = zpWORK+2      ; LOAD/SAVE control block
-        F_EXEC  = F_LOAD+4
-        F_START = F_LOAD+8
-        F_END   = F_LOAD+12
-
         BRKV   = $0202
         WRCHV  = $020E
 
@@ -113,11 +108,6 @@
 
         FAULT  = zp4F         ; Pointer to error block
 
-        F_LOAD  = zpWORK+2    ; LOAD/SAVE control block
-        F_EXEC  = F_LOAD+2
-        F_START = F_LOAD+4
-        F_END   = F_LOAD+6
-
         BRKV=$0202
         WRCHV=$0208
       
@@ -147,11 +137,6 @@
         FAULT  = $fd            ; Pointer to error block
         ESCFLG = $ff            ; Escape pending flag
 
-        F_LOAD  = zpWORK+2      ; LOAD/SAVE control block
-        F_EXEC  = F_LOAD+4
-        F_START = F_LOAD+8
-        F_END   = F_LOAD+12
-
         BRKV=$0316    ; Fixed
         WRCHV=0       ; Fixed
       
@@ -160,6 +145,7 @@
     .endif
 
     .if .def MOS_BBC
+
         OS_CLI = $FFF7
         OSBYTE = $FFF4
         OSWORD = $FFF1
@@ -172,7 +158,14 @@
         OSBGET = $FFD7
         OSBPUT = $FFD4
         OSFIND = $FFCE
+
+        F_LOAD  = zpWORK+2      ; LOAD/SAVE control block
+        F_EXEC  = F_LOAD+4
+        F_START = F_LOAD+8
+        F_END   = F_LOAD+12
+
     .elseif .def MOS_ATOM
+
         OS_CLI=$FFF7
         OSWRCH=$FFF4
         OSNEWL=$FFED
@@ -186,6 +179,12 @@
         OSBPUT=$FFD1
         OSFIND=$FFCE
         OSSHUT=$FFCB
+
+        F_LOAD  = zpWORK+2    ; LOAD/SAVE control block
+        F_EXEC  = F_LOAD+2
+        F_START = F_LOAD+4
+        F_END   = F_LOAD+6
+
     .else
         .error "No MOS API specified"
     .endif
