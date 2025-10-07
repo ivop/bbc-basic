@@ -47,12 +47,12 @@
             MINORVERSION  = 10
         .endif
 
-        split   = 0
-        foldup  = 0
-        title   = 0
+        split     = 0
+        foldup    = 0
+        title     = 0
         workspace = $0400
-        membot  = 0             ; Use OSBYTE to find memory limits
-        memtop  = 0             ; ...
+        membot    = 0           ; Use OSBYTE to find memory limits
+        memtop    = 0           ; ...
 
         zp      = $00           ; Start of ZP addresses
 
@@ -97,15 +97,15 @@
         title  = 0
 
         .if .def TARGET_SYSTEM
-            romstart = $a000            ; Code start address
+            romstart  = $a000            ; Code start address
             workspace = $2800
-            membot   = $3000
-            ESCFLG   = $0e21            ; Escape pending flag
+            membot    = $3000
+            ESCFLG    = $0e21            ; Escape pending flag
         .elseif .def TARGET_ATOM
-            romstart = $4000            ; Code start address
+            romstart  = $4000            ; Code start address
             workspace = $9c00
-            membot   = $2800
-            ESCFLG   = $b001            ; Escape pending flag
+            membot    = $2800
+            ESCFLG    = $b001            ; Escape pending flag
         .endif
 
         memtop  = romstart    ; Top of memory is start of code
@@ -133,12 +133,12 @@
         VERSION       = 2
         MINORVERSION  = 0
 
-        split   = 0
-        foldup  = 0
-        title   = 0
+        split     = 0
+        foldup    = 0
+        title     = 0
         workspace = $0400
-        membot  = 0             ; Use OSBYTE to find memory limits
-        memtop  = 0             ; ...
+        membot    = 0           ; Use OSBYTE to find memory limits
+        memtop    = 0           ; ...
 
         zp      = $00           ; Start of ZP addresses
 
