@@ -859,7 +859,7 @@ ASS:
     sta zpBYTESM      ; Set OPT 3, default on entry to '['
 
 CASM:
-    jsr SPACES        ; Skip spaces
+    jsr SPACES        ; Skip spaces, and get next character
     cmp #']'
     beq STOPASM       ; ']' - exit assembler
 
@@ -1024,54 +1024,70 @@ CASMJ:
 ; ----------------------------------------------------------------------------
 
 SETL:                 ; set label
-    jsr CRAELV
-    beq ASSDED
-    bcs ASSDED
-    jsr PHACC         ; PHADDR??
-    jsr GETPC         ; Find P%
-    sta zpTYPE
-    jsr STORE
-    jsr ASCUR
+    jsr CRAELV        ; get variable name, check if it exists, or create
+    beq ASSDED        ; badly formed
+    bcs ASSDED        ; or string
+
+    jsr PHACC
+    jsr GETPC         ; put P% in IACC
+
+    sta zpTYPE        ; A contains $40, type is integer
+
+    jsr STORE         ; assign value to variable
+    jsr ASCUR         ; update cursor offset
 
     .if version >= 3
         sty zpNEWVAR
     .endif
 
+; Assemble a single instruction
+
 MNEENT:
-    ldx #$03          ; Prepare to fetch three characters
-    jsr SPACES        ; Skip spaces
+    ldx #$03          ; mnemonics are three characters
+    jsr SPACES        ; skip spaces, and get next character
 
     ldy #$00         ; number of bytes
-    sty zpWORK+6
+    sty zpWORK+6     ; make sure temp location is zero for packing mnemonic
+
     cmp #':'
     beq MMMM         ; End of statement
+
     cmp #$0D
     beq MMMM         ; End of line
+
     cmp #'\'
     beq MMMM         ; Comment
+
     cmp #'.'
     beq SETL         ; Label
+
     dec zpCURSOR
 
 RDLUP:
-    ldy zpCURSOR
-    inc zpCURSOR      ; Get current character, inc. index
+    ldy zpCURSOR      ; current character position
+    inc zpCURSOR      ; increment index
     lda (zpLINE),Y
     bmi RDSLPT        ; Token, check for tokenised AND, EOR, OR
+                      ; (they are tokenised because they match BASIC keywords)
 
     cmp #' '
-    beq RDOUT         ; Space, step past
+    beq RDOUT         ; premature space, step past
 
-    ldy #$05
+    ; pack mnemonic
+
+    ldy #$05          ; 5 bottom bits, fun fact: you can use lower case, too
+                      ;                          or even $ for D etc...
+    asl               ; skip top 3 bits
     asl
     asl
-    asl               ; Compact first character
+
 INLUP:
     asl
-    rol zpWORK+6
+    rol zpWORK+6      ; was cleared before, so there are not random top bits
     rol zpWORK+7
     dey
-    bne INLUP
+    bne INLUP         ; shift 5 times
+
     dex
     bne RDLUP         ; Loop to fetch three characters
 
@@ -1081,6 +1097,7 @@ INLUP:
 RDOUT:
     ldx #ALLOPS       ; Point to end of opcode lookup table
     lda zpWORK+6      ; Get low byte of compacted mnemonic
+
 SRCHM:
     cmp MNEML-1,X
     bne NOTGOT        ; Low half doesn't match
@@ -1096,79 +1113,104 @@ NOTGOT:
 ASSDED:
     jmp STDED         ; Mnemonic not matched, Mistake
 
+; The check-for-tokens routine called earlier
+
 RDSLPT:
     ldx #BRANCH+1     ; opcode number for 'AND'
     cmp #tknAND
     beq RDOPGT        ; Tokenised 'AND'
+
     inx               ; opcode number for 'EOR'
     cmp #tknEOR
     beq RDOPGT        ; Tokenised 'EOR'
+
     inx               ; opcode number for 'ORA'
     cmp #tknOR
     bne ASSDED        ; Not tokenised 'OR'
+
     inc zpCURSOR
     iny
     lda (zpLINE),Y    ; Get next character
     cmp #'A'
     bne ASSDED        ; Ensure 'OR' followed by 'A'
 
-; Opcode found
-; ------------
+; Continue here when mnemonic is found in table
 
 RDOPGT:
     lda STCODE-1,X
     sta zpOPCODE      ; Get base opcode
-    ldy #$01          ; Y=1 for one byte
-    cpx #IMPLIED+1
-    bcs NGPONE        ; Opcode $1A+ have arguments
+    ldy #$01          ; code length is 1
+    cpx #IMPLIED+1    ; compare with implied group border
+    bcs NGPONE        ; Opcode in next group(s)
+
+; Implied instruction group
 
 MMMM:
     lda PC
     sta zpWORK        ; Get P% low byte
+
     sty zpWORK+2
     ldx zpBYTESM
-    cpx #$04          ; Offset assembly (opt>3)
+    cpx #$04          ; Offset assembly (opt>3), set flags for next bcc
+
     ldx PC+1
     stx zpWORK+1      ; Get P% high byte
     bcc MMMMLR        ; No offset assembly
 
-    lda VARL_O        ; Get O%
+    lda VARL_O        ; Get O%, origin
     ldx VARL_O+1
+
 MMMMLR:
     sta zpWORK+3
     stx zpWORK+4      ; Store destination pointer
-    tya
-    beq MMMMRT
-    bpl MMMMLP
-    ldy zpCLEN
-    beq MMMMRT
+    tya               ; code length to A
+    beq MMMMRT        ; exit, no more bytes
+    bpl MMMMLP        ; it's an opcode
+
+    ldy zpCLEN        ; it's a string, length of string in STRACC buffer
+    beq MMMMRT        ; exit if string has zero length
 
 MMMMLP:
     dey
     lda zpOPCODE,Y    ; Get opcode byte   (lda abs,y (!))
     bit zpWORK+2
     bpl MMMMCL        ; Opcode - jump to store it
-    lda STRACC,Y      ; Get EQU byte
+
+    lda STRACC,Y      ; Get EQUS byte
+
 MMMMCL:
     sta (zpWORK+3),Y  ; Store byte
     inc PC            ; Increment P%
     bne MMMMLQ
+
     inc PC+1
+
 MMMMLQ:
-    bcc MMMMPP        ; Increment O%
-    inc VARL_O
+    bcc MMMMPP
+
+    inc VARL_O        ; increment O%
     bne MMMMPP
+
     inc VARL_O+1
+
 MMMMPP:
     tya
-    bne MMMMLP
+    bne MMMMLP        ; continue until counter reaches zero
+
 MMMMRT:
     rts
 
+; Branch instruction group
+
 NGPONE:
     cpx #BRANCH+1      ; index for 'AND' opcode
-    bcs NGPTWO
-    jsr ASEXPR
+    bcs NGPTWO         ; opcode in next group(s)
+
+    ; it's a branch
+
+    jsr ASEXPR         ; evaluate integer expression to IACC
+
+    ; calculate branching distance
 
     clc
     lda zpIACC
@@ -1179,19 +1221,19 @@ NGPONE:
     cpy #$01
     dey
     sbc #$00
-    beq FWD
+    beq FWD         ; branch forwards, MSB is zero, probably not out of range
 
-    cmp #$FF
-    beq BACKWARDS
+    cmp #$FF        ; MSB of branching distance is $ff, so negative
+    beq BACKWARDS   ; branch backwards
 
 BOR:
-    lda zpBYTESM
+    lda zpBYTESM            ; check OPT
     .if version < 3
-        lsr
+        lsr                 ; bug: only works if O% is not used
     .elseif version >= 3
-        and #$02
+        and #$02            ; bug fixed
     .endif
-    beq BRSTOR
+    beq BRSTOR              ; error not trapped
 
     brk
     .if foldup == 1
@@ -1202,37 +1244,46 @@ BOR:
     brk
 
 BRSTOR:
-    tay
+    tay             ; Y=A=0
+
 BRSTO:
-    sty zpIACC      ; zpOPCODE+1
+    sty zpIACC
+
 BRST:
-    ldy #$02
-    jmp MMMM
+    ldy #$02        ; set code length to 2 bytes
+    jmp MMMM        ; join the original code
 
 BACKWARDS:
-    tya
-    bmi BRSTO
-    bpl BOR
+    tya             ; set flags by copying displacement to A
+    bmi BRSTO       ; use displacement, not out of range
+    bpl BOR         ; positive for backwards is out of range
 
 FWD:
-    tya
-    bpl BRSTO
-    bmi BOR
+    tya             ; set flags
+    bpl BRSTO       ; positive is good for forward branch
+    bmi BOR         ; negative is out of range
+
+; Group 1 instruction group
 
 NGPTWO:
-    cpx #GROUP1+1      ; index for 'ASL' opcode
+    cpx #GROUP1+1   ; compare with group1 border
     bcs NGPTHR
-    jsr SPACES         ; Skip spaces
+
+    jsr SPACES      ; Skip spaces, and get next character
+
     cmp #'#'
-    bne NOTHSH
-    jsr PLUS8
+    bne NOTHSH      ; not immediate, skip to next addressing mode
+
+    jsr PLUS8       ; add 8 to the base opcode to correct for immediate
 
 IMMED:
-    jsr ASEXPR
+    jsr ASEXPR      ; evaluate integer expression
 
 INDINX:
-    lda zpIACC+1
-    beq BRST
+    lda zpIACC+1    ; check that MSB is zero, i.e. we got an 8-bit value
+    beq BRST        ; ok, jump to set code length to 2, and store
+
+    ; immediate argument > 255
 
 BYTE:
     brk
@@ -1249,9 +1300,10 @@ BYTE:
 ; Parse (zp),Y addressing mode
 ; ----------------------------
 NGPTHR:
-    cpx #COPSTA+1
+    cpx #COPSTA+1      ; compare with next instruction group border
     bne NOPSTA
-    jsr SPACES         ; Skip spaces, sta as others in group3 but for #
+
+    jsr SPACES         ; Skip spaces, and get next character
 
 NOTHSH:
     cmp #'('
@@ -9830,8 +9882,8 @@ AYACC:
         lda #$00
         sta zpIACC+2
         sta zpIACC+3      ; Set b16-b31 to 0
-        lda #$40
-        rts               ; Return 'integer'
+        lda #$40          ; type integer
+        rts
 
 ; ----------------------------------------------------------------------------
 
