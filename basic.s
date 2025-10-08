@@ -1611,6 +1611,8 @@ CONSTL:
     bne CONSTL
     ldy #$03
 
+; Encode line number constant, see SPGETN for decoder and format
+
 CONSTI:                 ; insert constant
     lda zpWORK+7
     ora #$40
@@ -1636,7 +1638,9 @@ CONSTI:                 ; insert constant
     jsr NEXTCH
     jsr NEXTCH
     jsr NEXTCH
+
     ldy #$00
+
 WORDCN:
     clc
     rts
@@ -4824,24 +4828,32 @@ SPTSTN:
     cmp #tknCONST
     bne FDA
 
+; Decode line number constant. bit 0-14 are encoded as:
+;
+;    Byte 1: | 0 | 1 |  bit7 |  bit6 |     0 | bit14 |    0 |   0
+;    Byte 2: | 0 | 1 |  bit5 |  bit4 |  bit3 |  bit2 | bit1 | bit0
+;    Byte 3: | 0 | 1 | bit13 | bit12 | bit11 | bit10 | bit9 | bit8
+;
+; bit6 and bit14 are stored inverted
+
 SPGETN:
     iny
-    lda (zpLINE),Y
+    lda (zpLINE),Y  ; get byte 1
+    asl             ; shift bit7 and bit6 to the top
     asl
-    asl
-    tax
-    and #$C0
+    tax             ; save in X for bit14
+    and #$C0        ; mask top two bits
     iny
-    eor (zpLINE),Y
-    sta zpIACC
-    txa
-    asl
+    eor (zpLINE),Y  ; XOR byte 2, the bottom 6 bits and invert bit6
+    sta zpIACC      ; and store in IACC
+    txa             ; retrieve shifted first byte
+    asl             ; shift bit14 (already at bit4 position) to bit6 position
     asl
     iny
-    eor (zpLINE),Y
-    sta zpIACC+1
+    eor (zpLINE),Y  ; XOR byte3, bottom 6 bits (bit8-bit13), invert bit6
+    sta zpIACC+1    ; and store as high byte of IACC
     iny
-    sty zpCURSOR
+    sty zpCURSOR    ; update cursor position
     sec
     rts
 
