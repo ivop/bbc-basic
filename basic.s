@@ -1307,19 +1307,25 @@ NGPTHR:
 
 NOTHSH:
     cmp #'('
-    bne NOTIND
-    jsr ASEXPR
-    jsr SPACES         ; Skip spaces
+    bne NOTIND         ; not indirect
+
+    jsr ASEXPR         ; evaluate integer expression
+
+    jsr SPACES         ; Skip spaces, and get next character
     cmp #')'
-    bne ININX
-    jsr SPACES         ; Skip spaces
+    bne ININX          ; branch if possible (zp,x)
+
+    jsr SPACES         ; Skip spaces, and get next character
     cmp #','
-    bne BADIND         ; No comma, jump to Index error
-    jsr PLUS10
-    jsr SPACES         ; Skip spaces
+    bne BADIND         ; No comma, (zp),y error
+
+    jsr PLUS10         ; add $10 to base opcode
+
+    jsr SPACES         ; Skip spaces, get next character
+
     cmp #'Y'
     bne BADIND         ; (zp),Y missing Y, jump to Index error
-    beq INDINX
+    beq INDINX         ; jump to check operand is a byte, and store/error
 
 ; Parse (zp,X) addressing mode
 ; ----------------------------
@@ -1327,13 +1333,15 @@ ININX:
     cmp #','
     bne BADIND         ; No comma, jump to Index error
 
-    jsr SPACES         ; Skip spaces
+    jsr SPACES         ; Skip spaces, and get next character
     cmp #'X'
     bne BADIND         ; zp,X missing X, jump to Index error
 
-    jsr SPACES         ; Skip spaces
+    jsr SPACES         ; Skip spaces, and get next character
     cmp #')'
-    beq INDINX         ; zp,X) - jump to process
+    beq INDINX         ; zp,X) jump to check operand is abyte, and store/error
+
+    ; the error message
 
 BADIND:
     brk
@@ -1345,15 +1353,18 @@ BADIND:
     .endif
     brk
 
+    ; check abs,x and abs,y
+
 NOTIND:
-    dec zpCURSOR
-    jsr ASEXPR
-    jsr SPACES         ; Skip spaces
+    dec zpCURSOR       ; one position back
+    jsr ASEXPR         ; evaluate integer expression
+    jsr SPACES         ; Skip spaces, and get next character
+
     cmp #','
     bne OPTIM          ; No comma - jump to process as abs,X
 
-    jsr PLUS10
-    jsr SPACES         ; Skip spaces
+    jsr PLUS10         ; add $10 (16) to opcode
+    jsr SPACES         ; Skip spaces, and get next character
     cmp #'X'
     beq OPTIM          ; abs,X - jump to process
 
@@ -1361,87 +1372,109 @@ NOTIND:
     bne BADIND         ; Not abs,Y - jump to Index error
 
 UNOPT:
-    jsr PLUS8
-    jmp JSRB
+    jsr PLUS8          ; add 8 to the opcode
+    jmp JSRB           ; go on to indicate instruction length of 3 and continue
 
-; abs and abs,X
-; -------------
+    ; abs and abs,X get here
+
 OPTIM:
-    jsr PLUS4
+    jsr PLUS4          ; add 4 to the opcode
+
 OPTIMA:
     lda zpIACC+1
-    bne UNOPT
-    jmp BRST
+    bne UNOPT          ; check if MSB !=0 (16-bit operand)
+    jmp BRST           ; jump to instruction length 2, and store
 
 NOPSTA:
-    cpx #DECINC+1
+    cpx #DECINC+1      ; check for DECINC group
     bcs NGPFR
-    cpx #ASLROR+1
-    bcs NOTACC
 
-    jsr SPACES         ; Skip spaces
+    cpx #ASLROR+1      ; check for ASLROR group
+    bcs NOTACC         ; skip check for 'A' if INC or DEC
+
+    jsr SPACES         ; Skip spaces, and get next character
     cmp #'A'
-    beq ACCUMS         ; ins A -
+    beq ACCUMS         ; brnach if ins A, e.g. ASL A
 
-    dec zpCURSOR
+    dec zpCURSOR       ; one character back
+
 NOTACC:
-    jsr ASEXPR
-    jsr SPACES         ; Skip spaces
+    jsr ASEXPR         ; evaluate integer expression
+    jsr SPACES         ; Skip spaces, and get next character
     cmp #','
     bne OPTIMA         ; No comma, jump to ...
-    jsr PLUS10
-    jsr SPACES         ; Skip spaces
+
+    jsr PLUS10         ; add $10 to opcode
+    jsr SPACES         ; Skip spaces, and get next character
     cmp #'X'
-    beq OPTIMA         ; Jump with address,X
+    beq OPTIMA         ; handle as address,X
+
     jmp BADIND         ; Otherwise, jump to Index error
 
+    ; ins A, e.g. ROR A
+
 ACCUMS:
-    jsr PLUS4
-    ldy #$01
-    bne JSRC
+    jsr PLUS4          ; add $04 to opcode
+
+    ldy #$01           ; set instruction length to 1
+    bne JSRC           ; and exit
 
 NGPFR:
-    cpx #JSRJMP-1
+    cpx #JSRJMP-1      ; check JSRJMP group
     bcs NGPFV
-    cpx #CPXCPY+1
-    beq BIT_
-    jsr SPACES        ; Skip spaces
+
+    cpx #CPXCPY+1      ; compare next group border
+    beq BIT_           ; BIT does not support immediate addressing mode
+
+    jsr SPACES         ; Skip spaces, and get next character
     cmp #'#'
-    bne NHASH         ; Not #, jump with address
-    jmp IMMED         ; Jump with immediate
+    bne NHASH          ; Not #, jump to handle address
+
+    jmp IMMED          ; handle immediate mode
 
 NHASH:
-    dec zpCURSOR
+    dec zpCURSOR       ; one character back
 
 BIT_:
-    jsr ASEXPR
-    jmp OPTIM
+    jsr ASEXPR         ; evaluate integer expression
+    jmp OPTIM          ; handle as abs before
 
 NGPFV:
-    cpx #JSRJMP
-    beq JSR_
-    bcs NGPSX
-    jsr SPACES       ; Skip spaces
+    cpx #JSRJMP      ; next instruction group
+    beq JSR_         ; it's JSR
+
+    bcs NGPSX        ; it's not JMP
+
+    ; it's JMP
+
+    jsr SPACES       ; Skip spaces, and get next character
+
     cmp #'('
     beq JSRA         ; Jump with (... addressing mode
+
     dec zpCURSOR
 
 JSR_:
-    jsr ASEXPR
+    jsr ASEXPR       ; evaluate integer expression
 
 JSRB:
-    ldy #$03
+    ldy #$03         ; set instruction length to 3
 
 JSRC:
-    jmp MMMM
+    jmp MMMM         ; continue with store
+
+    ; jmp (abs)
 
 JSRA:
     jsr PLUS10
-    jsr PLUS10
-    jsr ASEXPR
-    jsr SPACES         ; Skip spaces
+    jsr PLUS10       ; opcode plus $20
+
+    jsr ASEXPR       ; evaluate integer expression
+    jsr SPACES       ; Skip spaces, and get next character
+
     cmp #')'
-    beq JSRB
+    beq JSRB         ; jump to instruction length is 3, and continue
+
     jmp BADIND         ; No ) - jump to Index error
 
 NGPSX:
@@ -1453,7 +1486,7 @@ NGPSX:
     pha
     cpx #PSEUDO - 1
     bcs STXY
-    jsr SPACES         ; Skip spaces
+    jsr SPACES         ; Skip spaces, and get next character
     cmp #'#'
     bne LDXY
     pla
@@ -1464,13 +1497,13 @@ LDXY:
     jsr ASEXPR
     pla
     sta zpWORK
-    jsr SPACES         ; Skip spaces
+    jsr SPACES         ; Skip spaces, and get next character
     cmp #','
     beq LDIND
     jmp OPTIM
 
 LDIND:
-    jsr SPACES         ; Skip spaces
+    jsr SPACES         ; Skip spaces, and get next character
     and #$1F
     cmp zpWORK
     bne LDINDB
@@ -1484,10 +1517,10 @@ STXY:
     jsr ASEXPR
     pla
     sta zpWORK
-    jsr SPACES         ; Skip spaces
+    jsr SPACES         ; Skip spaces, and get next character
     cmp #','
     bne GOOP
-    jsr SPACES         ; Skip spaces
+    jsr SPACES         ; Skip spaces, and get next character
     and #$1F
     cmp zpWORK
     bne LDINDB
@@ -2313,7 +2346,7 @@ STMT:
     inc zpCURSOR      ; Get program pointer, increment for next time
     lda (zpLINE),Y    ; Get current character
     cmp #' '
-    beq STMT          ; Skip spaces
+    beq STMT          ; Skip spaces, and get next character
     cmp #tknPTR2
     bcc LETST         ; Not program command, jump to try variable assignment
 
@@ -2917,7 +2950,7 @@ PRTSTO:
     rts
 
 PRTSTN:
-    jsr SPACES         ; Skip spaces
+    jsr SPACES         ; Skip spaces, and get next character
     jsr PRSPEC
     bcc PRTSTO
 
@@ -5011,7 +5044,7 @@ BLINK:
     iny
     lda (zpLINE),Y     ; Get next character
     cmp #' '
-    beq BLINK          ; Skip spaces
+    beq BLINK          ; Skip spaces, and get next character
 
 DONET:
     cmp #':'
@@ -6236,7 +6269,7 @@ POWERA:
     inc zpAECUR
     lda (zpAELINE),Y      ; Get character
     cmp #' '
-    beq POWERA            ; Skip spaces
+    beq POWERA            ; Skip spaces, and get next character
 
     tax
     pla
@@ -10473,7 +10506,7 @@ MIDLP:
 ; =STR$ [~] numeric
 ; =================
 STRD:
-    jsr AESPAC        ; Skip spaces
+    jsr AESPAC        ; Skip spaces, and get next character
     ldy #$FF          ; Y=$FF for decimal
     cmp #'~'
     beq STRDT
@@ -13916,7 +13949,7 @@ AECHAN:
 ; Check for '#', evaluate channel
 ; ===============================
 CHANN:
-    jsr AESPAC        ; Skip spaces
+    jsr AESPAC        ; Skip spaces, and get next character
     cmp #'#'          ; If not '#', jump to give error
     bne CHANNE
 
