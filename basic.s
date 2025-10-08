@@ -277,11 +277,11 @@ tknNEW      = $CA
 tknOLD      = $CB
 tknRENUMBER = $CC
 tknSAVE     = $CD
-tknPTR2     = $CF
-tknPAGE2    = $D0
-tknTIME2    = $D1
-tknLOMEM2   = $D2
-tknHIMEM2   = $D3
+tknPTR2     = $CF   ; tknPTR   + $40, see bit 6 of token table flags
+tknPAGE2    = $D0   ; tknPAGE  + $40
+tknTIME2    = $D1   ; tknTIME  + $40
+tknLOMEM2   = $D2   ; tknLOMEM + $40
+tknHIMEM2   = $D3   ; tknHIMEM + $40
 tknSOUND    = $D4
 tknBPUT     = $D5
 tknCALL     = $D6
@@ -396,7 +396,7 @@ ENTRY:
     .elseif membot < 0
         ldy membot+1
     .endif
-    sty zpTXTP
+    sty zpTXTP        ; PAGE
 
     ldx #$00
     stx zpLISTOP          ; Set LISTO to 0
@@ -408,7 +408,7 @@ ENTRY:
     ldx #$0A
     stx VARL_AT
     dex
-    stx VARL_AT+1      ; Set @% to $0000090A
+    stx VARL_AT+1      ; Set @% to $0000090A        9.10
 
     lda #$01
     and zpSEED+4
@@ -852,7 +852,7 @@ PSEUDO = * - STCODE
 STOPASM:              ; Exit Assembler
     lda #$FF          ; Set OPT to 'BASIC'
     sta zpBYTESM
-    jmp STMT          ; Set OPT, return to execution loop
+    jmp STMT          ; return to execution loop
 
 ASS:
     lda #$03
@@ -863,42 +863,44 @@ CASM:
     cmp #']'
     beq STOPASM       ; ']' - exit assembler
 
-    jsr CLYADP
+    jsr CLYADP        ; add Y to zpLINE, set Y and zpCURSOR to 1
 
     dec zpCURSOR
-    jsr MNEENT
+    jsr MNEENT        ; assemble a single instruction
 
-    dec zpCURSOR
-    lda zpBYTESM
+    dec zpCURSOR      ; point to last character that could not assemble
+    lda zpBYTESM      ; top bit determines whether to list or not
     lsr
     bcc NOLIST
 
+    ; generate listing
+
     lda zpTALLY
-    adc #$04
-    sta zpWORK+8
-    lda zpWORK+1
-    jsr HEXOUT
+    adc #$04          ; carry is set, add 5 for reasonable output
+    sta zpWORK+8      ; save as indentation
+    lda zpWORK+1      ; P% as it was before assembling instruction
+    jsr HEXOUT        ; print MSB
 
     lda zpWORK
-    jsr HEXSP
+    jsr HEXSP         ; print LSB and space
 
-    ldx #$FC
+    ldx #-4           ; counter, max. 3 bytes per line, X=0 after 4th increment
     ldy zpWORK+2
     bpl WRTLOP
 
     ldy zpCLEN
 WRTLOP:
     sty zpWORK+1
-    beq RMOVE
+    beq RMOVE         ; hex of instructions done
 
     ldy #$00
 WRTLPY:
     inx
-    bne WRTLPA
+    bne WRTLPA        ; fourth increment, print newline first
 
     jsr NLINE         ; Print newline
 
-    ldx zpWORK+8
+    ldx zpWORK+8      ; retrieve indentation
 
     .if version < 3
 WRTLPZ:
@@ -909,7 +911,7 @@ WRTLPZ:
         jsr LISTPL     ; Print multiple spaces
     .endif
 
-    ldx #$fd
+    ldx #-3    ; one more than -4 because first loop through inx is not done
 
 WRTLPA:
     lda (zpWORK+3),Y
@@ -928,7 +930,7 @@ RMOVE:
         jsr CHOUT
         jmp RMOVE
 RMOVEB:
-        ldy #0
+        ldy #0              ; used to index into source text just assembled
     .elseif version >= 3
         txa
         tay
@@ -969,7 +971,7 @@ LABLSP:
 
 LLLL4:
     lda (zpLINE),Y
-    cmp #':'
+    cmp #':'           ; possible end of statement?
     beq NOCODA
 
     cmp #$0D
@@ -978,11 +980,11 @@ LLLL4:
 LLLLLL6:
     jsr TOKOUT         ; Print character or token
     iny
-    bne LLLL4
+    bne LLLL4          ; branch always, as line length of 256+ is impossible
 
 NOCODA:
     cpy zpCURSOR
-    bcc LLLLLL6
+    bcc LLLLLL6        ; not end of statement yet, continue processing
 
 NOCOD:
     jsr NLINE         ; Print newline
@@ -996,24 +998,28 @@ NOLA:
     lda (zpLINE),Y
     cmp #':'
     beq NOLB
-    cmp #$0D
+
+    cmp #$0D           ; CR, EOL
     bne NOLA
 
 NOLB:
-    jsr DONE_WITH_Y
+    jsr DONE_WITH_Y    ; check statement has ended, add Y to zpLINE, Y=1
+
     dey
     lda (zpLINE),Y
-    cmp #':'
-    beq CASMJ
-    lda zpLINE+1
+    cmp #':'            ; check if statement ended with :
+    beq CASMJ           ; assemble next instruction
+
+    lda zpLINE+1        ; check for immediate mode if LINE points to BUFFER
     cmp #>BUFFER
     bne INTXT
-    jmp CLRSTK
+
+    jmp CLRSTK          ; done
 
 INTXT:
     jsr LINO
 CASMJ:
-    jmp CASM
+    jmp CASM            ; assemble next instruction
 
 ; ----------------------------------------------------------------------------
 
