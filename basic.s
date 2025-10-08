@@ -1475,78 +1475,102 @@ JSRA:
     cmp #')'
     beq JSRB         ; jump to instruction length is 3, and continue
 
-    jmp BADIND         ; No ) - jump to Index error
+    jmp BADIND       ; No ) - jump to Index error
 
 NGPSX:
-    cpx #PSEUDO + 1
+    cpx #PSEUDO+1    ; check next instruction group
     bcs OPTION
-    lda zpWORK+6
-    eor #$01
-    and #$1F
-    pha
-    cpx #PSEUDO - 1
-    bcs STXY
-    jsr SPACES         ; Skip spaces, and get next character
+
+    lda zpWORK+6     ; still contains encoded mnemonic
+    eor #$01         ; invert bit 0
+    and #$1F         ; ignore all but the bottom 5 bits
+    pha              ; save last "letter" for later, source or dest. register
+
+    cpx #PSEUDO-1
+    bcs STXY         ; if STX/STY, jump, as they don't allow immediate addr.
+
+    jsr SPACES       ; Skip spaces, and get next character
     cmp #'#'
-    bne LDXY
-    pla
+    bne LDXY         ; jump if not immediate
+
+    pla              ; we don't need it, but we need to fix the stack
     jmp IMMED
 
 LDXY:
-    dec zpCURSOR
-    jsr ASEXPR
-    pla
-    sta zpWORK
-    jsr SPACES         ; Skip spaces, and get next character
+    dec zpCURSOR     ; one step back
+    jsr ASEXPR       ; evaluate integer expression
+    pla              ; destination register back from stack
+    sta zpWORK       ; and save
+
+    jsr SPACES       ; Skip spaces, and get next character
+
     cmp #','
-    beq LDIND
-    jmp OPTIM
+    beq LDIND        ; comma means indexed
+
+    jmp OPTIM        ; jump back to zp or abs code
 
 LDIND:
-    jsr SPACES         ; Skip spaces, and get next character
-    and #$1F
+    jsr SPACES       ; Skip spaces, and get next character
+    and #$1F         ; ignore top 3 bits
     cmp zpWORK
-    bne LDINDB
-    jsr PLUS10
-    jmp OPTIM
+    bne LDINDB       ; index error
+
+    jsr PLUS10       ; add $10
+    jmp OPTIM        ; same code as before for 
 
 LDINDB:
-    jmp BADIND         ; Jump to Index error
+    jmp BADIND       ; Jump to Index error
 
 STXY:
-    jsr ASEXPR
-    pla
-    sta zpWORK
-    jsr SPACES         ; Skip spaces, and get next character
+    jsr ASEXPR       ; evaluate integer expression following STX or STY
+
+    pla              ; source register back from stack
+    sta zpWORK       ; save
+
+    jsr SPACES       ; Skip spaces, and get next character
     cmp #','
-    bne GOOP
-    jsr SPACES         ; Skip spaces, and get next character
-    and #$1F
+    bne GOOP         ; not indexed
+
+    jsr SPACES       ; Skip spaces, and get next character
+
+    and #$1F         ; bottom 5 bits
     cmp zpWORK
-    bne LDINDB
-    jsr PLUS10
+    bne LDINDB       ; index error
+
+    jsr PLUS10       ; add $10 to opcode
+
     lda zpIACC+1
     beq GOOP         ; High byte=0, continue
+
     jmp BYTE         ; value>255, jump to Byte error
 
 GOOP:
-    jmp OPTIMA
+    jmp OPTIMA       ; 8- or 16-bit operand, and continue
 
 OPTION:
     bne EQUBWS
-    jsr ASEXPR
+
+    ; this is OPT
+
+    jsr ASEXPR       ; evaluate integer expression
+
     lda zpIACC
-    sta zpBYTESM
-    ldy #$00
-    jmp MMMM
+    sta zpBYTESM     ; set OPT
+
+    ldy #$00         ; instruction length is 0
+    jmp MMMM         ; continue
+
+; ----------------------------------------------------------------------------
+
+; Evaluate integer expression
 
 ASEXPR:
-    jsr AEEXPR
-    jsr INTEGB
+    jsr AEEXPR       ; evaluate expression
+    jsr INTEGB       ; ensure it is integer
 
 ASCUR:
     ldy zpAECUR
-    sty zpCURSOR
+    sty zpCURSOR     ; move cursor offset
     rts
 
 ; ----------------------------------------------------------------------------
@@ -1573,41 +1597,54 @@ EQUBWS:
     lda (zpLINE),Y    ; Get next character
     cmp #'B'
     beq EQUB
+
     inx               ; Prepare for two bytes
     cmp #'W'
     beq EQUB
+
     ldx #$04          ; Prepare for four bytes
     cmp #'D'
     beq EQUB
+
     cmp #'S'
     beq EQUS
     jmp STDED         ; Syntax error
 
+; enter with X= 1 (bytes), 2 (words), or 4 (dwords), 
+
 EQUB:
     txa
-    pha
-    jsr ASEXPR
-    ldx #zpOPCODE
-    jsr ACCTOM
+    pha                ; save number of bytes per expression on stack
+
+    jsr ASEXPR         ; evaluate the expression
+
+    ldx #zpOPCODE      ; copy IACC to OPCODE and next three bytes
+    jsr ACCTOM         ; basically shift one byte up (see vars.s)
 
     pla
-    tay
+    tay                ; set code length
+
 EQUSX:
-    jmp MMMM
+    jmp MMMM           ; and continue
 
 EQUSE:
-    jmp LETM
+    jmp LETM           ; type mismatch error
 
 EQUS:
     lda zpBYTESM
-    pha
-    jsr AEEXPR
-    bne EQUSE
+    pha                ; save current OPT value
+
+    jsr AEEXPR         ; evaluate expression
+
+    bne EQUSE          ; error if not a string
+
     pla
-    sta zpBYTESM
+    sta zpBYTESM       ; restore OPT
+
     jsr ASCUR
-    ldy #$FF
-    bne EQUSX
+
+    ldy #$FF           ; signal string with code length set to $ff
+    bne EQUSX          ; exit
 
 ; ----------------------------------------------------------------------------
 
