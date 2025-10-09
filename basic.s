@@ -1679,7 +1679,7 @@ INTOKA:
 
 ; ----------------------------------------------------------------------------
 
-; Convert ASCII number to 16-bit binary
+; Convert ASCII number to 16-bit binary and insert as tknCONST
 ; Y is set to the length of the number. This routine is used to encode
 ; line numbers. On entry, A contains the first digit, and Y is 0.
 
@@ -1804,71 +1804,93 @@ WORDCN:
     clc                 ; success and return
     rts
 
+; Check alphabet and _
+
 WORDCQ:
     cmp #$7B
-    bcs WORDCN
+    bcs WORDCN          ; fail >= 0x7b
     cmp #'_'
-    bcs WORDCY
-    cmp #$5B
-    bcs WORDCN
+    bcs WORDCY          ; succeed >= '_'
+    cmp #'Z'+1
+    bcs WORDCN          ; fail > 'Z'
     cmp #'A'
-    bcs WORDCY
+    bcs WORDCY          ; succeed >= 'A'
+
+; Check numeric
 
 NUMBCP:
     cmp #'9'+1
-    bcs WORDCN
+    bcs WORDCN          ; fail > '9'
     cmp #'0'
-WORDCY:
+WORDCY:                 ; succeed
     rts
+
+; Check dot
 
 NUMBCQ:
     cmp #'.'
     bne NUMBCP
     rts
 
+; Get character and increment WORK pointer
+
 GETWRK:
     lda (zpWORK),Y
+
+; Only increment pointer
+
 NEXTCH:
     inc zpWORK
     bne RELRTS
     inc zpWORK+1
+
 RELRTS:
     rts
 
+; Increment first, then get character
+
 GETWK2:
-    jsr NEXTCH         ; Increment $37/8
+    jsr NEXTCH
     lda (zpWORK),Y
     rts
 
 ; ----------------------------------------------------------------------------
 
-; Tokenise line at $37/8
-; ======================
+; Tokenise line at (zpWORK)
+; =========================
+
+; Set default values to zero
+
 MATCH:
     ldy #$00
-    sty zpWORK+4        ; Set tokeniser to left-hand-side
+    sty zpWORK+4        ; flags if at the start of a statement or not
+                        ; zero, start of statement, otherwise, not
 
 MATCEV:
-    sty zpWORK+5
+    sty zpWORK+5        ; flag if numbers are line numbers
+                        ; zero, don't tokenise number, otherwise, do
+
+; Usual entry point with flags in zpWORK+4/5 already set
 
 MATCHA:
     lda (zpWORK),Y     ; Get current character
     cmp #$0D
     beq RELRTS         ; Exit with <cr>
+
     cmp #' '
-    bne BMATCH         ; Skip <spc>
+    bne BMATCH         ; jump if not space
 
 MATCHB:
-    jsr NEXTCH
-    bne MATCHA         ; Increment $37/8 and check next character
+    jsr NEXTCH         ; skip character, increment WORK pointer
+    bne MATCHA         ; and loop
 
 BMATCH:
     cmp #'&'
     bne CMATCH         ; Jump if not '&'
 
 MATCHC:
-    jsr GETWK2         ; Increment $37/8 and get next character
-    jsr NUMBCP
+    jsr GETWK2         ; increment WORK pointer, and get next character
+    jsr NUMBCP         ; check if it's a digit
     bcs MATCHC         ; Jump if numeric character
 
     cmp #'A'
@@ -1880,73 +1902,76 @@ MATCHC:
 
 CMATCH:
     cmp #'"'
-    bne DMATCH
+    bne DMATCH         ; skip if not '"'
 
 MATCHD:
-    jsr GETWK2         ; Increment $37/8 and get next character
+    jsr GETWK2         ; Increment WORK pointer and get next character
     cmp #'"'
     beq MATCHB         ; Not quote, jump to process next character
 
     cmp #$0D
-    bne MATCHD
+    bne MATCHD         ; continue until EOL/CR
+
     rts
 
 DMATCH:
     cmp #':'
-    bne MATCHE
-    sty zpWORK+4
-    sty zpWORK+5    ; mode:=left;constant:=false
+    bne MATCHE         ; skip if not a colon
+
+    sty zpWORK+4       ; mode := left of statement
+    sty zpWORK+5       ; constant := tokenise numbers
     beq MATCHB
 
 MATCHE:
     cmp #','
-    beq MATCHB
+    beq MATCHB          ; return to start if ','
 
     cmp #'*'
-    bne FMATCH
+    bne FMATCH          ; skip if not '*'
 
     lda zpWORK+4
-    bne YMATCH      ; test '*' and mode=left
-    rts
+    bne YMATCH          ; test '*' and mode=left
+
+    rts                 ; abort, rest is OSCLI command
 
 FMATCH:
     cmp #'.'
-    beq MATCHZ
+    beq MATCHZ          ; skip if '.'
 
-    jsr NUMBCP
-    bcc GMATCH
+    jsr NUMBCP          ; check if number
+    bcc GMATCH          ; if not, skip
 
-    ldx zpWORK+5    ; constant?
-    beq MATCHZ
+    ldx zpWORK+5        ; tokenize constant?
+    beq MATCHZ          ; zero, don't tokenize
 
-    jsr CONSTQ
-    bcc MATCHF
+    jsr CONSTQ          ; tokenize constant
+    bcc MATCHF          ; return to start of tokenisation was successful
 
 MATCHZ:
-    lda (zpWORK),Y
-    jsr NUMBCQ
-    bcc MATCHY
+    lda (zpWORK),Y      ; get current character
+    jsr NUMBCQ          ; check for number or period
+    bcc MATCHY          ; end found
 
-    jsr NEXTCH
-    jmp MATCHZ
+    jsr NEXTCH          ; increment pointer
+    jmp MATCHZ          ; continue scanning to the end of the number
 
 MATCHY:
-    ldx #$FF
+    ldx #$FF            ; set both flags to $ff
     stx zpWORK+4
     sty zpWORK+5
-    jmp MATCHA
+    jmp MATCHA          ; and jump to start
 
 MATCHW:
-    jsr WORDCQ
-    bcc YMATCH
+    jsr WORDCQ          ; check alphanum
+    bcc YMATCH          ; jump if not
 
 MATCHV:
     ldy #$00
 
 MATCHG:
-    lda (zpWORK),Y
-    jsr WORDCQ
-    bcc MATCHY
+    lda (zpWORK),Y      ; get current character
+    jsr WORDCQ          ; check alphanum
+    bcc MATCHY          ; jump if not
 
     jsr NEXTCH
     jmp MATCHG
@@ -1956,12 +1981,14 @@ GMATCH:                ; lookup word (optimised for none present words)
     bcs HMATCH         ; Jump if letter
 
 YMATCH:
-    ldx #$FF
+    ldx #$FF            ; set both flags
     stx zpWORK+4
     sty zpWORK+5
 
 MATCHF:
-    jmp MATCHB
+    jmp MATCHB          ; loop
+
+    ; lookup keywords, table is in alphabetical order
 
 HMATCH:
     cmp #'X'
@@ -1974,44 +2001,46 @@ HMATCH:
 
 IMATCH:
     cmp (zpWORK+2),Y   ; Special check on first character
-    bcc MATCHG
-    bne JMATCH
+    bcc MATCHG         ; lower than 1st character, jump back, variable name
+    bne JMATCH         ; no match, skip to next table entry
 
 KMATCH:
     iny
     lda (zpWORK+2),Y
-    bmi LMATCH
+    bmi LMATCH         ; compating with token, end of keyword reached
 
     cmp (zpWORK),Y
-    beq KMATCH
+    beq KMATCH          ; match, continue matching
 
     lda (zpWORK),Y
     cmp #'.'
-    beq ABBREV
+    beq ABBREV          ; matched '.', deal with abbreviation
+
+    ; move to next table entry
 
 JMATCH:
     iny
     lda (zpWORK+2),Y
-    bpl JMATCH
+    bpl JMATCH          ; keep skipping bytes, until byte >= 0x80, token
 
     cmp #tknWIDTH       ; last token in list
-    bne MMATCH
-    bcs MATCHV
+    bne MMATCH          ; not end of list yet, continue
+    bcs MATCHV          ; end of list, skip rest of variable name
 
 ABBREV:
     iny
 
 ABBREA:
-    lda (zpWORK+2),Y
-    bmi LMATCH
+    lda (zpWORK+2),Y    ; next character from ROM
+    bmi LMATCH          ; jump if token
 
-    inc zpWORK+2
+    inc zpWORK+2        ; add 1 to pointer
     bne ABBREA
     inc zpWORK+3
     bne ABBREA
 
 MMATCH:
-    sec
+    sec                 ; add Y+1 to pointer
     iny
     tya
     adc zpWORK+2
@@ -2019,87 +2048,90 @@ MMATCH:
     bcc NMATCH
 
     inc zpWORK+3
-NMATCH:
+
+NMATCH:                 ; points to next keyword in table
     ldy #$00
     lda (zpWORK),Y
-    jmp IMATCH
+    jmp IMATCH          ; try again
 
 LMATCH:
-    tax               ; token held in x for now
+    tax                 ; token held in x for now
     iny
-    lda (zpWORK+2),Y
-    sta zpWORK+6      ; Get token flag
+    lda (zpWORK+2),Y    ; get token flags
+    sta zpWORK+6        ; store for later
     dey
     lsr
-    bcc OMATCH
+    bcc OMATCH          ; skip if bit 0 of flags is 0
 
-    lda (zpWORK),Y
-    jsr WORDCQ
-    bcs MATCHV
+    lda (zpWORK),Y      ; check last character
+    jsr WORDCQ          ; alphanum
+    bcs MATCHV          ; stop tokenising
 
 OMATCH:
-    txa
+    txa                 ; token back to A
     bit zpWORK+6
-    bvc WMATCH
+    bvc WMATCH          ; skip if bit 6 of flags is set
 
-    ldx zpWORK+4      ; mode=left?
-    bne WMATCH
+    ldx zpWORK+4        ; mode = left of statement?
+    bne WMATCH          ; skip if not start of statement
 
     .if split == 0
-        clc           ; Superflous as all paths to here have CLC
+        clc             ; Superflous as all paths to here have CLC
     .endif
-    adc #tknPTR2-$8f
+
+    adc #tknPTR2-tknPTR ; add $40 to the token
 
 WMATCH:
     dey
-    jsr INTOK
+    jsr INTOK           ; insert token
 
-    ldy #$00
+    ldy #$00            ; future new flags
     ldx #$FF
+
     lda zpWORK+6
     lsr
     lsr
-    bcc QMATCH
+    bcc QMATCH          ; skip to QMATCH if bit 1 of token flags not set
 
-    stx zpWORK+4        ; mode=right
-    sty zpWORK+5        ; constant=false
+    stx zpWORK+4        ; mode=right, not start of statement
+    sty zpWORK+5        ; constant=false, do not tokenise numbers
 
 QMATCH:
     lsr
-    bcc RMATCH
+    bcc RMATCH          ; skip if bit 2 of token flags is not set
 
-    sty zpWORK+4
-    sty zpWORK+5
+    sty zpWORK+4        ; mode=left, start of statement
+    sty zpWORK+5        ; constant=false, do not tokenise
 
 RMATCH:
     lsr
-    bcc TMATCH
+    bcc TMATCH          ; skip following section if bit 3 of flags is not set
 
-    pha
-    iny
+    pha                 ; save shifted flags
+    iny                 ; make Y=1
 
 SMATCH:
-    lda (zpWORK),Y
-    jsr WORDCQ
-    bcc XMATCH
+    lda (zpWORK),Y      ; get character
+    jsr WORDCQ          ; check alphanum
+    bcc XMATCH          ; stop if not
 
     jsr NEXTCH
-    jmp SMATCH
+    jmp SMATCH          ; loop
 
 XMATCH:
     dey
-    pla
+    pla                 ; restore tokenise flags
 
 TMATCH:
     lsr
-    bcc UMATCH
+    bcc UMATCH          ; skip if bit 4 of tokenise flags is set
 
-    stx zpWORK+5        ; constant
+    stx zpWORK+5        ; constant=true, tokenise line numbers
 
 UMATCH:
     lsr
-    bcs AESPAR
-    jmp MATCHB
+    bcs AESPAR          ; return immediately if bit of tokenise flags is set
+    jmp MATCHB          ; otherwise, go back to the start
 
 ; ----------------------------------------------------------------------------
 
