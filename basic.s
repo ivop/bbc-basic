@@ -1648,109 +1648,139 @@ EQUS:
 
 ; ----------------------------------------------------------------------------
 
-; Insert token in A into line
+; Replace of string by a single byte token.
+; zpWORK points to the string of characters that are replaced by this token.
+; On etry, A contains the token, and Y the string length
+; The whole string can be longer than Y, and is terminated by CR ($0d)
 
 INTOK:
-    pha
+    pha                 ; save token
     clc
-    tya
-    adc zpWORK
-    sta zpWORK+2
-    ldy #$00
+    tya                 ; number of bytes to remove in A
+    adc zpWORK          ; add to pointer
+    sta zpWORK+2        ; save in another pointer
+    ldy #$00            ; handle MSB, set Y=0 in the process
     tya
     adc zpWORK+1
     sta zpWORK+3
-    pla
-    sta (zpWORK),Y
+    pla                 ; retrieve token
+    sta (zpWORK),Y      ; store 
+
 INTOKA:
-    iny             ; Replace
-    lda (zpWORK+2),Y
+    iny
+    lda (zpWORK+2),Y    ; copy rest of string directly after token
     sta (zpWORK),Y
     cmp #$0D
-    bne INTOKA
+    bne INTOKA          ; copy until EOL/CR
+
+    ; carry is always set
+
     rts
 
 ; ----------------------------------------------------------------------------
 
+; Convert ASCII number to 16-bit binary
+; Y is set to the length of the number. This routine is used to encode
+; line numbers. On entry, A contains the first digit, and Y is 0.
+
 CONSTQ:
-    and #$0F
-    sta zpWORK+6
-    sty zpWORK+7
+    and #$0F            ; bottom nibble (top was $3x)
+    sta zpWORK+6        ; save as LSB of result
+    sty zpWORK+7        ; MSB is 0
 
 CONSTR:
     iny
     lda (zpWORK),Y
     .if version < 3
         cmp #'9'+1
-        bcs CONSTX
+        bcs CONSTX          ; not a digit
         cmp #'0'
     .elseif version >= 3
         jsr NUMBCP
     .endif
-    bcc CONSTX
-    and #$0F
-    pha
-    ldx zpWORK+7
+    bcc CONSTX              ; not a digit
+
+    and #$0F                ; convert to binary digit again (0-9)
+    pha                     ; save
+
+    ; multiply 16-bit int by 10
+    ; 
+    ldx zpWORK+7            ; remember original MSB in X
     lda zpWORK+6
-    asl
+    asl                     ; multiply by 2
     rol zpWORK+7
-    bmi CONSTY
-    asl
+    bmi CONSTY              ; result >= 32768, error
+
+    asl                     ; multiply by 2 (total is *4)
     rol zpWORK+7
-    bmi CONSTY
-    adc zpWORK+6
+    bmi CONSTY              ; result >= 32768, error
+
+    adc zpWORK+6            ; LSB*4 was kept in A, add original
     sta zpWORK+6
-    txa
-    adc zpWORK+7
-    asl zpWORK+6
+    txa                     ; retrieve remembered original MSB
+    adc zpWORK+7            ; add new MSB, we now have 4*n+n = 5n
+
+    asl zpWORK+6            ; multiple by 2
     rol
-    bmi CONSTY
-    bcs CONSTY
-    sta zpWORK+7
-    pla
+    bmi CONSTY              ; result >= 32768, error
+    bcs CONSTY              ; result >= 32768, error
+
+    sta zpWORK+7            ; MSB was in A, save, we now have (4*n+n)*2 = 10n
+
+    pla                     ; finally add our new digit
     adc zpWORK+6
-    sta zpWORK+6
-    bcc CONSTR
-    inc zpWORK+7
-    bpl CONSTR
-    pha
+    sta zpWORK+6            ; store
+    bcc CONSTR              ; next digit
+
+    inc zpWORK+7            ; adjust MSB
+    bpl CONSTR              ; next digit
+
+    pha  ; dummy push because we fallthrough to error condition with pla
 
 CONSTY:
-    pla
-    ldy #$00
-    sec
+    pla                     ; drop top of stack
+    ldy #$00                ; length 0
+    sec                     ; C=1 means error/overflow
     rts
 
+; Insert line number into buffer
+; zpWORK+0/1 points to ASCII string
+; binary representation is in zpWORK+6/7
+
 CONSTX:
-    dey
+    dey                 ; make Y reflect length of line number (string)
     lda #tknCONST
-    jsr INTOK
-    lda zpWORK
-    adc #$02
+    jsr INTOK           ; insert token, return with carry set(!)
+                        ; Y points to CR ($0d)
+
+    lda zpWORK          ; reserve space for binary number
+    adc #$02            ; add 3 (!) and save as source pointer
     sta zpWORK+2
     lda zpWORK+1
     adc #$00
     sta zpWORK+3
 
 CONSTL:
-    lda (zpWORK),Y
-    sta (zpWORK+2),Y
+    lda (zpWORK),Y      ; copy backwards from $0d location to zero
+    sta (zpWORK+2),Y    ; hence creating a gap for the binary number
     dey
     bne CONSTL
-    ldy #$03
+
+    ldy #$03            ; start at 3rd position
 
 ; Encode line number constant, see SPGETN for decoder and format
+; number is in zpWORK+6/7
 
 CONSTI:                 ; insert constant
     lda zpWORK+7
-    ora #$40
+    ora #$40            ; always 1 bit at bit6
     sta (zpWORK),Y
-    dey
+    dey                 ; 2nd position
     lda zpWORK+6
     and #~$C0
-    ora #$40
+    ora #$40            ; always 1 bit at bit6
     sta (zpWORK),Y
-    dey
+    dey                 ; 1st position
     lda zpWORK+6
     and #$C0
     sta zpWORK+6
@@ -1761,16 +1791,17 @@ CONSTI:                 ; insert constant
     ora zpWORK+6
     lsr
     lsr
-    eor #$54
+    eor #$54            ; inverse of original bit6 and bit14, and always 1 bit 
     sta (zpWORK),Y
-    jsr NEXTCH
-    jsr NEXTCH
+
+    jsr NEXTCH          ; add 3 to the pointer to point to the last byte
+    jsr NEXTCH          ; of the integer constant
     jsr NEXTCH
 
-    ldy #$00
+    ldy #$00            ; offset zero
 
 WORDCN:
-    clc
+    clc                 ; success and return
     rts
 
 WORDCQ:
