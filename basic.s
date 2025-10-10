@@ -3227,45 +3227,49 @@ DOCL:
 ; CALL numeric [,items ... ]
 ; ==========================
 CALL:
-    jsr AEEXPR
-    jsr INTEG
-    jsr PHACC
+    jsr AEEXPR          ; evaluate expression, address of routine
+    jsr INTEG           ; ensure it's an integer
+    jsr PHACC           ; save on stack
 
     ldy #$00
-    sty STRACC
+    sty STRACC          ; zero number of parameters
 
 CALLLP:
-    sty ws+$06FF
-    jsr AESPAC
+    sty ws+$06FF        ; pointer into parameter area
+    jsr AESPAC          ; get next character
 
     cmp #','
-    bne CALLDN
+    bne CALLDN          ; jump out of loop if no comma
 
     ldy zpAECUR
-    jsr LVBLNKplus1
-    beq CALLFL
+    jsr LVBLNKplus1     ; get variable name
+    beq CALLFL          ; No such variable error
 
     ldy ws+$06FF
     iny
     lda zpIACC
-    sta STRACC,Y
+    sta STRACC,Y        ; LSB of parameter address
+
     iny
     lda zpIACC+1
-    sta STRACC,Y
+    sta STRACC,Y        ; MSB of parameter address
+
     iny
     lda zpIACC+2
-    sta STRACC,Y
-    inc STRACC
+    sta STRACC,Y        ; type of parameter
+
+    inc STRACC          ; increment number of parameters
 
     jmp CALLLP
 
 CALLDN:
     dec zpAECUR
-    jsr AEDONE      ; Check for end of statement
-    jsr POPACC      ; Pop integer to IACC
+    jsr AEDONE      ; check for end of statement
+    jsr POPACC      ; pull address of the stack
     jsr USER        ; Set up registers and call code at IACC
-    cld             ; Ensure Binary mode on return
-    jmp NXT         ; Jump back to program loop
+
+    cld             ; ensure Binary mode on return
+    jmp NXT         ; jump back to program loop
 
 CALLFL:
     jmp FACERR
@@ -3287,104 +3291,115 @@ USER:
 ; ----------------------------------------------------------------------------
 
 DELDED:
-    jmp STDED
+    jmp STDED           ; Syntax error
 
 ; DELETE linenum, linenum
 ; =======================
-DELETE:
-    jsr SPTSTN
-    bcc DELDED
 
-    jsr PHACC
+DELETE:
+    jsr SPTSTN          ; decode line number after the word DELETE
+    bcc DELDED          ; syntax error
+
+    jsr PHACC           ; push line number to the stack
     jsr SPACES
     cmp #','
-    bne DELDED
+    bne DELDED          ; no comma, syntax error
 
-    jsr SPTSTN
-    bcc DELDED
+    jsr SPTSTN          ; decode next line number
+    bcc DELDED          ; syntax error
 
-    jsr DONE
-    lda zpIACC
+    jsr DONE            ; check end of statement
+
+    lda zpIACC          ; second line number to work pointer (zpWORK+2)
     sta zpWORK+2
     lda zpIACC+1
     sta zpWORK+3
-    jsr POPACC
+
+    jsr POPACC          ; pop first line number into IACC
 
 DODELS:
-    jsr REMOVE
-    jsr TSTBRK
-    jsr INCACC
+    jsr REMOVE          ; delete line number in IACC
+    jsr TSTBRK          ; check escape key
+    jsr INCACC          ; increment line number in IACC
 
-    lda zpWORK+2
+    lda zpWORK+2        ; compare with second line number in zpWORK+2/3
     cmp zpIACC
     lda zpWORK+3
     sbc zpIACC+1
-    bcs DODELS
+    bcs DODELS          ; continue removing if <
 
-    jmp FSASET
+    jmp FSASET          ; jump to warm start
 
 ;  ----------------------------------------------------------------------------
 
-; Called by RENUMBER and AUTO
-GETTWO:
-    lda #$0A
-    jsr SINSTK
-    jsr SPTSTN
-    jsr PHACC
+; Decode parameters for RENUMBER and AUTO
 
-    lda #$0A
-    jsr SINSTK
+GETTWO:
+    lda #10             ; default value
+    jsr SINSTK          ; store in IACC
+
+    jsr SPTSTN          ; decode first line number
+    jsr PHACC           ; push to stack
+
+    lda #10             ; second default value
+    jsr SINSTK          ; store in IACC
+
     jsr SPACES
     cmp #','
-    bne NO
+    bne NO              ; no comma, no second parameter
 
-    jsr SPTSTN
+    jsr SPTSTN          ; get second line number
     lda zpIACC+1
-    bne GETYUK
+    bne GETYUK          ; 'Silly' error if interval > 255
 
     lda zpIACC
-    beq GETYUK
+    beq GETYUK          ; 'Silly' if interval = 0
 
-    inc zpCURSOR
+    inc zpCURSOR        ; pre-increment for next decrement
+
 NO:
     dec zpCURSOR
-    jmp DONE
+    jmp DONE            ; check for end of statement, and return (tail call)
 
 ; called by renumber
+
 RENSET:
-    lda zpTOP
+    lda zpTOP           ; copy TOP ptr to zpWORK+4/5
     sta zpWORK+4
     lda zpTOP+1
     sta zpWORK+5
 
 RENSTR:
-    lda zpTXTP
+    lda zpTXTP          ; copy PAGE ptr to zpWORK+0/1
     sta zpWORK+1
-    lda #$01
+    lda #$01            ; plus 1
     sta zpWORK
     rts
 
 ; RENUMBER [linenume [,linenum]]
 ; ==============================
+
 RENUM:
-    jsr GETTWO
+    jsr GETTWO          ; decode the parameters
     ldx #zpWORK+2
-    jsr POPX
-    jsr ENDER
-    jsr RENSET
+    jsr POPX            ; pull starting line number to zpWORK+2..5
+
+    jsr ENDER           ; check for 'Bad program'
+    jsr RENSET          ; set zpWORK+4/5 to TOP ptr
 
 ; Build up table of line numbers
+
 NUMBA:
     ldy #$00
-    lda (zpWORK),Y
-    bmi NUMBB         ; Line.hi>$7F, end of program
+    lda (zpWORK),Y      ; get line number of current line in the program
+    bmi NUMBB           ; MSB > $7F, end of program
 
-    sta (zpWORK+4),Y
+    sta (zpWORK+4),Y    ; save the MSB of the number in the pile at TOP
     iny
     lda (zpWORK),Y
-    sta (zpWORK+4),Y
+    sta (zpWORK+4),Y    ; similar for LSB
 
-    sec
+    sec                 ; adjust pointer
     tya
     adc zpWORK+4
     sta zpWORK+4
@@ -3393,12 +3408,13 @@ NUMBA:
     lda zpWORK+5
     adc #$00
     sta zpWORK+5
-    cpx zpHIMEM
-    sbc zpHIMEM+1
-    bcs NUMBFL
 
-    jsr STEPON      ; Y=1
-    bcc NUMBA
+    cpx zpHIMEM         ; check if pointer colides with HIMEM
+    sbc zpHIMEM+1
+    bcs NUMBFL          ; if so, 'RENUMBER space' error
+
+    jsr STEPON          ; Y=1, move pointer to the next line, returns with C=0
+    bcc NUMBA           ; always loop back to the next line
 
 NUMBFL:
     brk
@@ -3429,7 +3445,7 @@ NUMBB:
 ; =======================
 PROC:
         lda zpLINE
-        sta zpAELINE        ; AELINE=LINE=>after 'PROC' token
+        sta zpAELINE        ; AELINE=LINE --> after 'PROC' token
         lda zpLINE+1
         sta zpAELINE+1
         lda zpCURSOR
@@ -3443,154 +3459,170 @@ NUMBB:
     .endif
 
 ; Look for renumber references
-    jsr RENSTR
+
+    jsr RENSTR              ; set zpWORK+0/1 to PAGE+1
 
 NUMBC:
     ldy #$00
-    lda (zpWORK),Y
-    bmi NUMBD
+    lda (zpWORK),Y          ; get MSB of line number
+    bmi NUMBD               ; exit if the end of the program has been reached
 
-    lda zpWORK+3
+    lda zpWORK+3            ; update the line number
     sta (zpWORK),Y
     lda zpWORK+2
     iny
     sta (zpWORK),Y
 
-    clc
+    clc                     ; add interval to line number
     lda zpIACC
     adc zpWORK+2
     sta zpWORK+2
 
     lda #$00
     adc zpWORK+3
-    and #$7F
+    and #$7F                ; assure it doesn't exceed 32767
     sta zpWORK+3
 
-    jsr STEPON
-    bcc NUMBC
+    jsr STEPON              ; move to the next line, returns with C=0
+    bcc NUMBC               ; always loop for handling next line
 
 NUMBD:
-    lda zpTXTP
+    lda zpTXTP              ; copy PAGE to zpLINE
     sta zpLINE+1
     ldy #$00
     sty zpLINE
+
     iny
-    lda (zpLINE),Y
+    lda (zpLINE),Y          ; get MSB of line number of current line
     .if version < 3
-        bmi NUMBXX
+        bmi NUMBXX          ; exit if the end of the program has been reached
     .elseif version >= 3
-        bmi NUMBX
+        bmi NUMBX           ; exit if the end of the program has been reached
     .endif
 
 NUMBE:
-    ldy #$04
+    ldy #$04                ; point to the first byte of the text of the line
+
 NUMBF:
-    lda (zpLINE),Y
+    lda (zpLINE),Y          ; get byte of text of the line
     cmp #tknCONST
-    beq NUMBG
-    iny
+    beq NUMBG               ; jump if tknCONST was found
+
+    iny                     ; point to next byte (in case bne is taken)
     cmp #$0D
-    bne NUMBF
+    bne NUMBF               ; loop as long as CR is not found
+
     lda (zpLINE),Y
     .if version < 3
-        bmi NUMBXX
+        bmi NUMBXX          ; exit if the end of the program has been reached
     .elseif version >= 3
-        bmi NUMBX
+        bmi NUMBX           ; exit if the end of the program has been reached
     .endif
+
     ldy #$03
-    lda (zpLINE),Y
+    lda (zpLINE),Y          ; add length of the line to zpLINE pointer
     clc
     adc zpLINE
     sta zpLINE
-    bcc NUMBE
+    bcc NUMBE               ; branch always, loop
 
     inc zpLINE+1
-    bcs NUMBE
+    bcs NUMBE               ; branch always, loop
 
 NUMBXX:
     .if version < 3
-        jmp FSASET
+        jmp FSASET          ; jump to warm start
     .endif
 
 NUMBG:
-    jsr SPGETN
-    jsr RENSET
+    jsr SPGETN              ; decode the line number
+    jsr RENSET              ; set zpWORK+4/5 to TOP, and zpWORK+0/1 to PAGE+1
 
 NUMBH:
     ldy #$00
-    lda (zpWORK),Y
-    bmi NUMBJ
-    lda (zpWORK+4),Y
-    iny
-    cmp zpIACC+1
-    bne NUMBI
-    lda (zpWORK+4),Y
+    lda (zpWORK),Y          ; get MSB of line number of current line
+    bmi NUMBJ               ; exit if the end of the program has been reached
+
+    lda (zpWORK+4),Y        ; get MSB of next line number in the pile
+    iny                     ; Y=1
+    cmp zpIACC+1            ; check against line number being sought
+    bne NUMBI               ; skip forwards if they do not match
+
+    lda (zpWORK+4),Y        ; same for the LSB
     cmp zpIACC
-    bne NUMBI
-    lda (zpWORK),Y
-    sta zpWORK+6
-    dey
+    bne NUMBI               ; jump if no match
+
+    lda (zpWORK),Y          ; get line number
+    sta zpWORK+6            ; and store it in zpWORK+6/7
+    dey                     ; Y=0
     lda (zpWORK),Y
     sta zpWORK+7
+
     ldy zpCURSOR
     dey
-    lda zpLINE
+    lda zpLINE              ; copy LINE pointer to WORK
     sta zpWORK
     lda zpLINE+1
     sta zpWORK+1
-    jsr CONSTI
+
+    jsr CONSTI              ; encode the line number and store it
 
 NUMBFA:
     ldy zpCURSOR
-    bne NUMBF
+    bne NUMBF               ; go back and continue the search
 
 NUMBI:
     .if version >= 3
         clc
     .endif
 
-    jsr STEPON
+    jsr STEPON              ; move to the next line
 
-    lda zpWORK+4
+    lda zpWORK+4            ; add two to zpWORK+4/5
     adc #$02
     sta zpWORK+4
-    bcc NUMBH
+    bcc NUMBH               ; go back and look for the line number
 
     inc zpWORK+5
-    bcs NUMBH
+    bcs NUMBH               ; go back and look for the line number
 
 NUMBX:
     .if version >= 3
-        bmi ENDAUT
+        bmi ENDAUT          ; jump to warm start
     .endif
 
 NUMBJ:
-    jsr VSTRNG         ; Print inline text
+    jsr VSTRNG              ; Print inline text after this JSR
+                            ; up to the first character with bit 7 set
     .if foldup == 1
         dta 'FAILED AT '
     .else
         dta 'Failed at '
     .endif
-    iny
-    lda (zpLINE),Y
-    sta zpIACC+1
+
+    iny                     ; opcode 0xc8 has bit 7 set
+    lda (zpLINE),Y          ; get line number that couldn't be found
+    sta zpIACC+1            ; into IACC
     iny
     lda (zpLINE),Y
     sta zpIACC
 
     jsr POSITE        ; Print in decimal
     jsr NLINE         ; Print newline
-    beq NUMBFA
+    beq NUMBFA        ; join the original code
 
 STEPON:
-    iny
-    lda (zpWORK),Y
-    adc zpWORK
-    sta zpWORK
+    iny               ; make Y point to the byte giving the length of the line
+    lda (zpWORK),Y    ; get the length
+    adc zpWORK        ; add it to the pointer
+    sta zpWORK        ; and store
     bcc STEPX
 
-    inc zpWORK+1
+    inc zpWORK+1      ; adjust MSB if necessary
     clc
+
+    ; always return with C=0
+
 STEPX:
     rts
 
