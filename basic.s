@@ -15,7 +15,7 @@
 ;   AcornCmosBasic (https://github.com/stardot/AcornCmosBasic)
 ;   AcornDmosBasic (https://github.com/stardot/AcornDmosBasic)
 ;   AcornBasic128 (github.com/stardot/AcornBasic128)
-;   BBC Micro Compendium (not really used yet)
+;   BBC Micro Compendium
 ;
 ; ----------------------------------------------------------------------------
 
@@ -927,7 +927,7 @@ RMOVE:
     .if version < 3
         inx
         bpl RMOVEB
-        jsr LISTPT
+        jsr LISTPT          ; print a space
         jsr CHOUT
         jsr CHOUT
         jmp RMOVE
@@ -2304,6 +2304,7 @@ FSASET:
 
 ; IMMEDIATE LOOP
 ; ==============
+
 CLRSTK:
     ldy #>BUFFER       ; point zpLINE to keyboard buffer
     sty zpLINE+1
@@ -2316,8 +2317,9 @@ CLRSTK:
     lda #'>'
     jsr BUFF           ; Print '>' prompt, read input to buffer at (zpWORK)
 
-; Execute line at program pointer in $0B/C
-; ----------------------------------------
+; Execute line at program pointer in zpLINE
+; -----------------------------------------
+
 RUNTHG:
     lda #<BASERR       ; default error message
     sta zpERRORLH
@@ -2348,6 +2350,7 @@ RUNTHG:
 
 ; Command entered at immediate prompt
 ; -----------------------------------
+
 DC:                    ; Direct Command
     jsr SPACES         ; Skip spaces at (zpLINE)
     cmp #tknAUTO       ; first command token
@@ -2359,6 +2362,7 @@ LEAVE:                 ; trampoline for branches below
 
 ; [ - enter assembler
 ; ===================
+
 JUMPASS:
     jmp ASS         ; Jump to assembler
 
@@ -2471,6 +2475,7 @@ ENDEDL:
 
 ; Main execution loop
 ; -------------------
+
 SUNK:
     dec zpCURSOR
 
@@ -2495,6 +2500,7 @@ STMT:
 
 ; Dispatch function/command
 ; -------------------------
+
 DISPATCH:
     tax                         ; Index into dispatch table
     lda ADTABL-FIRST_TOKEN,X    ; Get routine address from table
@@ -2507,6 +2513,7 @@ DISPATCH:
 
 ; Not a command byte, try variable assignment, or =, *, [
 ; -------------------------------------------------------
+
 LETST:
     ldx zpLINE
     stx zpAELINE    ; Copy LINE to AELINE
@@ -2680,20 +2687,23 @@ STDONE:
 
 ; ----------------------------------------------------------------------------
 
+; Assignments for defined address strings
+
 NSTR:
-    jsr OSSTRT
+    jsr OSSTRT      ; place CR at end of string, returns w/ A=$0d and Y=length
     cpy #$00
-    beq NSTRX
+    beq NSTRX       ; zero length string, jump to end
 
 NSLOOP:
-    lda STRACC,Y
-    sta (zpIACC),Y
+    lda STRACC,Y    ; copy from string buffer
+    sta (zpIACC),Y  ; to variable
     dey
-    bne NSLOOP
+    bne NSLOOP      ; untile Y becomes zero
 
-    lda STRACC
+    lda STRACC      ; last byte
+
 NSTRX:
-    sta (zpIACC),Y
+    sta (zpIACC),Y  ; store and exit
     rts
 
 ; ----------------------------------------------------------------------------
@@ -2710,177 +2720,196 @@ ALLOCR:
 
 ; ----------------------------------------------------------------------------
 
+; Unstack a parameter
+
 STORST:
-    lda zpWORK+2
+    lda zpWORK+2        ; get type of item
     cmp #$80
-    beq STORSX
-    bcc STORIT
+    beq STORSX          ; jump if it's a string at a defined address
+    bcc STORIT          ; jump if it's numeric
 
-    ldy #$00
-    lda (zpAESTKP),Y
-    tax
-    beq STORSY
+    ldy #$00            ; it's a dynamic string
+    lda (zpAESTKP),Y    ; get length from top of stack
+    tax                 ; save in X
+    beq STORSY          ; skip copy if length is 0
 
-    lda (zpWORK),Y
+    lda (zpWORK),Y      ; subtract 1 because of length byte
     sbc #$01
-    sta zpWORK+2
+    sta zpWORK+2        ; store as new pointer
     iny
     lda (zpWORK),Y
     sbc #$00
     sta zpWORK+3
 
 STORSL:
-    lda (zpAESTKP),Y
-    sta (zpWORK+2),Y
+    lda (zpAESTKP),Y    ; get character from stacked string
+    sta (zpWORK+2),Y    ; save in variable area
     iny
     dex
-    bne STORSL
+    bne STORSL          ; continue until length is zero
 
 STORSY:
-    lda (zpAESTKP,X)
+    lda (zpAESTKP,X)    ; get length of string again (X=0)
     ldy #$03
 STORSW:
-    sta (zpWORK),Y
-    jmp POPSTX
+    sta (zpWORK),Y      ; save in string information block
+    jmp POPSTX          ; discard top of stack
+
+    ; strings at fixed address
 
 STORSX:
     ldy #$00
-    lda (zpAESTKP),Y
-    tax
-    beq STORSZ
+    lda (zpAESTKP),Y    ; get length of string
+    tax                 ; save in X
+    beq STORSZ          ; jump if length is 0
 
 STORSV:
     iny
-    lda (zpAESTKP),Y
-    dey
-    sta (zpWORK),Y
+    lda (zpAESTKP),Y    ; get character
+    dey                 ; adjust for different indeces, double iny in loop
+    sta (zpWORK),Y      ; store in variable
     iny
     dex
-    bne STORSV
+    bne STORSV          ; loop until length is zero
 
 STORSZ:
-    lda #$0D
+    lda #$0D            ; place CR at end of string
     bne STORSW
+
+    ; numeric entries
 
 STORIT:
     ldy #$00
-    lda (zpAESTKP),Y
-    sta (zpWORK),Y
+    lda (zpAESTKP),Y    ; get first byte
+    sta (zpWORK),Y      ; and save it
+
     .if version < 3
-        iny
-        cpy zpWORK+2
-        bcs STORIY
+        iny             ; Y=1
+        cpy zpWORK+2    ; compare with type
+        bcs STORIY      ; exit, it's an 8-bit value
     .elseif version >= 3
         ldy #4
         lda zpWORK+2
-        beq STORIY
-        ldy #$01
+        beq STORIY      ; exit, it's an 8-bit value, but leave with Y=4 (why?)
+        ldy #$01        ; continue with Y=1 again
     .endif
-    lda (zpAESTKP),Y
+    lda (zpAESTKP),Y    ; second byte
     sta (zpWORK),Y
+
     iny
-    lda (zpAESTKP),Y
+    lda (zpAESTKP),Y    ; third byte
     sta (zpWORK),Y
+
     iny
-    lda (zpAESTKP),Y
+    lda (zpAESTKP),Y    ; fourth byte
     sta (zpWORK),Y
+
     iny
-    cpy zpWORK+2
+    cpy zpWORK+2        ; check if it's float
     bcs STORIY
 
-    lda (zpAESTKP),Y
+    lda (zpAESTKP),Y    ; fifth byte
     sta (zpWORK),Y
     iny
+
 STORIY:
-    tya
+    tya                 ; transfer number of bytes to A
     clc
-    jmp POPN
+    jmp POPN            ; pop A number of bytes
 
 ; ----------------------------------------------------------------------------
 
-; PRINT#
+; PRINT#, called indirect via PRINT routine when # is detected
 
 PRINTH:
-    dec zpCURSOR
-    jsr AECHAN
+    dec zpCURSOR        ; correct cursor position
+    jsr AECHAN          ; find out file handle number
 
 PRINHL:
-    tya
-    pha
-    jsr AESPAC
+    tya                 ; file handle to A
+    pha                 ; and save
+    jsr AESPAC          ; get next character
     cmp #','
-    bne PRINHX
+    bne PRINHX          ; exit if not a comma
 
-    jsr EXPR
-    jsr STARGA
+    jsr EXPR            ; evaluate expression
+    jsr STARGA          ; store FACC in workspace temporary FWSA
 
-    pla
-    tay
+    pla                 ; get file handle
+    tay                 ; transfer back to Y
     lda zpTYPE
-    jsr OSBPUT
+    jsr OSBPUT          ; write type of item to file
 
-    tax
-    beq PRINHS
-    bmi PRINHF
+    tax                 ; type of item to X
+    beq PRINHS          ; jump if item is a string
+    bmi PRINHF          ; jump if item is floating point
 
-    ldx #$03
+    ; item is integer
+
+    ldx #$03            ; 4 bytes (3-0), MSB first
 PRINHQ:
     lda zpIACC,X
-    jsr OSBPUT
+    jsr OSBPUT          ; write integer to file
     dex
     bpl PRINHQ
-    bmi PRINHL
+    bmi PRINHL          ; loop back to check for comma
 
 PRINHF:
-    ldx #$04
+    ldx #$04            ; float is 5 bytes (4-0)
 
 PRINHP:
     lda FWSA,X
-    jsr OSBPUT
+    jsr OSBPUT          ; write float from workspace temporary FWSA
     dex
     bpl PRINHP
-    bmi PRINHL      ; branch always
+    bmi PRINHL          ; loop back to check for comma
 
 PRINHS:
     lda zpCLEN
-    jsr OSBPUT
+    jsr OSBPUT          ; write string length
     tax
-    beq PRINHL
+    beq PRINHL          ; loop back to check for comma if length is 0
 
 PRINHO:
     lda STRACC-1,X
-    jsr OSBPUT
+    jsr OSBPUT          ; write string backwards
     dex
     bne PRINHO
-    beq PRINHL
+    beq PRINHL          ; loop back to check for comma
 
 PRINHX:
-    pla
-    sty zpCURSOR
+    pla                 ; get handle from stack
+    sty zpCURSOR        ; save current offset
     jmp DONEXT
 
-; End of PRINT statement
-; ----------------------
+; end of PRINT statement
+
 DEDPRC:
     jsr NLINE         ; Output new line and set COUNT to zero
 DEDPR:
     jmp SUNK          ; Check end of statement, return to execution loop
 
+; semi-colon encountered
+
 PRFUNY:
     lda #$00
-    sta zpPRINTS
-    sta zpPRINTF      ; Set current field to zero, hex/dec flag to decimal
+    sta zpPRINTS      ; Set current field to zero
+    sta zpPRINTF      ; hex/dec flag to decimal
+
     jsr SPACES        ; Get next non-space character
     cmp #':'
     beq DEDPR         ; <colon> found, finish printing
+
     cmp #$0D
     beq DEDPR         ; <cr> found, finish printing
+
     cmp #tknELSE
     beq DEDPR         ; 'ELSE' found, finish printing
     bne CONTPR        ; Otherwise, continue into main loop
 
 ; PRINT [~][print items]['][,][;]
 ; ===============================
+
 PRINT:
     jsr SPACES         ; Get next non-space char
     cmp #'#'
@@ -2890,67 +2919,78 @@ PRINT:
     jmp STRTPR         ; Jump into PRINT loop
 
 ; Print a comma
-; -------------
+
 PRCOMM:
     lda VARL_AT
     beq STRTPR       ; If field width zero, no padding needed
                      ; jump back into main loop
 
+    ; padding
+
     lda zpTALLY      ; Get COUNT
 
 PRCOML:
     beq STRTPR       ; Zero, just started a new line, no padding
-                     ; jump back into main loop
+                     ; jump back into main print loop
 
     sbc VARL_AT      ; Get COUNT-field width
     bcs PRCOML       ; Loop to reduce until (COUNT MOD fieldwidth)<0
 
     tay              ; Y=number of spaces to get back to (COUNT MOD width)=zero
+                     ; Y is a negative number
+
 PRCOMO:
     jsr LISTPT
     iny
-    bne PRCOMO       ; Loop to print required spaces
+    bne PRCOMO       ; Loop to print required spaces until Y=0
 
 STRTPR:
     clc              ; Prepare to print decimal
     lda VARL_AT
     sta zpPRINTS     ; Set current field width from @%
+
 AMPER:
     ror zpPRINTF     ; Set hex/dec flag from Carry
+
 ENDPRI:
     jsr SPACES       ; Get next non-space character
+
     cmp #':'
     beq DEDPRC       ; End of statement if <colon> found
+
     cmp #$0D
     beq DEDPRC       ; End if statement if <cr> found
+
     cmp #tknELSE
     beq DEDPRC       ; End of statement if 'ELSE' found
 
 CONTPR:
     cmp #'~'
-    beq AMPER        ; Jump back to set hex/dec flag from Carry
+    beq AMPER        ; Jump back to set hex/dec flag from Carry, C=1
+
     cmp #','
     beq PRCOMM       ; Jump to pad to next print field
+
     cmp #';'
     beq PRFUNY       ; Jump to check for end of print statement
-    jsr PRSPEC
-    bcc ENDPRI       ; Check for ' TAB SPC, if print token found return
-                     ; to outer main loop
+
+    jsr PRSPEC       ; Check for ' TAB SPC
+    bcc ENDPRI       ; if print token found return to outer main loop
 
 ; All print formatting have been checked, so it now must be an expression
-; -----------------------------------------------------------------------
+
     lda zpPRINTS
-    pha
+    pha               ; save field width
     lda zpPRINTF
-    pha               ; Save field width and flags, as evaluator
-                      ; may call PRINT (eg FN, STR$, etc.)
-    dec zpAECUR
+    pha               ; save hex flags, as evaluator might call PRINT
+                      ; for example if a FN call uses PRINT
+    dec zpAECUR       ; account for not finding anything so far
     jsr EXPR          ; Evaluate expression
 
     pla
-    sta zpPRINTF
+    sta zpPRINTF      ; restore width
     pla
-    sta zpPRINTS      ; Restore field width and flags
+    sta zpPRINTS      ; restore hex flag
 
     lda zpAECUR
     sta zpCURSOR      ; Update program pointer
@@ -2967,12 +3007,12 @@ CONTPR:
 
     tay               ; Otherwise, Y=number of spaces to pad with
 FPRNL:
-    jsr LISTPT
+    jsr LISTPT        ; print a space
     dey
     bne FPRNL         ; Loop to print required spaces to pad the number
 
 ; Print string in string buffer
-; -----------------------------
+
 PSTR:
     lda zpCLEN
     beq ENDPRI        ; Null string, jump back to main loop
@@ -2988,15 +3028,19 @@ LOOP:
     beq ENDPRI        ; Jump back for next print item, branch always
 
 TABCOM:
-    jmp COMERR
+    jmp COMERR        ; 'Missing,' error
+
+; TAB(X,Y) routine
 
 TAB2:
     cmp #','
-    bne TABCOM        ; No comma, jump to TAB(x)
+    bne TABCOM        ; No comma, jump to COMERR
+
     lda zpIACC
-    pha               ; Save X
-    jsr BRA
-    jsr INTEGB
+    pha               ; Save X coordinate of destination
+
+    jsr BRA           ; evaluate expression and check for closing bracket
+    jsr INTEGB        ; ensure result was an integer
 
 ; Atom - manually position cursor
 ; -------------------------------
@@ -3037,26 +3081,34 @@ NO_XMOVEMENT:
 
     jmp PRTSTM        ; Continue to next PRINT item
 
-TAB:
-    jsr INEXPR
-    jsr AESPAC
-    cmp #')'
-    bne TAB2
+; TAB(X) routine
 
-    lda zpIACC
-    sbc zpTALLY
-    beq PRTSTM
+TAB:
+    jsr INEXPR         ; get integer expression
+    jsr AESPAC         ; get next character
+    cmp #')'
+    bne TAB2           ; jump if not ')', try TAB(X,Y)
+
+    ; carry is set
+
+    lda zpIACC         ; destination column
+    sbc zpTALLY        ; minus current column
+    beq PRTSTM         ; jump if equal
+
     .if version < 3
         tay
     .elseif version >= 3
         tax
     .endif
-    bcs SPCLOP
-    jsr NLINE
-    beq SPCT
+    bcs SPCLOP         ; jump if difference is positive
+
+    jsr NLINE          ; new line
+    beq SPCT           ; jump to SPC routine, w/o getting integer expression
+
+; SPC routine
 
 SPC:
-    jsr INTFAC
+    jsr INTFAC         ; evaluate argument
 
 SPCT:
     .if version < 3
@@ -3064,33 +3116,33 @@ SPCT:
     .elseif version >= 3
         ldx zpIACC
     .endif
-    beq PRTSTM
+    beq PRTSTM          ; jump if number of space is 0
 
 SPCLOP:
     .if version < 3
-        jsr LISTPT
+        jsr LISTPT      ; print a space
         dey
         bne SPCLOP
     .elseif version >= 3
-        jsr LISTPL
+        jsr LISTPL      ; print spaces, counter in X
     .endif
-    beq PRTSTM
+    beq PRTSTM          ; skip jsr NLINE
 
 PRCR:
     jsr NLINE
 
 PRTSTM:
-    clc
+    clc                 ; clear carry to indicate item was dealt with
     ldy zpAECUR
-    sty zpCURSOR
+    sty zpCURSOR        ; update cursor
     rts
 
 PRSPEC:
-    ldx zpLINE
+    ldx zpLINE          ; set zpAELINE to zpLINE
     stx zpAELINE
     ldx zpLINE+1
     stx zpAELINE+1
-    ldx zpCURSOR
+    ldx zpCURSOR        ; also copy cursor offset
     stx zpAECUR
 
     cmp #$27            ; '
@@ -3102,7 +3154,8 @@ PRSPEC:
     cmp #tknSPC
     beq SPC
 
-    sec
+    sec                 ; indicate nothing was found
+
 PRTSTO:
     rts
 
@@ -3113,6 +3166,7 @@ PRTSTN:
 
     cmp #'"'
     beq PRSTRN
+
     sec
     rts
 
@@ -3127,23 +3181,26 @@ NSTNG:
     dta '"'
     brk
 
+; print quoted string
+
 PCH:
-    jsr CHOUT
+    jsr CHOUT           ; print character
+
 PRSTRN:
     iny
     lda (zpAELINE),Y
     cmp #$0D
-    beq NSTNG
+    beq NSTNG           ; print 'Missing "' if next character is CR
 
     cmp #'"'
-    bne PCH
+    bne PCH             ; not '"', so print character
 
     iny
     sty zpAECUR
     lda (zpAELINE),Y
     cmp #'"'
-    bne PRTSTM
-    beq PCH                 ; branch always
+    bne PRTSTM          ; check for another " to handle "", jump if not
+    beq PCH             ; branch always, print "
 
 ; ----------------------------------------------------------------------------
 
@@ -3160,6 +3217,7 @@ CLS:
     jsr DONE         ; Check end of statement
     jsr BUFEND       ; Set COUNT to zero
     lda #$0C         ; Do VDU 12
+
 DOCL:
     jsr OSWRCH
     jmp NXT          ; jump to execution loop
@@ -11758,7 +11816,7 @@ HEXSP:
     jsr HEXOUT
 
 LISTPT:
-    lda #' '
+    lda #' '            ; print a space
 
 NCH:
     pha
@@ -13747,11 +13805,13 @@ OSSTRG:
     lda #>STRACC
     sta zpWORK+1
 
+; Place <CR> at end of string
+
 OSSTRT:
     ldy zpCLEN
     lda #$0D
     sta STRACC,Y
-    rts
+    rts                 ; returns with A=$0d and Y=string length
 
 ; ----------------------------------------------------------------------------
 
