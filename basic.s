@@ -269,7 +269,7 @@ tknRIGHTD   = $C2
 tknSTRD     = $C3
 tknSTRINGD  = $C4
 tknEOF      = $C5
-tknAUTO     = $C6
+tknAUTO     = $C6   ; first "command" token
 tknDELETE   = $C7
 tknLOAD     = $C8
 tknLIST     = $C9
@@ -592,6 +592,8 @@ TOKENS:
 
 ; FUNCTION/COMMAND DISPATCH TABLE, MACRO
 ; ======================================
+
+FIRST_TOKEN = tknOPENIN
 
 func_table .macro operator
     dta :1OPENIN      ; $8E - OPENIN
@@ -1006,18 +1008,19 @@ NOLB:
     jsr DONE_WITH_Y    ; check statement has ended, add Y to zpLINE, Y=1
 
     dey
-    lda (zpLINE),Y
+    lda (zpLINE),Y      ; get previous character
     cmp #':'            ; check if statement ended with :
     beq CASMJ           ; assemble next instruction
 
     lda zpLINE+1        ; check for immediate mode if LINE points to BUFFER
     cmp #>BUFFER
-    bne INTXT
+    bne INTXT           ; jump if not immediate mode
 
     jmp CLRSTK          ; done
 
 INTXT:
     jsr LINO
+
 CASMJ:
     jmp CASM            ; assemble next instruction
 
@@ -2135,19 +2138,21 @@ UMATCH:
 
 ; ----------------------------------------------------------------------------
 
-; Skip Spaces, get next character from the aeline, aecur
-; ------------------------------------------------------
+; Skip Spaces, get next character from AELINE at AECUR
+; ----------------------------------------------------
 AESPAC:
-    ldy zpAECUR
-    inc zpAECUR        ; Get offset, increment it
+    ldy zpAECUR        ; Get offset
+    inc zpAECUR        ; increment it
     lda (zpAELINE),Y   ; Get current character
     cmp #' '
     beq AESPAC         ; Loop until not space
 AESPAR:
     rts
 
-; Skip spaces, get next character from the line, cursor
-; -----------------------------------------------------
+; ----------------------------------------------------------------------------
+
+; Skip spaces, get next character from the LINE at CURSOR
+; -------------------------------------------------------
 SPACES:
     ldy zpCURSOR
     inc zpCURSOR
@@ -2156,6 +2161,10 @@ SPACES:
     beq SPACES
 COMRTS:
     rts
+
+; ----------------------------------------------------------------------------
+
+; Check for comma at AELINE
 
     .if version < 3
 COMERR:
@@ -2170,13 +2179,14 @@ COMERR:
     .endif
 
 COMEAT:
-    jsr AESPAC
+    jsr AESPAC              ; get character
     cmp #','
     .if version < 3
-        bne COMERR
+        bne COMERR          ; not equal, error
         rts
     .elseif version >= 3
-        beq COMRTS
+        beq COMRTS          ; equal, ok
+
 COMERR:
         brk
         dta 5
@@ -2197,7 +2207,7 @@ COMERR:
 OLD:
     jsr DONE          ; Check end of statement
     lda zpTXTP
-    sta zpWORK+1      ; Point $37/8 to PAGE
+    sta zpWORK+1      ; Point zpWORK to PAGE
     lda #$00
     sta zpWORK
     sta (zpWORK),Y    ; Remove end marker
@@ -2240,7 +2250,7 @@ STOP:
 
     .if title != 0
 NEWTITLE:
-        lda #$0D
+        lda #$0D        ; EOL/CR
         ldy zpTXTP
         sty zpTOP+1     ; TOP hi=PAGE hi
         ldy #0
@@ -2261,6 +2271,8 @@ NEWTITLE:
 ; =========================================
 ; NEW comand clears text and frees
 
+; Cold start
+
 NEW:
     jsr DONE          ; Check end of statement
     .if title != 0
@@ -2271,19 +2283,21 @@ NEW:
 ; -------------------------
 FORMAT:
     .if title == 0
-        lda #$0D
+        lda #$0D       ; EOL/CR
         ldy zpTXTP
         sty zpTOP+1    ; TOP hi=PAGE hi
         ldy #$00
-        sty zpTOP
-        sty zpTRFLAG   ; TOP=PAGE, TRACE OFF
-        sta (zpTOP),Y  ; ?(PAGE+0)=<cr>
+        sty zpTOP      ; TOP lo=0
+        sty zpTRFLAG   ; TRACE OFF
+        sta (zpTOP),Y  ; place CR at PAGE/TOP
         lda #$FF
         iny
-        sta (zpTOP),Y  ; ?(PAGE+1)=$FF
+        sta (zpTOP),Y  ; place $ff after that
         iny
         sty zpTOP      ; TOP=PAGE+2
     .endif
+
+; Warm start
 
 FSASET:
     jsr SETFSA         ; Clear variables, heap, stack
@@ -2291,7 +2305,7 @@ FSASET:
 ; IMMEDIATE LOOP
 ; ==============
 CLRSTK:
-    ldy #>BUFFER
+    ldy #>BUFFER       ; point zpLINE to keyboard buffer
     sty zpLINE+1
     ldy #<BUFFER
     sty zpLINE
@@ -2300,7 +2314,7 @@ CLRSTK:
     lda #>BASERR
     sta zpERRORLH+1
     lda #'>'
-    jsr BUFF           ; Print '>' prompt, read input to buffer at PtrA
+    jsr BUFF           ; Print '>' prompt, read input to buffer at (zpWORK)
 
 ; Execute line at program pointer in $0B/C
 ; ----------------------------------------
@@ -2309,23 +2323,25 @@ RUNTHG:
     sta zpERRORLH
     lda #>BASERR
     sta zpERRORLH+1
+
     ldx #$FF
     stx zpBYTESM       ; OPT=$FF - not within assembler
-    stx zpWORK+5       ; constant
+    stx zpWORK+5       ; constant, enable tokenising line number
     txs                ; Clear machine stack
-    jsr SETVAR         ; Clear DATA and stacks
 
-    tay
-    lda zpLINE
-    sta zpWORK         ; Point zpWORK to program line
+    jsr SETVAR         ; Clear DATA and stacks, returns with A=0
+
+    tay                ; Y=0
+    lda zpLINE         ; Point zpWORK to program line
+    sta zpWORK
     lda zpLINE+1
     sta zpWORK+1
-    sty zpWORK+4
-    sty zpCURSOR
+    sty zpWORK+4       ; mode is start/left of statement
+    sty zpCURSOR       ; reset CURSOR position
 
-    jsr MATCHA
-    jsr SPTSTN
-    bcc DC             ; Tokenise, jump forward if no line number
+    jsr MATCHA         ; tokenise keyboard buffer
+    jsr SPTSTN         ; see if it started with a line number
+    bcc DC             ; jump forward if no line number
 
     jsr INSRT          ; Insert into program
     jmp FSASET         ; Jump back to immediate loop
@@ -2333,12 +2349,12 @@ RUNTHG:
 ; Command entered at immediate prompt
 ; -----------------------------------
 DC:                    ; Direct Command
-    jsr SPACES         ; Skip spaces at PtrA
-    cmp #tknAUTO
-    bcs DISPATCH       ; If command token, jump to execute command
-    bcc LETST          ; Not command token, try variable assignment
+    jsr SPACES         ; Skip spaces at (zpLINE)
+    cmp #tknAUTO       ; first command token
+    bcs DISPATCH       ; if command token, jump to execute command
+    bcc LETST          ; not command token, try variable assignment
 
-LEAVE:
+LEAVE:                 ; trampoline for branches below
     jmp CLRSTK         ; Jump back to immediate mode
 
 ; [ - enter assembler
@@ -2348,15 +2364,30 @@ JUMPASS:
 
 ; =<value> - return from FN
 ; =========================
-; Stack needs to contain these items,
-;  ret_lo, ret_hi, PtrB_hi, PtrB_lo, PtrB_off, numparams, PtrA_hi, PtrA_lo, PtrA_off, tknFN
+; Stack needs to contain these items:
+;
+; (top) ($01ff)
+;   tknFN
+;   zpCURSOR
+;   zpLINE
+;   zpLINE+1
+;   number of parameters
+;   zpAECUR
+;   zpAELINE
+;   zpAELINE+1
+;   return address MSB
+;   return address LSB
+; (bottom)
+
 FNRET:
     tsx
     cpx #$FC
     bcs FNERR     ; If stack is empty, jump to give error
+
     lda $01FF
     cmp #tknFN
-    bne FNERR     ; If pushed token<>'FN', give error
+    bne FNERR     ; If pushed token != 'FN', give error
+
     jsr AEEXPR    ; Evaluate expression
     jmp FDONE     ; Check for end of statement and return to pop from function
 
@@ -2375,14 +2406,17 @@ FNERR:
 
 ; Check for =, *, [ commands
 ; ==========================
+
 OTSTMT:
     ldy zpCURSOR
-    dey
-    lda (zpLINE),Y    ; Step program pointer back and fetch char
+    dey               ; step program pointer back
+    lda (zpLINE),Y    ; get the character
     cmp #'='
     beq FNRET         ; Jump for '=', return from FN
+
     cmp #'*'
     beq DOS           ; Jump for '*', embedded *command
+
     cmp #'['
     beq JUMPASS       ; Jump for '[', start assembler
     bne SUNK          ; Otherwise, see if end of statement
@@ -2391,40 +2425,48 @@ OTSTMT:
 
 ; Embedded *command
 ; =================
+
 DOS:
-    jsr CLYADP         ; Update PtrA to current address
+    jsr CLYADP         ; Update zpLINE to current address
+
     ldx zpLINE
-    ldy zpLINE+1       ; XY=>command string
+    ldy zpLINE+1       ; XY => command string
 
     .ifdef MOS_ATOM
-        jsr cmdStar    ; Pass command at ptrA to Atom OSCLI
+        jsr cmdStar    ; Pass command at (zpLINE) to Atom OSCLI
     .endif
 
     .ifdef MOS_BBC
-        jsr OS_CLI     ; Pass command at ptrA to OSCLI
+        jsr OS_CLI     ; Pass command at (zpLINE) to OSCLI
     .endif
 
 ; DATA, DEF, REM, ELSE
 ; ====================
 ; Skip to end of line
 ; -------------------
+
 DATA:
 DEF:
 REM:
-    lda #$0D
-    ldy zpCURSOR
-    dey               ; Get program pointer
+    lda #$0D         ; EOL/CR to match to
+    ldy zpCURSOR     ; get program pointer
+    dey              ; pre-decrement because loops start with iny
+
 ILP:
     iny
     cmp (zpLINE),Y
     bne ILP          ; Loop until <cr> found
+
 ENDEDL:
     cmp #tknELSE
     beq REM          ; If 'ELSE', jump to skip to end of line
+
     lda zpLINE+1
-    cmp #>BUFFER
-    beq LEAVE        ; Program in command buffer, jump back to immediate loop
+    cmp #>BUFFER     ; Program in command buffer?
+    beq LEAVE        ; if so, jump back to immediate loop
+
     jsr LINO
+
     bne STMT         ; Check for end of program, step past <cr>
 
 ; Main execution loop
@@ -2433,7 +2475,7 @@ SUNK:
     dec zpCURSOR
 
 DONEXT:
-    jsr DONE
+    jsr DONE          ; check for end of statement
 
 NXT:
     ldy #$00
@@ -2442,21 +2484,22 @@ NXT:
     bne ENDEDL        ; Not <colon>, check for ELSE
 
 STMT:
-    ldy zpCURSOR
-    inc zpCURSOR      ; Get program pointer, increment for next time
+    ldy zpCURSOR      ; Get program pointer
+    inc zpCURSOR      ; increment for next time
     lda (zpLINE),Y    ; Get current character
     cmp #' '
     beq STMT          ; Skip spaces, and get next character
+
     cmp #tknPTR2
     bcc LETST         ; Not program command, jump to try variable assignment
 
 ; Dispatch function/command
 ; -------------------------
 DISPATCH:
-    tax                 ; Index into dispatch table
-    lda ADTABL-$8E,X
-    sta zpWORK          ; Get routine address from table
-    lda ADTABH-$8E,X
+    tax                         ; Index into dispatch table
+    lda ADTABL-FIRST_TOKEN,X    ; Get routine address from table
+    sta zpWORK
+    lda ADTABH-FIRST_TOKEN,X
     sta zpWORK+1
     jmp (zpWORK)        ; Jump to routine
 
@@ -2478,27 +2521,34 @@ LETST:
 ; Variable not found, create a new one
 ; ------------------------------------
     stx zpAECUR
-    jsr EQEAT         ; Check for and step past '='
+    jsr EQEAT         ; Check (zpAELINE) for '=' and step past
     jsr CREATE        ; Create new variable
+
     ldx #$05          ; X=$05 = float
     cpx zpIACC+2
     bne LETSZ         ; Jump if dest. not a float
+
     inx               ; X=$06
+
 LETSZ:
     jsr CREAX
     dec zpCURSOR
 
 ; LET variable = expression
 ; =========================
+
 LET:
     jsr CRAELV
     beq NOLET
+
 GOTLT:
     bcc LETED
     jsr PHACC         ; Stack integer (address of data)
     jsr EQEXPR        ; Check for end of statement
+
     lda zpTYPE        ; Get evaluation type
     bne LETM          ; If not string, error
+
     jsr STSTOR        ; Assign the string
     jmp NXT           ; Return to execution loop
 
@@ -2507,11 +2557,12 @@ LETED:
     jsr EQEXPR        ; Check for end of statement
     lda zpTYPE        ; Get evaluation type
     beq LETM          ; If not number, error
+
     jsr STORE         ; Assign the number
     jmp NXT           ; Return to execution loop
 
 NOLET:
-    jmp STDED
+    jmp STDED         ; syntax error
 
 LETM:
     brk
@@ -2522,6 +2573,8 @@ LETM:
         dta 'Type mismatch'
     .endif
     brk
+
+; String Assignments
 
 STSTOR:
     jsr POPACC       ; Unstack integer (address of data)
@@ -2534,9 +2587,9 @@ STSTRE:
     ldy #$02
     lda (zpIACC),Y
     cmp zpCLEN
-    bcs ALLOCX       ; old mlen >= to new len
+    bcs ALLOCX       ; old mlen >= to new len, enough room
 
-    lda zpFSA
+    lda zpFSA        ; save current setting of VARTOP/FSA
     sta zpIACC+2
     lda zpFSA+1
     sta zpIACC+3
@@ -2545,24 +2598,25 @@ STSTRE:
     cmp #$08         ; if <8 characters then use this as mlen
     bcc ALLOCU
 
-    adc #$07         ; add 8 because carry is set
-    bcc ALLOCU
+    adc #$07         ; add 8 because carry is set, some room for growth
+    bcc ALLOCU       ; jump if no (unsigned) overflow
 
-    lda #$FF
+    lda #$FF         ; give the string a length of $ff
+
 ALLOCU:
     clc
-    pha
-    tax
-    lda (zpIACC),Y   ; is new space contiguous to old?
+    pha              ; save (new) length on stack
+    tax              ; and in X
+    lda (zpIACC),Y
     ldy #$00
     adc (zpIACC),Y
     eor zpFSA
-    bne ALLJIM
+    bne ALLJIM       ; is new space contiguous to old?
 
     iny
     adc (zpIACC),Y
     eor zpFSA+1
-    bne ALLJIM
+    bne ALLJIM      ; is new space contiguous to old?
 
     sta zpIACC+3    ; new space is, so reduce amount needed
     txa
@@ -2572,51 +2626,54 @@ ALLOCU:
     tax
 
 ALLJIM:
-    txa
+    txa             ; get length to be allocated from X
     clc
-    adc zpFSA
-    tay
-    lda zpFSA+1
-    adc #$00
-    cpy zpAESTKP    ; are we hitting our heads on the roof?
-    tax
-    sbc zpAESTKP+1
-    bcs ALLOCR
+    adc zpFSA       ; add VARTOP
+    tay             ; store in Y
 
-    sty zpFSA
-    stx zpFSA+1
-    pla
+    lda zpFSA+1     ; MSB of VARTOP
+    adc #$00        ; add possible carry
+
+    cpy zpAESTKP    ; are we hitting our heads on the roof?
+    tax             ; resulting MSB in X
+    sbc zpAESTKP+1
+    bcs ALLOCR      ; jump to No room error
+
+    sty zpFSA       ; store LSB
+    stx zpFSA+1     ; store MSB
+
+    pla             ; get back the allocated length of the new string
     ldy #$02
-    sta (zpIACC),Y  ; new mlen
+    sta (zpIACC),Y  ; save new mlen
     dey
     lda zpIACC+3
-    beq ALLOCX      ; we were contiguous
+    beq ALLOCX      ; we have expanded the same starting location
 
-    sta (zpIACC),Y
+    sta (zpIACC),Y  ; change the start address of the string, save MSB
     dey
     lda zpIACC+2
-    sta (zpIACC),Y
+    sta (zpIACC),Y  ; save LSB
 
 ALLOCX:
     ldy #$03
-    lda zpCLEN
-    sta (zpIACC),Y
-    beq STDONE
+    lda zpCLEN      ; get the length of the string
+    sta (zpIACC),Y  ; store it in the block
+    beq STDONE      ; return if length is zero
 
     dey
     dey
-    lda (zpIACC),Y
+    lda (zpIACC),Y  ; copy MSB and LSB of start address and store it
     sta zpIACC+3
     dey
     lda (zpIACC),Y
     sta zpIACC+2
 
 LTCVRM:
-    lda STRACC,Y
-    sta (zpIACC+2),Y
+    lda STRACC,Y        ; get character from string buffer
+    sta (zpIACC+2),Y    ; save it in the variable area
     iny
     cpy zpCLEN
-    bne LTCVRM
+    bne LTCVRM          ; continue until the end of the string is met
 
 STDONE:
     rts
@@ -4034,8 +4091,21 @@ LOCEND:
 
 ; ENDPROC
 ; =======
-; Stack needs to contain these items,
-;  ret_lo, ret_hi, PtrB_hi, PtrB_lo, PtrB_off, numparams, PtrA_hi, PtrA_lo, PtrA_off, tknPROC
+; Stack needs to contain these items:
+;
+; (top) ($01ff)
+;   tknFN
+;   zpCURSOR
+;   zpLINE
+;   zpLINE+1
+;   number of parameters
+;   zpAECUR
+;   zpAELINE
+;   zpAELINE+1
+;   return address MSB
+;   return address LSB
+; (bottom)
+
 ENDPR:
     tsx
     cpx #$FC
@@ -5149,8 +5219,10 @@ BLINK:
 DONET:
     cmp #':'
     beq CLYADP         ; Colon, jump to update program pointer
+
     cmp #$0D
     beq CLYADP         ; <cr>, jump to update program pointer
+
     cmp #tknELSE
     bne STDED          ; Not 'ELSE', jump to 'Syntax error'
 
@@ -5160,7 +5232,7 @@ CLYADP:
     clc
     tya
     adc zpLINE
-    sta zpLINE         ; Update program pointer in PtrA
+    sta zpLINE         ; Update program pointer in zpLINE
     bcc SECUR
     inc zpLINE+1
 SECUR:
@@ -5737,17 +5809,17 @@ COMPRI:
 ; EXPRESSION EVALUATOR
 ; ====================
 
-; Evaluate expression at PtrA
+; Evaluate expression at zpLINE
 ; ---------------------------
 AEEXPR:
     lda zpLINE
-    sta zpAELINE          ; Copy PtrA to PtrB
+    sta zpAELINE          ; Copy zpLINE to zpAELINE
     lda zpLINE+1
     sta zpAELINE+1
     lda zpCURSOR
     sta zpAECUR
 
-; Evaluate expression at PtrB
+; Evaluate expression at zpAELINE
 ; ---------------------------
 ; TOP LEVEL EVALUATOR
 ;
@@ -5768,7 +5840,7 @@ EXPRQ:
     cpx #tknEOR
     beq EOR_          ; Jump if next char is EOR
 
-    dec zpAECUR       ; Step PtrB back to last char
+    dec zpAECUR       ; Step zpAECUR back to last char
     tay
     sta zpTYPE
     rts               ; Set flags from type, store type in $27 and return
@@ -10888,7 +10960,7 @@ FNNOIC:
 FNGOA:
     ldy #$00
     lda (zpIACC),Y
-    sta zpLINE          ; Set PtrA to address from FN/PROC infoblock
+    sta zpLINE          ; Set zpLINE to address from FN/PROC infoblock
     iny
     lda (zpIACC),Y
     sta zpLINE+1
@@ -13322,7 +13394,8 @@ SETVAR:
     sta zpFORSTP
     sta zpSUBSTP           ; Clear REPEAT, FOR, GOSUB stacks
     sta zpDATAP
-    rts
+
+    rts                    ; always return with A=0
 
 ; ----------------------------------------------------------------------------
 
