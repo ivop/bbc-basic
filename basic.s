@@ -3988,6 +3988,7 @@ SMULXE:
 
 ; HIMEM=numeric
 ; =============
+
 LHIMM:
     jsr INEQEX          ; Set past '=', evaluate integer
 
@@ -4004,6 +4005,7 @@ LHIMM:
 
 ; LOMEM=numeric
 ; =============
+
 LLOMM:
     jsr INEQEX         ; Step past '=', evaluate integer
 
@@ -4021,6 +4023,7 @@ LLOMM:
 
 ; PAGE=numeric
 ; ============
+
 LPAGE:
     jsr INEQEX         ; Step past '=', evaluate integer
     lda zpIACC+1
@@ -4032,6 +4035,7 @@ LPAGEX:
 
 ; CLEAR
 ; =====
+
 CLEAR:
     jsr DONE           ; Check end of statement
     jsr SETFSA         ; Clear heap, stack, data, variables
@@ -4041,8 +4045,9 @@ CLEAR:
 
 ; TRACE ON | OFF | numeric
 ; ========================
+
 TRACE:
-    jsr SPTSTN
+    jsr SPTSTN         ; check for line number
     bcs TRACNM         ; If line number, jump for TRACE linenum
 
     cmp #tknON
@@ -4055,25 +4060,27 @@ TRACE:
 
 ; TRACE numeric
 ; -------------
+
 TRACNM:
     jsr DONE           ; Check end of statement
     lda zpIACC
     sta zpTRNUM        ; Set trace limit low byte
     lda zpIACC+1
 TRACNO:
-    sta zpTRNUM+1
-    lda #$FF           ; Set trace limit high byte, set TRACE ON
+    sta zpTRNUM+1      ; Set trace limit high byte
+    lda #$FF           ; set TRACE ON
 TRACNN:
-    sta zpTRFLAG
-    jmp NXT            ; Set TRACE flag, return to execution loop
+    sta zpTRFLAG       ; Set TRACE flag
+    jmp NXT            ; return to execution loop
 
 ; ----------------------------------------------------------------------------
 
 ; TRACE ON
 ; --------
+
 TRACON:
-    inc zpCURSOR
-    jsr DONE           ; Step past, check end of statement
+    inc zpCURSOR       ; Step past
+    jsr DONE           ; check end of statement
     lda #$FF
     bne TRACNO         ; Jump to set TRACE $FFxx
 
@@ -4081,9 +4088,10 @@ TRACON:
 
 ; TRACE OFF
 ; ---------
+
 TOFF:
-    inc zpCURSOR
-    jsr DONE           ; Step past, check end of statement
+    inc zpCURSOR       ; Step past
+    jsr DONE           ; check end of statement
     lda #$00
     beq TRACNN         ; Jump to set TRACE OFF
 
@@ -4091,12 +4099,13 @@ TOFF:
 
 ; TIME=numeric
 ; ============
+
 LTIME:
     jsr INEQEX         ; Step past '=', evaluate integer
     .ifdef MOS_BBC
-        ldx #zpIACC
-        ldy #$00
-        sty zpFACCS    ; Point to integer, set 5th byte to 0
+        ldx #zpIACC    ; YX = address of value, IACC
+        ldy #$00       ; MSB always zero
+        sty zpFACCS    ; set 5th byte to 0 (zpFACCS == zpIACC+4)
         lda #$02
         jsr OSWORD     ; Call OSWORD $02 to do TIME=
     .endif
@@ -4106,21 +4115,22 @@ LTIME:
 
 ; Evaluate <comma><numeric>
 ; =========================
+
 INCMEX:
     jsr COMEAT         ; Check for and step past comma
 
 INEXPR:
-    jsr EXPR
-    jmp INTEGB
+    jsr EXPR           ; evaluate expression
+    jmp INTEGB         ; check it is integer, tail call
 
 ; ----------------------------------------------------------------------------
 
 ; Evaluate <equals><integer>
 ; ==========================
 INTFAC:
-    jsr FACTOR
-    beq INTEGE
-    bmi INTEGF
+    jsr FACTOR         ; evaluate expression
+    beq INTEGE         ; jump to 'Type mismatch' error
+    bmi INTEGF         ; convert to int if it's a float
 
 INTEGX:
     rts
@@ -4136,21 +4146,23 @@ INTEGB:
     bpl INTEGX         ; Integer, return
 
 INTEGF:
-    jmp IFIX           ; Real, jump to convert to integer
+    jmp IFIX           ; Float, jump to convert to integer, tail call
 
 INTEGE:
     jmp LETM           ; Jump to 'Type mismatch' error
 
 ; Evaluate <real>
 ; ===============
+
 FLTFAC:
     jsr FACTOR         ; Evaluate expression
 
-; Ensure value is real
-; --------------------
+; Ensure value is float
+; ---------------------
+
 FLOATI:
     beq INTEGE         ; String, jump to 'Type mismatch'
-    bmi INTEGX         ; Real, return
+    bmi INTEGX         ; float, return
     jmp IFLT           ; Integer, jump to convert to real
 
 ; ----------------------------------------------------------------------------
@@ -4174,6 +4186,8 @@ PROC:
 
 ; ----------------------------------------------------------------------------
 
+; LOCAL routine(s)
+
 LOCSTR:
     ldy #$03
     lda #$00           ; Set length to zero
@@ -4184,22 +4198,24 @@ LOCSTR:
 ; ==============================
 LOCAL:
     tsx
-    cpx #$FC
+    cpx #$FC          ; at least four bytes should be on the machine stack
     bcs NLOCAL        ; Not inside subroutine, error
 
-    jsr CRAELV
-    beq LOCEND        ; Find variable, jump if bad variable name
+    jsr CRAELV        ; get next variable name
+    beq LOCEND        ; jump if bad variable name
 
     jsr RETINF        ; Push value on stack, push variable info on stack
 
-    ldy zpIACC+2
+    ldy zpIACC+2      ; get type of variable
     bmi LOCSTR        ; If a string, jump to make zero length
 
-    jsr PHACC
-    lda #$00          ; Set IACC to zero
-    jsr SINSTK
+    jsr PHACC         ; save descriptor on stack
 
-    sta zpTYPE
+    lda #$00          ; Set IACC to zero
+    jsr SINSTK        ; returns with A=$40
+
+    sta zpTYPE        ; set type to integer
+
     jsr STORE         ; Set current variable to IACC (zero)
 
 ; Next LOCAL item
@@ -4207,15 +4223,19 @@ LOCAL:
 LOCVAR:
     tsx
     inc $0106,X       ; Increment number of LOCAL items
+                      ; machine will crash with too many
+                      ; local variables and/or parameters
+
     ldy zpAECUR
-    sty zpCURSOR      ; Update line pointer
+    sty zpCURSOR      ; Update line pointer offset
     jsr SPACES        ; Get next character
     cmp #','
     beq LOCAL         ; Comma, loop back to do another item
+
     jmp SUNK          ; Jump to main execution loop
 
 LOCEND:
-    jmp DONEXT
+    jmp DONEXT        ; jump to main loop
 
 ; ----------------------------------------------------------------------------
 
@@ -4238,11 +4258,13 @@ LOCEND:
 
 ENDPR:
     tsx
-    cpx #$FC
-    bcs NOPROC      ; If stack empty, jump to give error
+    cpx #$FC        ; should be at least four bytes
+    bcs NOPROC      ; If stack empty, jump to print error
+
     lda $01FF
     cmp #tknPROC
-    bne NOPROC      ; If pushed token<>'PROC', give error
+    bne NOPROC      ; If pushed token != 'PROC', print error
+
     jmp DONE        ; Check end of statement and return to pop from subroutine
 
 NOPROC:
@@ -4280,12 +4302,16 @@ MODESX:
 
 ; GCOL numeric, numeric
 ; =====================
+
 GRAPH:
-    jsr ASEXPR
+    jsr ASEXPR         ; evaluate modifier
+
     lda zpIACC
-    pha                ; Evaluate integer
+    pha                ; save result on stack
+
     jsr INCMEX         ; Step past comma, evaluate integer
     jsr AEDONE         ; Update program pointer, check for end of statement
+
     lda #$12
     jsr OSWRCH         ; Send VDU 18 for GCOL
     jmp SENTWO         ; Jump to send two bytes to OSWRCH
@@ -4294,22 +4320,24 @@ GRAPH:
 
 ; COLOUR numeric
 ; ==============
+
 COLOUR:
     lda #$11
     pha                ; Stack VDU 17 for COLOUR
-    jsr ASEXPR
-    jsr DONE           ; Evaluate integer, check end of statement
+    jsr ASEXPR         ; evaluate integer expression
+    jsr DONE           ; check end of statement
     jmp SENTWO         ; Jump to send two bytes to OSWRCH
 
 ; ----------------------------------------------------------------------------
 
 ; MODE numeric
 ; ============
+
 MODES:
     lda #$16
     pha               ; Stack VDU 22 for MODE
-    jsr ASEXPR
-    jsr DONE          ; Evaluate integer, check end of statement
+    jsr ASEXPR        ; evaluate integer expression
+    jsr DONE          ; check end of statement
 
 ; BBC - Check if changing MODE will move screen into stack
 ; --------------------------------------------------------
@@ -4360,8 +4388,8 @@ MODEGO:
 SENTWO:
     pla
     jsr OSWRCH        ; Send stacked byte to OSWRCH
-    jsr WRIACC
-    jmp NXT           ; Send IACC to OSWRCH, jump to execution loop
+    jsr WRIACC        ; Print byte in IACC
+    jmp NXT           ; jump to execution loop
 
 ; ----------------------------------------------------------------------------
 
@@ -4387,16 +4415,17 @@ DRAWER:
 ; PLOT numeric, numeric, numeric
 ; ==============================
 PLOT:
-    jsr ASEXPR
+    jsr ASEXPR        ; evaluate integer expression
 
     lda zpIACC
-    pha               ; Evaluate integer
-    jsr COMEAT
-    jsr EXPR          ; Step past comma, evaluate expression
+    pha               ; save on stack
+
+    jsr COMEAT        ; eat comma
+    jsr EXPR          ; evaluate expression
 
 PLOTER:
     jsr INTEG         ; Confirm numeric and ensure is integer
-    jsr PHACC         ; Stack integer
+    jsr PHACC         ; Push IACC
     jsr INCMEX        ; Step past command and evaluate integer
     jsr AEDONE        ; Update program pointer, check for end of statement
 
@@ -4408,10 +4437,10 @@ PLOTER:
     jsr POPWRK        ; Pop integer to temporary store at $37/8
 
     lda zpWORK
-    jsr OSWRCH        ; Send first coordinate to OSWRCH
+    jsr OSWRCH        ; Send first coordinate to OSWRCH LSB
 
     lda zpWORK+1
-    jsr OSWRCH
+    jsr OSWRCH        ; MSB
 
     jsr WRIACC        ; Send IACC to OSWRCH, second coordinate
 
@@ -4430,6 +4459,7 @@ VDUP:
 
 ; VDU num[,][;][...]
 ; ==================
+
 VDU:
     jsr SPACES         ; Get next character
 
@@ -4438,14 +4468,14 @@ VDUL:
     beq VDUX           ; If end of statement, jump to exit
 
     cmp #$0D
-    beq VDUX
+    beq VDUX           ; exit if CR
 
     cmp #tknELSE
-    beq VDUX
+    beq VDUX           ; exit if ELSE token
 
     dec zpCURSOR       ; Step back to current character
-    jsr ASEXPR
-    jsr WRIACC         ; Evaluate integer and output low byte
+    jsr ASEXPR         ; evaluate integer expression
+    jsr WRIACC         ; and output low byte
     jsr SPACES         ; Get next character
 
     cmp #','
@@ -4478,12 +4508,14 @@ WRIACC:
 ; --------------------------
 ; On entry, (zpWORK)+1=>FN/PROC token (ie, first character of name)
 ;
+
 CREAFN:
     ldy #$01
     lda (zpWORK),Y      ; Get PROC/FN character
     ldy #$F6            ; Point to PROC list start
     cmp #tknPROC
     beq CREATF          ; If PROC, jump to scan list
+
     ldy #$F8
     bne CREATF          ; Point to FN list start and scan list
 
@@ -4492,8 +4524,8 @@ CREAFN:
 ; Look for a variable in the heap
 ; -------------------------------
 ; LOOKUP is given a base address-1 in WORK,WORK+1, length+1 in WORK+2
-; It returns with EQ set if it can't find the thing, else with
-; IACC,IACC+1 pointing to the data item and NEQ.
+; It returns with Z flag set if it can't find the thing, else with
+; IACC,IACC+1 pointing to the data item and Z cleared
 ;
 LOOKUP:
     ldy #$01
