@@ -1031,7 +1031,7 @@ SETL:                 ; set label
     beq ASSDED        ; badly formed
     bcs ASSDED        ; or string
 
-    jsr PHACC
+    jsr PHACC         ; push to AE stack
     jsr GETPC         ; put P% in IACC
 
     sta zpTYPE        ; A contains $40, type is integer
@@ -1644,7 +1644,7 @@ EQUS:
     pla
     sta zpBYTESM       ; restore OPT
 
-    jsr ASCUR
+    jsr ASCUR          ; move CURSOR to AECUR
 
     ldy #$FF           ; signal string with code length set to $ff
     bne EQUSX          ; exit
@@ -2159,6 +2159,9 @@ SPACES:
     lda (zpLINE),Y
     cmp #' '
     beq SPACES
+
+    ; return with zpCURSOR position in Y
+
 COMRTS:
     rts
 
@@ -3631,82 +3634,92 @@ STEPX:
 ; AUTO [numeric [, numeric ]]
 ; ===========================
 AUTO:
-    jsr GETTWO
-    lda zpIACC
+    jsr GETTWO      ; decode parameters
+
+    lda zpIACC      ; save interval on machine stack
     pha
-    jsr POPACC
+    jsr POPACC      ; get starting line number back
 
 AUTOLP:
-    jsr PHACC
-    jsr NPRN
+    jsr PHACC       ; save on AE stack
+    jsr NPRN        ; print IACC using field width of five characters
 
     lda #' '
-    jsr BUFF
-    jsr POPACC
-    jsr MATCH
-    jsr INSRT
-    jsr SETFSA
+    jsr BUFF        ; get line of text with ' ' as the prompt
 
-    pla
-    pha
+    jsr POPACC      ; pull lline number back
+    jsr MATCH       ; tokenise the line
+    jsr INSRT       ; insert the line into program
+    jsr SETFSA      ; clear variable area and stacks
+
+    pla             ; get interval back
+    pha             ; and save for next loop
     clc
-    adc zpIACC
+    adc zpIACC      ; add interval to current line number
     sta zpIACC
-    bcc AUTOLP
+    bcc AUTOLP      ; loop to next line number
+
     inc zpIACC+1
-    bpl AUTOLP
+    bpl AUTOLP      ; loop to next line number
+
+    ; fallthrough if line number becomes >= 32768
 
 ENDAUT:
-    jmp FSASET
+    jmp FSASET      ; jump to warm start
 
 ; ----------------------------------------------------------------------------
 
-; Code related to DIM
+; Code related to DIM, reserve space, and if necessary, create the
+; variable indicated and adjust VARTOP
 
 DIMSPR:
-    jmp DIMRAM
+    jmp DIMRAM      ; jump to 'DIM space' error message
 
 DIMSP:
     dec zpCURSOR
-    jsr CRAELV
-    beq NOTGO
-    bcs NOTGO
+    jsr CRAELV      ; get the name of the variable
+    beq NOTGO       ; give 'Bad DIM' error
+    bcs NOTGO       ; if name is a string or invalid
 
-    jsr PHACC
-    jsr INEXPR
-    jsr INCACC
+    jsr PHACC       ; save the address of the variable
+    jsr INEXPR      ; evaluate integer expression (number of bytes to reserve)
+    jsr INCACC      ; increment by 1 for "zeroth" elementh
 
     lda zpIACC+3
     ora zpIACC+2
-    bne NOTGO
+    bne NOTGO       ; 'Bad DIM' if attempting to reserve too much
 
     clc
-    lda zpIACC
-    adc zpFSA
-    tay
-    lda zpIACC+1
-    adc zpFSA+1
-    tax
-    cpy zpAESTKP
-    sbc zpAESTKP+1
-    bcs DIMSPR
+    lda zpIACC      ; add LSB of reserved size to
+    adc zpFSA       ; VARTOP's LSB
+    tay             ; save in Y
 
-    lda zpFSA
+    lda zpIACC+1    ; add MSB of reserved size to
+    adc zpFSA+1     ; VARTOP's MSB
+    tax             ; save in X
+
+    cpy zpAESTKP    ; compare
+    sbc zpAESTKP+1  ; with top of AE stack
+    bcs DIMSPR      ; if there's not enough space, error with 'DIM space'
+
+    lda zpFSA       ; save current VARTOP in IACC
     sta zpIACC
     lda zpFSA+1
     sta zpIACC+1
-    sty zpFSA
+
+    sty zpFSA       ; store new VARTOP values
     stx zpFSA+1
 
-    lda #$00
+    lda #$00        ; clear top 16-bits of 32-bit IACC
     sta zpIACC+2
     sta zpIACC+3
-    lda #$40
+
+    lda #$40        ; set type to integer
     sta zpTYPE
 
-    jsr STORE
-    jsr ASCUR
-    jmp DIMNXT
+    jsr STORE       ; assigne the variable
+    jsr ASCUR       ; move CURSOR to AECUR
+    jmp DIMNXT      ; join main DIM code
 
 NOTGO:
     brk
@@ -3721,163 +3734,182 @@ NOTGO:
 
 ; DIM numvar [numeric] [(arraydef)]
 ; =================================
+
 DIM:
-    jsr SPACES
-    tya
+    jsr SPACES      ; skip any spaces after DIM keyword
+
+    tya             ; get zpLINE offset (zpCURSOR) in A
+
     clc
-    adc zpLINE
-    ldx zpLINE+1
+    adc zpLINE      ; add offset to LINE pointer
+    ldx zpLINE+1    ; MSB in X
     bcc DIMNNO
 
-    inx
+    inx             ; handle carry overflow, final MSB in X
     clc
 
 DIMNNO:
-    sbc #$00
-    sta zpWORK
-    txa
-    sbc #$00
-    sta zpWORK+1
-    ldx #$05
-    stx zpWORK+8
-    ldx zpCURSOR
-    jsr WORD
+    sbc #$00        ; we arrive here with C=0, so subtract 1
+    sta zpWORK      ; store LSB in zpWORK
+    txa             ; MSB to A
+    sbc #$00        ; adjust for underflow
+    sta zpWORK+1    ; store MSB in zpWORK+1
 
-    cpy #$01
-    beq NOTGO
-    cmp #'('
-    beq DIMVAR
+    ldx #$05        ; we start of with sizeof each element = 5 = floating point
+    stx zpWORK+8
+
+    ldx zpCURSOR
+    jsr WORD        ; get the name of the array being defined
+
+    cpy #$01        ; if Y still points to the first position
+    beq NOTGO       ; jump to 'Bad DIM' error
+
+    cmp #'('        ; first character after variable name
+    beq DIMVAR      ; jump to dim floats
+
     cmp #'$'
-    beq DIMINT
+    beq DIMINT      ; jump to dim int or string
+
     cmp #'%'
-    bne DIMSPA
+    bne DIMSPA      ; not ints, no '(', jump to dim space
 
 DIMINT:
-    dec zpWORK+8
-    iny
+    dec zpWORK+8    ; decrement size of element to correspond to int and string
+    iny             ; point to character after '%' or '$'
     inx
     lda (zpWORK),Y
     cmp #'('
-    beq DIMVAR
+    beq DIMVAR      ; jump to dim variable
 
 DIMSPA:
     jmp DIMSP
 
 DIMVAR:
-    sty zpWORK+2
-    stx zpCURSOR
-    jsr LOOKUP
-    bne NOTGO       ; NE chain branch to NOTGO
+    sty zpWORK+2    ; save length of the name
+    stx zpCURSOR    ; set CURSOR to character after the name
+    jsr LOOKUP      ; find the address of the variable
+    bne NOTGO       ; error if variable is found (redimensioning not supported)
 
-    jsr CREATE
-    ldx #$01
-    jsr CREAX
+    jsr CREATE      ; create catalogue entry fo the array name
 
-    lda zpWORK+8
-    pha
-    lda #$01
-    pha
-    jsr SINSTK
+    ldx #$01        ; clear the single byte after the name, and make VARTOP
+    jsr CREAX       ; to point after the zero byte terminating the name
+
+    lda zpWORK+8    ; get number of bytes in each element
+    pha             ; save on machine stack
+    lda #$01        ; save the current offset into the subscript area
+    pha             ; on the machine stack
+
+    jsr SINSTK      ; set IACC to 1
 
 RDLOOP:
-    jsr PHACC
-    jsr ASEXPR
+    jsr PHACC       ; save IACC on BASIC stack
+    jsr ASEXPR      ; evaluate the expression giving the (next) dimension
 
-    lda zpIACC+1
+    lda zpIACC+1    ; check if subscript is greater than 16383
     and #$C0
     ora zpIACC+2
     ora zpIACC+3
-    bne NOTGO
+    bne NOTGO       ; if so, jump to error
 
-    jsr INCACC
+    jsr INCACC      ; increment IACC to allow for element zero
 
-    pla
+    pla             ; retrieve offset into subscript area
     tay
-    lda zpIACC
+    lda zpIACC      ; save size in subscript area, LSB
     sta (zpFSA),Y
     iny
-    lda zpIACC+1
+    lda zpIACC+1    ; idem, MSB
     sta (zpFSA),Y
     iny
 
-    tya
+    tya             ; save the pointer on the machine stack
     pha
-    jsr SMUL
-    jsr SPACES
+
+    jsr SMUL        ; 16-bit multiply top of AE stack with IACC
+
+    jsr SPACES      ; get the next character
 
     cmp #','
-    beq RDLOOP
-    cmp #')'
-    beq DIMGON
+    beq RDLOOP      ; go back for the next subscript if it's a comma
 
-    jmp NOTGO
+    cmp #')'
+    beq DIMGON      ; continue on closing bracket
+
+    jmp NOTGO       ; 'Bad DIM' error
 
 DIMGON:
-    pla
+    pla             ; offset into subscript storage area
     sta zpPRINTF
-    pla
+    pla             ; number of bytes per element
     sta zpWORK+8
-
     lda #$00
     sta zpWORK+9
-    jsr WMUL
+
+    jsr WMUL        ; IACC = zpWORK+8/9 * IACC, total number of bytes required
 
     ldy #$00
-    lda zpPRINTF
-    sta (zpFSA),Y
-    adc zpIACC
+    lda zpPRINTF    ; offset into subscript storage area
+    sta (zpFSA),Y   ; store immediately after the zero following the name
+    adc zpIACC      ; add this to the total number of bytes required
     sta zpIACC
     bcc NOHINC
 
     inc zpIACC+1
+
 NOHINC:
-    lda zpFSA+1
+    lda zpFSA+1     ; VARTOP to WORK
     sta zpWORK+1
     lda zpFSA
     sta zpWORK
-    clc
+
+    clc             ; add length of array to VARTOP
     adc zpIACC
     tay
     lda zpIACC+1
     adc zpFSA+1
-    bcs DIMRAM
+    bcs DIMRAM      ; jump to 'DIM space' error
 
-    tax
+    tax             ; compare with AE stack pointer
     cpy zpAESTKP
     sbc zpAESTKP+1
-    bcs DIMRAM
+    bcs DIMRAM      ; jump to 'DIM space' error
 
-    sty zpFSA
+    sty zpFSA       ; store new VARTOP value
     stx zpFSA+1
+
+    ; clear the just allocated area
+
     lda zpWORK
-    adc zpPRINTF
+    adc zpPRINTF    ; add offset to first element
     tay
-    lda #$00
+    lda #$00        ; A=0
     sta zpWORK
     bcc ZELOOP
 
     inc zpWORK+1
 
 ZELOOP:
-    sta (zpWORK),Y
+    sta (zpWORK),Y  ; A=0, clear
     iny
     bne ZELPA
     inc zpWORK+1
 
 ZELPA:
     cpy zpFSA
-    bne ZELOOP
+    bne ZELOOP      ; clear loop
     cpx zpWORK+1
-    bne ZELOOP
+    bne ZELOOP      ; clear until VARTOP is reached
 
 DIMNXT:
     jsr SPACES
     cmp #','
-    beq DIMJ
-    jmp SUNK
+    beq DIMJ        ; skip exit
+
+    jmp SUNK        ; exit
 
 DIMJ:
-    jmp DIM
+    jmp DIM         ; go back and get the next array
 
 DIMRAM:
     brk
@@ -3891,6 +3923,8 @@ DIMRAM:
     brk
 
 ; ----------------------------------------------------------------------------
+
+; Increment IACC by 1
 
 INCACC:
     inc zpIACC
@@ -3909,38 +3943,41 @@ INCDON:
 
 SMUL:
     ldx #zpWORK+8
-    jsr POPX
+    jsr POPX            ; pop 32-bit int from AE stack
+
+; multiply as 16-bit int with IACC as 16-bit int
 
 WMUL:
-    ldx #$00
-    ldy #$00
+    ldx #$00        ; X and Y are used as accumulators where the answer
+    ldy #$00        ; is built up. Clear on entry
 
 SMULA:
-    lsr zpWORK+9
+    lsr zpWORK+9    ; get least significant bit of multiplicand
     ror zpWORK+8
-    bcc SMULB
+    bcc SMULB       ; do not add the multiplier to the YX accu if clear
 
-    clc
+    clc             ; add multiplier (zpIACC) to YX accu
     tya
     adc zpIACC
     tay
     txa
     adc zpIACC+1
     tax
-    bcs SMULXE
+    bcs SMULXE      ; 'Bad DIM' error on overflow
 
 SMULB:
-    asl zpIACC
+    asl zpIACC      ; multiply multiplier by 2 (one left shift)
     rol zpIACC+1
-    lda zpWORK+8
+
+    lda zpWORK+8    ; check multiplicand
     ora zpWORK+9
-    bne SMULA
+    bne SMULA       ; continue until it's zero
 
     .if .hi(SMULA) != .hi(*)
         .error "ASSERT: SMUL loop crosses page"
     .endif
 
-    sty zpIACC
+    sty zpIACC      ; store final answer
     stx zpIACC+1
     rts
 
@@ -3956,7 +3993,7 @@ LHIMM:
 
     lda zpIACC
     sta zpHIMEM
-    sta zpAESTKP        ; Set HIMEM and STACK
+    sta zpAESTKP        ; Set HIMEM and AE STACK pointer
     lda zpIACC+1
     sta zpHIMEM+1
     sta zpAESTKP+1
@@ -3972,11 +4009,11 @@ LLOMM:
 
     lda zpIACC
     sta zpLOMEM
-    sta zpFSA          ; Set LOMEM and VAREND
+    sta zpFSA          ; Set LOMEM and VARTOP
     lda zpIACC+1
     sta zpLOMEM+1
     sta zpFSA+1
-    jsr SETVAL         ; Clear dynamic variables
+    jsr SETVAL         ; Clear the dynamic variables catalogue
 
     beq LPAGEX         ; branch always, jump to execution loop
 
@@ -4007,10 +4044,13 @@ CLEAR:
 TRACE:
     jsr SPTSTN
     bcs TRACNM         ; If line number, jump for TRACE linenum
+
     cmp #tknON
     beq TRACON         ; Jump for TRACE ON
+
     cmp #tknOFF
     beq TOFF           ; Jump for TRACE OFF
+
     jsr ASEXPR         ; Evaluate integer
 
 ; TRACE numeric
@@ -4668,8 +4708,12 @@ CREATX:
 
 ; ----------------------------------------------------------------------------
 
-; Check if variable name is valid
-; ===============================
+; Get an array name
+; Search for an array name starting at (zpWORK) + 1
+; On exit, (zpWORK),Y point to the first character that could not be
+; interpreted as part of the array name, and A contains this character.
+; X is incremented for each character that is scanned.
+
 WORD:
     ldy #$01
 
@@ -4695,9 +4739,12 @@ WORDNC:
 WORDNA:
     cmp #'_'
     bcs WORDNB
+
     cmp #'['
     bcc WORDNC
+
 WORDDN:
+    ; return value in C, C=0 is OK, C=1 is FAIL
     rts
 
 WORDNB:
