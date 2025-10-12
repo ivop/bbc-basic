@@ -462,7 +462,7 @@ TOKENS:
     dta 'AUTO'    , tknAUTO,        $10      ; 00010000
     dta 'BGET'    , tknBGET,        $01      ; 00000001
     dta 'BPUT'    , tknBPUT,        $03      ; 00000011
-    .if version == 2 || (version == 3 && minorversion == 10)
+    .if version == 2 || (version == 3 && minorversion >= 10)
         dta 'COLOUR', tknCOLOR,     $02      ; 00000010
     .elseif version == 3
         dta 'COLOR', tknCOLOR,      $02      ; 00000010
@@ -476,9 +476,9 @@ TOKENS:
     dta 'CLS'     , tknCLS,         $01      ; 00000001
     dta 'COS'     , tknCOS,         $00      ; 00000000
     dta 'COUNT'   , tknCOUNT,       $01      ; 00000001
-    .if version == 3 && minorversion != 10
+    .if version == 3 && minorversion < 10
         dta 'COLOUR', tknCOLOR,     $02      ; 00000010
-    .elseif version == 3 && minorversion == 10
+    .elseif version == 3 && minorversion >= 10
         dta 'COLOR', tknCOLOR,      $02      ; 00000010
     .endif
     dta 'DATA'    , tknDATA,        $20      ; 00100000
@@ -14399,7 +14399,7 @@ CHANNE:
         .if version == 2
             dta '2', '.', '0', '0'
         .elseif version == 3
-            .if minorversion != 10
+            .if minorversion < 10
                 dta '3'
             .else
                 dta '3', '.', '1'
