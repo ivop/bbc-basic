@@ -1810,14 +1810,14 @@ WORDCN:
 ; Check alphabet and _
 
 WORDCQ:
-    cmp #$7B
-    bcs WORDCN          ; fail >= 0x7b
+    cmp #'z'+1
+    bcs WORDCN      ; fail > 'z'
     cmp #'_'
-    bcs WORDCY          ; succeed >= '_'
+    bcs WORDCY      ; succeed >= '_' (0x60 pound sign, ASCII backtick allowed)
     cmp #'Z'+1
-    bcs WORDCN          ; fail > 'Z'
+    bcs WORDCN      ; fail > 'Z'
     cmp #'A'
-    bcs WORDCY          ; succeed >= 'A'
+    bcs WORDCY      ; succeed >= 'A'
 
 ; Check numeric
 
@@ -4760,41 +4760,43 @@ CREATX:
 ; X is incremented for each character that is scanned.
 
 WORD:
-    ldy #$01
+    ldy #$01        ; point to first character of name
 
 WORDLP:
     lda (zpWORK),Y
     cmp #'0'
-    bcc WORDDN
+    bcc WORDDN      ; exit if < '0'
 
     cmp #'@'
-    bcs WORDNA
+    bcs WORDNA      ; continue if  >= '@'
 
-    cmp #':'
-    bcs WORDDN
+    cmp #'9'+1
+    bcs WORDDN      ; exit if > '9'
+
+    ; it's a number
 
     cpy #$01
-    beq WORDDN
+    beq WORDDN      ; exit if it's the first character
 
 WORDNC:
     inx
-    iny
-    bne WORDLP
+    iny             ; point to next character
+    bne WORDLP      ; and loop
 
 WORDNA:
     cmp #'_'
-    bcs WORDNB
+    bcs WORDNB      ; jump if >= '_' (0x60, pound sign, ASCII backtick allowed)
 
-    cmp #'['
-    bcc WORDNC
+    cmp #'Z'+1
+    bcc WORDNC      ; continue if <= 'Z'
 
 WORDDN:
     ; return value in C, C=0 is OK, C=1 is FAIL
     rts
 
 WORDNB:
-    cmp #$7B
-    bcc WORDNC
+    cmp #'z'+1
+    bcc WORDNC      ; continue if <= 'z'
     rts
 
 ; ----------------------------------------------------------------------------
