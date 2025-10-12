@@ -4516,7 +4516,7 @@ CREAFN:
     cmp #tknPROC
     beq CREATF          ; If PROC, jump to scan list
 
-    ldy #$F8
+    ldy #$F8            ; cataloge offset for functions
     bne CREATF          ; Point to FN list start and scan list
 
 ; ----------------------------------------------------------------------------
@@ -4527,6 +4527,9 @@ CREAFN:
 ; It returns with Z flag set if it can't find the thing, else with
 ; IACC,IACC+1 pointing to the data item and Z cleared
 ;
+; The routine uses two slightly different search routines, which are used
+; alternately. This is done to reduce the amount of swapping of pointers
+
 LOOKUP:
     ldy #$01
     lda (zpWORK),Y      ; Get first character of variable
@@ -4543,9 +4546,9 @@ CREATF:
 
 CREATLP:
     lda zpWORK+4
-    beq CREAEOLST         ; End of list
+    beq CREAEOLST         ; End of list reached
 
-    ldy #$00
+    ldy #$00              ; store link address of the next entry in zpWORK+5/6
     lda (zpWORK+3),Y
     sta zpWORK+5
 
@@ -4554,34 +4557,34 @@ CREATLP:
     sta zpWORK+6
 
     iny
-    lda (zpWORK+3),Y
-    bne CREATG         ; Jump if not null name
+    lda (zpWORK+3),Y       ; get first character of name
+    bne CREATG             ; Jump if not null name
 
     dey
-    cpy zpWORK+2
-    bne CREATH
+    cpy zpWORK+2           ; compare length
+    bne CREATH             ; no match, continue with next entry
 
     iny
-    bcs CREATI
+    bcs CREATI             ; branch always, carry is set by cpy before
 
 CREATL:
     iny
-    lda (zpWORK+3),Y
-    beq CREATH
+    lda (zpWORK+3),Y       ; next character from the catalogue entry
+    beq CREATH             ; jump if zero marking end is found
 
 CREATG:
-    cmp (zpWORK),Y
-    bne CREATH
+    cmp (zpWORK),Y         ; compare with name being sought
+    bne CREATH             ; jump if no match
 
     cpy zpWORK+2
-    bne CREATL
+    bne CREATL             ; end of sought variable name has not been reached
 
     iny
-    lda (zpWORK+3),Y
-    bne CREATH
+    lda (zpWORK+3),Y       ; next character from the catalogue entry
+    bne CREATH             ; jump if not end yet
 
 CREATI:
-    tya
+    tya                    ; make IACC point to the zero byte after the name
     adc zpWORK+3
     sta zpIACC
     lda zpWORK+4
@@ -4593,9 +4596,9 @@ CREAEOLST:
 
 CREATH:
     lda zpWORK+6
-    beq CREAEOLST
+    beq CREAEOLST           ; no more entries for the same initial letter
 
-    ldy #$00
+    ldy #$00                ; get new link bytes from the new catalogue entry
     lda (zpWORK+5),Y
     sta zpWORK+3
 
@@ -4604,34 +4607,34 @@ CREATH:
     sta zpWORK+4
 
     iny
-    lda (zpWORK+5),Y
-    bne CREATK
+    lda (zpWORK+5),Y        ; next character from catalogue entry
+    bne CREATK              ; jump if not zero marking the end of the name
 
     dey
-    cpy zpWORK+2
-    bne CREATLP
+    cpy zpWORK+2            ; check against length of sought variable
+    bne CREATLP             ; jump if not the same
 
-    iny
-    bcs CREATM
+    iny                     ; point to zero after the name
+    bcs CREATM              ; carry always set, jump to exit
 
 CREATJ:
     iny
-    lda (zpWORK+5),Y
-    beq CREATLP
+    lda (zpWORK+5),Y        ; get next information block character
+    beq CREATLP             ; move to the next block if the character is zero
 
 CREATK:
-    cmp (zpWORK),Y
-    bne CREATLP
+    cmp (zpWORK),Y          ; check against character of sought variable
+    bne CREATLP             ; jump if no match
 
     cpy zpWORK+2
-    bne CREATJ
+    bne CREATJ              ; end of sought variable name has not been reached
 
     iny
     lda (zpWORK+5),Y
-    bne CREATLP
+    bne CREATLP             ; jump to next info block if not zero marking
 
 CREATM:
-    tya
+    tya                     ; make IACC point to the zero byte after the name
     adc zpWORK+5
     sta zpIACC
     lda zpWORK+6
@@ -4643,10 +4646,10 @@ LOOKFN:
     ldy #$01
     lda (zpWORK),Y
     tax
-    lda #$F6
+    lda #$F6                ; catalogue offset for procedures
     cpx #tknPROC
     beq LOOKMN
-    lda #$F8
+    lda #$F8                ; catalogue offset for functions
     bne LOOKMN
 
 ; ----------------------------------------------------------------------------
@@ -4656,44 +4659,47 @@ LOOKFN:
 
 CREATE:
     ldy #$01
-    lda (zpWORK),Y
-    asl
+    lda (zpWORK),Y      ; get the first letter of the variable
+    asl                 ; multiply by 2
 
 LOOKMN:
-    sta zpWORK+3
+    sta zpWORK+3        ; use it to create pointer into variable catalogue
     lda #>VARL
     sta zpWORK+4
 
 LOOPLB:
-    lda (zpWORK+3),Y
-    beq LOOKK
+    lda (zpWORK+3),Y    ; get MSB of linked list
+    beq LOOKK           ; jump if at the end of list sharing the same inital
+                        ; letter as the one being created
 
-    tax
+    tax                 ; save MSB in X
     dey
-    lda (zpWORK+3),Y
-    sta zpWORK+3
+    lda (zpWORK+3),Y    ; get LSB of linked list item
+    sta zpWORK+3        ; store as new pointer
     stx zpWORK+4
     iny
-    bpl LOOPLB
+    bpl LOOPLB          ; loop until we reach the end of the linked list
 
 LOOKK:
-    lda zpFSA+1
+    lda zpFSA+1         ; use VARTOP as location for new entry
     sta (zpWORK+3),Y
     lda zpFSA
     dey
     sta (zpWORK+3),Y
-    tya
+
+    tya                 ; A=Y=0
     iny
-    sta (zpFSA),Y
-    cpy zpWORK+2
-    beq CREATX
+    sta (zpFSA),Y       ; save zero as the MSB, indicating end of list
+    cpy zpWORK+2        ; compare length
+    beq CREATX          ; exit if the name has only one letter
 
 LOOPRA:
     iny
-    lda (zpWORK),Y
+    lda (zpWORK),Y      ; copy next character
     sta (zpFSA),Y
     cpy zpWORK+2
-    bne LOOPRA
+    bne LOOPRA          ; loop until end of the name has been reached
+
     rts
 
 ; ----------------------------------------------------------------------------
@@ -4706,35 +4712,42 @@ CREAX:
     lda #$00
 CREZER:
     iny
-    sta (zpFSA),Y
+    sta (zpFSA),Y       ; clear
     dex
     bne CREZER
 
 FSAPY:
-    sec
+    sec                 ; set carry to add +1
     tya
-    adc zpFSA
+    adc zpFSA           ; add Y+1 to VARTOP (LSB), keep in A
     bcc CREATY
 
-    inc zpFSA+1
+    inc zpFSA+1         ; adjust MSB, never restored on 'No room' error?
 
 CREATY:
     ldy zpFSA+1
-    cpy zpAESTKP+1
-    bcc CREATZ
-    bne CREATD
+    cpy zpAESTKP+1      ; compare against AE stack pointer
+    bcc CREATZ          ; VARTOP MSB is lower, ok, exit
+    bne CREATD          ; skip LSB check if MSB is different
 
-    cmp zpAESTKP
-    bcc CREATZ
+    cmp zpAESTKP        ; check VARTOP LSB against AE stack pointer
+    bcc CREATZ          ; jump to exit if lower
 
 CREATD:
-    lda #$00
+    lda #$00            ; zero MSB of link byte to stop block from existing
     ldy #$01
     sta (zpWORK+3),Y
-    jmp ALLOCR
+
+                        ; BUG? MSB of VARTOP is not decremented if it was
+                        ; increased before the test.
+                        ; Possible fix: pair inc zpFSA+1 with inx,
+                        ; here: dex:bne .skip:dec zpFSA+1:.skip
+
+    jmp ALLOCR          ; 'No room' error
 
 CREATZ:
-    sta zpFSA
+    sta zpFSA           ; store LSB of VARTOP
+
 CREATX:
     rts
 
