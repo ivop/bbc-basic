@@ -4802,51 +4802,62 @@ WORDNB:
 ; ----------------------------------------------------------------------------
 
 CRAELT:
-    jsr CREAX
+    jsr CREAX       ; clear the variable
+
+; Get a variable, creating it if needed
 
 CRAELV:
-    jsr AELV
-    bne LVRTS
-    bcs LVRTS
+    jsr AELV        ; search for the variable name
+    bne LVRTS       ; exit if variable exists
+    bcs LVRTS       ; exit if variable is invalid
 
-    jsr CREATE
+    jsr CREATE      ; create the variable
 
-    ldx #$05
+    ldx #$05        ; for ints and strings
     cpx zpIACC+2
-    bne CRAELT
-    inx
-    bne CRAELT
+    bne CRAELT      ; clear
+    inx             ; for floats
+    bne CRAELT      ; jump always, clear
 
 LVFD:
     cmp #'!'
-    beq UNPLIN
-    cmp #'$'
-    beq DOLL
-    eor #'?'
-    beq UNIND
+    beq UNPLIN      ; unary '!'
 
-    lda #$00
+    cmp #'$'
+    beq DOLL        ; $<address>
+
+    eor #'?'
+    beq UNIND       ; unary '?'
+
+    lda #$00        ; variable not found, invalid
     sec
 
 LVRTS:
     rts
 
+; Unary '!'
+
 UNPLIN:
-    lda #$04
+    lda #$04        ; four bytes
+
+; Unary '?'
+
 UNIND:
-    pha
-    inc zpAECUR
-    jsr INTFAC
-    jmp INSET
+    pha             ; save number of bytes
+    inc zpAECUR     ; move cursor past '!' or '?'
+    jsr INTFAC      ; get integer expression
+    jmp INSET       ; join the code that deals with binary operators
+
+; $<address>
 
 DOLL:
-    inc zpAECUR
-    jsr INTFAC
+    inc zpAECUR     ; move cursor past '$'
+    jsr INTFAC      ; get integer expression
 
     lda zpIACC+1
-    beq DOLLER
+    beq DOLLER      ; error if < 256
 
-    lda #$80
+    lda #$80        ; string
     sta zpIACC+2
     sec
     rts
@@ -4861,22 +4872,39 @@ DOLLER:
     .endif
     brk
 
+; Copy LINE pointer to AE pointer, and skip spaces before searching for
+; a variable name
+
 AELV:
     lda zpLINE
     sta zpAELINE
     lda zpLINE+1
     sta zpAELINE+1
     ldy zpCURSOR
-    dey
+    dey             ; one position back to allow for loop to start with iny
 
 LVBLNK:
     iny
 
 LVBLNKplus1:
-    sty zpAECUR
+    sty zpAECUR         ; save AE offset
     lda (zpAELINE),Y
     cmp #' '
-    beq LVBLNK
+    beq LVBLNK          ; loop to skip spaces
+
+; enter here to search for a variable. A contains the first character
+; of the alleged variable. This routine is optimized towards identifying
+; resident integer variables as fast as it can.
+; On exit, the address of the value of the variable is stored in IACC.
+; If Z is set, the variable does not exist.
+; If C is set, the variable is invalid
+; If Z is clear, a valid, defined variable was found, and the carry flag
+; will be set if the variable is a string variable
+;
+; Z=0, C=0 --> a defined numeric variable was found
+; Z=0, C=1 --> a defined string variable was found
+; Z=1, C=0 --> a valid but undefined variable was found
+; Z=1, C=1 --> an invalid variable was found
 
 LVCONT:
     cmp #'@'
@@ -4884,29 +4912,33 @@ LVCONT:
                     ; this test also removes numeric first characters
 
     cmp #'['
-    bcs MULTI
+    bcs MULTI       ; jump if >=
 
+    ; upper case letter
+
+    asl             ; multiply by four, makes it an index into VARL page
     asl
-    asl
-    sta zpIACC
+    sta zpIACC      ; store as LSB
     lda #>VARL
-    sta zpIACC+1
+    sta zpIACC+1    ; store MSB
+
     iny
     lda (zpAELINE),Y
     iny
     cmp #'%'
-    bne MULTI
+    bne MULTI       ; jump if next character is not '%'
 
-    ldx #$04
+    ldx #$04        ; integer type/size
     stx zpIACC+2
     lda (zpAELINE),Y
     cmp #'('
-    bne CHKQUE
+    bne CHKQUE      ; jump if not '('
 
 MULTI:
-    ldx #$05
+    ldx #$05        ; set type/size to float
     stx zpIACC+2
-    lda zpAECUR
+
+    lda zpAECUR     ; add offset to AELINE, result in XA
     clc
     adc zpAELINE
     ldx zpAELINE+1
@@ -4914,76 +4946,82 @@ MULTI:
 
     inx
     clc
+
 BKTVNO:
-    sbc #$00
-    sta zpWORK
+    sbc #$00        ; subtract 1 and save as WORK pointer
+    sta zpWORK      ; pointing one position before the first character
     bcs BKTVNP
 
     dex
+
 BKTVNP:
-    stx zpWORK+1
-    ldx zpAECUR
-    ldy #$01
+    stx zpWORK+1    ; MSB of pointer
+
+    ldx zpAECUR     ; keep track of offset
+    ldy #$01        ; offset to WORK pointer, start at 1
 
 BKTVD:
     lda (zpWORK),Y
     cmp #'A'
-    bcs BKTVA
+    bcs BKTVA       ; jump if >= 'A'
 
     cmp #'0'
-    bcc BKTVE
+    bcc BKTVE       ; jump if < '0'
 
     cmp #'9'+1
-    bcs BKTVE
+    bcs BKTVE       ; jump if > '9'
 
     inx
     iny
-    bne BKTVD
+    bne BKTVD       ; loop and get the next character
 
 BKTVA:
     cmp #'Z'+1
-    bcs BKTVDD
+    bcs BKTVDD      ; jump if > 'Z'
+
     inx
     iny
-    bne BKTVD
+    bne BKTVD       ; loop and get the next character
 
 BKTVDD:
     cmp #'_'
-    bcc BKTVE
+    bcc BKTVE       ; jump if < '_'
 
     cmp #'z'+1
-    bcs BKTVE
+    bcs BKTVE       ; jump if > 'z'
 
     inx
     iny
-    bne BKTVD
+    bne BKTVD       ; loop and get the next character
 
 BKTVE:
     dey
-    beq BKTVFL
+    beq BKTVFL      ; if Y is still 1, no character was valid, error
 
     cmp #'$'
-    beq LVSTR
+    beq LVSTR       ; jump if it's a string
 
     cmp #'%'
-    bne BKTVF
+    bne BKTVF       ; jump if it's not an integer but a float
 
-    dec zpIACC+2
-    iny
-    inx
-    iny
+    ; it's an integer
+
+    dec zpIACC+2    ; decrement 5 to 4
+    iny             ; compensate for dey at BKTVE
+    inx             ; next character
+    iny             ; next character
     lda (zpWORK),Y
-    dey
+    dey             ; Y must be maintained at 1 position to the left
 
 BKTVF:
-    sty zpWORK+2
+    sty zpWORK+2    ; save the length of the name
     cmp #'('
-    beq BKTVAR
+    beq BKTVAR      ; jump if we have an array
 
-    jsr LOOKUP
-    beq BKTVFC
+    jsr LOOKUP      ; find address of the variable
+    beq BKTVFC      ; exit with Z=1,C=0 if the variable is undefined
 
-    stx zpAECUR
+    stx zpAECUR     ; update AELINE offset
 
 CHKPLI:
     ldy zpAECUR
@@ -4991,46 +5029,51 @@ CHKPLI:
 
 CHKQUE:
     cmp #'!'
-    beq BIPLIN
+    beq BIPLIN      ; jump to binary '!'
 
     cmp #'?'
-    beq BIQUER
+    beq BIQUER      ; jump to binary '?'
 
-    clc
-    sty zpAECUR
-    lda #$FF
+    clc             ; indicate numeric, C=0
+    sty zpAECUR     ; update cursor position
+    lda #$FF        ; indicate valid, Z=0
     rts
 
 BKTVFL:
-    lda #$00
-    sec
+    lda #$00    ; Z=1
+    sec         ; C=1
     rts
 
 BKTVFC:
-    lda #$00
-    clc
+    lda #$00    ; Z=1
+    clc         ; C=0
     rts
+
+; Binary '?'
 
 BIQUER:
     lda #$00
-    beq BIPLIN+2    ; skip lda #4
+    beq BIPLIN+2    ; skip lda #4 (could save byte with dta 0x2c (BIT abs))
+
+; Binary '!'
 
 BIPLIN:
-    lda #$04
-    pha
+    lda #$04        ; set type to 4
+    pha             ; save on stack
     iny
-    sty zpAECUR
+    sty zpAECUR     ; increment past '?' or '!' and store cursor
 
-    jsr VARIND
-    jsr INTEGB
+    jsr VARIND      ; get the value of the variable scanned so far
+    jsr INTEGB      ; make sure it's an integer
 
-    lda zpIACC+1
+    lda zpIACC+1    ; save address on stack
     pha
     lda zpIACC
     pha
-    jsr INTFAC
 
-    clc
+    jsr INTFAC      ; get the integer operand following '?' or '!'
+
+    clc             ; add the address on the stack to the value of the operand
     pla
     adc zpIACC
     sta zpIACC
@@ -5039,45 +5082,55 @@ BIPLIN:
     sta zpIACC+1
 
 INSET:
-    pla
+    pla             ; restore type from stack
     sta zpIACC+2
-    clc
-    lda #$FF
+    clc             ; C=0
+    lda #$FF        ; Z=0
     rts
+
+    ; Prepare for array
 
 BKTVAR:
-    inx
+    inx             ; increment past the '('
     inc zpWORK+2
-    jsr ARRAY
-    jmp CHKPLI
+
+    jsr ARRAY       ; deal with the array
+
+    jmp CHKPLI      ; check for indirection operators, tail call
+
+    ; String
 
 LVSTR:
-    inx
+    inx             ; increment past the '$' at the end of the name
     iny
-    sty zpWORK+2
-    iny
-    dec zpIACC+2
+    sty zpWORK+2    ; save the length of the name
+    iny             ; point to next character
+    dec zpIACC+2    ; decrement type to 4
     lda (zpWORK),Y
     cmp #'('
-    beq LVSTRA
+    beq LVSTRA      ; jump if string array
 
-    jsr LOOKUP
-    beq BKTVFC
+    jsr LOOKUP      ; find the address of the variable
+    beq BKTVFC      ; error if undefined
 
-    stx zpAECUR
-    lda #$81
+    stx zpAECUR     ; update AE offset
+    lda #$81        ; set type to $81, and Z=0
     sta zpIACC+2
-    sec
+    sec             ; C=1
     rts
 
+    ; String array
+
 LVSTRA:
-    inx
+    inx             ; increment past '('
     sty zpWORK+2
-    dec zpIACC+2
-    jsr ARRAY
-    lda #$81
+    dec zpIACC+2    ; decrement type to 3
+
+    jsr ARRAY       ; handle array
+
+    lda #$81        ; set type to $81, and Z=0
     sta zpIACC+2
-    sec
+    sec             ; C=1
     rts
 
 UNARRY:
@@ -5090,12 +5143,15 @@ UNARRY:
     .endif
     brk
 
-ARRAY:
-    jsr LOOKUP
-    beq UNARRY
+    ; Array
 
-    stx zpAECUR
-    lda zpIACC+2
+ARRAY:
+    jsr LOOKUP      ; find address of the variable
+    beq UNARRY      ; error if not found
+
+    stx zpAECUR     ; update AE offset
+
+    lda zpIACC+2    ; save type and address of the base of the array
     pha
     lda zpIACC
     pha
@@ -5103,74 +5159,79 @@ ARRAY:
     pha
 
     ldy #$00
-    lda (zpIACC),Y
+    lda (zpIACC),Y  ; get number of elements of the array (stored as 2n+1)
     cmp #$04
-    bcc AQUICK
+    bcc AQUICK      ; jump if array is one dimensional
 
     tya
-    jsr SINSTK
-    lda #$01
+    jsr SINSTK      ; zero IACC
+
+    lda #$01        ; save the pointer to the current subscript index
     sta zpIACC+3
 
 ARLOP:
-    jsr PHACC
-    jsr INEXPR
+    jsr PHACC       ; save IACC on BASIC stack
+    jsr INEXPR      ; evaluate next array index
     inc zpAECUR
     cpx #','
-    bne UNARRY
+    bne UNARRY      ; error if no ',' is present
 
     ldx #zpWORK+2
-    jsr POPX
+    jsr POPX        ; pop IACC to zpWORK+2 onwards
 
-    ldy zpWORK+5
-    pla
+    ldy zpWORK+5    ; get offset of current index
+
+    pla             ; retrieve base address of the array to zpWORK
     sta zpWORK+1
     pla
     sta zpWORK
-    pha
+
+    pha             ; and stack it again
     lda zpWORK+1
     pha
 
-    jsr TSTRNG
+    jsr TSTRNG      ; check current index against its limit
 
-    sty zpIACC+3
-    lda (zpWORK),Y
+    sty zpIACC+3    ; save pointer to current element
+
+    lda (zpWORK),Y  ; save next subscript limit
     sta zpWORK+8
     iny
     lda (zpWORK),Y
     sta zpWORK+9
-    lda zpIACC
-    adc zpWORK+2
+
+    lda zpIACC      ; add preset subscript to total subscript
+    adc zpWORK+2    ; (subscript into array as if it was one long array)
     sta zpIACC
     lda zpIACC+1
     adc zpWORK+3
     sta zpIACC+1
 
-    jsr WMUL
+    jsr WMUL        ; multiply subscript bye the next subscript limit
 
     ldy #$00
     sec
-    lda (zpWORK),Y
-    sbc zpIACC+3
+    lda (zpWORK),Y  ; get offset of the last subscript
+    sbc zpIACC+3    ; subtract offset of the current subscript
     cmp #$03
-    bcs ARLOP
+    bcs ARLOP       ; continue if more than one subscript is left
 
-    jsr PHACC
-    jsr BRA
-    jsr INTEGB
+    jsr PHACC       ; save IACC
+    jsr BRA         ; get expression and check for right hand bracket
+    jsr INTEGB      ; ensure expression is integer
 
-    pla
+    pla             ; get base address of array
     sta zpWORK+1
     pla
     sta zpWORK
 
     ldx #zpWORK+2
-    jsr POPX
+    jsr POPX        ; POP to zpWORK+2 onwards
 
-    ldy zpWORK+5
-    jsr TSTRNG
+    ldy zpWORK+5    ; get the offset of the current subscript
+    jsr TSTRNG      ; check against limit
 
-    clc
+    clc             ; add new subscript to toal subscript
     lda zpWORK+2
     adc zpIACC
     sta zpIACC
@@ -5179,36 +5240,45 @@ ARLOP:
     sta zpIACC+1
     bcc ARFOUR
 
-AQUICK:
-    jsr BRA
-    jsr INTEGB
+    ; single dimension arrays
 
-    pla
+AQUICK:
+    jsr BRA         ; get expression and check for ')'
+    jsr INTEGB      ; ensure it's integer
+
+    pla             ; retrieve base address of the array
     sta zpWORK+1
     pla
     sta zpWORK
+
     ldy #$01
-    jsr TSTRNG
+    jsr TSTRNG      ; check subscript limit
 
 ARFOUR:
-    pla
-    sta zpIACC+2
-    cmp #$05
-    bne ARFO
+    pla             ; get type of array
+    sta zpIACC+2    ; and save it
 
-    ldx zpIACC+1
+    cmp #$05
+    bne ARFO        ; jump if it's not a floating point array
+
+    ; multiply total subscript by 5
+
+    ldx zpIACC+1    ; save MSB in X so we can add it later
+
     lda zpIACC
-    asl zpIACC
+    asl zpIACC      ; *2
     rol zpIACC+1
-    asl zpIACC
+    asl zpIACC      ; *2 (total is *4)
     rol zpIACC+1
-    adc zpIACC
+
+    adc zpIACC      ; add original
     sta zpIACC
     txa
     adc zpIACC+1
-    sta zpIACC+1
-    bcc ARFI
+    sta zpIACC+1    ; total is 4n+n = 5n
+    bcc ARFI        ; skip code for integer and string arrays
 
+    ; multiply total subscript by 4 for integer and string arrays
 ARFO:
     asl zpIACC
     rol zpIACC+1
@@ -5216,37 +5286,40 @@ ARFO:
     rol zpIACC+1
 
 ARFI:
-    tya
+    tya             ; add length of the preamble
     adc zpIACC
     sta zpIACC
     bcc NNINC
 
     inc zpIACC+1
     clc
+
 NNINC:
-    lda zpWORK
+    lda zpWORK      ; add base addres to get the actual address of the element
     adc zpIACC
     sta zpIACC
     lda zpWORK+1
     adc zpIACC+1
-    sta zpIACC+1
+    sta zpIACC+1    ; result in IACC
     rts
 
+; check the array subscript
+
 TSTRNG:
-    lda zpIACC+1
+    lda zpIACC+1    ; ensure subscript is less than 16384
     and #$C0
     ora zpIACC+2
     ora zpIACC+3
-    bne SUBSCP
+    bne SUBSCP      ; error if it's not
 
-    lda zpIACC
+    lda zpIACC      ; check against the limit
     cmp (zpWORK),Y
     iny
     lda zpIACC+1
     sbc (zpWORK),Y
-    bcs SUBSCP
+    bcs SUBSCP      ; error if it's too big
 
-    iny
+    iny             ; return with Y past limit
     rts
 
 SUBSCP:
@@ -5261,6 +5334,8 @@ SUBSCP:
 
 ; ----------------------------------------------------------------------------
 
+; Line number routines
+
 SPTSTM:
     inc zpCURSOR
 
@@ -5268,10 +5343,11 @@ SPTSTN:
     ldy zpCURSOR
     lda (zpLINE),Y
     cmp #' '
-    beq SPTSTM
+    beq SPTSTM          ; loop to skip spaces
 
     cmp #tknCONST
-    bne FDA
+    bne FDA             ; exit if not CONST token
+
 
 ; Decode line number constant. bit 0-14 are encoded as:
 ;
@@ -5299,19 +5375,26 @@ SPGETN:
     sta zpIACC+1    ; and store as high byte of IACC
     iny
     sty zpCURSOR    ; update cursor position
-    sec
+    sec             ; indicate line number was found
     rts
 
 FDA:
-    clc
+    clc             ; indicate line number was not found
     rts
 
+; ----------------------------------------------------------------------------
+
+; Note: copying LINE to AELINE is replicated several times, and could
+;       be made a subroutine
+
+; Check for '=', evaluate Arithmetic Expression, check for end of statement
+
 AEEQEX:
-    lda zpLINE
+    lda zpLINE      ; copy LINE pointer to AELINE pointer
     sta zpAELINE
     lda zpLINE+1
     sta zpAELINE+1
-    lda zpCURSOR
+    lda zpCURSOR    ; and its offset
     sta zpAECUR
 
 EQEXPR:
@@ -5319,10 +5402,10 @@ EQEXPR:
     inc zpAECUR
     lda (zpAELINE),Y
     cmp #' '
-    beq EQEXPR
+    beq EQEXPR      ; loop to skip spaces
 
     cmp #'='
-    beq EXPRDN
+    beq EXPRDN      ; jump to evaluate expression, else fallthrough to error
 
 EQERRO:
     brk
@@ -5369,22 +5452,24 @@ DOBRK:
     brk
 
 EQEAT:
-    jsr AESPAC
+    jsr AESPAC      ; skip spaces and get next character
     cmp #'='
-    bne EQERRO
+    bne EQERRO      ; error if not '='
     rts
 
 EXPRDN:
-    jsr EXPR
+    jsr EXPR        ; evaluate the expression
 
 FDONE:
     txa
     ldy zpAECUR
-    jmp DONET
+    jmp DONET       ; check for end of statement, tail call
 
 AEDONE:
     ldy zpAECUR
     jmp DONE_WITH_Y
+
+; ----------------------------------------------------------------------------
 
 ; Check for end of statement, check for Escape
 ; ============================================
@@ -5411,20 +5496,22 @@ DONET:
     bne STDED          ; Not 'ELSE', jump to 'Syntax error'
 
 ; Update program pointer
-; ----------------------
+
 CLYADP:
     clc
     tya
     adc zpLINE
     sta zpLINE         ; Update program pointer in zpLINE
     bcc SECUR
+
     inc zpLINE+1
+
 SECUR:
     ldy #$01
     sty zpCURSOR
 
 ; Check background Escape state
-; -----------------------------
+
 TSTBRK:
 
 ; Atom - check keyboard matrix
@@ -5458,6 +5545,8 @@ TSTBRK:
 
 SECEND:
     rts
+
+; ----------------------------------------------------------------------------
 
 FORR:
     jsr DONE
