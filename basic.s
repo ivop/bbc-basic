@@ -8,7 +8,7 @@
 ; Based on source reconstruction and commentary © 2018 J.G. Harston
 ; https://mdfs.net/Software/BBCBasic/BBC/
 ;
-; BBC BASIC Copyright © 1982/1983 Acorn Computer and Roger Wilson
+; BBC BASIC Copyright © 1982/1983 Acorn Computer and Sophie Wilson
 ;
 ; References used:
 ;   Advanced BASIC ROM USer Guide
@@ -8188,7 +8188,7 @@ FFIXG:
 ; Here I have overflow
 
 FFIXV:
-    jmp FOVR
+    jmp FOVR        ; 'Too big' error message
 
 ; ----------------------------------------------------------------------------
 
@@ -8248,31 +8248,37 @@ FFRAC:
     jmp FTST        ; exit, set flags, if FACC's integer part is zero
 
 FFRACA:
-    jsr FFIX
-    lda zpFACCMD
-    sta zpFQUAD
-    jsr FMWTOA
+    jsr FFIX        ; fix FACC
 
-    lda #$80
+    lda zpFACCMD    ; get least significant integer part
+    sta zpFQUAD
+
+    jsr FMWTOA      ; copy FWRK to FACC
+
+    lda #$80        ; set exponent to $80, "bicemal" at the start of the number
     sta zpFACCX
     ldx zpFACCMA
-    bpl FNEARN      ; fraction part < 0.5
+    bpl FNEARN      ; exit if fractional part < 0.5
 
     eor zpFACCS
-    sta zpFACCS     ; change sign of fraction part
-    bpl FNEARQ
+    sta zpFACCS     ; change sign of fractional part
+    bpl FNEARQ      ; if it's now positive, round down
 
-    inc zpFQUAD
-    jmp FNEARR
+    inc zpFQUAD     ; round upwards
+    jmp FNEARR      ; skip next instruction (could be BIT to save 2 bytes)
 
 FNEARQ:
-    dec zpFQUAD
+    dec zpFQUAD     ; round integral part downwards
 
 FNEARR:
-    jsr FINEG       ; achieves fract = 1 - fract
+    jsr FINEG       ; Negate FACC
 
 FNEARN:
-    jmp FNRM
+    jmp FNRM        ; normalise and exit, tail call
+
+; ----------------------------------------------------------------------------
+
+; Increment FACC mantissa
 
 FINC:
     inc zpFACCMD
@@ -8285,25 +8291,35 @@ FINC:
     bne FNEARZ
 
     inc zpFACCMA
-    beq FFIXV       ; overflow
+    beq FFIXV       ; overflow, 'Too big' error message
 
 FNEARZ:
     rts
 
+; ----------------------------------------------------------------------------
+
+; Decrement FACC mantissa
+
 FNEARP:
-    jsr FINEG
-    jsr FINC
-    jmp FINEG
+    jsr FINEG   ; negate
+    jsr FINC    ; increment
+    jmp FINEG   ; negate, tail call
 
 ; ----------------------------------------------------------------------------
 
+; Subtraction, FACC = FACC - (ARGP)
+
 FSUB:
-    jsr FXSUB
-    jmp FNEG
+    jsr FXSUB   ; FACC = (ARGP) - FACC
+    jmp FNEG    ; negate, and exit, tail call
+
+; Exchange FACC and (ARGP)
 
 FSWOP:
-    jsr FLDW
-    jsr FSTA
+    jsr FLDW        ; load FWRK from (ARGP)
+    jsr FSTA        ; save FACC to (ARGP)
+
+    ; copy FWRK sign and exponent to FACC
 
 FWTOA:
     lda zpFWRKS
@@ -8312,6 +8328,8 @@ FWTOA:
     sta zpFACCXH
     lda zpFWRKX
     sta zpFACCX
+
+    ; copy FWRK mantissa to FACC
 
 FMWTOA:
     lda zpFWRKMA
@@ -8324,47 +8342,60 @@ FMWTOA:
     sta zpFACCMD
     lda zpFWRKMG
     sta zpFACCMG
+
 FADDZ:
     rts
 
+; ----------------------------------------------------------------------------
+
+; FACC = (ARGP) - FACC
+
 FXSUB:
-    jsr FNEG
+    jsr FNEG    ; negate FACC
+
+    ; fallthrough
+
+; FACC = (ARGP) + FACC
 
 FADD:
-    jsr FLDW
-    beq FADDZ       ; A+0.0=A
+    jsr FLDW        ; load FWRK from (ARGP)
+    beq FADDZ       ; A + 0.0 = A, answer is already in FACC
 
 FADDW:
-    jsr FADDW1
-    jmp FTIDY
+    jsr FADDW1      ; do the addition
+    jmp FTIDY       ; tidy up and exit, tail call
 
 FADDW1:
-    jsr FTST        ; see if adding to 0
-    beq FWTOA       ; load with FWRK
+    jsr FTST        ; see if FACC is 0
+    beq FWTOA       ; if so, load FACC with FWRK
 
     ; Here I have non-trivial add
 
-    ldy #$00
+    ldy #$00        ; Y=0 so we can zero memory locations with sty
+
     sec
     lda zpFACCX
-    sbc zpFWRKX
-    beq FADDA
-    bcc FADDB       ; X(FACC) < X(FWRK)
+    sbc zpFWRKX     ; subtract FWRK exponent from FACC exponent
+    beq FADDA       ; if zero, no shifts are needed
+    bcc FADDB       ; jump if X(FACC) < X(FWRK) (FACC needs shifting)
+
+                    ; FWRK needs shifting
 
     cmp #$25
-    bcs FADDZ       ; shift too large for significance
+    bcs FADDZ       ; jump if shift too large for significance
+                    ; basically, FACC + FWRK = FACC
 
-    pha
-    and #$38
-    beq FADDCA
+    pha             ; save the difference
+    and #$38        ; find out number of bytes to shift (bottom 3 bits ignored)
+    beq FADDCA      ; jump if no bytes need to be moved
 
+    lsr             ; divide by 8
     lsr
     lsr
-    lsr
-    tax
+    tax             ; transfer to X as loop counter
 
 FADDCB:
-    lda zpFWRKMD
+    lda zpFWRKMD    ; shift whole FWRK mantissa one byte to the right (>>8)
     sta zpFWRKMG
     lda zpFWRKMC
     sta zpFWRKMD
@@ -8372,47 +8403,50 @@ FADDCB:
     sta zpFWRKMC
     lda zpFWRKMA
     sta zpFWRKMB
-    sty zpFWRKMA
+    sty zpFWRKMA    ; zero to top byte
     dex
-    bne FADDCB
+    bne FADDCB      ; loop X number of times
 
 FADDCA:
-    pla
-    and #$07
-    beq FADDA
+    pla             ; retreive the difference
+    and #$07        ; keep bottom 3 bits (0-7 bits to shift)
+    beq FADDA       ; jump if zero shifts are needed
 
-    tax
+    tax             ; transer to X as loop counter again
 
 FADDC:
-    lsr zpFWRKMA
+    lsr zpFWRKMA    ; shift mantissa of FWRK right (>>1)
     ror zpFWRKMB
     ror zpFWRKMC
     ror zpFWRKMD
     ror zpFWRKMG
     dex
-    bne FADDC
-    beq FADDA       ; alligned
+    bne FADDC       ; loop for indicated number of bits
+    beq FADDA       ; alligned, skip shifting FACC, branch always
+
+; --------------------------------------
 
 FADDB:
     sec
     lda zpFWRKX
-    sbc zpFACCX     ; amounto to shift FACC
+    sbc zpFACCX     ; amount to shift FACC
     cmp #$25
-    bcs FWTOA       ; FACC not significant
+    bcs FWTOA       ; jump if FACC not significant
+                    ; basically FACC + FWRK = FWRK
 
 ; Now shift FACC right
 
-    pha
-    and #$38
-    beq FADDDA
+    pha             ; save difference on the stack
+    and #$38        ; same as for FWRK, ignore bottom 3 bits
+    beq FADDDA      ; jump if zero byte shifts are to be done
 
+    lsr             ; divide by 8
     lsr
     lsr
-    lsr
-    tax
+    tax             ; into X for loop counter
 
 FADDDB:
-    lda zpFACCMD
+    lda zpFACCMD    ; shift mantissa of FACC one byte to the right (>>8)
     sta zpFACCMG
     lda zpFACCMC
     sta zpFACCMD
@@ -8420,36 +8454,36 @@ FADDDB:
     sta zpFACCMC
     lda zpFACCMA
     sta zpFACCMB
-    sty zpFACCMA
+    sty zpFACCMA    ; zero in top byte
     dex
-    bne FADDDB
+    bne FADDDB      ; loop for X number of bytes
 
 FADDDA:
-    pla
-    and #$07
-    beq FADDAL
+    pla             ; retrieve difference from stack
+    and #$07        ; check bottom 3 bits
+    beq FADDAL      ; jump if no more shifts are needed
 
-    tax
+    tax             ; loop counter again
 
 FADDD:
-    lsr zpFACCMA
+    lsr zpFACCMA    ; shift FACC mantissa to the right (>>1)
     ror zpFACCMB
     ror zpFACCMC
     ror zpFACCMD
     ror zpFACCMG
     dex
-    bne FADDD
+    bne FADDD       ; loop for required number of shifts
 
 FADDAL:
-    lda zpFWRKX
-    sta zpFACCX
+    lda zpFWRKX     ; copy FWRK exponent
+    sta zpFACCX     ; to FACC exponent
 
 FADDA:
-    lda zpFACCS
+    lda zpFACCS     ; eor the signs of the two number
     eor zpFWRKS
-    bpl FADDE       ; both same sign
+    bpl FADDE       ; jump if both same sign
 
-    lda zpFACCMA
+    lda zpFACCMA    ; compare mantissas
     cmp zpFWRKMA
     bne FADDF
 
@@ -8469,10 +8503,12 @@ FADDA:
     cmp zpFWRKMG
     bne FADDF
 
-    jmp FCLR        ; FACC=FWRK in difference case
+    jmp FCLR        ; mantissas are the same mgnitude, the result is zero, tail
 
 FADDF:
-    bcs FADDG       ; abs(FACC) > abs(FWRK)
+    bcs FADDG       ; jump if abs(FACC) > abs(FWRK)
+
+    ; calculate FAACCM = FWRKM - FACCM
 
     sec
     lda zpFWRKMG
@@ -8490,13 +8526,16 @@ FADDF:
     lda zpFWRKMA
     sbc zpFACCMA
     sta zpFACCMA
-    lda zpFWRKS
+    lda zpFWRKS     ; use the sign of FWRK as the sign of the result
     sta zpFACCS
-    jmp FNRM
+
+    jmp FNRM        ; normalise, and exit, tail call
 
 FADDE:
-    clc
-    jmp FPLWF       ; add FWRK to FACC
+    clc             ; numbers are of the same sign,
+    jmp FPLWF       ; so add FWRK to FACC, and exit, tail call
+
+    ; calculate FACCM = FACCM - FWRKM
 
 FADDG:
     sec
@@ -8515,56 +8554,64 @@ FADDG:
     lda zpFACCMA
     sbc zpFWRKMA
     sta zpFACCMA
-    jmp FNRM
+
+    jmp FNRM        ; normalise and exit, tail call
 
 ; ----------------------------------------------------------------------------
 
 FMULZ:
     rts
 
+; Multiply, FACC = FACC * (ARGP)
+
 IFMUL:
-    jsr FTST
-    beq FMULZ       ; 0.0 * something
-    jsr FLDW        ; get other arg
-    bne FMULA       ; non-zero, so real work
-    jmp FCLR
+    jsr FTST        ; check if FACC is zero
+    beq FMULZ       ; exit if it is
+
+    jsr FLDW        ; unpack (ARGP) to FWRK
+    bne FMULA       ; jump if non-zero, so real work
+
+    jmp FCLR        ; FWRK is zero, so clear FACC, and exit, tail call
+
+; Multiply, FACC = FACC * FWRK, both non-zero
 
 FMULA:
     clc
     lda zpFACCX
     adc zpFWRKX     ; add exponents
-    bcc FMULB
+    bcc FMULB       ; skip next if no overflow occurred
 
-    inc zpFACCXH
+    inc zpFACCXH    ; increment overflow flag
 
     ; Subtract $80 bias from exponent, do not check over/underflow yet
     ; in case renormalisation fixes things
 
     clc
+
 FMULB:
     sbc #$7F        ; carry subtracts extra 1
-    sta zpFACCX
-    bcs FMULC
+    sta zpFACCX     ; save as exponent of the result
+    bcs FMULC       ; skip next if no underflow occurred
 
-    dec zpFACCXH
+    dec zpFACCXH    ; decrement over/underflow flag
 
 ; Copy FACC to FTMP, clear FACC then I can do FACC:=FWRK*FTMP
-; as a fixed point operation.
+; as a fixed point operation. FTMP is mantissa only.
 
 FMULC:
     ldx #$05
     ldy #$00        ; to preset FACC to 0.0
 
 FMULD:
-    lda zpFACCMA-1,X
-    sta zpFTMPMA-1,X
-    sty zpFACCMA-1,X
+    lda zpFACCMA-1,X    ; copy mantissa of FACC
+    sta zpFTMPMA-1,X    ; to FTMP
+    sty zpFACCMA-1,X    ; and clear FACC
     dex
     bne FMULD
 
     lda zpFACCS
     eor zpFWRKS
-    sta zpFACCS      ; get sign right
+    sta zpFACCS     ; get sign right
 
 ; Now for 1:32 do {
 ;   IF MSB(FTMP)=1 FACC:=FACC+FWRK
@@ -8572,41 +8619,51 @@ FMULD:
 ;   FWRK:=FWRK>>1 }
 
     ldy #$20
+
 FMULE:
-    lsr zpFWRKMA
+    lsr zpFWRKMA    ; shift FWRK mantissa one bit to the right
     ror zpFWRKMB
     ror zpFWRKMC
     ror zpFWRKMD
     ror zpFWRKMG
-    asl zpFTMPMD    ; FTMPG cannot affect answer
+
+                    ; FTMPG cannot affect answer
+
+    asl zpFTMPMD    ; shift FTMP mantissa one bit to the left
     rol zpFTMPMC
     rol zpFTMPMB
     rol zpFTMPMA
-    bcc FMULF
+    bcc FMULF       ; skip addition if carry did not 'fall out'
 
     clc
-    jsr FPLW
+    jsr FPLW        ; add FWRK to FACC
 
 FMULF:
     dey
-    bne FMULE
+    bne FMULE       ; loop until Y=0
+
     rts
 
+; --------------------------------------
+
+; FACC = FACC * (ARGP), and check overflow
+
 FMUL:
-    jsr IFMUL
+    jsr IFMUL       ; do the multiplication
 
 NRMTDY:
-    jsr FNRM
+    jsr FNRM        ; normalise the result
 
 FTIDY:
     lda zpFACCMG
     cmp #$80
-    bcc FTRNDZ
+    bcc FTRNDZ      ; rounding byte < $80, jump to round to zero
     beq FTRNDA
 
     lda #$FF
-    jsr FPLNF
-    jmp FTRNDZ
+    jsr FPLNF       ; add 0.$ff to mantissa of FACC
+
+    jmp FTRNDZ      ; exit via round to zero (sets rounding byte to zero)
 
 FOVR:
     brk
@@ -8619,16 +8676,21 @@ FOVR:
     brk
 
 FTRNDA:
-    lda zpFACCMD
+    lda zpFACCMD    ; set least significant bit of the mantissa
     ora #$01
-    sta zpFACCMD
+    sta zpFACCMD    ; as a partial rounding operation
 
 FTRNDZ:
-    lda #$00
+    lda #$00        ; set mantissa rounding byte to zero
     sta zpFACCMG
+
     lda zpFACCXH
-    beq FTIDYZ
-    bpl FOVR
+    beq FTIDYZ      ; exit if over/underflow byte is zero
+    bpl FOVR        ; 'Too big' error message if overflow
+
+    ; otherwise, fallthrough to zero FACC
+
+; ----------------------------------------------------------------------------
 
 ; Clear FACC
 
@@ -8648,35 +8710,39 @@ FTIDYZ:
 
 ; ----------------------------------------------------------------------------
 
+; Set FACC to 1.000
+
 FONE:
-    jsr FCLR
+    jsr FCLR        ; clear FACC
     ldy #$80
-    sty zpFACCMA
+    sty zpFACCMA    ; set mantissa to $80000000
     iny
-    sty zpFACCX
+    sty zpFACCX     ; and exponent to $81
     tya
-    rts                 ; always return with !Z
+    rts             ; always return with !Z
 
 ; ----------------------------------------------------------------------------
 
-; 1/X
+; FACC = 1.0 / FACC
 
 FRECIP:
-    jsr STARGA
-    jsr FONE
-    bne FDIV           ; branch always, FONE returns with !Z
+    jsr STARGA      ; save FACC at workspace temporary FWSA, also sets ARGP
+    jsr FONE        ; set FACC to 1.0
+    bne FDIV        ; divide, branch always, FONE returns !Z
 
 ; ----------------------------------------------------------------------------
 
+; FACC = (ARGP) / FACC
+
 FXDIV:
-    jsr FTST
-    beq FDIVZ
+    jsr FTST        ; test FACC
+    beq FDIVZ       ; if zero, divide by zero error
 
-    jsr FTOW
-    jsr FLDA
-    bne FDIVA
+    jsr FTOW        ; copy FACC to FWRK
+    jsr FLDA        ; load FACC from (ARGP)
+    bne FDIVA       ; if not zero, jump to divide
 
-    rts             ; result is zero
+    rts             ; 0/x is always zero
 
 FDIVZ:
     jmp ZDIVOR      ; Divide by zero error
