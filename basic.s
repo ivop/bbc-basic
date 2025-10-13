@@ -2756,7 +2756,7 @@ STORSY:
     ldy #$03
 STORSW:
     sta (zpWORK),Y      ; save in string information block
-    jmp POPSTX          ; discard top of stack
+    jmp POPSTX          ; discard string on top of stack
 
     ; strings at fixed address
 
@@ -5548,132 +5548,159 @@ SECEND:
 
 ; ----------------------------------------------------------------------------
 
+; Move to the next statement
+;
+; This routine advances zpLINE to point to the start of the next statement,
+; moving to the next line if necessary.
+
 FORR:
-    jsr DONE
+    jsr DONE        ; check for end of statement
     dey
-    lda (zpLINE),Y
+    lda (zpLINE),Y  ; get character that caused end of statement
     cmp #':'
-    beq SECEND
+    beq SECEND      ; exit if it was a colon
 
     lda zpLINE+1
     cmp #>BUFFER
-    beq LEAVER
+    beq LEAVER      ; leave if statement came from BUFFER (immediate mode)
 
 LINO:
     iny
     lda (zpLINE),Y
-    bmi LEAVER
+    bmi LEAVER      ; leave if end of program is reached
 
     lda zpTRFLAG
-    beq NOTR
+    beq NOTR        ; jump if TRACE is turned off
 
-    tya
+    tya             ; save current offset on the stack
     pha
+
     iny
-    lda (zpLINE),Y
+    lda (zpLINE),Y  ; get LSB of line number and save on stack
     pha
+
     dey
-    lda (zpLINE),Y
-    tay
-    pla
+    lda (zpLINE),Y  ; get MSB of line number
+    tay             ; into Y
 
-    jsr AYACC
-    jsr TRJOBA
+    pla             ; retrieve LSB in A again
 
-    pla
+    jsr AYACC       ; put YA in IACC
+    jsr TRJOBA      ; print TRACE info if required
+
+    pla             ; restore offset from the stack
     tay
 
 NOTR:
     iny
-    sec
+    sec             ; C=1, add one more
     tya
     adc zpLINE
-    sta zpLINE
+    sta zpLINE      ; save addjusted LINE
     bcc LINOIN
 
     inc zpLINE+1
+
 LINOIN:
-    ldy #$01
+    ldy #$01        ; set offset to 1
     sty zpCURSOR
 
 NOTRDE:
     rts
 
 LEAVER:
-    jmp CLRSTK
+    jmp CLRSTK      ; jump to immediate mode
+
+; ----------------------------------------------------------------------------
 
 ; IF numeric
 ; ==========
+;
+; First evaluate expression. If the result is zero, the remainder of the line
+; is scanned for ELSE. If it is found, the statements following are executed.
+; If noy, control passes to the next line.
+; If the expression is non-zero, the statements after the word THEN are
+; executed.
+; The complicating factors are the possible ommission of the word THEN and the
+; possible presence of a line number after either THEN or ELSE, as in:
+;   IF A=2 THEN 320
+
 IFE:
-    jmp LETM
+    jmp LETM        ; 'Type mismatch' error
 
 IF:
-    jsr AEEXPR
-    beq IFE
-    bpl IFX
+    jsr AEEXPR      ; evaluate the expression
+    beq IFE         ; Type mismatch if expression is a string
+    bpl IFX         ; skip conversion to int if it's already an int
 
-    jsr IFIX
+    jsr IFIX        ; convert FACC to IACC
+
 IFX:
     ldy zpAECUR
-    sty zpCURSOR
-    lda zpIACC
+    sty zpCURSOR    ; update cursor past Arithmetic Expression
+
+    lda zpIACC      ; check if IACC is zero
     ora zpIACC+1
     ora zpIACC+2
     ora zpIACC+3
-    beq ELSE
+    beq ELSE        ; if so, jump to scan for ELSE
 
     cpx #tknTHEN
-    beq THEN
+    beq THEN        ; handle THEN token
 
 THENST:
-    jmp STMT
+    jmp STMT        ; start executing statement(s)
 
 THEN:
-    inc zpCURSOR
+    inc zpCURSOR    ; increment past THEN token
 
 THENLN:
-    jsr SPTSTN
-    bcc THENST
-    jsr GOTGO
-    jsr SECUR
-    jmp GODONE
+    jsr SPTSTN      ; check for line number token
+    bcc THENST      ; jump to start executing statements if not a line number
+
+    jsr GOTGO       ; check that line number exists
+    jsr SECUR       ; make zpLINE point directly after the line number
+    jmp GODONE      ; join GOTO code
 
 ELSE:
-    ldy zpCURSOR        ; try to find else clause
+    ldy zpCURSOR    ; try to find else clause
 
 ELSELP:
     lda (zpLINE),Y
     cmp #$0D
-    beq ENDED
+    beq ENDED       ; exit if end of line
 
-    iny
+    iny             ; increment to next character
     cmp #tknELSE
-    bne ELSELP
+    bne ELSELP      ; loop until ELSE or EOL is found
 
-    sty zpCURSOR
-    beq THENLN
+    sty zpCURSOR    ; save cursor position
+    beq THENLN      ; branch always (Z by cmp #tknELSE), join THEN code
 
 ENDED:
-    jmp ENDEDL
+    jmp ENDEDL      ; jump to skip everything after ELSE
+
+; TRACE output if required
 
 TRJOBA:
     lda zpIACC
     cmp zpTRNUM
     lda zpIACC+1
     sbc zpTRNUM+1
-    bcs NOTRDE
+    bcs NOTRDE      ; return if current line number is greater than limit
 
     lda #'['
     jsr CHOUT
-    jsr POSITE
+    jsr POSITE      ; print the line number
     lda #']'
     jsr CHOUT
     jmp LISTPT
 
 ; ----------------------------------------------------------------------------
 
-; Print 16-bit decimal number
-; ===========================
+; Print IACC as a 16-bit decimal number
+; =====================================
+
 POSITE:
     lda #$00          ; No padding
     beq NPRN+2        ; skip lda #5
@@ -5685,7 +5712,7 @@ NPRN:
 
 NUMLOP:
     lda #$00
-    sta zpWORK+8,X
+    sta zpWORK+8,X   ; zero current digit
     sec
 
 NUMLP:
@@ -5703,22 +5730,27 @@ NUMLP:
 
 OUTNUM:
     dex
-    bpl NUMLOP
+    bpl NUMLOP        ; loop until all digits are done
 
     ldx #$05
+
 LZB:
     dex
-    beq LASTZ
-    lda zpWORK+8,X
-    beq LZB
+    beq LASTZ         ; reached end of number
+
+    lda zpWORK+8,X    ; get current digit
+    beq LZB           ; continue if it's zero
 
 LASTZ:
-    stx zpWORK
+    stx zpWORK      ; index of first non-zero digit, or last digit if IACC=0
+
     lda zpPRINTS
-    beq PLUME
+    beq PLUME       ; skip leading spaces if field width is 0
 
     sbc zpWORK      ; carry clear
     beq PLUME
+
+    ; print required number of spaces
 
     .if version < 3
         tay
@@ -5732,12 +5764,14 @@ LISTPLLP:
         ldx zpWORK
     .endif
 
+    ; print digits
+
 PLUME:
     lda zpWORK+8,X
-    ora #$30
+    ora #'0'        ; add ASCII offset
     jsr CHOUT
     dex
-    bpl PLUME
+    bpl PLUME       ; loop until all digits are printed
 
     rts
 
@@ -5750,46 +5784,50 @@ VALL:
 ; ----------------------------------------------------------------------------
 
 ; Line Search, find line number in IACC
+; On exit, C=1 means line does not exist, C=0 if it does, and zpWORK+6/7
+; points to one less than the address of the text of the line
+
 FNDLNO:
-    ldy #$00
+    ldy #$00            ; LSB always zero
     sty zpWORK+6
     lda zpTXTP
-    sta zpWORK+7
+    sta zpWORK+7        ; set WORK+6/7 to PAGE
 
 SIGHT:
     ldy #$01
-    lda (zpWORK+6),Y
-    cmp zpIACC+1
-    bcs LOOK
+    lda (zpWORK+6),Y    ; get MSB of line number
+    cmp zpIACC+1        ; compare against MSB being sought
+    bcs LOOK            ; jump of >=
 
 LOOKR:
     ldy #$03
-    lda (zpWORK+6),Y
-    adc zpWORK+6
+    lda (zpWORK+6),Y    ; get length of current line
+    adc zpWORK+6        ; add to pointer
     sta zpWORK+6
-    bcc SIGHT
+    bcc SIGHT           ; and continue search
 
-    inc zpWORK+7
-    bcs SIGHT
+    inc zpWORK+7        ; adjust MSB of pointer
+    bcs SIGHT           ; and continue search
 
 LOOK:
-    bne PAST
+    bne PAST            ; not equal, exit with C=1
 
     ldy #$02
-    lda (zpWORK+6),Y
-    cmp zpIACC
-    bcc LOOKR
-    bne PAST
+    lda (zpWORK+6),Y    ; get LSB of line number
+    cmp zpIACC          ; compare against what's being sought
+    bcc LOOKR           ; continue search if it being too small
+    bne PAST            ; not equal, exit with C=1
 
-    tya
-    adc zpWORK+6
-    sta zpWORK+6
+    tya                 ; Y=A=2
+    adc zpWORK+6        ; add 3 because C is always set here
+    sta zpWORK+6        ; store
     bcc PAST
 
-    inc zpWORK+7
-    clc
+    inc zpWORK+7        ; possibly increment MSB of pointer
+    clc                 ; indicate line number exists
+
 PAST:
-    ldy #$02
+    ldy #$02            ; return with Y=2
     rts
 
 ; ----------------------------------------------------------------------------
@@ -5813,29 +5851,35 @@ VALM:
 ; ----------------------------------------------------------------------------
 
 ; Divide top of stack by IACC
+;
+; This routine does integer division. It's used by both MOD and DIV.
 
 DIVOP:              ; divide with remainder
     tay
-    jsr INTEGB
+    jsr INTEGB      ; ensure dividend is an integer
+
     lda zpIACC+3
-    pha
-    jsr ABSCOM
-    jsr PHPOW
+    pha             ; save byte with sign on stack
+
+    jsr ABSCOM      ; take absolute value of IACC
+    jsr PHPOW       ; push dividend and get another operand
 
     stx zpTYPE
     tay
-    jsr INTEGB
+    jsr INTEGB      ; ensure divisor is an integer
 
-    pla
+    pla             ; get sign byte back
     sta zpWORK+1
-    eor zpIACC+3
-    sta zpWORK
-    jsr ABSCOM
+
+    eor zpIACC+3    ; eor with sign of divisor
+    sta zpWORK      ; and store
+
+    jsr ABSCOM      ; take the absolute value of the divisor
 
     ldx #zpWORK+2
     jsr POPX        ; pop from stack into zpWORK+2 ... zpWORK+5
 
-    sty zpWORK+6    ; clear dword
+    sty zpWORK+6    ; clear next dword in zpWORK space
     sty zpWORK+7
     sty zpWORK+8
     sty zpWORK+9
@@ -5846,57 +5890,60 @@ DIVOP:              ; divide with remainder
     ora zpIACC+2
     beq ZDIVOR      ; Divide by 0 error
 
-    ldy #$20
+    ldy #32         ; number of iterations
 
 DIVJUS:
     dey
-    beq DIVRET
-    asl zpWORK+2
+    beq DIVRET      ; exit if enough iterations have taken place
+
+    asl zpWORK+2    ; shift the dividend left
     rol zpWORK+3
     rol zpWORK+4
     rol zpWORK+5
-    bpl DIVJUS
+    bpl DIVJUS      ; repeat until most significant bit is 1
 
 DIVER:
-    rol zpWORK+2
+    rol zpWORK+2    ; shift dividend left...
     rol zpWORK+3
     rol zpWORK+4
     rol zpWORK+5
-    rol zpWORK+6
+    rol zpWORK+6    ; and shift bit into the accumulator
     rol zpWORK+7
     rol zpWORK+8
     rol zpWORK+9
 
-    sec
+    sec             ; subtract the divisor from IACC and stack result (LSB)
     lda zpWORK+6
     sbc zpIACC
     pha
 
-    lda zpWORK+7
+    lda zpWORK+7    ; same for the next byte
     sbc zpIACC+1
     pha
 
-    lda zpWORK+8
+    lda zpWORK+8    ; same for the third byte, but keep in X
     sbc zpIACC+2
     tax
 
-    lda zpWORK+9
+    lda zpWORK+9    ; and finally the MSB
     sbc zpIACC+3
-    bcc NOSUB
+    bcc NOSUB       ; if the subtraction did not 'go', discard the result
 
-    sta zpWORK+9
+    sta zpWORK+9    ; store it in out work Accu
     stx zpWORK+8
-    pla
+    pla             ; pull saved bytes from stack
     sta zpWORK+7
     pla
     sta zpWORK+6
-    bcs NOSUB+2         ; skip pla, pla
+
+    bcs NOSUB+2     ; skip pla, pla
 
 NOSUB:
+    pla             ; discard our two bytes saved
     pla
-    pla
+
     dey
-    bne DIVER
+    bne DIVER       ; continue the loop
 
 ; Later BASICs have this check, disabled for now because it fails for
 ; Atom and System targets...
@@ -5909,49 +5956,59 @@ DIVRET:
 
 ; ----------------------------------------------------------------------------
 
+; FCOMPS is called when a comparison is attempted where the first operand
+; is an integer and the second is a floating point. On entry, the integer
+; is on the stack and the floating point value is in FACC.
+
 FCOMPS:
     stx zpTYPE
-    jsr POPACC
-    jsr PHFACC
-    jsr IFLT
-    jsr FTOW
-    jsr POPSET
-    jsr FLDA
-    jmp FCMPA
+
+    jsr POPACC      ; pop integer from stack into IACC
+    jsr PHFACC      ; push FACC
+
+    jsr IFLT        ; convert integer to float
+    jsr FTOW        ; copy to FWRK
+    jsr POPSET      ; discard FP on stack, but have zpARGP point to it
+    jsr FLDA        ; then unpack from (zpARGP) to FACC
+    jmp FCMPA       ; jump to main floating point comparison routine
+
+; Floating point comparison
 
 FCOMPR:
-    jsr PHFACC
-    jsr ADDER
+    jsr PHFACC      ; save first operand on stack
+    jsr ADDER       ; get second operand via 'level 4' parser
     stx zpTYPE
     tay
-    jsr FLOATI
-    jsr POPSET
+    jsr FLOATI      ; ensure it's a float
+    jsr POPSET      ; discard FP on stack, but have zpARGP point to it
 
 FCMP:
-    jsr FLDW
+    jsr FLDW        ; load to FWRK via ARGP
 
 ; Compare FACC with FWRK
-; ----------------------
+
 FCMPA:
     ldx zpTYPE
     ldy #$00
-    lda zpFWRKS
+
+    lda zpFWRKS     ; isolate sign of FWRK
     and #$80
     sta zpFWRKS
-    lda zpFACCS
+
+    lda zpFACCS     ; isolate sign of FACC
     and #$80
-    cmp zpFWRKS
-    bne FCMPZ
+    cmp zpFWRKS     ; compare signs
+    bne FCMPZ       ; not equal, exit
 
-    lda zpFWRKX
+    lda zpFWRKX     ; compare exponents
     cmp zpFACCX
-    bne FCMPZZ
+    bne FCMPZZ      ; not equal, exit with proper flags
 
-    lda zpFWRKMA
+    lda zpFWRKMA    ; compare first mantissa
     cmp zpFACCMA
-    bne FCMPZZ
+    bne FCMPZZ      ; not equal, exit with proper flags
 
-    lda zpFWRKMB
+    lda zpFWRKMB    ; etc...
     cmp zpFACCMB
     bne FCMPZZ
 
@@ -5967,10 +6024,10 @@ FCMPZ:
     rts
 
 FCMPZZ:
-    ror
-    eor zpFWRKS
-    rol
-    lda #$01
+    ror             ; clear top bit of A
+    eor zpFWRKS     ; eor with sign
+    rol             ; shift sign bit to C
+    lda #$01        ; make suer Z=0
     rts
 
 COMPRE:
@@ -5978,6 +6035,12 @@ COMPRE:
 
 ; Evaluate next expression and compare with previous
 ; --------------------------------------------------
+; On exit:
+;   A=B     Z=1
+;   A<>B    Z=0
+;   A>B     C=1 and Z=0
+;   A<B     C=0
+
 COMPR:
     txa
 
@@ -5985,36 +6048,43 @@ COMPRP1:
     beq STNCMP        ; Jump if current is string
     bmi FCOMPR        ; Jump if current is float
 
+; Integer comparison
+
     jsr PHACC         ; Stack integer
-    jsr ADDER
-    tay               ; Evaluate next expression
+    jsr ADDER         ; evaluate second operand expression
+    tay               ; examine type
     beq COMPRE        ; Error if string
-    bmi FCOMPS        ; Float, jump to compare floats
+    bmi FCOMPS        ; Float, jump to compare int to float
 
 ; Compare IACC with top of stack
-; ------------------------------
-    lda zpIACC+3
-    eor #$80
-    sta zpIACC+3
-    sec
-    ldy #$00
+
+    lda zpIACC+3      ; flip sign bit of IACC ; this is to avoid the problem
+    eor #$80          ; where a negative number will be interpreted as being
+    sta zpIACC+3      ; bigger than any positive number by SBC and CMP below
+
+    sec               ; prepare for subtraction
+
+    ldy #$00          ; subtract byte for byte with top of AE stack
     lda (zpAESTKP),Y
     sbc zpIACC
     sta zpIACC
+
     iny
     lda (zpAESTKP),Y
     sbc zpIACC+1
     sta zpIACC+1
+
     iny
     lda (zpAESTKP),Y
     sbc zpIACC+2
     sta zpIACC+2
+
     iny
     lda (zpAESTKP),Y
     ldy #$00
-    eor #$80
+    eor #$80          ; flip sign of top of stack int, too
     sbc zpIACC+3
-    ora zpIACC
+    ora zpIACC        ; check rest of result for zero
     ora zpIACC+1
     ora zpIACC+2
 
@@ -6026,64 +6096,75 @@ COMPRP1:
     bcc COMPRX
 
     inc zpAESTKP+1
+
 COMPRX:
     plp                   ; restore flags
     rts
 
 ; Compare string with next expression
 ; -----------------------------------
+
 STNCMP:
-    jsr PHSTR
-    jsr ADDER
+    jsr PHSTR       ; push first string to the stack
+    jsr ADDER       ; evaluate next expression
 
-    tay
-    bne COMPRE
+    tay             ; set flags on A
+    bne COMPRE      ; 'Type mismatch' if not a string
 
-    stx zpWORK
+                    ; Y=A=0
+
+    stx zpWORK      ; save the next character
+
     ldx zpCLEN
+
     .if version < 3 || (version == 3 && minorversion < 10)
-        ldy #$00
+        ldy #$00        ; see above, Y is already zero
     .endif
-    lda (zpAESTKP),Y
-    sta zpWORK+2
-    cmp zpCLEN
-    bcs COMPRF
+
+    lda (zpAESTKP),Y    ; get length of first string from stack
+    sta zpWORK+2        ; save in zpWORK+2
+    cmp zpCLEN          ; compare both lengths
+    bcs COMPRF          ; skip next instruction if second string is shorter
 
     tax
+
 COMPRF:
-    stx zpWORK+3
+    stx zpWORK+3        ; save length of the (shortest) string
 
     .if version < 3 || (version == 3 && minorversion < 10)
-        ldy #$00
+        ldy #$00        ; Y is still 0
     .endif
 
 COMPRG:
     cpy zpWORK+3
-    beq COMPRH
+    beq COMPRH          ; exit if shorter string has zero length
+
+    ; compare string in STRACC with string on top of stack
 
     iny
     lda (zpAESTKP),Y
     cmp STRACC-1,Y
-    beq COMPRG
-    bne COMPRI
+    beq COMPRG          ; loop to next character if equal
+    bne COMPRI          ; leave when not equal
 
 COMPRH:
-    lda zpWORK+2
+    lda zpWORK+2        ; compare the lengths of the strings
     cmp zpCLEN
 
 COMPRI:
-    php
-    jsr POPSTX
-    ldx zpWORK
-    plp
+    php                 ; save the flags
+    jsr POPSTX          ; discard string on top of stack
+    ldx zpWORK          ; get the character back
+    plp                 ; restore the flags
     rts
 
 
 ; EXPRESSION EVALUATOR
 ; ====================
 
-; Evaluate expression at zpLINE
-; ---------------------------
+; Evaluate expression at (zpLINE)
+; -------------------------------
+
 AEEXPR:
     lda zpLINE
     sta zpAELINE          ; Copy zpLINE to zpAELINE
@@ -6105,7 +6186,7 @@ AEEXPR:
 
 EXPR:
     jsr ANDER         ; Call Evaluator Level 6 - AND
-                      ; Returns A=type, value in IACC/FPA/StrA, X=next char
+                      ; Returns A=type, value in IACC/FACC/STRACC, X=next char
 EXPRQ:
     cpx #tknOR
     beq OR            ; Jump if next char is OR
@@ -6120,12 +6201,14 @@ EXPRQ:
 
 ; OR numeric
 ; ----------
-OR:
-    jsr PHANDR
-    tay               ; Stack as integer, call Evaluator Level 6
-    jsr INTEGB
 
-    ldy #$03          ; If float, convert to integer
+OR:
+    jsr PHANDR        ; push as integer, evaluate next expression
+    tay
+    jsr INTEGB        ; ensure it's also an integer, if not, convert
+
+    ldy #$03
+
 ORLP:
     lda (zpAESTKP),Y
     ora zpIACC,Y      ; OR IACC with top of stack    ; abs,y (!)
@@ -6135,17 +6218,19 @@ ORLP:
 
 EXPRP:
     jsr POPINC        ; Drop integer from stack
-    lda #$40
-    bne EXPRQ         ; Return type=Int, check for more OR/EOR, branch always
+    lda #$40          ; return type is integer
+    bne EXPRQ         ; check for more OR/EOR, branch always
 
 ; EOR numeric
 ; -----------
-EOR_:
-    jsr PHANDR
-    tay
-    jsr INTEGB
 
-    ldy #$03          ; If float, convert to integer
+EOR_:
+    jsr PHANDR        ; push as integer, evaluate next expression
+    tay
+    jsr INTEGB        ; ensure it's also an integer, if not, convert
+
+    ldy #$03
+
 EORLP:
     lda (zpAESTKP),Y
     eor zpIACC,Y      ; EOR IACC with top of stack       ; abs,y (!)
@@ -6156,13 +6241,15 @@ EORLP:
 
 ; Stack current as integer, evaluate another Level 6
 ; --------------------------------------------------
+
 PHANDR:
     tay
-    jsr INTEGB        ; convert to integer
+    jsr INTEGB        ; ensure it's an integer, else, convert to integer
     jsr PHACC         ; push to stack
 
 ; Evaluator Level 6 - AND
 ; -----------------------
+
 ANDER:
     jsr RELATE         ; Call Evaluator Level 5, < <= = >= > <>
 
@@ -6173,16 +6260,18 @@ ANDERQ:
 
 ; AND numeric
 ; -----------
+
 AND:
     tay
-    jsr INTEGB
-    jsr PHACC         ; If float, convert to integer, push onto stack
+    jsr INTEGB        ; ensure it's an integer, convert otherwise
+    jsr PHACC         ; push onto stack
     jsr RELATE        ; Call Evaluator Level 5, < <= = >= > <>
 
     tay
-    jsr INTEGB
+    jsr INTEGB        ; ensure it's an integer
 
-    ldy #$03          ; If float, convert to integer
+    ldy #$03
+
 ANDLP:
     lda (zpAESTKP),Y
     and zpIACC,Y      ; AND IACC with top of stack   ; abs,y (!)
@@ -6191,15 +6280,16 @@ ANDLP:
     bpl ANDLP         ; Store result in IACC
 
     jsr POPINC        ; Drop integer from stack
-    lda #$40
-    bne ANDERQ        ; Return type=Int, jump to check for another AND
+    lda #$40          ; return type is integer
+    bne ANDERQ        ; jump to check for another AND
 
 ; Evaluator Level 5 - >... =... or <...
 ; -------------------------------------
+
 RELATE:
     jsr ADDER         ; Call Evaluator Level 4, + -
     cpx #'>'+1
-    bcs RELATX         ; Larger than '>', return
+    bcs RELATX        ; Larger than '>', return
 
     cpx #'<'
     bcs RELTS         ; Smaller than '<', return
@@ -6209,6 +6299,7 @@ RELATX:
 
 ; >... =... or <...
 ; -----------------
+
 RELTS:
     beq RELTLT        ; Jump with '<'
     cpx #'>'
@@ -6216,6 +6307,7 @@ RELTS:
                       ; Must be '='
 ; = numeric
 ; ---------
+
     tax
     jsr COMPRP1
     bne FAIL          ; Jump with result=0 for not equal
@@ -6228,8 +6320,8 @@ FAIL:
     sty zpIACC+1
     sty zpIACC+2
     sty zpIACC+3
-    lda #$40
-    rts               ; Return type=Int
+    lda #$40          ; return type is integer
+    rts
 
 ; < <= <>
 ; -------
@@ -6238,10 +6330,10 @@ RELTLT:               ; RELate Less Than
     ldy zpAECUR
     lda (zpAELINE),Y  ; Get next char from zpAELINE
     cmp #'='
-    beq LTOREQ         ; Jump for <=
+    beq LTOREQ        ; Jump for <=
 
     cmp #'>'
-    beq NEQUAL         ; Jump for <>
+    beq NEQUAL        ; Jump for <>
 
 ; Must be < numeric
 ; -----------------
@@ -6252,19 +6344,19 @@ RELTLT:               ; RELate Less Than
 ; <= numeric
 ; ----------
 LTOREQ:
-    inc zpAECUR
-    jsr COMPR         ; Step past '=', evaluate next and compare
-    beq PASS
-    bcc PASS          ; Jump to return TRUE if =, TRUE if <
+    inc zpAECUR       ; step past '='
+    jsr COMPR         ; evaluate next and compare
+    beq PASS          ; jump if equal
+    bcc PASS          ; jump if less than
     bcs FAIL          ; Jump to return FALSE otherwise
 
 ; <> numeric
 ; ----------
 NEQUAL:
-    inc zpAECUR
-    jsr COMPR         ; Step past '>', evaluate next and compare
-    bne PASS
-    beq FAIL          ; Jump to return TRUE if <>, FALSE if =
+    inc zpAECUR       ; step past '>'
+    jsr COMPR         ; evaluate next and compare
+    bne PASS          ; jump if not equal
+    beq FAIL          ; or fail
 
 ; > >=
 ; ----
@@ -6273,23 +6365,22 @@ RELTGT:               ; RELate Greater Than
     ldy zpAECUR
     lda (zpAELINE),Y  ; Get next char from zpAELINE
     cmp #'='
-    beq GTOREQ         ; Jump for >=
+    beq GTOREQ        ; Jump for >=
 
 ; > numeric
 ; ---------
     jsr COMPR         ; test greater than, evaluate next and compare
-    beq FAIL
-    bcs PASS          ; Jump to return FALSE if =, TRUE if >
-    bcc FAIL          ; Jump to return FALSE if <
+    beq FAIL          ; fail if equal
+    bcs PASS          ; pass if greater than (and not equal)
+    bcc FAIL          ; fail if less than
 
 ; >= numeric
 ; ----------
 GTOREQ:
-    inc zpAECUR
-    jsr COMPR         ; Step past '=', evaluate next and compare
-    bcs PASS
-    bcc FAIL          ; Jump to return TRUE if >=, FALSE if <
-                      ; branch always
+    inc zpAECUR       ; step past '='
+    jsr COMPR         ; evaluate next and compare
+    bcs PASS          ; pass if greater than or equal
+    bcc FAIL          ; fail if less than, branch always
 
 ; ----------------------------------------------------------------------------
 
@@ -6305,6 +6396,7 @@ STROVR:
 
 ; String addition / concatenation
 ; -------------------------------
+
 STNCON:
     jsr PHSTR         ; Stack string
     jsr POWER         ; call Evaluator Level 2
@@ -6328,37 +6420,40 @@ CONLOP:
     dey
     bne CONLOP
 
-    jsr POPSTR         ; Unstack string to start of string buffer
+    jsr POPSTR        ; Unstack string to start of string buffer
 
     pla
     sta zpCLEN
     ldx zpWORK        ; Set new string length
-    tya
-    beq ADDERQ        ; Set type=string, jump to check for more + or -
+    tya               ; set type is string
+    beq ADDERQ        ; jump to check for more + or -, branch always
 
 ; Evaluator Level 4, + -
 ; ----------------------
+
 ADDER:
     jsr TERM          ; Call Evaluator Level 3, * / DIV MOD
 
 ADDERQ:
     cpx #'+'
-    beq PLUS          ; Jump with addition
+    beq PLUS          ; Jump for addition
 
     cpx #'-'
-    beq MINUS         ; Jump with subtraction
+    beq MINUS         ; Jump for subtraction
 
     rts               ; Return otherwise
 
 ; + <value>
 ; ---------
+
 PLUS:
     tay
-    beq STNCON        ; Jump if current value is a string
+    beq STNCON        ; Jump if current value is a string (concatenation)
     bmi FPLUS         ; Jump if current value is a float
 
 ; Integer addition
 ; ----------------
+
     jsr PHTERM        ; Stack current and call Evaluator Level 3
     tay
     beq ADDERE        ; If int + string, jump to 'Type mismatch' error
@@ -6396,21 +6491,23 @@ ADDERP:
 ADDERE:
     jmp LETM           ; Jump to 'Type mismatch' error
 
-; Real addition
-; -------------
+; Floating point addition
+; -----------------------
+
 FPLUS:
-    jsr PHFACC
+    jsr PHFACC         ; push FACC
     jsr TERM           ; Stack float, call Evaluator Level 3
     tay
     beq ADDERE         ; float + string, jump to 'Type mismatch' error
+
     stx zpTYPE
     bmi FPLUSS         ; float + float, skip conversion
 
     jsr IFLT           ; float + int, convert int to float
 
 FPLUSS:
-    jsr POPSET         ; Pop float from stack, point FPTR to it
-    jsr FADD           ; Unstack float to FPA2 and add to FPA1
+    jsr POPSET         ; Pop float from stack, point ARGP to it
+    jsr FADD           ; load FWRK via ARGP, and add to FACC
 
 FFFFA:
     ldx zpTYPE         ; Get nextchar back
@@ -6419,15 +6516,17 @@ FFFFA:
 
 ; int + float
 ; -----------
+
 FPLUST:
     stx zpTYPE
     jsr POPACC         ; Unstack integer to IACC
-    jsr PHFACC
-    jsr IFLT           ; Stack float, convert integer in IACC to float in FPA1
+    jsr PHFACC         ; push FACC
+    jsr IFLT           ; convert integer in IACC to float in FACC
     jmp FPLUSS         ; Jump to do float + <stacked float>
 
 ; - numeric
 ; ---------
+
 MINUS:
     tay
     beq ADDERE         ; If current value is a string, jump to error
@@ -6435,6 +6534,7 @@ MINUS:
 
 ; Integer subtraction
 ; -------------------
+
     jsr PHTERM         ; Stack current and call Evaluator Level 3
     tay
     beq ADDERE         ; int + string, jump to error
@@ -6458,10 +6558,11 @@ MINUS:
     sbc zpIACC+3
     jmp ADDERP         ; Jump to pop stack and loop for more + or -
 
-; Real subtraction
-; ----------------
+; Floating point subtraction
+; --------------------------
+
 FMINUS:
-    jsr PHFACC
+    jsr PHFACC         ; push FACC
     jsr TERM           ; Stack float, call Evaluator Level 3
 
     tay
@@ -6472,20 +6573,24 @@ FMINUS:
     jsr IFLT           ; float - int, convert int to float
 
 FMINUR:
-    jsr POPSET         ; Pop float from stack and point FPTR to it
-    jsr FXSUB          ; Unstack float to FWRK and subtract it from FACC
+    jsr POPSET         ; Pop float from stack and point ARGP to it
+    jsr FXSUB          ; load FWRK via ARGP, and subtract it from FACC
     jmp FFFFA          ; Jump to set result and loop for more + or -
 
 ; int - float
 ; -----------
+
 FMINUT:
     stx zpTYPE
     jsr POPACC         ; Unstack integer to IACC
-    jsr PHFACC
-    jsr IFLT           ; Stack float, convert integer in IACC to float in FACC
-    jsr POPSET         ; Pop float from stack, point FPTR to it
-    jsr FSUB           ; Subtract FPTR float from FPA1 float
+    jsr PHFACC         ; push FACC
+    jsr IFLT           ; convert integer in IACC to float in FACC
+    jsr POPSET         ; Pop float from stack, point ARGP to it
+    jsr FSUB           ; Subtract ARGP float from FACC float
     jmp FFFFA          ; Jump to set result and loop for more + or -
+
+; Floating point multiplication
+; -----------------------------
 
 FTIMLF:
     jsr IFLT
@@ -10352,11 +10457,11 @@ LEN:
 SINSTK:
         ldy #$00      ; Clear b8-b15, jump to return 16-bit int
 
-; Return 16-bit integer in AY
+; Return 16-bit integer in YA
 ; ---------------------------
 AYACC:
         sta zpIACC
-        sty zpIACC+1      ; Store AY in integer accumulator
+        sty zpIACC+1      ; Store YA in integer accumulator
         lda #$00
         sta zpIACC+2
         sta zpIACC+3      ; Set b16-b31 to 0
@@ -13759,7 +13864,7 @@ PHACC:
 ; Stack the current string
 ; ========================
 PHSTR:
-    clc
+    clc               ; extra -1
     lda zpAESTKP
     sbc zpCLEN        ; stackbot=stackbot-length-1
     jsr HIDEC         ; Check enough space
@@ -13786,9 +13891,9 @@ POPSTR:
     ldy #$00
     lda (zpAESTKP),Y    ; Get stacked string length
     sta zpCLEN
-    beq POPSTX
+    beq POPSTX          ; If zero length, just unstack length
 
-    tay                 ; If zero length, just unstack length
+    tay
 
 POPSTL:
     lda (zpAESTKP),Y
