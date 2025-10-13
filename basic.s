@@ -7315,53 +7315,54 @@ FPRTNN:
 
 ; ----------------------------------------------------------------------------
 
-; Print AC in decimal unsigned
+; Print Accu in decimal unsigned, output of exponent as a number (0-99)
 
 IPRT:
-    ldx #$FF
+    ldx #$FF        ; start with most significant digit as -1
     sec
 
 IPRTA:
-    inx
-    sbc #$0A
-    bcs IPRTA
+    inx             ; increment digit
+    sbc #$0A        ; subtract 10
+    bcs IPRTA       ; if still >= 0, keep subtracting 10 and increasing X
 
-    adc #$0A
-    pha
+    adc #$0A        ; add last 10 back
+    pha             ; and save on stack
     txa
-    beq IPRTB
+    beq IPRTB       ; skip printing if it's 0
 
-    jsr FPRTDG
+    jsr FPRTDG      ; print digit
 
 IPRTB:
-    pla
+    pla             ; get remainder back in A
 
 FPRTDG:
-    ora #'0'
+    ora #'0'        ; add '0' to make it ASCII
 
 ; Store character in string buffer
 ; --------------------------------
 CHTOBF:
-    stx zpWORK+4
+    stx zpWORK+4    ; save X register
     ldx zpCLEN
     sta STRACC,X    ; Store character
-    ldx zpWORK+4
-    inc zpCLEN
-    rts               ; Increment string length
+    ldx zpWORK+4    ; restore X register
+    inc zpCLEN      ; Increment string length
+    rts
 
 ; ----------------------------------------------------------------------------
 
 ; READ ROUTINES
 
 FRDDXX:
-    clc
-    stx zpFACCMG
-    jsr FTST
-    lda #$FF
+    clc             ; indicate failure
+    stx zpFACCMG    ; set rounding byte to zero (always entered with X=0)
+    jsr FTST        ; set sign and under/overflow to zero
+    lda #$FF        ; indidcate answer is floating point
     rts
 
-; Scan decimal number
-; -------------------
+; Get decimal number from AELINE
+; ------------------------------
+
 FRDD:
     ldx #$00
     stx zpFACCMA        ; Clear FACC
@@ -7392,12 +7393,12 @@ FRDDDD:
     lda zpFRDDDP      ; seen before?
     bne FRDDQ         ; Already got decimal point, 
 
-    inc zpFRDDDP      ; Set decimal point flag
+    inc zpFRDDDP      ; set decimal point flag, indicate period has been seen
     bne FRDDC         ; loop for next
 
 FRDDD:
     cmp #'E'
-    beq FRDDEX         ; Jump to scan exponent
+    beq FRDDEX        ; Jump to scan exponent
 
     cmp #'9'+1
     bcs FRDDQ         ; Not a digit, jump to finish
@@ -7407,17 +7408,17 @@ FRDDD:
 
     ldx zpFACCMA      ; Get mantissa top byte
     cpx #$18
-    bcc FRDDE         ; If <25, still small enough to add to
+    bcc FRDDE         ; If <25, still small enough to add another digit
 
     ldx zpFRDDDP
-    bne FRDDC         ; Decimal point found, skip digits to end of number
+    bne FRDDC         ; Decimal point found, go back for next character
 
     inc zpFRDDDX      ; Otherwise, increment tens
-    bcs FRDDC         ; and skip digits
+    bcs FRDDC         ; go back and examine the next character
 
 FRDDE:
     ldx zpFRDDDP
-    beq FRDDF         ; No . yet
+    beq FRDDF         ; No period yet
 
     dec zpFRDDDX      ; Decimal point found, decrement exponent
 
@@ -7441,14 +7442,14 @@ FRDDF:
     bne FRDDC         ; Loop to check next digit
 
 ; Deal with Exponent in scanned number
-; ------------------------------------
+
 FRDDEX:
     jsr IRDD          ; Scan following number
     adc zpFRDDDX      ; Add to current exponent
     sta zpFRDDDX
 
 ; End of number found
-; -------------------
+
 FRDDQ:
     sty zpAECUR       ; Store AELINE offset
     lda zpFRDDDX
@@ -7459,64 +7460,65 @@ FRDDQ:
     beq FRDDZZ        ; if so, exit at once
 
 FRFP:
-    lda #$A8
-    sta zpFACCX
-    lda #$00
+    lda #$A8          ; set exponent to indicate "bicemal" point
+    sta zpFACCX       ; is to the right of the rounding byte
+    lda #$00          ; clear sign and under/overflow bytes
     sta zpFACCXH
     sta zpFACCS
-    jsr FNRM
+    jsr FNRM          ; normalise the number
 
 ; Now I have to MUL or DIV by power of ten given in zpFRDDDX
 
     lda zpFRDDDX
-    bmi FRDDM
-    beq FRDDZ
+    bmi FRDDM         ; jump if it's negative
+    beq FRDDZ         ; exit if it's zero
 
 FRDDP:
-    jsr FTENFX          ; times 10.0
-    dec zpFRDDDX
-    bne FRDDP
-    beq FRDDZ
+    jsr FTENFX        ; times 10.0
+    dec zpFRDDDX      ; decrement exponent
+    bne FRDDP         ; keep adjusting until exponent is zero
+    beq FRDDZ         ; exit, branch always
 
 FRDDM:
-    jsr FTENFQ          ; divider 10.0
-    inc zpFRDDDX
-    bne FRDDM
+    jsr FTENFQ        ; divide by 10.0
+    inc zpFRDDDX      ; increment exponent
+    bne FRDDM         ; until it's zero
 
 FRDDZ:
-    jsr FTIDY           ; round, check overflow
+    jsr FTIDY         ; round, check overflow
 
 FRDDZZ:
-    sec
-    lda #$FF
+    sec               ; indicate success
+    lda #$FF          ; result is floating point
     rts
 
 FRINT:
-    lda zpFACCMB
+    lda zpFACCMB      ; make sure numbe is not too big to be an integer
     sta zpIACC+3
     and #$80
     ora zpFACCMA
-    bne FRFP
+    bne FRFP          ; jump if too big
 
-    lda zpFACCMG
+    lda zpFACCMG      ; copy relevant parts of mantissa to IACC
     sta zpIACC
     lda zpFACCMD
     sta zpIACC+1
     lda zpFACCMC
     sta zpIACC+2
 
-    lda #$40
-    sec
+    lda #$40          ; indicate it's an integer
+    sec               ; and success
     rts
 
 IRDDB:
     jsr IRDDC         ; Scan following number
-    eor #$FF
-    sec
-    rts               ; Negate it, return CS=Ok
+    eor #$FF          ; Negate it
+    sec               ; return ok
+    rts
 
 ; Scan exponent, allows E E+ E- followed by one or two digits
 ; -----------------------------------------------------------
+
 IRDD:
     iny
     lda (zpAELINE),Y  ; Get next character
@@ -7524,7 +7526,7 @@ IRDD:
     beq IRDDB         ; If '-', jump to scan and negate
 
     cmp #'+'
-    bne IRDDA         ; If '+', just step past
+    bne IRDDA         ; If not '+', don't get next character
 
 IRDDC:
     iny
@@ -7532,26 +7534,26 @@ IRDDC:
 
 IRDDA:
     cmp #'9'+1
-    bcs IRDDOW        ; Not a digit, exit with CC and A=0
+    bcs IRDDOW        ; Not a digit, exit with C=0 and A=0
 
     sbc #'0'-1
-    bcc IRDDOW        ; Not a digit, exit with CC and A=0
+    bcc IRDDOW        ; Not a digit, exit with C=0 and A=0
 
     sta zpFRDDW       ; Store exponent digit
     iny
     lda (zpAELINE),Y  ; Get next character
     cmp #'9'+1
-    bcs IRDDQ         ; Not a digit, exit with CC and A=exp
+    bcs IRDDQ         ; Not a digit, exit with C=0 and A=exp
 
     sbc #'0'-1
-    bcc IRDDQ         ; Not a digit, exit with CC and A=exp
+    bcc IRDDQ         ; Not a digit, exit with C=0 and A=exp
 
     iny
     sta zpFTMPMA      ; Step past digit, store current digit
     lda zpFRDDW       ; Get current exponent
     asl
     asl               ; exp *= 4
-    adc zpFRDDW       ; exp += exp (total *5
+    adc zpFRDDW       ; exp += exp (total *5)
     asl               ; exp *= 2   (total *10)
     adc zpFTMPMA      ; exp=exp*10+digit
     rts
@@ -7590,29 +7592,33 @@ FPLW:
 
 ; ----------------------------------------------------------------------------
 
-; Multiply FACC MANTISSA by 10
+; Multiply FACC mantissa by 10
 
 FTENX:
-    pha
-    ldx zpFACCMD
-    lda zpFACCMA
+    pha             ; preserve A
+
+    ldx zpFACCMD    ; save mantissa in X and on the stack in the order we
+    lda zpFACCMA    ; need to add it later
     pha
     lda zpFACCMB
     pha
     lda zpFACCMC
     pha
-    lda zpFACCMG
+
+    lda zpFACCMG    ; shift left (m*2)
     asl
     rol zpFACCMD
     rol zpFACCMC
     rol zpFACCMB
     rol zpFACCMA
-    asl
+
+    asl             ; shift left (m*2, total m*4)
     rol zpFACCMD
     rol zpFACCMC
     rol zpFACCMB
     rol zpFACCMA
-    adc zpFACCMG
+
+    adc zpFACCMG    ; add original version (m*4+m, total m*5)
     sta zpFACCMG
     txa
     adc zpFACCMD
@@ -7625,13 +7631,15 @@ FTENX:
     sta zpFACCMB
     pla
     adc zpFACCMA
-    asl zpFACCMG
+
+    asl zpFACCMG    ; shift left (m*2, total m*10)
     rol zpFACCMD
     rol zpFACCMC
     rol zpFACCMB
     rol
     sta zpFACCMA
-    pla
+
+    pla             ; restore A
     rts
 
 ; ----------------------------------------------------------------------------
@@ -7646,16 +7654,17 @@ FTST:
     ora zpFACCMG
     beq FTSTZ       ; it is zero
 
-    lda zpFACCS
-    bne FTSTR
+    lda zpFACCS     ; get sign byte
+    bne FTSTR       ; exit if it's not zero
 
-    lda #$01        ; non-zero if sign byte
+    lda #$01        ; non-zero and positive
     rts
 
 FTSTZ:
-    sta zpFACCS
+    sta zpFACCS     ; zero sign, exponent, and under/overflow
     sta zpFACCX
     sta zpFACCXH
+
 FTSTR:
     rts
 
@@ -7663,44 +7672,46 @@ FTSTR:
 
 ; FACC times 10.0
 ;
-;   FX:=FX+3
-;   FW:=FACC
-;   FW:=FW>>2
-;   FACC:=FACC+FW
-;   IF CARRY THEN {
-;     FACC:=FACC>>1;
-;     FX:=FX+1 }
+;   FX:=FX+3            \ exponent + 3 --> *8
+;   FW:=FACC            \ FWRK = FACC
+;   FW:=FW>>2           \ divide by 4, i.e. two times the original value
+;   FACC:=FACC+FW       \ add it to FACC, result is original *10
+;   IF CARRY THEN {     \ in case of overflow
+;     FACC:=FACC>>1;    \ divide by 2
+;     FX:=FX+1 }        \ adjust exponent to compensate
 
 FTENFX:
     clc
-    lda zpFACCX
+    lda zpFACCX     ; add 3 to exponent, *8
     adc #$03
     sta zpFACCX
     bcc FTENFA
 
-    inc zpFACCXH
+    inc zpFACCXH    ; increment overflow if needed
 
 FTENFA:
-    jsr FTOW        ; copy to FWRK
-    jsr FASRW
-    jsr FASRW
+    jsr FTOW        ; copy FACC to FWRK
+    jsr FASRW       ; divide by 2
+    jsr FASRW       ; divide by 2 (FWRK contains original *2)
 
 FPLWF:
-    jsr FPLW
+    jsr FPLW        ; FACC = FACC + FWRK, total is original *10
 
 ;   CY is set on carry out of FACCMA and FWRKMA
 
 FRENRM:
-    bcc FRENX
-    ror zpFACCMA
+    bcc FRENX       ; exit if no overflow occurred
+
+    ror zpFACCMA    ; shift mantissa right, divide by 2
     ror zpFACCMB
     ror zpFACCMC
     ror zpFACCMD
     ror zpFACCMG
-    inc zpFACCX
+
+    inc zpFACCX     ; increment exponent to compensate for divide
     bne FRENX
 
-    inc zpFACCXH
+    inc zpFACCXH    ; possible exponent overflow
 
 FRENX:
     rts
@@ -7747,6 +7758,8 @@ FASRW:
 
 ; FTENFQ -- Divide FACC by 10.0
 ;
+; original author notes:
+;
 ;   FX:=FX-4; WRK:=ACC; WRK:=WRK>>1; ACC:=ACC+WRK
 ;   ADJUST IF CARRY
 ;   WRK:=ACC; WRK:=WRK>>4; ACC:=ACC+WRK
@@ -7760,22 +7773,24 @@ FASRW:
 
 FTENFQ:
     sec
-    lda zpFACCX
+    lda zpFACCX     ; subtract 4 from the exponent, divide by 16
     sbc #$04
     sta zpFACCX
     bcs FTENB
 
-    dec zpFACCXH
-FTENB:
-    jsr FTOWAS
-    jsr FPLWF           ; * 0.00011
-    jsr FTOWAS
-    jsr FASRW
-    jsr FASRW
-    jsr FASRW
-    jsr FPLWF           ; * 0.000110011
+    dec zpFACCXH    ; adjust underflow if needed
 
-    lda #$00
+FTENB:
+    jsr FTOWAS      ; copy FACC to FWRK and divide by 2 (>>1)
+    jsr FPLWF       ; FACC += FWRK, (* 0.00011)
+
+    jsr FTOWAS      ; copy FACC to FWRK and divide by 2
+    jsr FASRW       ; divide FWRK by 2
+    jsr FASRW       ; divide FWRK by 2
+    jsr FASRW       ; divide FWRK by 2 (total FWRK divided by 16, >>4)
+    jsr FPLWF       ; FACC += FWRK, (* 0.000110011)
+
+    lda #$00        ; FWRK = FACC DIV 256 (shifted right one byte, >>8)
     sta zpFWRKMA
     lda zpFACCMA
     sta zpFWRKMB
@@ -7786,33 +7801,34 @@ FTENB:
     lda zpFACCMD
     sta zpFWRKMG
 
-    lda zpFACCMG
-    rol                 ; set carry bit properly
-    jsr FPLWF           ; OK to 16 bits
+    lda zpFACCMG    ; include rounding bit
+    rol             ; set carry bit properly
+    jsr FPLWF       ; FACC += FWRK
     lda #$00
-    sta zpFWRKMA        ; later BASICs skip this, because FWRKMA is already 0
+    sta zpFWRKMA    ; later BASICs skip this, because FWRKMA is already 0
     sta zpFWRKMB
 
-    lda zpFACCMA
+    lda zpFACCMA    ; FWRK = FACC DIV 65536 (shift right two bytes, >>16)
     sta zpFWRKMC
     lda zpFACCMB
     sta zpFWRKMD
     lda zpFACCMC
     sta zpFWRKMG
 
-    lda zpFACCMD
+    lda zpFACCMD    ; include rounding bit
     rol
-    jsr FPLWF
-    lda zpFACCMB
+    jsr FPLWF       ; FACC += FWRK
+
+    lda zpFACCMB    ; get rounding bit of byte 2 in carry
     rol
-    lda zpFACCMA
+    lda zpFACCMA    ; get byte 1
 
 FPLNF:
-    adc zpFACCMG
+    adc zpFACCMG    ; add to mantissa
     sta zpFACCMG
-    bcc FPLNY
+    bcc FPLNY       ; jump if no carry
 
-    inc zpFACCMD
+    inc zpFACCMD    ; ripple carry through whole mantissa
     bne FPLNY
 
     inc zpFACCMC
@@ -7824,25 +7840,30 @@ FPLNF:
     inc zpFACCMA
     bne FPLNY
 
-    jmp FRENRM
+    jmp FRENRM      ; right shift and increment exponent if still carry
 
 FPLNY:
     rts
 
 ; ----------------------------------------------------------------------------
 
+; Convert IACC to FACC
+
 IFLT:
-    ldx #$00
+    ldx #$00        ; zero under/overflow and rounding bytes
     stx zpFACCMG
     stx zpFACCXH
-    lda zpIACC+3
-    bpl IFLTA
 
-    jsr COMPNO
-    ldx #$FF
+    lda zpIACC+3
+    bpl IFLTA       ; skip negating if it is already positive
+
+    jsr COMPNO      ; negate it
+    ldx #$FF        ; indicate floating point sign
+
 IFLTA:
-    stx zpFACCS
-    lda zpIACC
+    stx zpFACCS     ; save sign
+
+    lda zpIACC      ; copy IACC to mantissa
     sta zpFACCMD
     lda zpIACC+1
     sta zpFACCMC
@@ -7850,11 +7871,15 @@ IFLTA:
     sta zpFACCMB
     lda zpIACC+3
     sta zpFACCMA
-    lda #$A0
+
+    lda #$A0        ; set exponent, indicate "bicemal" point is at 32 bits
     sta zpFACCX
-    jmp FNRM
+
+    jmp FNRM        ; normalise the number
 
 ; ----------------------------------------------------------------------------
+
+; Copy A to sign, exponent, and exponent under/overflow bytes
 
 FNRMZ:
     sta zpFACCS
@@ -7864,21 +7889,25 @@ FNRMZ:
 FNRMX:
     rts
 
+; Convert A to FACC
+
 FLTACC:
-    pha
-    jsr FCLR
-    pla
+    pha             ; save A
+    jsr FCLR        ; zero FACC
+    pla             ; restore A
+
     beq FNRMX       ; done if 0.0
     bpl FLTAA       ; >0.0
 
-    sta zpFACCS
-    lda #$00
+    sta zpFACCS     ; indicate negative sign
+
+    lda #$00        ; negate
     sec
     sbc zpFACCS
 
 FLTAA:
-    sta zpFACCMA
-    lda #$88
+    sta zpFACCMA    ; store in most significant byte of mantissa
+    lda #$88        ; set "bicemal" point at 8 bits
     sta zpFACCX
 
 ; FNRM normalizes the FACC using 16 bit exponent, so no worry about
@@ -7886,21 +7915,22 @@ FLTAA:
 
 FNRM:
     lda zpFACCMA
-    bmi FNRMX
+    bmi FNRMX       ; exit if already normalised
 
     ora zpFACCMB
     ora zpFACCMC
     ora zpFACCMD
     ora zpFACCMG
-    beq FNRMZ
+    beq FNRMZ       ; if mantissa is zero, set rest to zero and exit
 
-    lda zpFACCX
+    lda zpFACCX     ; rescue the exponent, A is always the current exponent
+
 FNRMA:
     ldy zpFACCMA
-    bmi FNRMX
-    bne FNRMC
+    bmi FNRMX       ; exit if number is normalised
+    bne FNRMC       ; if top byte is not zero, no (more) byte shifts
 
-    ldx zpFACCMB
+    ldx zpFACCMB    ; byte shift on mantissa (<<8)
     stx zpFACCMA
     ldx zpFACCMC
     stx zpFACCMB
@@ -7908,64 +7938,73 @@ FNRMA:
     stx zpFACCMC
     ldx zpFACCMG
     stx zpFACCMD
-    sty zpFACCMG
-    sec
-    sbc #$08
-    sta zpFACCX
-    bcs FNRMA
+    sty zpFACCMG    ; zero rounding byte
 
-    dec zpFACCXH
-    bcc FNRMA
+    sec             ; subtract 8 of exponent
+    sbc #$08
+    sta zpFACCX     ; and save
+    bcs FNRMA       ; restart loop
+
+    dec zpFACCXH    ; update underflow
+    bcc FNRMA       ; restart loop, branch always
 
 FNRMB:
     ldy zpFACCMA
-    bmi FNRMX           ; fully normalized
+    bmi FNRMX       ; exit if normalised
 
 FNRMC:
-    asl zpFACCMG
+    asl zpFACCMG    ; shift mantissa left (<<1)
     rol zpFACCMD
     rol zpFACCMC
     rol zpFACCMB
     rol zpFACCMA
-    sbc #$00
-    sta zpFACCX
-    bcs FNRMB
+    sbc #$00        ; subtract 1 of exponent
+    sta zpFACCX     ; and save
+    bcs FNRMB       ; restart the loop
 
     dec zpFACCXH
-    bcc FNRMB           ; branch always
+    bcc FNRMB       ; restart the loop, branch always
 
 ; ----------------------------------------------------------------------------
 
 ; FLDW -- Load FWRK via zpARGP
 
 FLDW:
-    ldy #$04
-    lda (zpARGP),Y
+    ldy #5-1        ; five bytes
+
+    lda (zpARGP),Y  ; get four mantissa bytes
     sta zpFWRKMD
+
     dey
     lda (zpARGP),Y
     sta zpFWRKMC
+
     dey
     lda (zpARGP),Y
     sta zpFWRKMB
+
     dey
     lda (zpARGP),Y
     sta zpFWRKS
+
     dey
-    sty zpFWRKMG
+    sty zpFWRKMG    ; zero over/underflow bytes
     sty zpFWRKXH
-    lda (zpARGP),Y
+
+    lda (zpARGP),Y  ; get exponent
     sta zpFWRKX
+
     ora zpFWRKS
     ora zpFWRKMB
     ora zpFWRKMC
     ora zpFWRKMD
-    beq FLDWX
+    beq FLDWX       ; if zero, set top byte of mantissa to zero
 
-    lda zpFWRKS
+    lda zpFWRKS     ; set top byte from the sign byte
     ora #$80
+
 FLDWX:
-    sta zpFWRKMA
+    sta zpFWRKMA    ; store
     rts
 
 ; ----------------------------------------------------------------------------
@@ -7997,9 +8036,10 @@ FSTA:
     lda zpFACCS         ; tidy up sign bit
     and #$80
     sta zpFACCS
+
     lda zpFACCMA
     and #$7F
-    ora zpFACCS
+    ora zpFACCS         ; set true sign bit
     sta (zpARGP),Y
 
     lda zpFACCMB
@@ -8018,7 +8058,7 @@ FSTA:
 ; ----------------------------------------------------------------------------
 
 LDARGA:
-    jsr ARGA
+    jsr ARGA        ; set ARGP to point to FWSA
 
 ; Load FACC via ARGP
 
@@ -8043,30 +8083,33 @@ FLDA:
     lda (zpARGP),Y
     sta zpFACCX
 
-    sty zpFACCMG
+    sty zpFACCMG    ; zero under/overflow bytes
     sty zpFACCXH
+
     ora zpFACCS
     ora zpFACCMB
     ora zpFACCMC
     ora zpFACCMD
-    beq FLDAX
+    beq FLDAX       ; zero top byte of the mantissa if rest is zero
 
-    lda zpFACCS
+    lda zpFACCS     ; set top byte from sign
     ora #$80
+
 FLDAX:
-    sta zpFACCMA
+    sta zpFACCMA    ; store
     rts
 
 ; ----------------------------------------------------------------------------
 
-; Convert real to integer
-; =======================
+; Convert floating point to integer
+; =================================
+
 IFIX:
-    jsr FFIX         ; Convert real to integer
+    jsr FFIX         ; Convert floating point to integer
 
 COPY_FACC_TO_IACC:
     lda zpFACCMA
-    sta zpIACC+3          ; Copy to Integer Accumulator
+    sta zpIACC+3     ; Copy to Integer Accumulator
     lda zpFACCMB
     sta zpIACC+2
     lda zpFACCMC
@@ -8077,6 +8120,7 @@ COPY_FACC_TO_IACC:
 
 ; FFIX converts float to integer
 ; ==============================
+;
 ; On entry, FACCX-FACCMD ($30-$34) holds a float
 ; On exit,  FACCX-FACCMD ($30-$34) holds integer part
 ; ---------------------------------------------------
@@ -8084,6 +8128,7 @@ COPY_FACC_TO_IACC:
 ; by 2 and incrementing the exponent to multiply the number by 2, until the
 ; exponent is $80, indicating that we have got to mantissa * 2^0.
 ; Truncates towards zero.
+; The fractional part is left in FWRK.
 
 FFIXQ:
     jsr FTOW       ; Copy FACC to FWRK
@@ -8093,8 +8138,8 @@ FFIX:
     lda zpFACCX
     bpl FFIXQ      ; Exponent<$80, number<1, jump to return 0
 
-    jsr FCLRW      ; Set $3B-$42 to zero
-    jsr FTST
+    jsr FCLRW      ; Set FWRK to zero
+    jsr FTST       ; test FACC
     bne FFIXG      ; Always shift at least once
     beq FFIXY      ; except for 0
 
@@ -8107,8 +8152,9 @@ FFIXB:
     bcs FFIXG      ; Loop to keep dividing
 
     adc #$08
-    sta zpFACCX    ; Increment exponent by 8
-    lda zpFWRKMC
+    sta zpFACCX    ; Increment exponent by 8, allow for byte shift
+
+    lda zpFWRKMC   ; byte shift, divide by 256 (>>8)
     sta zpFWRKMD
     lda zpFWRKMB
     sta zpFWRKMC
@@ -8117,26 +8163,27 @@ FFIXB:
     lda zpFACCMD
     sta zpFWRKMA
     lda zpFACCMC
-    sta zpFACCMD      ; Divide mantissa by 2^8
+    sta zpFACCMD
     lda zpFACCMB
     sta zpFACCMC
     lda zpFACCMA
     sta zpFACCMB
-    lda #$00
+    lda #$00        ; shift in zeros at the top
     sta zpFACCMA
-    beq FFIXB         ; Loop to keep dividing, branch always
+    beq FFIXB       ; Loop to keep dividing, branch always
 
 FFIXG:
-    lsr zpFACCMA
+    lsr zpFACCMA    ; bitwise right shift, divide by 2 (>>1)
     ror zpFACCMB
     ror zpFACCMC
     ror zpFACCMD
-    ror zpFWRKMA
+    ror zpFWRKMA    ; rotate into FWRK
     ror zpFWRKMB
     ror zpFWRKMC
-    ror zpFWRKMD      ; rotate into FWRK
-    inc zpFACCX
-    bne FFIXB
+    ror zpFWRKMD
+
+    inc zpFACCX     ; increment exponent by 1
+    bne FFIXB       ; continue and repeat the test
 
 ; Here I have overflow
 
@@ -8144,6 +8191,8 @@ FFIXV:
     jmp FOVR
 
 ; ----------------------------------------------------------------------------
+
+; Clear FWRK
 
 FCLRW:
     lda #$00
@@ -8160,7 +8209,7 @@ FCLRW:
 ; ----------------------------------------------------------------------------
 
 FFIXC:
-    bne FFIXV         ; Exponent>32, jump to 'Too big' error
+    bne FFIXV         ; Exponent > 32, jump to 'Too big' error
 
 FFIXY:
     lda zpFACCS
@@ -8186,9 +8235,8 @@ FFIXZ:
 
 ; ----------------------------------------------------------------------------
 
-; FFRAC sets FQUAD to the integer part of
-; FACC, and FACCC to its fractional part. Returns with
-; condition code set zero if fraction is zero.
+; FFRAC sets FQUAD to the integer part of FACC, and FACCC to its fractional
+; part. Returns with condition code set zero if fraction is zero.
 ; Assumes that on input FIX(FACC) < 128.
 
 FFRAC:
@@ -8197,7 +8245,7 @@ FFRAC:
 
     lda #$00
     sta zpFQUAD
-    jmp FTST
+    jmp FTST        ; exit, set flags, if FACC's integer part is zero
 
 FFRACA:
     jsr FFIX
