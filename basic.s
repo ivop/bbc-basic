@@ -6593,62 +6593,75 @@ FMINUT:
 ; -----------------------------
 
 FTIMLF:
-    jsr IFLT
+    jsr IFLT        ; convert IACC to FACC
 
 FTIML:
-    jsr POPACC
-    jsr PHFACC
-    jsr IFLT
-    jmp FTIMR
+    jsr POPACC      ; pull integer from stack
+    jsr PHFACC      ; push FACC to stack
+    jsr IFLT        ; convert IACC to FACC
+    jmp FTIMR       ; jump to floating point multiplication
 
 FTIMFL:
-    jsr IFLT
+    jsr IFLT        ; convert IACC to FACC
 
 FTIM:
-    jsr PHFACC
-    jsr POWER
-    stx zpTYPE
+    jsr PHFACC      ; push FACC to stack
+    jsr POWER       ; evaluate next expression
+    stx zpTYPE      ; save the next character
     tay
-    jsr FLOATI
+    jsr FLOATI      ; ensure operand is floating point number
 
 FTIMR:
-    jsr POPSET
-    jsr FMUL
+    jsr POPSET      ; pop float, leave ARGP pointing to it
+    jsr FMUL        ; multiply!
     lda #$FF
     ldx zpTYPE
-    jmp TERMQ
+    jmp TERMQ       ; rejoin parser
 
 FTIME:
-    jmp LETM
+    jmp LETM        ; jump to 'Type mismatch' error
 
 ; * <value>
 ; ---------
+
 TIMES:
     tay
     beq FTIME         ; If current value is string, jump to error
     bmi FTIM          ; Jump if current valus ia a float
 
+; Integer multiplication
+;
+; This algorithm is complicated by checks that are made for overflow before
+; it starts (e.g. &100000 * &100000 would overflow in integer arithmetic)
+; Thus the routine tries to sense whether multiplication would be better
+; carried out using floating point arithmetic. This is done bye checking
+; if either operand is outside the -&8000 to &7FFF range. If either is,
+; floating point multiplication is used.
+
     lda zpIACC+3
     cmp zpIACC+2
-    bne FTIMFL
+    bne FTIMFL      ; do FP mul if top two bytes of operand are not equal
 
     tay
-    beq TIMESA
+    beq TIMESA      ; skip if (both) byte(s) are zero
+
     cmp #$FF
-    bne FTIMFL
+    bne FTIMFL      ; if not $ff, do floating point multiplication
+
+    ; we can be sure the top bytes are either $0000 or $ffff
 
 TIMESA:
     eor zpIACC+1
-    bmi FTIMFL
+    bmi FTIMFL      ; top bit differs from previous two bytes --> fp mul
 
-    jsr PHPOW
+    jsr PHPOW       ; save current operand and evaluate next
 
     stx zpTYPE
     tay
-    beq FTIME
-    bmi FTIML
+    beq FTIME       ; 'Type mismatch' error if 2nd expression is a string
+    bmi FTIML       ; floating point multiplication if it's a real
 
-    lda zpIACC+3
+    lda zpIACC+3    ; same range checks as done on first operand
     cmp zpIACC+2
     bne FTIMLF
 
@@ -6662,18 +6675,24 @@ TIMESB:
     eor zpIACC+1
     bmi FTIMLF
 
-    lda zpIACC+3
+    lda zpIACC+3    ; save byte containing sign bit on the stack
     pha
-    jsr ABSCOM
+    jsr ABSCOM      ; take absolute value of IACC
 
     ldx #zpWORK+2
-    jsr ACCTOM
-    jsr POPACC
+    jsr ACCTOM      ; stash IACC in zpWORK+2 and onwards
 
-    pla
-    eor zpIACC+3
-    sta zpWORK
-    jsr ABSCOM
+    jsr POPACC      ; pop first operand to IACC
+
+    pla             ; retrieve the other sign
+    eor zpIACC+3    ; eor to get sign of answer
+    sta zpWORK      ; store in zpWORK
+
+    jsr ABSCOM      ; absolute value of IACC
+
+; Mostly the same multiplication as we have seen before
+; multiply IACC by zpWORK+2/3, result in zpWORK+6..9
+; for speed, zpWORK+6/7 are kept in XY, and stored at the end
 
     ldy #$00
     ldx #$00
@@ -6681,17 +6700,18 @@ TIMESB:
     sty zpWORK+9
 
 NUL:
-    lsr zpWORK+3
+    lsr zpWORK+3    ; shift right
     ror zpWORK+2
-    bcc NAD
+    bcc NAD         ; no addition if there's no carry
 
-    clc
+    clc             ; add IACC to answer, keep LSB and LSB+1 in XY
     tya
     adc zpIACC
     tay
     txa
     adc zpIACC+1
     tax
+
     lda zpWORK+8
     adc zpIACC+2
     sta zpWORK+8
@@ -6700,32 +6720,32 @@ NUL:
     sta zpWORK+9
 
 NAD:
-    asl zpIACC
+    asl zpIACC      ; shift IACC left
     rol zpIACC+1
     rol zpIACC+2
     rol zpIACC+3
     lda zpWORK+2
     ora zpWORK+3
-    bne NUL
+    bne NUL         ; continue until zpWORK value is zero
 
-    sty zpWORK+6
+    sty zpWORK+6    ; finally store XY in result
     stx zpWORK+7
     lda zpWORK
-    php
+    php             ; save flags / sign of result
 
 REMIN:
-    ldx #zpWORK+6
+    ldx #zpWORK+6   ; 'M' offset
 
 DIVIN:
-    jsr MTOACC
+    jsr MTOACC      ; move 'M' to IACC
 
-    plp
-    bpl TERMA
+    plp             ; pull sign of result
+    bpl TERMA       ; exit if ok.
 
-    jsr COMPNO
+    jsr COMPNO      ; negate the answer
 
 TERMA:
-    ldx zpTYPE
+    ldx zpTYPE      ; get back the next letter
     jmp TERMQ
 
 ; * <value>
@@ -6743,11 +6763,11 @@ PHTERM:
 ; Evaluator Level 3, * / DIV MOD
 ; ------------------------------
 TERM:
-    jsr POWER         ; Call Evaluator Level 2, ^
+    jsr POWER          ; Call Evaluator Level 2, ^
 
 TERMQ:
     cpx #'*'
-    beq TIMESJ        ; Jump with multiply
+    beq TIMESJ         ; Jump with multiply
 
     cpx #'/'
     beq DIVIDE         ; Jump with divide
@@ -6765,46 +6785,52 @@ TERMQ:
 DIVIDE:
     tay
     jsr FLOATI         ; Ensure current value is real
-    jsr PHFACC
-    jsr POWER          ; Stack float, call Evaluator Level 2
+    jsr PHFACC         ; push FACC to stack
+    jsr POWER          ; call Evaluator Level 2
 
-    stx zpTYPE
+    stx zpTYPE         ; save next character
     tay
     jsr FLOATI         ; Ensure current value is real
-    jsr POPSET
-    jsr FXDIV          ; Unstack to FPTR, call divide routine
+    jsr POPSET         ; pop, and have ARGP point to popped float
+    jsr FXDIV          ; call divide routine
 
-    ldx zpTYPE
-    lda #$FF
-    bne TERMQ; Set result, loop for more * / MOD DIV
+    ldx zpTYPE         ; get back character
+    lda #$FF           ; indicate result is floating point
+    bne TERMQ          ; loop for more * / MOD DIV
 
 ; MOD <value>
 ; -----------
+
 REMAIN:
-    jsr DIVOP         ; Ensure current value is integer
-    lda zpWORK+1
-    php
-    jmp REMIN         ; Jump to MOD routine
+    jsr DIVOP         ; call the integer division routine
+
+    lda zpWORK+1      ; save sign of the dividend
+    php               ; on the stack
+
+    jmp REMIN         ; join int mul code to retrieve 'M' to IACC
 
 ; DIV <value>
 ; -----------
+
 INTDIV:
-    jsr DIVOP         ; Ensure current value is integer
-    rol zpWORK+2      ; Multiply by 2
+    jsr DIVOP         ; call the integer division routine
+
+    rol zpWORK+2      ; multiply dividend by 2 (final operation)
     rol zpWORK+3
     rol zpWORK+4
     rol zpWORK+5
-    bit zpWORK
-    php
+    bit zpWORK        ; save the sign
+    php               ; on the stack
+
     ldx #zpWORK+2     ; for MTOACC
-    jmp DIVIN         ; Jump to DIV routine
+    jmp DIVIN         ; join int mul code to retrieve 'M' to IACC
 
 ; ----------------------------------------------------------------------------
 
 ; Stack current integer and evaluate another Level 2
 ; --------------------------------------------------
 PHPOW:
-    jsr PHACC         ; Stack integer
+    jsr PHACC         ; Stack IACC
 
 ; Evaluator Level 2, ^
 ; --------------------
@@ -6812,21 +6838,21 @@ POWER:
     jsr FACTOR         ; Call Evaluator Level 1, - + NOT function ( ) ? ! $ | "
 
 POWERB:
-    pha
+    pha                 ; save the type of operand
 
 POWERA:
     ldy zpAECUR
     inc zpAECUR
-    lda (zpAELINE),Y      ; Get character
+    lda (zpAELINE),Y    ; Get character
     cmp #' '
-    beq POWERA            ; Skip spaces, and get next character
+    beq POWERA          ; Skip spaces, and get next character
 
-    tax
-    pla
+    tax                 ; transfer next character to X
+    pla                 ; retrieve type back in A
     cpx #'^'
-    beq POW
+    beq POW             ; jump if exponentiation
 
-    rts               ; Return if not ^
+    rts                 ; Return if not ^
 
 ; ^ <value>
 ; ---------
