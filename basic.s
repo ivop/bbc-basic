@@ -6858,80 +6858,92 @@ POWERA:
 ; ---------
 POW:
     tay
-    jsr FLOATI         ; Ensure current value is a float
-    jsr PHFACC
-    jsr FLTFAC         ; Stack float, evaluate a real
+    jsr FLOATI      ; ensure current value is a float
+    jsr PHFACC      ; push FACC
+    jsr FLTFAC      ; evaluate expression, make sure it's a real number
 
     lda zpFACCX
     cmp #$87
-    bcs FPOWA          ; abs(n) >= 64
+    bcs FPOWA       ; jump if abs(n) >= 64
 
-    jsr FFRAC
-    bne FPOWE
+    jsr FFRAC       ; set FQUAD to the integer part of FACC, and FACCC to
+                    ; its fractional part
+    bne FPOWE       ; jummp if fractional part != 0
 
-    jsr POPSET
-    jsr FLDA
+                    ; exponent n is integer between -64 and +64
 
-    lda zpFQUAD
-    jsr FIPOW
+    jsr POPSET      ; pop float from stack, leave ARGP pointing to it
+    jsr FLDA        ; unpack to FACC
 
-    lda #$FF
-    bne POWERB         ; Set result=real, loop to check for more ^
+    lda zpFQUAD     ; get (integer) exponent n in A
+    jsr FIPOW       ; calculate FACC ^ n
+
+    lda #$FF        ; result is floating point
+    bne POWERB      ; loop to check for more ^
+
+    ; here when exponent is not an integer
 
 FPOWE:
-    jsr STARGC
+    jsr STARGC      ; copy fractional part to FWSC temporary workspace
 
-    lda zpAESTKP
+    lda zpAESTKP    ; make ARGP point to top of stack
     sta zpARGP
     lda zpAESTKP+1
     sta zpARGP+1
-    jsr FLDA
+
+    jsr FLDA        ; unpack top of stack to FACC
 
     lda zpFQUAD
-    jsr FIPOW
+    jsr FIPOW       ; calculate FACC = FACC ^ INT(n)
 
 FPOWC:
-    jsr STARGB
-    jsr POPSET
-    jsr FLDA
-    jsr FLOG
-    jsr ACMUL
-    jsr FEXP
-    jsr ARGB
-    jsr FMUL
-    lda #$FF
-    bne POWERB         ; Set result=real, loop to check for more ^
+    jsr STARGB      ; save intermediate answer in FWSB temporary workspace
+
+    jsr POPSET      ; pop float from stack, leave ARGP pointing to it
+    jsr FLDA        ; unpack to FACC
+    jsr FLOG        ; calculate FACC = LN(FACC)
+    jsr ACMUL       ; calculate FACC = FACC * FWSC (FWSC = fractional part of n)
+    jsr FEXP        ; calculate FACC = e ^ FACC
+    jsr ARGB        ; make ARGP point to FWSB (partial answer)
+    jsr FMUL        ; multiply, FACC = FACC * FWSB
+
+    lda #$FF        ; result is floating point
+    bne POWERB      ; loop to check for more ^
 
 FPOWA:
-    jsr STARGC
-    jsr FONE
-    bne FPOWC          ; branch always
+    jsr STARGC      ; store FACC at FWSC temporary workspace
+    jsr FONE        ; set FACC to 1
+    bne FPOWC       ; branch always
 
 ; ----------------------------------------------------------------------------
 
 ; Convert number to hex string in STRACC
 ; --------------------------------------
+
 FCONHX:
     tya
     bpl FCONHF
-    jsr IFIX         ; Convert real to integer
+
+    jsr IFIX          ; convert floating point to to integer
 
 FCONHF:
-    ldx #$00
-    ldy #$00
+    ldx #$00          ; pointer into zpWORK+8
+    ldy #$00          ; pointer into IACC
 
 HEXPLP:
-    lda zpIACC,Y      ; abs,y (!)
-    pha               ; Expand four bytes into eight digits
-    and #$0F
-    sta zpWORK+8,X
-    pla
+    lda zpIACC,Y      ; get first byte (abs,y (!))
+    pha               ; save
+    and #$0F          ; lower nibble
+    sta zpWORK+8,X    ; save in workspace
+
+    pla               ; retrieve original byte
+    lsr               ; shift right 4 times
     lsr
     lsr
     lsr
-    lsr
+
     inx
-    sta zpWORK+8,X
+    sta zpWORK+8,X    ; save upper nibble as digit
     inx
     iny
     cpy #$04
@@ -6945,19 +6957,20 @@ HEXLZB:
     beq HEXLZB        ; Skip leading zeros
 
 HEXP:
-    lda zpWORK+8,X
+    lda zpWORK+8,X    ; traverse storage backwards
     cmp #$0A
     bcc NOTHX         ; less than 10
 
+                      ; carry is set, so it's +7
     adc #$06          ; >= 10, convert byte to hex (A-F after '0' is added)
 
 NOTHX:
     adc #'0'          ; to ASCII
-    jsr CHTOBF        ; store in buffer
+    jsr CHTOBF        ; store in STRACC buffer
     dex
-    bpl HEXP
+    bpl HEXP          ; loop for remaining digits
 
-    rts               ; Loop for all digits
+    rts
 
 ; ----------------------------------------------------------------------------
 
@@ -6990,25 +7003,25 @@ FPRTC:
 ; Uses,     zpWORK=format type 0/1/2=G/E/F
 ;           zpWORK+1=max digits
 ;           zpFPRTDX
-; On exit,  StrA contains string version of number
+; On exit,  STRACC contains string version of number
 ;           zpCLEN=string length
 ;
 FCON:
-    ldx VARL_AT+2      ; Get format byte, flag forcing E
+    ldx VARL_AT+2     ; Get format byte, flag forcing E
     cpx #$03
-    bcc FCONOK         ; If <3, ok - use it
+    bcc FCONOK        ; If <3, ok - use it
 
     ldx #$00          ; If invalid, $00 for General format
 FCONOK:
-    stx zpWORK          ; Store format type
+    stx zpWORK        ; Store format type
     lda VARL_AT+1
     beq FCONC         ; If digits=0, jump to check format
 
     cmp #$0A
     bcs FCONA         ; If 10+ digits, jump to use 10 digits
 
-;  In G,E formats varl is no. of sig figs >0
-;  In F format it is no. of decimals and can e >=0
+;  In G,E formats VARL is no. of significant figs > 0
+;  In F format it is no. of decimals and can e >= 0
 
     bcc FCONB         ; If <10 digits, use specified number
 
@@ -7023,21 +7036,21 @@ FCONA:
 
 FCONB:
     sta zpWORK+1
-    sta zpFDIGS        ; Store digit length
+    sta zpFDIGS       ; Store digit length
     lda #$00
-    sta zpCLEN
-    sta zpFPRTDX       ; Set initial output length to 0, initial exponent to 0
-    bit zpPRINTF
-    bmi FCONHX         ; Jump for hex conversion if $15.b7 set
+    sta zpCLEN        ; set initial STRACC length to 0
+    sta zpFPRTDX      ; set initial exponent to 0
+    bit zpPRINTF      ; check bit 7
+    bmi FCONHX        ; Jump for hex conversion if bit 7 set
 
     tya
-    bmi FCONFX
+    bmi FCONFX        ; ensure we have float
 
-    jsr IFLT           ; Convert integer to real
+    jsr IFLT          ; convert integer to floating point
 
 FCONFX:
-    jsr FTST
-    bne FPRTA     ; Get -1/0/+1 sign, jump if not zero to output nonzero number
+    jsr FTST      ; Get -1/0/+1 sign
+    bne FPRTA     ; jump if not zero to output nonzero number
 
     lda zpWORK
     bne FPRTHJ    ; If not General format, output fixed or exponential zero
@@ -7049,16 +7062,17 @@ FPRTHJ:
     jmp FPRTHH     ; Jump to output zero in fixed or exponential format
 
 FPRTEE:
-    jsr FONE
-    bne FPRTEP3    ; FACC=1.0
+    jsr FONE        ; FACC = 1.0
+    bne FPRTEP3     ; branch always
 
 ; FACC now is >=1, check that it is <10
 ; -------------------------------------
+
 FPRTD:
     cmp #$84        ; exponent of 9.99
     bcc FPRTF       ; 1.0 to 7.999999 all OK
     bne FPRTE       ; exponent 85 or more
-    lda zpFACCMA    ; fine check if exponent=84
+    lda zpFACCMA    ; fine check when exponent=84
     cmp #$A0
     bcc FPRTF       ; 8.0000 to 9.9999
 
@@ -7066,15 +7080,16 @@ FPRTE:
     jsr FTENFQ      ; divide FACC by 10.0
 
 FPRTEP3:
-    inc zpFPRTDX
-    jmp FPRTC         ; Jump back to get the number >=1 again
+    inc zpFPRTDX    ; indicate decimal point moved 1 position to the left
+    jmp FPRTC       ; jump back to get the number >=1 again
 
-; FloatA is now between 1 and 9.999999999
-; ---------------------------------------
+; FACC is now between 1 and 9.999999999
+; --------------------------------------
+
 FPRTF:
-    lda zpFACCMG
+    lda zpFACCMG      ; save rounding byte separately
     sta zpTYPE
-    jsr STARGA         ; Copy FloatA to FloatTemp at $27/$046C
+    jsr STARGA        ; Copy FACC to FWSA, workspace temporary float
 
     lda zpFDIGS
     sta zpWORK+1      ; Get number of digits
@@ -7089,86 +7104,91 @@ FPRTF:
     cmp #$0B
     bcc FPRTFH        ; precision still reasonable
 
-    lda #$0A
+    lda #$0A          ; ten digits
     sta zpWORK+1
     lda #$00
     sta zpWORK        ; treat as G format
 
 FPRTFH:
-    jsr FCLR          ; Clear FloatA
+    jsr FCLR          ; Clear FACC
 
     lda #$A0
     sta zpFACCMA
     lda #$83
     sta zpFACCX       ;  5.0 --> FACC
+
     ldx zpWORK+1
-    beq FPRTGJ
+    beq FPRTGJ        ; loop if remaining digits
 
 FPRTGG:
     jsr FTENFQ        ; divide FACC by 10.0
     dex
-    bne FPRTGG        ; create .00,,005 const
+    bne FPRTGG        ; continue until the digit count is zero
 
 FPRTGJ:
-    jsr ARGA          ; Point to workspace FP temp A
-    jsr FLDW          ; Unpack to FWRK
+    jsr ARGA          ; Point ARGP to workspace FP temp A (FWSA)
+    jsr FLDW          ; Unpack (ARGP) to FWRK
 
     lda zpTYPE
-    sta zpFWRKMG
-    jsr FADDW1        ; Add
+    sta zpFWRKMG      ; restore rounding byte
+
+    jsr FADDW1        ; Add FWRK to FACC
 
 FPRTFF:
     lda zpFACCX
     cmp #$84
-    bcs FPRTG
+    bcs FPRTG         ; exit if exponent >= $84
 
-    ror zpFACCMA      ; could call end of FTENFX
+    ror zpFACCMA      ; shift mantissa right (share code with end of FTENFX?)
     ror zpFACCMB
     ror zpFACCMC
     ror zpFACCMD
     ror zpFACCMG
-    inc zpFACCX
-    bne FPRTFF
+    inc zpFACCX       ; compensate by increasing exponent
+    bne FPRTFF        ; continue
 
 FPRTG:
     lda zpFACCMA
     cmp #$A0          ; see if unnormalized
     bcs FPRTEE        ; fix up if so
+
     lda zpWORK+1
-    bne FPRTH
+    bne FPRTH         ; skip next section if number of digits != 0, always here
 
 ; Output zero in Exponent or Fixed format
 ; ---------------------------------------
+
 FPRTHH:
     cmp #$01
-    beq FPRTK
+    beq FPRTK       ; goto 'E' format
 
 FPRTZR:
-    jsr FCLR         ; Clear FACC
+    jsr FCLR        ; Clear FACC
+
     lda #$00
-    sta zpFPRTDX
+    sta zpFPRTDX    ; set decimal exponent to zero
     lda zpFDIGS
-    sta zpWORK+1
-    inc zpWORK+1
+    sta zpWORK+1    ; set number of digits to be printed to value in @%
+    inc zpWORK+1    ; increment by one to allow for the leading zero
 
 ;  The exponent is $84, so the top digit of FACC is the first digit to print
 
 FPRTH:
     lda #$01
     cmp zpWORK
-    beq FPRTK
+    beq FPRTK       ; goto 'E' format
 
     ldy zpFPRTDX
-    bmi FPRTKK
+    bmi FPRTKK      ; print leading zeroes
 
     cpy zpWORK+1
     bcs FPRTK       ; use scientific is <1.0 or > 10^digits
 
     lda #$00
-    sta zpFPRTDX    ; use F type format
+    sta zpFPRTDX    ; set exponent to zero
     iny
-    tya
-    bne FPRTK
+    tya             ; location of decimal point in A
+    bne FPRTK       ; use F type format
 
 FPRTKK:
     lda zpWORK
@@ -7188,98 +7208,110 @@ FPRTKL:
 
     lda #'0'        ; Prepare '0'
 FPRTKM:
-    inc zpFPRTDX
-    beq FPRTKN
+    inc zpFPRTDX    ; increment exponent
+    beq FPRTKN      ; exit when it becomes zero
 
-    jsr CHTOBF      ; Output
-    bne FPRTKM
+    jsr CHTOBF      ; Output '0'
+    bne FPRTKM      ; repeat the process
 
 FPRTKN:
-    lda #$80
+    lda #$80        ; indicate decimal point is at $80, will not be printed
 
 FPRTK:
-    sta zpFPRTWN
+    sta zpFPRTWN    ; save decimal point location
 
 FPRTI:
-    jsr FPRTNN
-    dec zpFPRTWN
+    jsr FPRTNN      ; print next digit to buffer
+
+    dec zpFPRTWN    ; decrement decimal point location
     bne FPRTL
 
-    lda #'.'
+    lda #'.'        ; add decimal point to buffer
     jsr CHTOBF
 
 FPRTL:
     dec zpWORK+1
-    bne FPRTI
+    bne FPRTI       ; loop for the required number of digits
 
     ldy zpWORK
     dey
-    beq FPRTTX
+    beq FPRTTX      ; print exponent part if 'E' mode is in use
 
     dey
-    beq FPRTTYp2
+    beq FPRTTYp2    ; print exponent part in 'F' mode
+
+    ; 'G' mode, remove trailing zeros
 
     ldy zpCLEN
+
 FPRTTZ:
     dey
     lda STRACC,Y
     cmp #'0'
-    beq FPRTTZ
+    beq FPRTTZ      ; remove 0s
 
     cmp #'.'
-    beq FPRTTY
+    beq FPRTTY      ; and decimal point if needed
 
     iny
+
 FPRTTY:
-    sty zpCLEN
+    sty zpCLEN      ; store string length
+
 FPRTTYp2:
     lda zpFPRTDX
-    beq FPRTX          ; exponent=0
+    beq FPRTX       ; return if exponent = 0
 
 FPRTTX:
     lda #'E'
-    jsr CHTOBF         ; Output 'E'
+    jsr CHTOBF      ; Output 'E'
 
     lda zpFPRTDX
-    bpl FPRTJ
+    bpl FPRTJ       ; skip next part if exponent is positive
 
     lda #'-'
-    jsr CHTOBF         ; Output '-'
+    jsr CHTOBF      ; Output '-'
 
     sec
     lda #$00
-    sbc zpFPRTDX       ; Negate
+    sbc zpFPRTDX    ; Negate exponent
 
 FPRTJ:
-    jsr IPRT
+    jsr IPRT        ; print exponent to the buffer
+
     lda zpWORK
-    beq FPRTX
+    beq FPRTX       ; exit if 'G' format is in use
 
     lda #' '
     ldy zpFPRTDX
-    bmi FPRTTW
+    bmi FPRTTW      ; skip if exponent was minus
 
-    jsr CHTOBF
+    jsr CHTOBF      ; when positive, add space to make up for the minus sign
+
 FPRTTW:
     cpx #$00
     bne FPRTX
-    jmp CHTOBF
+
+    jmp CHTOBF      ; add another ' ' if exponent is a single digit, tail call
 
 FPRTX:
     rts
 
+; print next mantissa digit
+
 FPRTNN:
-    lda zpFACCMA
+    lda zpFACCMA    ; get top nibble
     lsr
     lsr
     lsr
     lsr
-    jsr FPRTDG
+    jsr FPRTDG      ; print digit
 
     lda zpFACCMA
-    and #$0F
-    sta zpFACCMA
-    jmp FTENX
+    and #$0F        ; mask out top nibble
+    sta zpFACCMA    ; and store
+
+    jmp FTENX       ; multiply by 10, tail call
 
 ; ----------------------------------------------------------------------------
 
@@ -8054,8 +8086,8 @@ COPY_FACC_TO_IACC:
 ; Truncates towards zero.
 
 FFIXQ:
-    jsr FTOW       ; Copy FloatA to FloatB
-    jmp FCLR       ; Set FloatA to zero and return
+    jsr FTOW       ; Copy FACC to FWRK
+    jmp FCLR       ; Set FACC to zero and return
 
 FFIX:
     lda zpFACCX
