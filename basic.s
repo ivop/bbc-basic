@@ -9088,7 +9088,7 @@ FLOGD:
     txa
     pha             ; save exponent on stack
 
-    sty zpFACCX     ; set exponent of result
+    sty zpFACCX     ; set exponent of result (strip exponent)
     jsr FADDW       ; calculate FACC = FACC + FWRK
 
     lda #<FWSD
@@ -9180,7 +9180,7 @@ FCFA:
 
 FCFLP:
     jsr ARGA            ; make ARGP point to FWSA (value of X in formula)
-    jsr FXDIV           ; calculate FACC = (ARGP) / FACC    \ X / (....)
+    jsr FXDIV           ; calculate FACC = (ARGP) / FACC
 
     clc
     lda zpCOEFP         ; move COEFP pointer to next floating point value
@@ -9192,7 +9192,7 @@ FCFLP:
     sta zpCOEFP+1
     sta zpARGP+1
 
-    jsr FADD            ; FACC = FACC = (ARGP)  \ add X
+    jsr FADD            ; FACC = FACC + (ARGP)
 
     dec zpFRDDDP        ; decrement counter
     bne FCFLP           ; and loop if necessary
