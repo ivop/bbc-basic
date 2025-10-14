@@ -39,11 +39,11 @@
             MINORVERSION  = 0
         .elseif .def BUILD_BBC_BASIC3
             romstart      = $8000     ; Code start address
-            VERSION       = 3 
+            VERSION       = 3
             MINORVERSION  = 0
         .elseif .def BUILD_BBC_BASIC310HI
             romstart      = $b800     ; Code start address
-            VERSION       = 3 
+            VERSION       = 3
             MINORVERSION  = 10
         .endif
 
@@ -110,7 +110,7 @@
 
         BRKV=$0202
         WRCHV=$0208
-      
+
         OSBYTE=NULLRET
         OSWORD=NULLRET
 
@@ -139,7 +139,7 @@
 
         BRKV=$0316    ; Fixed
         WRCHV=0       ; Fixed
-      
+
     .else
         .error "Please specify your build (i.e. -d:BUILD_BBC_BASIC2=1)"
     .endif
@@ -1519,7 +1519,7 @@ LDIND:
     bne LDINDB       ; index error
 
     jsr PLUS10       ; add $10
-    jmp OPTIM        ; same code as before for 
+    jmp OPTIM        ; same code as before for
 
 LDINDB:
     jmp BADIND       ; Jump to Index error
@@ -1613,7 +1613,7 @@ EQUBWS:
     beq EQUS
     jmp STDED         ; Syntax error
 
-; enter with X= 1 (bytes), 2 (words), or 4 (dwords), 
+; enter with X= 1 (bytes), 2 (words), or 4 (dwords),
 
 EQUB:
     txa
@@ -1667,7 +1667,7 @@ INTOK:
     adc zpWORK+1
     sta zpWORK+3
     pla                 ; retrieve token
-    sta (zpWORK),Y      ; store 
+    sta (zpWORK),Y      ; store
 
 INTOKA:
     iny
@@ -1707,7 +1707,7 @@ CONSTR:
     pha                     ; save
 
     ; multiply 16-bit int by 10
-    ; 
+    ;
     ldx zpWORK+7            ; remember original MSB in X
     lda zpWORK+6
     asl                     ; multiply by 2
@@ -1794,7 +1794,7 @@ CONSTI:                 ; insert constant
     ora zpWORK+6
     lsr
     lsr
-    eor #$54            ; inverse of original bit6 and bit14, and always 1 bit 
+    eor #$54            ; inverse of original bit6 and bit14, and always 1 bit
     sta (zpWORK),Y
 
     jsr NEXTCH          ; add 3 to the pointer to point to the last byte
@@ -4497,7 +4497,7 @@ WRIACC:
     .if WRCHV != 0
         jmp (WRCHV)
     .elseif WRCHV == 0
-        jmp OSWRCH 
+        jmp OSWRCH
     .endif
 
 ; ----------------------------------------------------------------------------
@@ -6756,7 +6756,7 @@ TIMESJ:
 ; ----------------------------------------------------------------------------
 
 ; Stack current value and continue in Evaluator Level 3
-; ------------------------------------------------------- 
+; -------------------------------------------------------
 PHTERM:
     jsr PHACC
 
@@ -7391,7 +7391,7 @@ FRDDC:
 
 FRDDDD:
     lda zpFRDDDP      ; seen before?
-    bne FRDDQ         ; Already got decimal point, 
+    bne FRDDQ         ; Already got decimal point,
 
     inc zpFRDDDP      ; set decimal point flag, indicate period has been seen
     bne FRDDC         ; loop for next
@@ -8755,81 +8755,88 @@ FDIVZ:
 ; FTAN works as FSIN(X)/FCOS(X)
 
 TAN:
-    jsr FLTFAC
-    jsr FRANGE
+    jsr FLTFAC      ; get operand, ensure it's a floating point value
+    jsr FRANGE      ; compute the quadrant of the angle
 
     lda zpFQUAD
-    pha
-    jsr ARGD
-    jsr FSTA
+    pha             ; save the quadrant on the stack
 
-    inc zpFQUAD
+    jsr ARGD        ; set ARGP to point to FWSD
+    jsr FSTA        ; store FACC at (ARGP)
 
-    jsr FSC
-    jsr ARGD
-    jsr FSWOP
+    ; the FSC function is common to sine and cosine, just a quadrant apart
 
-    pla
-    sta zpFQUAD
+    inc zpFQUAD     ; increase quadrant for cosine
 
-    jsr FSC
-    jsr ARGD
-    jsr FDIV
+    jsr FSC         ; calculate cosine
+    jsr ARGD        ; set ARGP to point to FWSD
+    jsr FSWOP       ; swap FACC with (ARGP)
 
-    lda #$FF
+    pla             ; retrieve quadrant
+    sta zpFQUAD     ; and store
+
+    jsr FSC         ; calculate sine
+    jsr ARGD        ; set ARGP to point to FWSD
+    jsr FDIV        ; FACC = FACC / (ARGP)  \ sin(x)/cos(x)
+
+    lda #$FF        ; indicate it's a floating point number
     rts
 
 ; ----------------------------------------------------------------------------
 
 FDIV:
-    jsr FTST
+    jsr FTST        ; test FACC
     beq FTIDYZ      ; 0.0/anything = 0.0 (including 0.0/0.0)
 
-    jsr FLDW
-    beq FDIVZ       ; divide by zero
+    jsr FLDW        ; load FWRK from (ARGP)
+    beq FDIVZ       ; if it's zero, error 'Divide by zero'
 
 FDIVA:
-    lda zpFACCS
+    lda zpFACCS     ; eor the signs to get the sign of the result
     eor zpFWRKS
-    sta zpFACCS     ; sign correct
+    sta zpFACCS
+
     sec
     lda zpFACCX
     sbc zpFWRKX     ; difference of exponents
-    bcs FDIVB
+    bcs FDIVB       ; jump if no underflow
 
-    dec zpFACCXH
+    dec zpFACCXH    ; adjust underflow
     sec
+
 FDIVB:
     adc #$80        ; $81 because carry is set
-    sta zpFACCX
-    bcc FDIVC
+    sta zpFACCX     ; store as exponent of the answer
+    bcc FDIVC       ; jump if no overflow
 
-    inc zpFACCXH
+    inc zpFACCXH    ; adjust overflow flag
     clc
+
 FDIVC:
-    ldx #$20
+    ldx #$20        ; loop counter
 
 FDIVE:
-    bcs FDIVH
+    bcs FDIVH       ; skip test if previous shift set the carry flag
 
     lda zpFACCMA
     cmp zpFWRKMA
-    bne FDIVF
+    bne FDIVF       ; not equal, test <
 
     lda zpFACCMB
     cmp zpFWRKMB
-    bne FDIVF
+    bne FDIVF       ; not equal, test <
 
     lda zpFACCMC
     cmp zpFWRKMC
-    bne FDIVF
+    bne FDIVF       ; not equal, test <
 
     lda zpFACCMD
     cmp zpFWRKMD
-FDIVF:
-    bcc FDIVG       ; won't go
 
-; FACC guard on basis of the comparison, carry already set for sbc
+FDIVF:
+    bcc FDIVG       ; skip subtraction if FACCM < FWRKM
+
+; Calculate FACCM = FACCM - FWRKM, carry already set for sbc
 
 FDIVH:
     lda zpFACCMD
@@ -8844,39 +8851,50 @@ FDIVH:
     lda zpFACCMA
     sbc zpFWRKMA
     sta zpFACCMA
-    sec
+
+    sec             ; C=1, subtraction tookplace
 
 FDIVG:
-    rol zpFTMPMD
+    rol zpFTMPMD    ; shift carry into FTMPM
     rol zpFTMPMC
     rol zpFTMPMB
     rol zpFTMPMA
-    asl zpFACCMD
+
+    asl zpFACCMD    ; multiply FACM by two, shift left
     rol zpFACCMC
     rol zpFACCMB
     rol zpFACCMA
-    dex
-    bne FDIVE
 
-    ldx #$07
+    dex
+    bne FDIVE       ; loop as often as necessary
+
+; Here, the same process is repeated, except the rounding byte is used
+
+    ldx #$07        ; 7 iterations required (7 guard bits)
+
 FDIVJ:
-    bcs FDIVL       ; now generate seven guard bits
-    lda zpFACCMA
+    bcs FDIVL       ; skip the comparison if the previous shift generated carry
+
+    lda zpFACCMA    ; compare FACCM to FWRKM
     cmp zpFWRKMA
-    bne FDIVK
+    bne FDIVK       ; not equal, test <
 
     lda zpFACCMB
     cmp zpFWRKMB
-    bne FDIVK
+    bne FDIVK       ; not equal, test <
 
     lda zpFACCMC
     cmp zpFWRKMC
-    bne FDIVK
+    bne FDIVK       ; not equal, test <
 
     lda zpFACCMD
     cmp zpFWRKMD
 FDIVK:
-    bcc FDIVM
+    bcc FDIVM       ; skip subtraction if FACCM < FWRKM
+
+    ; carry always set (fallthrough, or came via bcs FDIVL)
+
+    ; calculate FACCM = FACCM - FWRKM
 
 FDIVL:
     lda zpFACCMD
@@ -8891,19 +8909,24 @@ FDIVL:
     lda zpFACCMA
     sbc zpFWRKMA
     sta zpFACCMA
-    sec
+
+    sec             ; subtraction took place
 
 FDIVM:
-    rol zpFACCMG
+    rol zpFACCMG    ; shift carry flag into mantissa via rounding byte
     asl zpFACCMD
     rol zpFACCMC
     rol zpFACCMB
     rol zpFACCMA
     dex
-    bne FDIVJ
+    bne FDIVJ       ; loop for as many times as necessary
 
-    asl zpFACCMG
-    lda zpFTMPMD
+    ; since only seven iterations were performed, this instruction is
+    ; needed to line the rounding byte up
+
+    asl zpFACCMG    ; shift left once
+
+    lda zpFTMPMD    ; transfer result from FTMPM to FACCM
     sta zpFACCMD
     lda zpFTMPMC
     sta zpFACCMC
@@ -8912,9 +8935,11 @@ FDIVM:
     lda zpFTMPMA
     sta zpFACCMA
 
-    jmp NRMTDY
+    jmp NRMTDY      ; normalize, and tidy up, tail call
 
 ; ----------------------------------------------------------------------------
+
+; Read -ve as negative
 
 FSQRTE:
     brk
@@ -8928,47 +8953,53 @@ FSQRTE:
 
 ; =SQR numeric
 ; ============
+
+; Newton method: SQR(n): x[i+1] = 0.5 * (x[i] + N / x[i])
+
 SQR:
-    jsr FLTFAC
+    jsr FLTFAC      ; evaluate operand, ensure it's floating point
 
 FSQRT:
-    jsr FTST
-    beq FSQRTZ      ; SQRT(0.0) easy
-    bmi FSQRTE      ; bad -ve
+    jsr FTST        ; set flags
+    beq FSQRTZ      ; exit if zero, sqr(0) is easy
+    bmi FSQRTE      ; argument is negative, jump to '-ve root'
 
-    jsr STARGA
+    jsr STARGA      ; store FACC at temporary workspace FWSA
 
     lda zpFACCX
-    lsr
-    adc #$40
-    sta zpFACCX
-    lda #$05
+    lsr             ; halve the exponent of the number
+    adc #$40        ; and add $40
+    sta zpFACCX     ; store, new number is first approximation
+
+    lda #$05        ; loop 5 times
     sta zpFRDDW
-    jsr ARGB
+
+    jsr ARGB        ; set ARGP to point to FWSB
 
 FSQRTA:
-    jsr FSTA
+    jsr FSTA        ; store FACC at (ARGP) --> FWSB
 
     lda #<FWSA
-    sta zpARGP
-    jsr FXDIV
+    sta zpARGP      ; set ARGP to point to FWSA (value of n)
+    jsr FXDIV       ; FACC = (ARGP) / FACC --> n / x[i]
 
     lda #<FWSB
-    sta zpARGP
-    jsr FADD
+    sta zpARGP      ; set ARGP to point to FWSB (x[i])
+    jsr FADD        ; FACC = FACC + (ARGP) --> x[i] + n / x[i]
 
-    dec zpFACCX
-    dec zpFRDDW
-    bne FSQRTA
+    dec zpFACCX     ; divide by 2 by decreasing exponent (*0.5)
+    dec zpFRDDW     ; decrement counter
+    bne FSQRTA      ; loop required times
 
 FSQRTZ:
-    lda #$FF
+    lda #$FF        ; return type is floating point
     rts
 
 ; ----------------------------------------------------------------------------
 
 ; Point zpARGP to a workspace floating point temps
 ; ------------------------------------------------
+
 ARGD:
     lda #<FWSD
     bne ARGCOM
@@ -8993,28 +9024,31 @@ ARGCOM:
 
 ; ----------------------------------------------------------------------------
 
-;   FLOG sets FACC= LOG(FACC)
-;   (base e). works by
-;   (A) Check for acc <= 0.0
-;   (B) Strip exponent to put FACC in range 1.0 - 2.0
-;       and renormalize to .707 TO 1.414
-;   (B2) Extra care with smallest possible exponent
-;   (C) Approximate log using (x-1)+(x-1)^2*cf(x-1)
-;       where cf is a minimax continued fraction
-;   (D) Add result to exponent * LOG(2.0)
-;   N.B. Result can not overflow so no worry there.
-;   The series approximation used for LOGs is a continued
-;   fraction: F(X)=C(0)+X/(C(1)+X/(...
+; FLOG sets FACC= LOG(FACC) (base e)
+; works by
+; (A) Check for acc <= 0.0
+; (B) Strip exponent to put FACC in range 1.0 - 2.0
+;     and renormalize to .707 TO 1.414
+; (B2) Extra care with smallest possible exponent
+; (C) Approximate log using (x-1)+(x-1)^2*cf(x-1)
+;     where cf is a minimax continued fraction
+; (D) Add result to exponent * LOG(2.0)
+; N.B. Result can not overflow so no worry there.
+; The series approximation used for LOGs is a continued
+; fraction: F(X)=C(0)+X/(C(1)+X/(...
 
 ; =LN numeric
 ; ===========
+
 LN:
-    jsr FLTFAC
+    jsr FLTFAC  ; evaluate argument, ensure it's floating point
 
 FLOG:
-    jsr FTST
+    jsr FTST    ; test and set flags
     beq FLOGA   ; LOG(0) is illegal
     bpl FLOGB   ; LOG(>0.0) is OK
+
+    ; error when argument is negative or zero
 
 FLOGA:
     .if foldup == 0
@@ -9031,58 +9065,60 @@ FLOGA:
     .endif
 
 FLOGB:
-    jsr FCLRW
+    jsr FCLRW       ; clear FWRK
 
-    ldy #$80
+    ldy #$80        ; set FWRK to -1.0
     sty zpFWRKS
     sty zpFWRKMA
     iny
-    sty zpFWRKX         ; FWRK = -1
+    sty zpFWRKX
 
-    ldx zpFACCX
+    ldx zpFACCX     ; skip mantissa test if exponent of argument is zero
     beq FLOGC
 
-    lda zpFACCMA
+    lda zpFACCMA    ; check if mantissa < $b5000000
     cmp #$B5
     bcc FLOGD
 
 FLOGC:
-    inx
-    dey
+    inx             ; increment exponent in X
+    dey             ; decrement Y (Y=$80)
 
 FLOGD:
     txa
-    pha
-    sty zpFACCX
-    jsr FADDW
+    pha             ; save exponent on stack
+
+    sty zpFACCX     ; set exponent of result
+    jsr FADDW       ; calculate FACC = FACC + FWRK
 
     lda #<FWSD
-    jsr FSTAP
+    jsr FSTAP       ; store FACC in FWSD (workspace temporary)
 
-    lda #<FLOGTC
+    lda #<FLOGTC    ; set YA to point to FLOGTC table for continued fraction
     ldy #>FLOGTC
     jsr FCF         ; evaluate continued fraction
-    jsr ARGD
-    jsr FMUL
-    jsr FMUL
-    jsr FADD
-    jsr STARGA      ; save partial result
+    jsr ARGD        ; make ARGP point to FWSD
+    jsr FMUL        ; FACC = FACC * (ARGP)
+    jsr FMUL        ; FACC = FACC * (ARGP)
+    jsr FADD        ; FACC = FACC + (ARGP)
+    jsr STARGA      ; save partial result in FWSA
 
     pla             ; recover exponent byte
+
     sec
-    sbc #$81
-    jsr FLTACC
+    sbc #$81        ; subtract bias
+    jsr FLTACC      ; turn A into float in FACC
 
     lda #<LOGTWO
     sta zpARGP
     lda #>LOGTWO
     sta zpARGP+1
 
-    jsr FMUL
-    jsr ARGA
-    jsr FADD
+    jsr FMUL        ; calculate FACC = FACC * LOGTWO
+    jsr ARGA        ; make ARGP point to FWSA
+    jsr FADD        ; FACC = FACC + (ARGP)
 
-    lda #$FF
+    lda #$FF        ; result is a floating point value
     rts
 
     .if version < 3
@@ -9116,33 +9152,39 @@ FLOGTC:
 ;       <BYTE N> <AN> ... <A0>
 ;       where AN through A0 are floating point values.
 ;       Sam demands that no table cross a page!
+;
+; Note that the tables are in reverse order. The formula is evaluated
+; from right to left.
 
 FCF:
-    sta zpCOEFP
+    sta zpCOEFP         ; store pointer to coefficients
     sty zpCOEFP+1
-    jsr STARGA          ; save x
+    jsr STARGA          ; save FACC (X value in formula) to FWSA
 
     ldy #$00
     lda (zpCOEFP),Y     ; length of series - always downstairs
-    sta zpFRDDDP
-    inc zpCOEFP
+    sta zpFRDDDP        ; store as counter
+
+    inc zpCOEFP         ; point to next byte, start of first constant
     bne FCFA
 
     inc zpCOEFP+1
+
 FCFA:
-    lda zpCOEFP
+    lda zpCOEFP         ; copy COEFP to ARGP
     sta zpARGP
     lda zpCOEFP+1
     sta zpARGP+1
-    jsr FLDA
+
+    jsr FLDA            ; load FACC with constant at (ARGP)
 
 FCFLP:
-    jsr ARGA
-    jsr FXDIV
+    jsr ARGA            ; make ARGP point to FWSA (value of X in formula)
+    jsr FXDIV           ; calculate FACC = (ARGP) / FACC    \ X / (....)
 
     clc
-    lda zpCOEFP
-    adc #$05
+    lda zpCOEFP         ; move COEFP pointer to next floating point value
+    adc #$05            ; size of float is 5 bytes
     sta zpCOEFP
     sta zpARGP
     lda zpCOEFP+1
@@ -9150,10 +9192,10 @@ FCFLP:
     sta zpCOEFP+1
     sta zpARGP+1
 
-    jsr FADD
+    jsr FADD            ; FACC = FACC = (ARGP)  \ add X
 
-    dec zpFRDDDP
-    bne FCFLP
+    dec zpFRDDDP        ; decrement counter
+    bne FCFLP           ; and loop if necessary
 
     rts
 
@@ -10011,7 +10053,7 @@ INKEY:
     .if version < 3
         cpy #$00
     .elseif version >= 3
-        tya     
+        tya
     .endif
     bne TRUE
 
@@ -10647,7 +10689,7 @@ AYACC:
 COUNT:
         lda zpTALLY
         bcc SINSTK     ; Get COUNT, jump to return 8-bit integer
-     
+
 ; ----------------------------------------------------------------------------
 
 ; =LOMEM - Start of BASIC heap
@@ -10656,7 +10698,7 @@ RLOMEM:
         lda zpLOMEM
         ldy zpLOMEM+1
         bcc AYACC     ; Get LOMEM to AY, jump to return as integer
-     
+
 ; ----------------------------------------------------------------------------
 
 ; =HIMEM - Top of BASIC memory
@@ -10722,10 +10764,10 @@ RPAGE:
         lda #$00
         ldy zpTXTP
         jmp AYACC
-     
+
 JMPFACERR:
         jmp FACERR
-     
+
 ; ----------------------------------------------------------------------------
 
 ; =FALSE
@@ -10736,7 +10778,7 @@ FALSE:
 
 LENB:
         jmp LETM
-     
+
 ; ----------------------------------------------------------------------------
 
 ; =LEN string$
@@ -10782,7 +10824,7 @@ AYACC:
 COUNT:
         lda zpTALLY
         jmp SINSTK     ; Get COUNT, jump to return 8-bit integer
-     
+
 ; ----------------------------------------------------------------------------
 
 ; =LOMEM - Start of BASIC heap
@@ -10791,7 +10833,7 @@ RLOMEM:
         lda zpLOMEM
         ldy zpLOMEM+1
         jmp AYACC     ; Get LOMEM to AY, jump to return as integer
-     
+
 ; ----------------------------------------------------------------------------
 
 ; =HIMEM - Top of BASIC memory
@@ -10947,7 +10989,7 @@ RTOP:
         dey
         bne RTOP
         rts
- 
+
 ; ----------------------------------------------------------------------------
 
 ; =ERL - Return error line number
@@ -12203,7 +12245,7 @@ STORFP:
 STORPF:
     ldy #$00          ; Store 5-byte float
     lda zpFACCX
-    sta (zpWORK),Y 
+    sta (zpWORK),Y
 
     iny               ; exponent
     lda zpFACCS
@@ -12780,7 +12822,7 @@ FOR:
     jsr STEXPR
 
     ldy zpFORSTP
-    cpy #cFORTOP 
+    cpy #cFORTOP
     bcs FORDP
 
     lda zpWORK
@@ -13642,7 +13684,7 @@ RDLINELP:
         jsr OSWRCH       ; VDU 127
         dey
         jmp RDLINELP     ; Dec. counter, loop back
-     
+
 RDLINED:
         cmp #$15
         bne RDLINEC      ; Not Ctrl-U
@@ -13655,7 +13697,7 @@ RDLINLP2:
         dey
         bne RDLINLP2
         beq RDLINELP
-     
+
 RDLINEC:
         sta (zpWORK),Y   ; Store character
         cmp #$0D
@@ -14316,7 +14358,7 @@ OSCL:
     .ifdef MOS_ATOM
         jsr cmdStar1
         jmp NXT     ; Call Atom OSCLI and return to execution loop
-     
+
 
     ; Embedded star command
     ; ---------------------
@@ -14420,11 +14462,11 @@ SAVE:
     .endif
     .if version < 3
         .ifdef MOS_BBC
-            stx F_EXEC+2 
+            stx F_EXEC+2
             sty F_EXEC+3    ; Set address high words
             stx F_START+2
             sty F_START+3
-            stx F_END+2  
+            stx F_END+2
             sty F_END+3
         .endif
         .ifdef MOS_ATOM
@@ -14440,11 +14482,11 @@ SAVE:
     .endif
     .if version >= 3
         .ifdef MOS_BBC
-            stx F_EXEC+2 
+            stx F_EXEC+2
             sty F_EXEC+3     ; Set address high words
             stx F_START+2
             sty F_START+3
-            stx F_END+2  
+            stx F_END+2
             sty F_END+3
         .endif
         .ifdef MOS_ATOM
@@ -14473,7 +14515,7 @@ SAVE:
         jsr OSSAVE
     .endif
     .ifdef MOS_BBC
-        jsr OSFILE    
+        jsr OSFILE
     .endif
     jmp NXT
 
@@ -14508,7 +14550,7 @@ LPTR:
     tay
     ldx #zpIACC
     .ifdef MOS_ATOM
-        jsr OSSTAR         
+        jsr OSSTAR
     .endif
     .ifdef MOS_BBC
         lda #$01
@@ -14581,7 +14623,7 @@ BGET:
 OPENIN:
     .ifdef MOS_ATOM
         sec           ; SEC=OPENUP
-        bcs F     
+        bcs F
     .endif
     .ifdef MOS_BBC
         lda #$40      ; $40=OPENUP
@@ -14595,7 +14637,7 @@ OPENIN:
 OPENO:
     .ifdef MOS_ATOM
         clc           ; CLC=OPENOUT
-        bcc F     
+        bcc F
     .endif
     .ifdef MOS_BBC
         lda #$80      ; 80=OPENOUT
@@ -14615,10 +14657,10 @@ OPENI:
     .endif
 F:
     .ifdef MOS_ATOM
-        php       
+        php
     .endif
     .ifdef MOS_BBC
-        pha       
+        pha
     .endif
     jsr FACTOR
     bne OPENE          ; Evaluate, if not string, jump to error
@@ -14651,7 +14693,7 @@ CLOSE:
     jsr AEDONE         ; Evaluate #handle, check end of statement
     ldy zpIACC         ; Get handle from IACC
     .ifdef MOS_ATOM
-        jsr OSSHUT         
+        jsr OSSHUT
     .endif
     .ifdef MOS_BBC
         lda #$00
@@ -14784,3 +14826,5 @@ CHANNE:
 
     .align romstart + $4000, 0
 END_OF_ROM:
+
+; vi:syntax=mads
