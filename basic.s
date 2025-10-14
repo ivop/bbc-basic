@@ -9281,7 +9281,7 @@ FATANA:
 PISUB:
     jsr AHPIHI      ; PI/2-A
     jsr FADD
-    jsr LAA4C
+    jsr AHPILO
     jsr FADD
     jmp FNEG
 
@@ -9428,7 +9428,7 @@ FFLOTA:
     jsr FSTA
     jsr ARGB
     jsr FLDA
-    jsr LAA4C
+    jsr AHPILO
     jsr FMUL
     jsr ARGA
     jmp FADD
@@ -9455,10 +9455,12 @@ AHPIHI:
     .if (HPIHI & 0xff) == 0
         .error "BNE as BRA will not be taken!"
     .endif
-    bne LAA4E
-LAA4C:
+    bne SETARGP
+
+AHPILO:
     lda #<HPILO
-LAA4E:
+
+SETARGP:
     sta zpARGP
     lda #>HPIHI
     sta zpARGP+1
@@ -9469,7 +9471,11 @@ ARGHPI:
     .if (HALFPI & 0xff) == 0
         .error "BNE as BRA will not be taken!"
     .endif
-    bne LAA4E         ; AA57= D0 F5       Pu
+    bne SETARGP
+
+    .if (>HALFPI) != (>HPIHI)
+        .error "HPIHI and HALFPI are not on the same page"
+    .endif
 
 ; ----------------------------------------------------------------------------
 
