@@ -9770,35 +9770,36 @@ VPOS:
 ; ============
     .if version < 3
 SGNFLT:
-        jsr FTST
-        beq SGNSIN
-        bpl SGNPOS
-        bmi SGNJMPTRUE
+        jsr FTST        ; test the floating point argument, set flags
+        beq SGNSIN      ; return 0 in IACC
+        bpl SGNPOS      ; return 1 in IACC
+        bmi SGNJMPTRUE  ; return -1 in IACC
 
 SGN:
-        jsr FACTOR
-        beq FACTE
-        bmi SGNFLT
+        jsr FACTOR      ; evaluate expression
+        beq FACTE       ; 'Type mismatch' error if it's a string
+        bmi SGNFLT      ; jump if it's a float
 
-        lda zpIACC+3
+        lda zpIACC+3    ; test IACC
         ora zpIACC+2
         ora zpIACC+1
         ora zpIACC
-        beq SGNINT
+        beq SGNINT      ; jump if IACC = 0
 
-        lda zpIACC+3
-        bpl SGNPOS
+        lda zpIACC+3    ; test MSB of IACC
+        bpl SGNPOS      ; return 1 for positive
 
 SGNJMPTRUE:
-        jmp TRUE
+        jmp TRUE        ; return -1 in IACC for negative, tail call
 
 SGNPOS:
-        lda #$01
+        lda #$01        ; return 1
+
 SGNSIN:
-        jmp SINSTK
+        jmp SINSTK      ; put A in IACC, and exit, tail call
 
 SGNINT:
-        lda #$40
+        lda #$40        ; indicate result is integer
         rts
     .endif          ;  version < 3
 
@@ -9806,43 +9807,56 @@ SGNINT:
 
 ; =LOG numeric
 ; ============
+
 LOG:
-    jsr LN
-    ldy #<RPLN10
+    jsr LN              ; evaluate natural logarithm
+    ldy #<RPLN10        ; set YA to constant
+    .if version >= 3
+        .error <RPLN10 == 0
+    .endif
     .if version < 3
         lda #>RPLN10
+        .error >RPLN10 == 0
     .endif
-    bne CX
+    bne CX              ; branch always, check during assembly
 
 ; ----------------------------------------------------------------------------
 
 ; =RAD numeric
 ; ============
+
 RAD:
-    jsr FLTFAC
-    ldy #<FPIs18
+    jsr FLTFAC          ; evaluate expression, ensure it's floating point
+    ldy #<FPIs18        ; set YA to constant factor
     .if version < 3
         lda #>FPIs18
     .endif
 
 CX:
     .if version >= 3
-        lda #>FPIs18       ; identical to version < 3
+        lda #>FPIs18    ; share setting MSB, see checks during assembly below
     .endif
     sty zpARGP
     sta zpARGP+1
-    jsr FMUL
+    jsr FMUL            ; multiply, FACC = FACC * (ARGP)
 
     lda #$FF
     rts
+
+    .if version >= 3
+        .if (>FPIs18) != (>RPLN10) || (>FPIs18) != (>F180sP)
+            .error "MSB of FPIs18, F180sP, and RPLN10 must be equal"
+        .endif
+    .endif
 
 ; ----------------------------------------------------------------------------
 
 ; =DEG numeric
 ; ============
+
 DEG:
-    jsr FLTFAC
-    ldy #<F180sP
+    jsr FLTFAC          ; evaluate expression, ensure it's floating point
+    ldy #<F180sP        ; set YA to constant factor
     .if version >= 3
         .error  <F180sP == 0
     .endif
@@ -9850,36 +9864,38 @@ DEG:
         lda #>F180sP
         .error >F180sP == 0
     .endif
-    bne CX               ; branch always
+    bne CX               ; branch always, check during assembly
 
 ; ----------------------------------------------------------------------------
 
 ; =PI
 ; ===
+
 PI:
-    jsr ASINAA
-    inc zpFACCX
-    tay
+    jsr ASINAA          ; get value of PI/2 in FACC
+    inc zpFACCX         ; multiply by 2 by incrementing the exponent
+    tay                 ; repeat setting of flags (instead of lda #$ff)
     rts
 
 ; ----------------------------------------------------------------------------
 
 ; =USR numeric
 ; ============
+
 USR:
     jsr INTFAC          ; Evaluate integer
     jsr USER            ; Set up registers and call code at IACC
-    sta zpIACC
-    stx zpIACC+1        ; Store returned A,X in IACC
-    sty zpIACC+2        ; Store returned Y
+    sta zpIACC          ; Store returned A,X,Y in IACC
+    stx zpIACC+1
+    sty zpIACC+2
 
     php
     pla
     sta zpIACC+3        ; Store returned flags in IACC
     cld                 ; Ensure in binary mode on return
 
-    lda #$40
-    rts               ; Return INTEGER
+    lda #$40            ; indicate return type is integer
+    rts
 
     .if version < 3
 FACTE:
@@ -9890,45 +9906,48 @@ FACTE:
 
 ; =EVAL string$ - Tokenise and evaluate expression
 ; ================================================
+
 EVAL:
-    jsr FACTOR         ; Evaluate value
+    jsr FACTOR              ; Evaluate value
     .if version < 3
-        bne FACTE
+        bne FACTE           ; 'Type mismatch' error
     .elseif version >= 3
-        bne EVALE
+        bne EVALE           ; 'Type mismatch' error
     .endif
 
     inc zpCLEN
     ldy zpCLEN        ; Increment string length to add a <cr>
     lda #$0D
     sta STRACC-1,Y    ; Put in terminating <cr>
+
     jsr PHSTR         ; Stack the string
                       ; String has to be stacked as otherwise would
                       ; be overwritten by any string operations
                       ; called by Evaluator
     lda zpAELINE
-    pha               ; Save PTRB
+    pha               ; Save AELINE pointer on machine stack
     lda zpAELINE+1
     pha
     lda zpAECUR
-    pha
+    pha               ; including its cursor offset
 
     ldy zpAESTKP
-    ldx zpAESTKP+1    ; YX=>stackbottom (wrong way around)
+    ldx zpAESTKP+1    ; XY = stackbottom
     iny               ; Step over length byte
-    sty zpAELINE      ; AELINE=>stacked string
-    sty zpWORK        ; WORK=>stacked string
-    bne EVALX
+    sty zpAELINE      ; AELINE => stacked string
+    sty zpWORK        ; WORK => stacked string
+    bne EVALX         ; skip if MSB does not needs to be adjusted
 
-    inx               ; Inc high byte if next page
+    inx               ; adjust MSB
 
 EVALX:
-    stx zpAELINE+1
-    stx zpWORK+1      ; AELINE and WORK high bytes
+    stx zpAELINE+1     ; store AELINE and WORK high bytes
+    stx zpWORK+1
+
     ldy #$FF
-    sty zpWORK+4
-    iny
-    sty zpAECUR        ; Point AELINE offset back to start
+    sty zpWORK+4       ; set tokenising flag to indicate not start of statement
+    iny                ; Y=0
+    sty zpAECUR        ; Point AELINE offset back to start of string
 
     jsr MATCEV         ; Tokenise string on stack
     jsr EXPR           ; Call expression evaluator
@@ -9936,170 +9955,180 @@ EVALX:
 
 VALOUT:
     pla
-    sta zpAECUR          ; Restore AELINE
+    sta zpAECUR        ; Restore AELINE from machine stack
     pla
     sta zpAELINE+1
     pla
     sta zpAELINE
-    lda zpTYPE          ; Get expression return value type
-    rts               ; And return
+    lda zpTYPE         ; Get expression return value type
+    rts                ; And return
 
     .if version >= 3
 EVALE:
-        jmp LETM
+        jmp LETM       ; 'Type mismatch' error
     .endif
 
 ; ----------------------------------------------------------------------------
 
 ; =VAL numeric
 ; ============
+
 VAL:
-    jsr FACTOR
+    jsr FACTOR              ; evaluate argument
     .if version < 3
-        bne EVALE
+        bne EVALE           ; 'Type mismatch' error
     .elseif version >= 3
-        bne EVALE
+        bne EVALE           ; 'Type mismatch' error
     .endif
 
 VALSTR:
-    ldy zpCLEN
+    ldy zpCLEN          ; add zero to the end of the string
     lda #$00
     sta STRACC,Y
 
-    lda zpAELINE
+    lda zpAELINE        ; save AELINE on machine stack
     pha
     lda zpAELINE+1
     pha
-    lda zpAECUR
+    lda zpAECUR         ; and its cursor offset position
     pha
 
     lda #$00
-    sta zpAECUR
+    sta zpAECUR         ; reset cursor to 0
 
     .if version < 3
-        lda #<STRACC        ; of course <STRACC = 0
+        lda #<STRACC    ; of course <STRACC = 0
     .endif
-    sta zpAELINE
+    sta zpAELINE        ; set AELINE to point to the beginning of STRACC
     lda #>STRACC
     sta zpAELINE+1
 
-    jsr AESPAC
+    jsr AESPAC          ; skip spaces, and get next character
 
     cmp #'-'
-    beq VALMIN
+    beq VALMIN          ; jump is negative value
 
     cmp #'+'
-    bne VALNUB
+    bne VALNUB          ; jump if not a '+' sign
 
-    jsr AESPAC
+    jsr AESPAC          ; skip '+' and optional spaces, get next character
 
 VALNUB:
-    dec zpAECUR
-    jsr FRDD
+    dec zpAECUR         ; one position backwards, because next character has
+                        ; been read already
 
-    jmp VALTOG
+    jsr FRDD            ; get decimal number from AELINE
+
+    jmp VALTOG          ; exit via end of EVAL routine, tail call
 
 VALMIN:
-    jsr AESPAC
+    jsr AESPAC          ; skip spaces, and get next character
 
-    dec zpAECUR
-    jsr FRDD
+    dec zpAECUR         ; one position backwards, point to current character
+    jsr FRDD            ; get decimal number from AELINE
 
-    bcc VALTOG
+    bcc VALTOG          ; exit via end of EVAL routine to restore AELINE/CUR
 
-    jsr VALCMP
+    jsr VALCMP          ; negate value via unary minus code
 
 VALTOG:
-    sta zpTYPE
-    jmp VALOUT
+    sta zpTYPE          ; store the type
+    jmp VALOUT          ; exit, restore AELINE/CUR, tail call
+
+; ----------------------------------------------------------------------------
 
 ; =INT numeric
 ; ============
 INT:
-    jsr FACTOR
+    jsr FACTOR              ; evaluate argument
 
     .if version < 3
-        beq EVALE
+        beq EVALE           ; 'Type mismatch' error
     .elseif version >= 3
-        beq FACTE
+        beq FACTE           ; 'Type mismatch' error
     .endif
 
-    bpl INTX
+    bpl INTX                ; exit if it's already an integer ($40)
 
-    lda zpFACCS
+    lda zpFACCS             ; save the sign of FACC
     php
 
-    jsr FFIX
+    jsr FFIX                ; fix into an integer
 
-    plp
-    bpl INTF
+    plp                     ; get flags (sign bit)
+    bpl INTF                ; jump if positive
 
     lda zpFWRKMA
     ora zpFWRKMB
     ora zpFWRKMC
     ora zpFWRKMD
-    beq INTF
+    beq INTF                ; jump if negative, but fractional part is zero
 
-    jsr FNEARP
+    jsr FNEARP              ; otherwise, decrement FACC mantissa
+                            ; INT(-7.9) is rounded down to -8
 
 INTF:
-    jsr COPY_FACC_TO_IACC
-    lda #$40
+    jsr COPY_FACC_TO_IACC   ; what the function name says :)
+
+    lda #$40                ; indicate return type is integer
 
 INTX:
     rts
 
     .if version < 3
 EVALE:
-        jmp LETM
+        jmp LETM            ; 'Type mismatch' error
     .endif
 
 ; ----------------------------------------------------------------------------
 
 ; =ASC string$
 ; ============
+
 ASC:
-    jsr FACTOR
+    jsr FACTOR              ; evaluate argument
     .if version < 3
-        bne EVALE
+        bne EVALE           ; 'Type mismatch' error if it's not a string
     .elseif version >= 3
-        bne FACTE
+        bne FACTE           ; 'Type mismatch' error if it's not a string
     .endif
     lda zpCLEN
-    beq TRUE
+    beq TRUE                ; return -1 in IACC if string length is 0
 
-    lda STRACC
+    lda STRACC              ; get first character of string
 
 ASCX:
-    jmp SINSTK          ; tail call
+    jmp SINSTK              ; put A in IACC, and exit, tail call
 
 ; ----------------------------------------------------------------------------
 
 ; =INKEY numeric
 ; ==============
+
 INKEY:
-    jsr INKEA
+    jsr INKEA               ; call INKEY master routine
     .if version < 3
         cpy #$00
     .elseif version >= 3
-        tya
+        tya                 ; faster way to set flags on Y, but clobbers A
     .endif
-    bne TRUE
+    bne TRUE                ; return -1 in IACC if no character was recorded
 
-    txa
-    jmp AYACC
+    txa                     ; move character from X to A
+    jmp AYACC               ; place A in IACC, and exit, tail call
 
     .if version >= 3
 FACTE:
-        jmp LETM
+        jmp LETM            ; 'Type mismatch' error
     .endif
 
 ; ----------------------------------------------------------------------------
 
 ; =EOF#numeric
 ; ============
+
 EOF:
-    jsr CHANN
+    jsr CHANN               ; evaluate the handle of the file
     tax
     lda #$7F
     .ifdef MOS_BBC
@@ -10107,10 +10136,12 @@ EOF:
     .endif
     txa
     .if version < 3
-        beq ASCX
+        beq ASCX            ; return 0 in IACC if not EOF (16-bit int)
     .elseif version >= 3
-        beq TRUTWO
+        beq TRUTWO          ; return 0 in IACC if not EOF (32-bit int)
     .endif
+
+    ; fallthrough, return -1 in IACC if EOF
 
 ; ----------------------------------------------------------------------------
 
@@ -10118,24 +10149,24 @@ EOF:
 ; =====
 TRUE:
     .if version < 3
-        lda #$FF
+        lda #$FF            ; set fill value in A
     .elseif version >= 3
-        ldx #$FF
+        ldx #$FF            ; set fill value in X
     .endif
 TRUTWO:
     .if version < 3
-        sta zpIACC
+        sta zpIACC          ; fill IACC with A
         sta zpIACC+1
         sta zpIACC+2
         sta zpIACC+3
     .elseif version >= 3
-        stx zpIACC
+        stx zpIACC          ; fill IACC with X
         stx zpIACC+1
         stx zpIACC+2
         stx zpIACC+3
 SGNINT:
     .endif
-    lda #$40
+    lda #$40        ; return type is integer
     rts
 
 ; ----------------------------------------------------------------------------
@@ -10143,65 +10174,70 @@ SGNINT:
     .if version >= 3
 ; =FALSE
 ; ======
+
 FALSE:
         ldx #$00
-        beq TRUTWO       ; branch always
-
-SGNFLT:
-        jsr FTST
-        beq FALSE
-        bpl SGNPOS
-        bmi TRUE
+        beq TRUTWO       ; branch always, fill IACC with 0, and exit
 
 ; ----------------------------------------------------------------------------
 
+SGNFLT:
+        jsr FTST        ; test the floating point argument, set flags
+        beq FALSE       ; return 0 in IACC
+        bpl SGNPOS      ; return 1 in IACC
+        bmi TRUE        ; return -1 in IACC
+
 ; =SGN numeric
 ; ============
+
 SGN:
-        jsr FACTOR
-        beq FACTE
-        bmi SGNFLT
+        jsr FACTOR      ; evaluate expression, 
+        beq FACTE       ; 'Type mismatch' error if it's a string
+        bmi SGNFLT      ; jump if it's a float
 
         lda zpIACC+3
         ora zpIACC+2
         ora zpIACC+1
         ora zpIACC
-        beq SGNINT
+        beq SGNINT      ; if zero, return zero, exit
 
         lda zpIACC+3
-        bmi TRUE
+        bmi TRUE        ; if negative, return -1 in IACC, and exit
 
 SGNPOS:
-        lda #$01
+        lda #$01        ; return 1
+
 SGNSIN:
-        jmp SINSTK
+        jmp SINSTK      ; set IACC from A, and exit, tail call
 
 ; ----------------------------------------------------------------------------
 
 ; =POINT(numeric, numeric)
 ; ========================
 POINT:
-        jsr INEXPR
-        jsr PHACC
-        jsr COMEAT
-        jsr BRA
-        jsr INTEGB
+        jsr INEXPR      ; evaluate expression as an integer
+        jsr PHACC       ; push to stack
+        jsr COMEAT      ; expect comma
+        jsr BRA         ; handle second argument, and closing bracket
+        jsr INTEGB      ; make sure it's an integer
 
-        lda zpIACC
-        pha
-        ldx zpIACC+1
-        jsr POPACC
+        lda zpIACC      ; LSB second argument
+        pha             ; save on stack
+        ldx zpIACC+1    ; MSB second argument, save in X
 
-        stx zpIACC+3
-        pla
-        sta zpIACC+2
-        ldx #zpIACC
-        lda #$09
+        jsr POPACC      ; pop first argument into IACC
+
+        stx zpIACC+3    ; set MSB of second argument in MSB of IACC
+        pla             ; restore LSB second argument
+        sta zpIACC+2    ; and LSB just below it
+
+        ldx #zpIACC     ; pointer to XY-coordinates block
+        lda #$09        ; OSWORD POINT routine
         jsr OSWORD
 
-        lda zpFACCS
-        bmi TRUE
-        bpl SGNSIN
+        lda zpFACCS     ; zpIACC+4, return value
+        bmi TRUE        ; return TRUE if point is off the screen
+        bpl SGNSIN      ; put A in IACC, and exit
 
     .endif              ; version >= 3
 
@@ -10210,17 +10246,20 @@ POINT:
     .if version < 3
 ; =NOT numeric
 ; ============
+
 NOT:
-        jsr INTFAC
-        ldx #$03
+        jsr INTFAC      ; evaluate argument as integer
+
+        ldx #$03        ; loop 3..0
+
 NOTLOP:
         lda zpIACC,X
-        eor #$FF
+        eor #$FF        ; invert every byte of IACC
         sta zpIACC,X
         dex
         bpl NOTLOP
 
-        lda #$40
+        lda #$40        ; return type is integer
         rts
     .endif
 
@@ -10228,6 +10267,7 @@ NOTLOP:
 
 ; =INSTR(string$, string$ [, numeric])
 ; ====================================
+
 INSTR:
     jsr EXPR
     .if version < 3
