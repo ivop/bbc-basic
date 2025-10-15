@@ -8777,7 +8777,7 @@ TAN:
 
     jsr FSC         ; calculate sine
     jsr ARGD        ; set ARGP to point to FWSD
-    jsr FDIV        ; FACC = FACC / (ARGP)  \ sin(x)/cos(x)
+    jsr FDIV        ; FACC = FACC / (ARGP)  ; sin(x)/cos(x)
 
     lda #$FF        ; indicate it's a floating point number
     rts
@@ -9339,7 +9339,7 @@ FATANC:
 
 COS:
     jsr FLTFAC      ; evaluate float argument
-    jsr FRANGE      ; reduce to < PI/2
+    jsr FRANGE      ; reduce to < PI/2, compute quadrant
     inc zpFQUAD     ; increment quadrant counter (offset to SIN)
     jmp FSC         ; common code SIN/COS
 
@@ -9347,37 +9347,38 @@ COS:
 ; ============
 
 SIN:
-    jsr FLTFAC
-    jsr FRANGE
+    jsr FLTFAC      ; evaluate argument and ensure it's floating point
+    jsr FRANGE      ; compute the quadrant of the angle
 
 FSC:
-    lda zpFQUAD
-    and #$02
-    beq FSCA
-    jsr FSCA
-    jmp FNEG
+    lda zpFQUAD     ; check quadrant if result needs to be negated
+    and #$02        ; quadrants 4-7
+    beq FSCA        ; jump if no negation is necessary
+
+    jsr FSCA        ; calculate sine
+    jmp FNEG        ; negate, and exit, tail call
 
 FSCA:
-    lsr zpFQUAD
-    bcc FSCB        ; 1st or 2nd (+ve)
+    lsr zpFQUAD     ; check quadrant
+    bcc FSCB        ; jump if 1st or 2nd (+ve)
 
     jsr FSCB
 
-SQRONE:
-    jsr STARGA      ; SQR(FACC^2-1)
-    jsr FMUL
-    jsr FSTA
-    jsr FONE
-    jsr FSUB
-    jmp FSQRT
+SQRONE:             ; SQR(FACC^2-1)
+    jsr STARGA      ; store FACC at FWSA
+    jsr FMUL        ; calculate FACC = FACC * FWSA  ; = FACC^2
+    jsr FSTA        ; store FACC at FWSA
+    jsr FONE        ; set FACC to 1.0
+    jsr FSUB        ; calculate FACC = FWSA - FACC
+    jmp FSQRT       ; calculate SQR(FACC), and exit, tail call
 
 FSCB:
-    jsr STARGC
-    jsr FMUL
+    jsr STARGC      ; store FACC at FWSC
+    jsr FMUL        ; calculate FACC = FACC * FWSC  ; = FACC^2
     lda #<FSINC
     ldy #>FSINC
-    jsr FCF         ; evaluate approximation
-    jmp ACMUL       ; X*(SIN(X)/X)
+    jsr FCF         ; evaluate approximation (sin(x)/x)
+    jmp ACMUL       ; multiply by FWSC, and exit, tail call
 
 ; ----------------------------------------------------------------------------
 
@@ -9390,58 +9391,58 @@ FSCB:
 FRANGE:
     lda zpFACCX
     cmp #$98
-    bcs FRNGQQ      ; arg too big
+    bcs FRNGQQ      ; argument too big, error 'Accuracy lost'
 
-    jsr STARGA      ; save arg away
-    jsr ARGHPI      ; PI/2
-    jsr FLDW
+    jsr STARGA      ; save FACC at FWSA
+    jsr ARGHPI      ; set ARGP to PI/2
+    jsr FLDW        ; load FWRK from (ARGP)
 
-    lda zpFACCS
+    lda zpFACCS     ; copy sign of FACC to FWRK
     sta zpFWRKS
-    dec zpFWRKX     ; PI/4*SGN(INPUT)
+    dec zpFWRKX     ; decrement exponent --> FWRK = PI/4*SGN(FACC)
 
-    jsr FADDW
-    jsr FDIV
+    jsr FADDW       ; FACC = FACC + FWRK
+    jsr FDIV        ; FACC = FACC / (ARGP)      ; FACC /(PI/2)
 
 ; Note that the above division only has to get its result about right to
 ; the nearest integer.
 
-    jsr FFIX
+    jsr FFIX        ; fix to integer
 
-    lda zpFACCMD
+    lda zpFACCMD    ; save least significant byte as quadrant
     sta zpFQUAD
     ora zpFACCMC
     ora zpFACCMB
     ora zpFACCMA
-    beq FRNGD       ; FIX(A/(PI/2))=0
+    beq FRNGD       ; if mantissa is zero, FIX(A/(PI/2))=0
 
-    lda #$A0
+    lda #$A0        ; set exponent to $a0
     sta zpFACCX
-    ldy #$00
+    ldy #$00        ; clear rounding byte
     sty zpFACCMG
-    lda zpFACCMA
+    lda zpFACCMA    ; move sign into the sign byte
     sta zpFACCS
-    bpl FFLOTA
+    bpl FFLOTA      ; skip next if positive
 
-    jsr FINEG
+    jsr FINEG       ; negate the mantissa if needed
 
 FFLOTA:
-    jsr FNRM
-    jsr STARGB
-    jsr AHPIHI
-    jsr FMUL
-    jsr ARGA
-    jsr FADD
-    jsr FSTA
-    jsr ARGB
-    jsr FLDA
-    jsr AHPILO
-    jsr FMUL
-    jsr ARGA
-    jmp FADD
+    jsr FNRM        ; normalise the result
+    jsr STARGB      ; store FACC in FWSB
+    jsr AHPIHI      ; make ARGP point to -PI/2 (almost)
+    jsr FMUL        ; FACC = FACC * (ARGP), and check overflow
+    jsr ARGA        ; make ARGP point to FWSA
+    jsr FADD        ; FACC = FACC + (ARGP)
+    jsr FSTA        ; store FACC in FWSA
+    jsr ARGB        ; set ARGP to FWSB
+    jsr FLDA        ; unpack (ARGP) to FACC
+    jsr AHPILO      ; make ARGP point to -PI/2 (residue, almost zero)
+    jsr FMUL        ; FACC = FACC * (ARGP)
+    jsr ARGA        ; set ARGP to FWSA again
+    jmp FADD        ; and add to FACC, exit, tail call
 
 FRNGD:
-    jmp LDARGA
+    jmp LDARGA      ; copy (ARGP) to FACC = PI/2
 
 ; ----------------------------------------------------------------------------
 
@@ -9457,6 +9458,8 @@ FRNGQQ:
 
 ; ----------------------------------------------------------------------------
 
+; Set ARGP to HPIHI
+
 AHPIHI:
     lda #<HPIHI
     .if (HPIHI & 0xff) == 0
@@ -9464,14 +9467,18 @@ AHPIHI:
     .endif
     bne SETARGP
 
+; Set ARGP to HPILO
+
 AHPILO:
     lda #<HPILO
 
 SETARGP:
     sta zpARGP
-    lda #>HPIHI
+    lda #>HPIHI     ; shared MSB between them, hence the possible error below
     sta zpARGP+1
     rts
+
+; Set ARGP to HALFPI
 
 ARGHPI:
     lda #<HALFPI
@@ -9490,18 +9497,18 @@ ARGHPI:
 ; Done this way for accuracy to 1.5 precision approx.
 
 HPIHI:
-    dta $81, $c9, $10, $00, $00         ; -1.57080078
+    dta $81, $c9, $10, $00, $00     ; -1.5708007812500000
 HPILO:
-    dta $6f, $15, $77, $7a, $61         ; 0.00000445
+    dta $6f, $15, $77, $7a, $61     ; 0.0000044544551105
 HALFPI:
-    dta $81, $49, $0f, $da, $a2         ; 1.57079633 = PI/2
+    dta $81, $49, $0f, $da, $a2     ; 1.5707963267341256
 FPIs18:
-    dta $7b, $0e, $fa, $35, $12         ; 0.01745329 = PI/180 (1 deg in rads)
+    dta $7b, $0e, $fa, $35, $12     ; 0.0174532925157109 = PI/180 (1° in in rad)
 F180sP:
-    dta $86, $65, $2e, $e0, $d3         ; 57.29577951 = 180/PI (1 rad in degs)
+    dta $86, $65, $2e, $e0, $d3     ; 57.2957795113325119 = 180/PI (1 rad in °)
     .if version >= 3
 RPLN10:
-        dta $7f, $5e, $5b, $d8, $aa     ; 0.43429448 = LOG10(e)
+        dta $7f, $5e, $5b, $d8, $aa         ; 0.4342944819945842 = LOG10(e)
     .endif
 
     .if .hi(*) != .hi(HPIHI)
@@ -9511,13 +9518,13 @@ RPLN10:
 ; ----------------------------------------------------------------------------
 
 FSINC:
-    dta $05                         ; Length -1
-    dta $84, $8a, $ea, $0c, $1b     ; -8.68214045
-    dta $84, $1a, $be, $bb, $2b     ; 9.67156522
-    dta $84, $37, $45, $55, $ab     ; 11.45442740
-    dta $82, $d5, $55, $57, $7c     ; -3.33333385
-    dta $83, $c0, $00, $00, $05     ; -6.00000001
-    dta $81, $00, $00, $00, $00     ; 1.00000000
+    dta $05                             ; length -1
+    dta $84, $8a, $ea, $0c, $1b         ; -8.6821404509246349
+    dta $84, $1a, $be, $bb, $2b         ; 9.6715652160346508
+    dta $84, $37, $45, $55, $ab         ; 11.4544274024665356
+    dta $82, $d5, $55, $57, $7c         ; -3.3333338461816311
+    dta $83, $c0, $00, $00, $05         ; -6.0000000093132257
+    dta $81, $00, $00, $00, $00         ; 1.0000000000000000
 
     .if .hi(*) != .hi(FSINC)
         .error "Table FSINC crosses page!"
