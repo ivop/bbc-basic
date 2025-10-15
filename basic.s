@@ -9203,39 +9203,43 @@ FCFLP:
 
 ; =ACS numeric
 ; ============
+
 ACS:
-    jsr ASN
-    jmp PISUB
+    jsr ASN         ; calculate ASN
+    jmp PISUB       ; subtract PI/2
 
 ; ----------------------------------------------------------------------------
 
 ; =ASN numeric
 ; ============
+
+; Calculates by ASN(x) = ATN(x/SQR(x^2+1))
+
 ASN:
-    jsr FLTFAC
-    jsr FTST
-    bpl ASNA
+    jsr FLTFAC      ; evaluate the operand, and make sure it's floating point
+    jsr FTST        ; test, and set flags
+    bpl ASNA        ; jump if operand is positive
 
-    lsr zpFACCS
-    jsr ASNA
-    jmp SETNEG
+    lsr zpFACCS     ; clear sign bit. cleverly with one instruction
+    jsr ASNA        ; call positive code
+    jmp SETNEG      ; make negative, and exit, tail call
 
-ASNA:
-    jsr STARGC
-    jsr SQRONE
-    jsr FTST
-    beq ASINAA
+ASNA:               ; operand is positive
+    jsr STARGC      ; store FACC at FWSC
+    jsr SQRONE      ; calculate SQR(FACC^2-1)
+    jsr FTST        ; test, and set flags
+    beq ASINAA      ; skip if result is zero
 
-    jsr ARGC
-    jsr FXDIV
-    jmp FATAN
+    jsr ARGC        ; make ARGP point to FWSC
+    jsr FXDIV       ; calculate (ARGP) / FACC
+    jmp FATAN       ; take ATN of result, and exit, tail call
 
 ASINAA:
-    jsr ARGHPI
-    jsr FLDA
+    jsr ARGHPI      ; make ARGP point to PI/2
+    jsr FLDA        ; load into FACC
 
 FATANZ:
-    lda #$FF
+    lda #$FF        ; indicate that result is floating point
     rts
 
 ; ----------------------------------------------------------------------------
@@ -9254,16 +9258,17 @@ FATANZ:
 
 ; =ATN numeric
 ; ============
+
 ATN:
-    jsr FLTFAC
+    jsr FLTFAC      ; evaluate operand, make sure it's floating point
 
 FATAN:
-    jsr FTST
-    beq FATANZ
-    bpl FATANA
+    jsr FTST        ; test and set flags
+    beq FATANZ      ; if zero, return zero
+    bpl FATANA      ; positive, do ATAN(x)
 
     lsr zpFACCS     ; force +ve
-    jsr FATANA      ; ATAN(-X)
+    jsr FATANA      ; ATAN(-x)
 
 SETNEG:
     lda #$80
@@ -9273,25 +9278,25 @@ SETNEG:
 FATANA:
     lda zpFACCX
     cmp #$81        ; is FACC >= 1.0 ?
-    bcc FATANB      ; no it isn't
+    bcc FATANB      ; jump if it isn't
 
-    jsr FRECIP
-    jsr FATANB      ; ATAN(1/X)
+    jsr FRECIP      ; calcualte FACC = 1.0/FACC
+    jsr FATANB      ; ATAN(1/X), call code for X < 1
 
 PISUB:
-    jsr AHPIHI      ; PI/2-A
-    jsr FADD
+    jsr AHPIHI
+    jsr FADD        ; add -PI/2
     jsr AHPILO
-    jsr FADD
-    jmp FNEG
+    jsr FADD        ; in two steps for enhanced precission
+    jmp FNEG        ; negate, and exit, tail call
 
 FATANB:
     lda zpFACCX
     cmp #$73
-    bcc FATANZ      ; very small number
+    bcc FATANZ      ; very small number, return zero, and exit
 
-    jsr STARGC      ; save arg away
-    jsr FCLRW
+    jsr STARGC      ; save FACC at FWSC
+    jsr FCLRW       ; clear FWRK
 
     lda #$80
     sta zpFWRKX
@@ -9311,17 +9316,17 @@ FATANB:
     rts
 
 FATANC:
-    dta $09                         ; Length - 1
-    dta $85, $a3, $59, $e8, $67     ; -20.41890030
-    dta $80, $1c, $9d, $07, $36     ; 0.61177106
-    dta $80, $57, $bb, $78, $df     ; 0.84270435
-    dta $80, $ca, $9a, $0e, $83     ; -0.79141322
-    dta $84, $8c, $bb, $ca, $6e     ; -8.79584735
-    dta $81, $95, $96, $06, $de     ; -1.16864096
-    dta $81, $0a, $c7, $6c, $52     ; 1.08421091
-    dta $7f, $7d, $ad, $90, $a1     ; 0.49546482
-    dta $82, $fb, $62, $57, $2f     ; -3.92787723
-    dta $80, $6d, $63, $38, $2C     ; 0.92729522
+    dta $09                             ; length -1
+    dta $85, $a3, $59, $e8, $67         ; -20.4189003035426140
+    dta $80, $1c, $9d, $07, $36         ; 0.6117710596881807
+    dta $80, $57, $bb, $78, $df         ; 0.8427043480332941
+    dta $80, $ca, $9a, $0e, $83         ; -0.7914132184814662
+    dta $84, $8c, $bb, $ca, $6e         ; -8.7958473488688469
+    dta $81, $95, $96, $06, $de         ; -1.1686409553512931
+    dta $81, $0a, $c7, $6c, $52         ; 1.0842109108343720
+    dta $7f, $7d, $ad, $90, $a1         ; 0.4954648205311969
+    dta $82, $fb, $62, $57, $2f         ; -3.9278772315010428
+    dta $80, $6d, $63, $38, $2c         ; 0.9272952182218432
 
     .if .hi(*) != .hi(FATANC)
         .error "Table FATANC crosses page!"
@@ -9331,14 +9336,16 @@ FATANC:
 
 ; =COS numeric
 ; ============
+
 COS:
-    jsr FLTFAC      ; evaluate float
-    jsr FRANGE      ; reduce to <PI/2
-    inc zpFQUAD     ; quadrant counter
+    jsr FLTFAC      ; evaluate float argument
+    jsr FRANGE      ; reduce to < PI/2
+    inc zpFQUAD     ; increment quadrant counter (offset to SIN)
     jmp FSC         ; common code SIN/COS
 
 ; =SIN numeric
 ; ============
+
 SIN:
     jsr FLTFAC
     jsr FRANGE
@@ -9357,7 +9364,7 @@ FSCA:
     jsr FSCB
 
 SQRONE:
-    jsr STARGA      ; SQR(1-FACC^2)
+    jsr STARGA      ; SQR(FACC^2-1)
     jsr FMUL
     jsr FSTA
     jsr FONE
@@ -10334,6 +10341,8 @@ FABS:
     jsr FTST
     bpl FNEGX
     bmi NEGACC
+
+; Negate FACC
 
 FNEG:
     jsr FTST
