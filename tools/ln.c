@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <math.h>
+#include "fcf.h"
 
 static double c[7] = {
     0.00892464,
@@ -10,8 +11,6 @@ static double c[7] = {
     2.99999994,
     -0.50000000
 };
-
-#include "fcf.c"
 
 int main(int argc, char **argv) {
     double x = 2.42;

@@ -1,4 +1,4 @@
-static double fcf(int cnt, double *c, double fwsd) {
+double fcf(int cnt, double *c, double fwsd) {
     double fwsa = 0.0;
     for (int i=0; i<cnt; i++) {
         fwsa = c[i] + fwsa;
@@ -7,4 +7,3 @@ static double fcf(int cnt, double *c, double fwsd) {
     }
     return fwsa;
 }
-

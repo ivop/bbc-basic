@@ -14,8 +14,8 @@ float-to-hex: float-to-hex.c
 sqrt: sqrt.c
 	$(CC) -o $@ $< -lm
 
-ln: ln.c
-	$(CC) -o $@ $< -lm
+ln: ln.c fcf.c
+	$(CC) -o $@ $^ -lm
 
 clean:
 	rm -f genmnem print-hex-float ln sqrt float-to-hex
