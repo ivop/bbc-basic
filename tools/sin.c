@@ -15,15 +15,14 @@ static double c[] = {
 
 int main(int argc, char **argv) {
     double x = 0.5;
-    double fwsd, fwsa;
+    double facc;
     int cnt = sizeof(c)/sizeof(double);
 
-    fwsd = x * x;
-    fwsa = fcf(sizeof(c)/sizeof(double), c, fwsd);
+    facc = fcf(sizeof(c)/sizeof(double), c, x*x);
 
-    fwsa *= x;
+    facc *= x;
 
-    printf("fcf: sin(%.8f) = %.8f\n", x, fwsa);
+    printf("fcf: sin(%.8f) = %.8f\n", x, facc);
 
     printf("mathlib: sin(%.8f) = %.8f\n", x, sin(x));
 }
