@@ -11,7 +11,7 @@ static void print_hex(double x) {
 
     int exp = 0;
 
-    while (x > 1.0) x /= 2.0, exp++;
+    while (x >= 1.0) x /= 2.0, exp++;
     while (x > 0.0 && x < 0.5) x *= 2.0, exp--;
     exp += 0x80;
 
@@ -34,7 +34,7 @@ static double table[] = {
 };
 #endif
 
-#if 1
+#if 0
 // FATANC
 static double table[] = {
     -20.4189003035426140,
@@ -47,6 +47,18 @@ static double table[] = {
     0.4954648205311969,
     -3.9278772315010428,
     0.9272952182218432
+};
+#endif
+
+#if 1
+// FSINC
+static double table[] = {
+    -8.6821404509246349,
+    9.6715652160346508,
+    11.4544274024665356,
+    -3.3333338461816311,
+    -6.0000000093132257,
+    1.0000000000000000
 };
 #endif
 
