@@ -1,6 +1,6 @@
 CC=gcc
 
-all: genmnem print-hex-float ln sqrt float-to-hex atn
+all: genmnem print-hex-float ln sqrt float-to-hex atn sin
 
 genmnem: genmnem.c
 	$(CC) -o $@ $<
@@ -20,8 +20,11 @@ ln: ln.c fcf.c
 atn: atn.c fcf.c
 	$(CC) -o $@ $^ -lm
 
+sin: sin.c fcf.c
+	$(CC) -o $@ $^ -lm
+
 clean:
-	rm -f genmnem print-hex-float ln sqrt float-to-hex atn
+	rm -f genmnem print-hex-float ln sqrt float-to-hex atn sin
 
 cleaner: clean
 	rm -f *~
