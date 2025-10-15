@@ -28,4 +28,5 @@ Conversion to mads, improvements and bug fixes by Ivo van Poorten, 2025
 [ARM Basic 65 source reconstruction](https://mdfs.net/Software/BBCBasic/6502/) and commentary, Copyright © 2018 J.G.Harston  
 BBC BASIC Copyright © 1982,1983 Acorn Computer and Sophie Wilson  
 Thanks to Paul Fellows for releasing the original [CmosBasic](https://github.com/stardot/AcornCmosBasic),
-[DmosBasic](https://github.com/stardot/AcornDmosBasic), and [Basic128]( https://github.com/stardot/AcornBasic128) sources.
+[DmosBasic](https://github.com/stardot/AcornDmosBasic), and [Basic128]( https://github.com/stardot/AcornBasic128) sources.  
+[The BBC Micro Compendium](https://archive.org/search?query=bbc+micro+compendium) by Jeremy Ruston  
