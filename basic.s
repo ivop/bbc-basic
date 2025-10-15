@@ -9542,16 +9542,17 @@ FSINC:
 
 ; = EXP numeric
 ; =============
+
 EXP:
-    jsr FLTFAC
+    jsr FLTFAC      ; evaluate argument, make sure it's floating point
 
 FEXP:
-    lda zpFACCX
+    lda zpFACCX     ; check if it's in range
     cmp #$87
-    bcc FEXPA       ; certainly in range
-    bne FEXPB       ; certainly not
+    bcc FEXPA       ; jump if certainly in range
+    bne FEXPB       ; jump if certainly not
 
-    ldy zpFACCMA
+    ldy zpFACCMA    ; check MSB of mantissa
     cpy #$B3
     bcc FEXPA       ; in range, at least nearly
 
@@ -9559,9 +9560,9 @@ FEXPB:
     lda zpFACCS
     bpl FEXPC       ; overflow case
 
-    jsr FCLR
+    jsr FCLR        ; clear FACC, return 0
 
-    lda #$FF
+    lda #$FF        ; indicate it's a floating point value
     rts
 
 FEXPC:
@@ -9579,24 +9580,24 @@ FEXPC:
     .endif
 
 FEXPA:
-    jsr FFRAC       ; get fractional part
-    jsr FEXPS       ; EXP(fraction)
-    jsr STARGC      ; save it away
+    jsr FFRAC       ; get fractional part, leave integer part in FQUAD
+    jsr FEXPS       ; EXP(fraction), calculate continued fraction
+    jsr STARGC      ; save it away at FWSC
 
-    lda #<FNUME
+    lda #<FNUME     ; set ARGP to point to FNUME (the constant 'e')
     sta zpARGP
     lda #>FNUME
     sta zpARGP+1
-    jsr FLDA
+    jsr FLDA        ; load value into FACC
 
-    lda zpFQUAD
-    jsr FIPOW       ; X**N
+    lda zpFQUAD     ; get integral part
+    jsr FIPOW       ; calcualte e^N
 
 ACMUL:
-    jsr ARGC
-    jsr FMUL
+    jsr ARGC        ; make ARGP point to FWSC where we stored fractional result
+    jsr FMUL        ; multiply, FACC = FACC * (ARGP)
 
-    lda #$FF
+    lda #$FF        ; indicate result is floating point
     rts
 
 FEXPS:
@@ -9608,18 +9609,18 @@ FEXPS:
     rts
 
 FNUME:
-    dta $82, $2d, $f8, $54, $58     ; 2.71828183 = e
+    dta $82, $2d, $f8, $54, $58         ; 2.7182818278670311 = e
 
 FEXPCO:
-    dta $07                         ; Length - 1
-    dta $83, $e0, $20, $86, $5b     ; -7.00397032
-    dta $82, $80, $53, $93, $b8     ; -2.00510114
-    dta $83, $20, $00, $06, $a1     ; 5.00000316
-    dta $82, $00, $00, $21, $63     ; 2.00000796
-    dta $82, $c0, $00, $00, $02     ; -3.00000000
-    dta $82, $80, $00, $00, $0c     ; -2.00000001
-    dta $81, $00, $00, $00, $00     ; 1.00000000
-    dta $81, $00, $00, $00, $00     ; 1.00000000
+    dta $07                             ; length -1
+    dta $83, $e0, $20, $86, $5b         ; -7.0039703156799078
+    dta $82, $80, $53, $93, $b8         ; -2.0051011368632317
+    dta $83, $20, $00, $06, $a1         ; 5.0000031609088182
+    dta $82, $00, $00, $21, $63         ; 2.0000079600140452
+    dta $82, $c0, $00, $00, $02         ; -3.0000000018626451
+    dta $82, $80, $00, $00, $0c         ; -2.0000000111758709
+    dta $81, $00, $00, $00, $00         ; 1.0000000000000000
+    dta $81, $00, $00, $00, $00         ; 1.0000000000000000
 
 ; Later versions of BBC BASIC enforce this, but it fails for BASIC II/III
 ;    .if .hi(*) != .hi(FEXPCO)
@@ -9633,29 +9634,33 @@ FEXPCO:
 
 FIPOW:
     tax
-    bpl FIPOWA
+    bpl FIPOWA      ; jump if positive
 
-    dex
+    dex             ; minus 1
     txa
-    eor #$FF        ; complement
-    pha
-    jsr FRECIP
+    eor #$FF        ; complement = two's complement
+    pha             ; save exponent on stack
+
+    jsr FRECIP      ; FACC = 1 / FACC
+
     pla             ; recover exponent
 
 FIPOWA:
-    pha
-    jsr STARGA       ; STARGA
-    jsr FONE
+    pha             ; save exponent
+
+    jsr STARGA      ; store FACC at FWSA, set ARGP to point to FWSA
+    jsr FONE        ; set FACC to 1, which results in X**1 = X
 
 FIPOWB:
-    pla
-    beq FIPOWZ      ; exit condition
+    pla             ; retrieve exponent
+    beq FIPOWZ      ; exit if power is zero, return 1.0, or result of loop(s)
 
-    sec
+    sec             ; subtract 1
     sbc #$01
-    pha
-    jsr FMUL
-    jmp FIPOWB
+    pha             ; and push back to stack
+
+    jsr FMUL        ; FACC = FACC * (ARGP)
+    jmp FIPOWB      ; keep repeating
 
 FIPOWZ:
     rts
@@ -9664,10 +9669,11 @@ FIPOWZ:
 
 ; =ADVAL numeric - Call OSBYTE to read buffer/device
 ; ==================================================
+
 ADVAL:
     jsr INTFAC        ; Evaluate integer
-    ldx zpIACC
-    lda #$80          ; X=low byte, A=$80 for ADVAL
+    ldx zpIACC        ; X=low byte of IACC
+    lda #$80          ; A=$80 for ADVAL
 
     .if .def MOS_BBC
         .if .def TARGET_C64
@@ -9684,48 +9690,50 @@ ADVAL:
     .if version < 3
 ; =POINT(numeric, numeric)
 ; ========================
-POINT:
-        jsr INEXPR
-        jsr PHACC
-        jsr COMEAT
-        jsr BRA
-        jsr INTEGB
 
-        lda zpIACC
+POINT:
+        jsr INEXPR      ; evaluate expression as an integer
+        jsr PHACC       ; push it to the stack
+        jsr COMEAT      ; check for a comma
+        jsr BRA         ; evaluate next expression, and check closing bracket
+        jsr INTEGB      ; ensure it's an integer
+
+        lda zpIACC      ; save Y coordinate on the machine stack
         pha
         lda zpIACC+1
         pha
-        jsr POPACC
 
-        pla
+        jsr POPACC      ; pull X coordinate back into IACC
+
+        pla             ; pull Y coordinate into top bytes of IACC
         sta zpIACC+3
         pla
         sta zpIACC+2
 
-        ldx #zpIACC
-        lda #$09
+        ldx #zpIACC     ; pointer to XY-coordinates block
+        lda #$09        ; OSWORD POINT call
         jsr OSWORD
 
-        lda zpFACCS
-        bmi SGNJMPTRUE
+        lda zpFACCS     ; zpIACC+4, return value
+        bmi SGNJMPTRUE  ; return TRUE if point is off the screen
 
-        jmp SINSTK
+        jmp SINSTK      ; place A in IACC, and exit, tail call
     .elseif version >= 3
 ; =NOT
 ; ====
 NOT:
-        jsr INTFAC
+        jsr INTFAC      ; evaluate expression, ensure it's integer
 
-        ldx #$03
+        ldx #$03        ; loop 3..0
 
 NOTLOP:
-        lda zpIACC,X
+        lda zpIACC,X    ; invert IACC
         eor #$FF
         sta zpIACC,X
         dex
         bpl NOTLOP
 
-        lda #$40
+        lda #$40        ; return type is integer
         rts
     .endif
 
@@ -9735,13 +9743,14 @@ NOTLOP:
 ; ====
 POS:
     .if version < 3
-        lda #$86
+        lda #$86            ; get cursor position in X and Y
         jsr OSBYTE
-        txa
-        jmp SINSTK
+        txa                 ; X position to A
+        jmp SINSTK          ; put A into IACC, and exit, tail call
     .elseif version >= 3
-        jsr VPOS
-        stx zpIACC
+        jsr VPOS            ; do OSBYTE $86, preserves X
+        stx zpIACC          ; store X position in IACC
+                            ; A = $40 already set by VPOS calling SINSTK
         rts
     .endif
 
@@ -9750,10 +9759,10 @@ POS:
 ; =VPOS
 ; =====
 VPOS:
-    lda #$86
+    lda #$86        ; get cursor position in X and Y
     jsr OSBYTE
     tya
-    jmp SINSTK          ; tail call
+    jmp SINSTK      ; put A into IACC, preserves X, exit, tail call
 
 ; ----------------------------------------------------------------------------
 
