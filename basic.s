@@ -10360,7 +10360,7 @@ INSTRO:
     lda zpIACC          ; current search position in A
 
 INSTRP:
-    jmp SINSTK          ; put A in IACC as 16-bit int, and exit, tail call
+    jmp SINSTK          ; put A in IACC, and exit, tail call
 
 INSTRY:
     jsr POPSTX          ; discard string
@@ -10559,7 +10559,7 @@ UNPLUS:
 
 DOPLUS:
     cmp #tknOPENIN
-    bcc TSTVAR          ; Lowest function token, test for indirections
+    bcc TSTVAR         ; Lowest function token, test for indirections
 
     cmp #tknEOF+1
     bcs FACERR         ; Highest function token, jump to error
@@ -10568,6 +10568,7 @@ DOPLUS:
 
 ; Indirection, hex, brackets
 ; --------------------------
+
 TSTVAR:
     cmp #'?'
     bcs TSTVB         ; Jump with ?numeric or higher
@@ -10579,27 +10580,27 @@ TSTVAR:
     beq HEXIN         ; Jump with hex number
 
     cmp #'('
-    beq BRA           ; Jump with brackets
+    beq BRA           ; Jump with brackets, evaluate and expect closing bracket
 
 TSTVB:
-    dec zpAECUR
-    jsr LVCONT
+    dec zpAECUR       ; decrement, cursor position back
+    jsr LVCONT        ; evaluate variable name
     beq ERRFAC        ; Jump with undefined variable or bad name
 
-    jmp VARIND
+    jmp VARIND        ; exit, getting the value of the variable, tail call
 
 TSTN:
-    jsr FRDD
-    bcc FACERR
+    jsr FRDD          ; get number from the text
+    bcc FACERR        ; 'No such variable' error if the number does not exist
     rts
 
 ERRFAC:
     lda zpBYTESM      ; Check assembler option
-    and #$02          ; Is 'ignore undefiened variables' set?
+    and #$02          ; Is 'ignore undefined variables' set?
     bne FACERR        ; b1=1, jump to give No such variable
     bcs FACERR        ; Jump with bad variable name
 
-    stx zpAECUR
+    stx zpAECUR       ; store our current AELINE offset
 
 GETPC:
     lda PC        ; Use P% for undefined variable
@@ -10628,7 +10629,7 @@ BKTERR = * -1               ; include previous BRK
         .endif
 
 HEXDED:
-        brk
+        brk                 ; both end of BKTERR and start of HEXDED
         dta $1C
         .if foldup == 1
             dta 'BAD HEX'
@@ -10640,12 +10641,14 @@ HEXDED:
 
 ; ----------------------------------------------------------------------------
 
+; Deal with bracketed expression
+
 BRA:
-    jsr EXPR
-    inc zpAECUR
+    jsr EXPR            ; evaluate expression, next character in X
+    inc zpAECUR         ; step past
     cpx #')'
-    bne BKTERR
-    tay
+    bne BKTERR          ; error if there's no closing bracket
+    tay                 ; set flags on A
     rts
 
     .if version < 3
@@ -10662,96 +10665,107 @@ BKTERR:
 
 HEXIN:
     .if version < 3
-        ldx #$00
+        ldx #$00            ; zero IACC
         stx zpIACC
         stx zpIACC+1
         stx zpIACC+2
         stx zpIACC+3
-        ldy zpAECUR
+        ldy zpAECUR         ; load AE cursor position
     .elseif version >= 3
-        jsr FALSE
-        iny
+        jsr FALSE           ; set IACC to all zeros
+        iny                 ; next cursor position
     .endif
 
 HEXIP:
-    lda (zpAELINE),Y
+    lda (zpAELINE),Y        ; get next character
     cmp #'0'
     bcc HEXEND
 
     cmp #'9'+1
     bcc OKHEX       ; '0'-'9' ok
 
-    sbc #$37        ; carry is set
+    sbc #$37        ; carry is set, subtract ASCII factor
     cmp #$0A
-    bcc HEXEND
+    bcc HEXEND      ; exit if less than 10
 
     cmp #$10
-    bcs HEXEND      ; branch if > 'F'
+    bcs HEXEND      ; exit if > 'F'
 
 OKHEX:
+    asl             ; shift digit into upper nibble
     asl
     asl
     asl
-    asl
-    ldx #$03
+
+    ldx #$03        ; loop 3..0
 
 INLOOP:
-    asl
+    asl             ; shift digit into bottom of IACC
     rol zpIACC
     rol zpIACC+1
     rol zpIACC+2
     rol zpIACC+3
     dex
-    bpl INLOOP
+    bpl INLOOP      ; shift four times for complete nibble
 
-    iny
-    bne HEXIP
+    iny             ; step to next character
+    bne HEXIP       ; and loop
 
 HEXEND:
-    txa
-    bpl HEXDED
+    txa             ; x is $ff if a conversion took place
+    bpl HEXDED      ; exit with error if it was still 0, meaning no
+                    ; character was read and converted
 
-    sty zpAECUR
-    lda #$40
+    sty zpAECUR     ; store our current position
+
+    lda #$40        ; return type is integer
     rts
 
 ; ----------------------------------------------------------------------------
-
+;xxx 8EB4
     .if version >= 3
 
 ; =TOP - Return top of program
 ; ============================
+; There is no TOP token, only TO (as in FOR), so a check for 'P' is done
+
 TO:
         iny
-        lda (zpAELINE),Y
+        lda (zpAELINE),Y    ; get next character
         cmp #'P'
-        bne FACERR
+        bne FACERR          ; no 'P' found, error 'No such variable'
 
-        inc zpAECUR
-        lda zpTOP
+        inc zpAECUR         ; increment past 'P'
+        lda zpTOP           ; load YA with value of TOP
         ldy zpTOP+1
-        bcs AYACC
+        bcs AYACC           ; branch always (because of cmp)
+                            ; set IACC to value of YA, and exit
 
 ; ----------------------------------------------------------------------------
 
 ; =PAGE - Read PAGE
 ; =================
+
 RPAGE:
-        ldy zpTXTP
+        ldy zpTXTP      ; load YA with PAGE value
         lda #$00
-        beq AYACC       ; branch always
+        beq AYACC       ; branch always, set IACC to YA, and exit
 
 LENB:
-        jmp LETM
+        jmp LETM        ; error, 'Type mismatch'
 
 ; ----------------------------------------------------------------------------
 
 ; =LEN string$
 ; ============
+
 LEN:
-        jsr FACTOR
-        bne LENB
-        lda zpCLEN
+        jsr FACTOR      ; evaluate argument
+        bne LENB        ; 'Type mismatch' if it's not a string
+
+        lda zpCLEN      ; get length of string STRACC
+
+        ; fallthrough to return it in IACC
 
 ; Return 8-bit integer
 ; --------------------
@@ -10773,45 +10787,50 @@ AYACC:
 
 ; =COUNT - Return COUNT
 ; =====================
+
 COUNT:
-        lda zpTALLY
-        bcc SINSTK     ; Get COUNT, jump to return 8-bit integer
+        lda zpTALLY    ; get COUNT
+        bcc SINSTK     ; jump to return in IACC
 
 ; ----------------------------------------------------------------------------
 
 ; =LOMEM - Start of BASIC heap
 ; ============================
+
 RLOMEM:
-        lda zpLOMEM
+        lda zpLOMEM     ; get LOMEM to YA
         ldy zpLOMEM+1
-        bcc AYACC     ; Get LOMEM to AY, jump to return as integer
+        bcc AYACC       ; jump to return in IACC
 
 ; ----------------------------------------------------------------------------
 
 ; =HIMEM - Top of BASIC memory
 ; ============================
+
 RHIMEM:
-        lda zpHIMEM
+        lda zpHIMEM     ; get HIMEM to YA
         ldy zpHIMEM+1
-        bcc AYACC     ; Get HIMEM to AY, jump to return as integer
+        bcc AYACC       ; jump to return in IACC
 
 ; ----------------------------------------------------------------------------
 
 ; =ERL - Return error line number
 ; ===============================
+
 ERL:
-        ldy zpERL+1
+        ldy zpERL+1     ; get ERL into YA
         lda zpERL
-        bcc AYACC     ; Get ERL to AY, jump to return 16-bit integer
+        bcc AYACC       ; jump to return in IACC
 
 ; ----------------------------------------------------------------------------
 
 ; =ERR - Return current error number
 ; ==================================
+
 ERR:
         ldy #$00
-        lda (FAULT),Y
-        bcc AYACC     ; Get error number, jump to return 16-bit integer
+        lda (FAULT),Y   ; FAULT points to the error number after the BRK
+        bcc AYACC       ; jump to return in IACC
 
     .endif      ; version > 3
 
@@ -10831,15 +10850,16 @@ HEXDED:
 
 ; =TIME - Read system TIME
 ; ========================
+
 RTIME:
-    ldx #zpIACC
-    ldy #$00          ; Point to integer accumulator
+    ldx #zpIACC       ; YX pointr to IACC
+    ldy #$00
     lda #$01          ; Read TIME to IACC via OSWORD $01
     .ifdef MOS_BBC
         jsr OSWORD
     .endif
-    lda #$40
-    rts               ; Return 'integer'
+    lda #$40          ; return type is integer
+    rts
 
 ; ----------------------------------------------------------------------------
 
@@ -10847,51 +10867,62 @@ RTIME:
 
 ; =PAGE - Read PAGE
 ; =================
+
 RPAGE:
-        lda #$00
+        lda #$00        ; set YA to PAGE
         ldy zpTXTP
-        jmp AYACC
+        jmp AYACC       ; return YA in IACC
 
 JMPFACERR:
-        jmp FACERR
+        jmp FACERR      ; 'No such variable' error
 
 ; ----------------------------------------------------------------------------
 
 ; =FALSE
 ; ======
+
 FALSE:
         lda #$00
-        beq SINSTK     ; Jump to return $00 as 16-bit integer
+        beq SINSTK      ; return 0 in IACC
 
 LENB:
-        jmp LETM
+        jmp LETM        ; 'Type mismatch' error
 
 ; ----------------------------------------------------------------------------
 
 ; =LEN string$
 ; ============
+
 LEN:
-        jsr FACTOR
-        bne LENB
-        lda zpCLEN
+        jsr FACTOR      ; evaluate argument
+        bne LENB        ; 'Type mismatch' if it's not a string
+
+        lda zpCLEN      ; get string length
+
+        ; fallthrough, return in IACC with the top bytes set to zero
 
 ; Return 8-bit integer
 ; --------------------
+
 SINSTK:
         ldy #$00
         beq AYACC     ; Clear b8-b15, jump to return 16-bit int
 
 ; =TOP - Return top of program
 ; ============================
+; There is no TOP token, only TO (as in FOR). Check for 'P'
+
 TO:
         ldy zpAECUR
-        lda (zpAELINE),Y
+        lda (zpAELINE),Y    ; get next character
         cmp #'P'
-        bne JMPFACERR
+        bne JMPFACERR       ; 'No such variable' error if it's not a 'P'
 
-        inc zpAECUR
-        lda zpTOP
+        inc zpAECUR         ; step past 'P'
+        lda zpTOP           ; set YA to TOP
         ldy zpTOP+1
+
+        ; fallthrough, return YA in IACC
 
 ; Return 16-bit integer in AY
 ; ---------------------------
@@ -10909,26 +10940,27 @@ AYACC:
 ; =COUNT - Return COUNT
 ; =====================
 COUNT:
-        lda zpTALLY
-        jmp SINSTK     ; Get COUNT, jump to return 8-bit integer
+        lda zpTALLY     ; get COUNT
+        jmp SINSTK      ; jump to return in IACC
 
 ; ----------------------------------------------------------------------------
 
 ; =LOMEM - Start of BASIC heap
 ; ============================
+
 RLOMEM:
-        lda zpLOMEM
+        lda zpLOMEM     ; get LOMEM in YA
         ldy zpLOMEM+1
-        jmp AYACC     ; Get LOMEM to AY, jump to return as integer
+        jmp AYACC       ; jump to return in IACC
 
 ; ----------------------------------------------------------------------------
 
 ; =HIMEM - Top of BASIC memory
 ; ============================
 RHIMEM:
-        lda zpHIMEM
+        lda zpHIMEM     ; get HIMEM in YA
         ldy zpHIMEM+1
-        jmp AYACC     ; Get HIMEM to AY, jump to return as integer
+        jmp AYACC       ; return YA in IACC
 
     .endif      ; version < 3
 
@@ -10936,60 +10968,72 @@ RHIMEM:
 
 ; =RND(numeric)
 ; -------------
+
 RNDB:
-    inc zpAECUR
-    jsr BRA
-    jsr INTEGB
+    inc zpAECUR     ; increment past opening bracket
+    jsr BRA         ; evaluate expression, and check closing bracket
+    jsr INTEGB      ; make sure it's an integer
 
     lda zpIACC+3
-    bmi RNDSET
+    bmi RNDSET      ; if IACC is negative, jump to set SEED manually
 
     ora zpIACC+2
     ora zpIACC+1
-    bne RNDBB
+    bne RNDBB       ; jump if argument is not zero
 
     lda zpIACC
-    beq FRND
+    beq FRND        ; jump if argument is 0
 
     cmp #$01
-    beq FRNDAA
+    beq FRNDAA      ; jump if argument is 1
+
+; RND(+X) entry
 
 RNDBB:
-    jsr IFLT
-    jsr PHFACC
-    jsr FRNDAA
-    jsr POPSET
-    jsr IFMUL
-    jsr FNRM
-    jsr IFIX
-    jsr INCACC
+    jsr IFLT        ; convert limit to a floating point number
+    jsr PHFACC      ; push FACC to the stack
+    jsr FRNDAA      ; get a random number between 0 and 1 into FACC
+    jsr POPSET      ; discard top of stack, but leave ARGP pointing to it
+    jsr IFMUL       ; multiply, FACC = FACC * (ARGP)
+    jsr FNRM        ; normalise the result
+    jsr IFIX        ; fix back to an integer
+    jsr INCACC      ; increment the number, so range is [1...limit]
 
-    lda #$40
+    lda #$40        ; return type is integer
     rts
 
+; --------------------------------------
+
+; Set seed manually
+
 RNDSET:
-    ldx #zpSEED
-    jsr ACCTOM
-    lda #$40
+    ldx #zpSEED     ; point 'M' destination to SEED location
+    jsr ACCTOM      ; copy IACC to M
+    lda #$40        ; set fifth byte to $40, also return type is integer
     sta zpSEED+4
 
     rts
 
 ; RND [(numeric)]
 ; ===============
+; Notice that RND(10) is computed using floating point arithmetic, so it's
+; faster to use RND MOD X, although statistacally that's not 100% uniform.
+
 RND:
     ldy zpAECUR
-    lda (zpAELINE),Y  ; Get current character
+    lda (zpAELINE),Y  ; get next character
     cmp #'('
-    beq RNDB          ; Jump with RND(numeric)
+    beq RNDB          ; jump to RND(numeric)
 
-    jsr FRNDAB        ; Get random number
+; get integer random number
 
-    ldx #zpSEED
+    jsr FRNDAB        ; one round of xor-shift
+
+    ldx #zpSEED       ; offset to seed location relative to start of ZP
 
 MTOACC:
-    lda zp+0,X
-    sta zpIACC        ; Copy number pointed to by X to IACC
+    lda zp+0,X        ; copy number pointed to by X to IACC
+    sta zpIACC
     lda zp+1,X
     sta zpIACC+1
     lda zp+2,X
@@ -10997,33 +11041,37 @@ MTOACC:
     lda zp+3,X
     sta zpIACC+3
 
-    lda #$40
-    rts               ; Return Integer
+    lda #$40          ; return type is integer
+    rts
+
+; get floating point random number
 
 FRNDAA:
-    jsr FRNDAB
+    jsr FRNDAB        ; one round of xor-shift
 
 FRND:
-    ldx #$00
+    ldx #$00          ; sign, overflow, and rounding bytes to zero
     stx zpFACCS
     stx zpFACCXH
     stx zpFACCMG
-    lda #$80
+    lda #$80          ; exponent to $80 so the number is between 0 and 1
     sta zpFACCX
 
 MTOFACC:
-    lda zpSEED,X
+    lda zpSEED,X      ; copy seed to mantissa
     sta zpFACCMA,X
     inx
     cpx #$04
     bne MTOFACC
 
-    jsr NRMTDY
+    jsr NRMTDY        ; normalise and tidy up
 
-    lda #$FF
+    lda #$FF          ; return type is a floating point number
     rts
 
 ; ----------------------------------------------------------------------------
+
+; Simple xor-shift
 
 FRNDAB:
 
@@ -11081,19 +11129,20 @@ RTOP:
 
 ; =ERL - Return error line number
 ; ===============================
+
 ERL:
-        ldy zpERL+1
+        ldy zpERL+1     ; get ERL into YA
         lda zpERL
-        jmp AYACC     ; Get ERL to AY, jump to return 16-bit integer
+        jmp AYACC       ; return YA in IACC
 
 ; ----------------------------------------------------------------------------
 
 ; =ERR - Return current error number
 ; ==================================
 ERR:
-        ldy #$00
-        lda (FAULT),Y
-        jmp AYACC     ; Get error number, jump to return 16-bit integer
+        ldy #$00        ; get error number in YA
+        lda (FAULT),Y   ; FAULT points to the byte after the BRK
+        jmp AYACC       ; return YA in IACC
 
     .endif          ; version < 3
 
@@ -11101,8 +11150,9 @@ ERR:
 
 ; INKEY
 ; =====
+
 INKEA:
-    jsr INTFAC         ; Evaluate <numeric>
+    jsr INTFAC         ; evaluate time limit
 
 ; Atom/System - Manually implement INKEY(num)
 ; -------------------------------------------
@@ -11156,10 +11206,11 @@ CONVKEY:
 
 ; BBC - Call MOS to wait for keypress
 ; -----------------------------------
+
     .ifdef MOS_BBC
         lda #$81
 C64_XY_OSBYTE:
-        ldx zpIACC
+        ldx zpIACC      ; timeout in YA
         ldy zpIACC+1
         jmp OSBYTE
     .endif
@@ -11168,29 +11219,34 @@ C64_XY_OSBYTE:
 
 ; =GET
 ; ====
+
 GET:
-    jsr OSRDCH
-    jmp SINSTK
+    jsr OSRDCH      ; call MOS
+    jmp SINSTK      ; return A in IACC
 
 ; ----------------------------------------------------------------------------
 
 ; =GET$
 ; =====
+
 GETD:
-    jsr OSRDCH
+    jsr OSRDCH      ; read a character
+
 SINSTR:
-    sta STRACC
-    lda #$01
+    sta STRACC      ; store in string buffer
+    lda #$01        ; set length to 1
     sta zpCLEN
-    lda #$00
+    lda #$00        ; return type is string
     rts
 
 ; ----------------------------------------------------------------------------
 
-; Note how LEFTD and RIGHTD are partly the same
+; Note how LEFTD and RIGHTD are partly the same. We might be able to save
+; some space here.
 
 ; =LEFT$(string$, numeric)
 ; ========================
+
 LEFTD:
     jsr EXPR
     bne LEFTE
