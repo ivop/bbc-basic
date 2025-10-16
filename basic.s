@@ -10269,163 +10269,172 @@ NOTLOP:
 ; ====================================
 
 INSTR:
-    jsr EXPR
+    jsr EXPR                ; evaluate expression
     .if version < 3
-        bne EVALE
+        bne EVALE           ; 'Type mismatch' error if it's not a string
     .elseif version >= 3
-        bne FACTE
+        bne FACTE           ; 'Type mismatch' error if it's not a string
     .endif
     cpx #','
-    bne INSTRE
+    bne INSTRE              ; 'Missing ,' if not followed by a comma
 
-    inc zpAECUR
-    jsr PHSTR
-    jsr EXPR
+    inc zpAECUR             ; increment past comma
+    jsr PHSTR               ; push searched string on the stack
+    jsr EXPR                ; evaluate next expression
 
     .if version < 3
-        bne EVALE
+        bne EVALE           ; 'Type mismatch' error if it's not a string
     .elseif version >= 3
-        bne FACTE
+        bne FACTE           ; 'Type mismatch' error if it's not a string
     .endif
 
-    lda #$01
+    lda #$01            ; set default start position to 1
     sta zpIACC
-    inc zpAECUR
+    inc zpAECUR         ; increment for next character
     cpx #')'
-    beq INSTRG
+    beq INSTRG          ; jump if current character is a ')'
 
     cpx #','
-    beq INSTRH
+    beq INSTRH          ; jump if current character is a comma
 
 INSTRE:
-    jmp COMERR
+    jmp COMERR          ; 'Missin ,' error
 
 INSTRH:
-    jsr PHSTR
-    jsr BRA
-    jsr INTEGB
-    jsr POPSTR
+    jsr PHSTR           ; push second string on the stack
+    jsr BRA             ; evaluate expression and closing bracket
+    jsr INTEGB          ; ensure it was an integer
+    jsr POPSTR          ; pop string
 
 INSTRG:
-    ldy #$00
-    ldx zpIACC
-    bne INSTRF
+    ldy #$00            ; Y=0 for later use (quick way to set A=0)
+    ldx zpIACC          ; X is starting position
+    bne INSTRF          ; if it's zero, set it to one
 
     ldx #$01
+
 INSTRF:
-    stx zpIACC
-    txa
-    dex
-    stx zpIACC+3
+    stx zpIACC          ; store current position
 
-    clc
+    txa                 ; transfer to A
+    dex                 ; decrement X to make it a proper offset
+    stx zpIACC+3        ; save in an unused part of IACC
+
+    clc                 ; add AE stack pointer
     adc zpAESTKP
-    sta zpWORK
+    sta zpWORK          ; and store in WORK
 
-    tya
+    tya                 ; handle MSB
     adc zpAESTKP+1
-    sta zpWORK+1
+    sta zpWORK+1        ; now points to start position in the search string
 
-    lda (zpAESTKP),Y
+    lda (zpAESTKP),Y    ; get length of searched string
     sec
-    sbc zpIACC+3
-    bcc INSTRY
+    sbc zpIACC+3        ; subtract modified start position
+    bcc INSTRY          ; exit with zero if position is past the end of
+                        ; searched string
 
-    sbc zpCLEN
-    bcc INSTRY
+    sbc zpCLEN          ; subtract length
+    bcc INSTRY          ; exit with zero if the string could not fit
+                        ; between start and end
 
-    adc #$00
-    sta zpIACC+1
-    jsr POPSTX
+    adc #$00            ; increment by 1
+    sta zpIACC+1        ; save as number of search positions left
+    jsr POPSTX          ; pop string
 
 INSTRL:
-    ldy #$00
-    ldx zpCLEN
-    beq INSTRO
+    ldy #$00            ; start searching at the beginning
+    ldx zpCLEN          ; X counts number of characters to be scanned
+    beq INSTRO          ; skip if count is zero
 
 INSTRM:
-    lda (zpWORK),Y
-    cmp STRACC,Y
-    bne INSTRN
+    lda (zpWORK),Y      ; compare searched string
+    cmp STRACC,Y        ; with search string
+    bne INSTRN          ; bail out if not equal
 
     iny
     dex
-    bne INSTRM
+    bne INSTRM          ; loop until all characters are matched
 
 INSTRO:
-    lda zpIACC
+    lda zpIACC          ; current search position in A
 
 INSTRP:
-    jmp SINSTK      ; tail call
+    jmp SINSTK          ; put A in IACC as 16-bit int, and exit, tail call
 
 INSTRY:
-    jsr POPSTX
+    jsr POPSTX          ; discard string
 
 INSTRZ:
-    lda #$00
-    beq INSTRP
+    lda #$00            ; return with zero result
+    beq INSTRP          ; branch always to jmp SINSTK
 
 INSTRN:
-    inc zpIACC
-    dec zpIACC+1
-    beq INSTRZ
+    inc zpIACC          ; increment current search position
+    dec zpIACC+1        ; decrement positions left
+    beq INSTRZ          ; return 0 if we have no more positions left
 
-    inc zpWORK
+    inc zpWORK          ; increment pointer into the searched string
     bne INSTRL
 
     inc zpWORK+1
-    bne INSTRL
+    bne INSTRL          ; and continue searching
 
 ABSE:
-    jmp LETM
+    jmp LETM            ; 'Type mismatch' error
 
 ; ----------------------------------------------------------------------------
 
 ; =ABS numeric
 ; ============
+
 ABS:
-    jsr FACTOR       ; FACTOR
-    beq ABSE
-    bmi FABS
+    jsr FACTOR      ; evaluate argument
+    beq ABSE        ; 'Type mismatch' if it's a string
+    bmi FABS        ; jump to FABS if it's a floating point
 
 ABSCOM:
-    bit zpIACC+3
-    bmi COMPNO
-    bpl COMPDN
+    bit zpIACC+3    ; check MSB of integer
+    bmi COMPNO      ; jump if negative
+    bpl COMPDN      ; jump and exit if it's (already) positive
 
 FABS:
-    jsr FTST
-    bpl FNEGX
-    bmi NEGACC
+    jsr FTST        ; test FACC, and set flags
+    bpl FNEGX       ; if it's (already) positive, exit
+    bmi NEGACC      ; jump to negate FACC
 
 ; Negate FACC
 
 FNEG:
-    jsr FTST
-    beq FNEGX
+    jsr FTST        ; test FACC, and set flags
+    beq FNEGX       ; exit if it's zero
 
 NEGACC:
-    lda zpFACCS
-    eor #$80
-    sta zpFACCS
+    lda zpFACCS     ; load sign
+    eor #$80        ; invert
+    sta zpFACCS     ; save sign
 
 FNEGX:
-    lda #$FF
+    lda #$FF        ; result type is floating point
     rts
+
+; ----------------------------------------------------------------------------
 
 ; unary minus
 
 UNMINS:
-    jsr UNPLUS
+    jsr UNPLUS      ; evaluate expression as if it was positive
 
 VALCMP:
-    beq ABSE
-    bmi FNEG
+    beq ABSE        ; 'Type mismatch' error if it was a string
+    bmi FNEG        ; if it was a floating point value, jump to FNEG
+
+; Negate integer in IACC
 
 COMPNO:
-    sec
+    sec             ; calculate IACC = 0 - IACC
     lda #$00
-    tay
+    tay             ; use Y to quickly get 0 back into A every time
     sbc zpIACC
     sta zpIACC
 
@@ -10442,81 +10451,88 @@ COMPNO:
     sta zpIACC+3
 
 COMPDN:
-    lda #$40
+    lda #$40        ; return type is integer
     rts
 
 ; ----------------------------------------------------------------------------
 
-DATAST:
-    jsr AESPAC
-    cmp #'"'
-    beq QSTR
+; Get string into string buffer
 
-    ldx #$00
+DATAST:
+    jsr AESPAC          ; skip spaces, and get the next character
+    cmp #'"'
+    beq QSTR            ; jump to quoted string routine if it's a "
+
+    ldx #$00            ; start at beginning of string buffer
+
 DATASL:
-    lda (zpAELINE),Y
-    sta STRACC,X
+    lda (zpAELINE),Y    ; load character from AE line
+    sta STRACC,X        ; store in string buffer
     iny
     inx
-    cmp #$0D
-    beq QSTRF
+    cmp #$0D            ; compare with EOL/CR
+    beq QSTRF           ; jump to common finish code if EOL is detected
 
     cmp #','
-    bne DATASL
+    bne DATASL          ; continue as long as character is not a comma
 
 QSTRF:
-    dey
+    dey                 ; one character less than , or CR
     .if version < 3
-        jmp QSTRE
+        jmp QSTRE       ; exit through end of quoted string routine
     .elseif version >= 3
 QSTRE:
-        dex
-        stx zpCLEN
-        sty zpAECUR
-        lda #$00
+        dex             ; one character less than , or CR
+        stx zpCLEN      ; store as string length of STRACC
+        sty zpAECUR     ; store as new AE cursor position
+        lda #$00        ; return type is a string
         rts
     .endif
+
+; Copy quoted string from AELINE to STRACC
 
 QSTR:
-    ldx #$00
+    ldx #$00            ; start at the beginning of STRACC
 
 QSTRP:
-    iny
+    iny                 ; skip past "
 
 QSTRL:
-    lda (zpAELINE),Y
+    lda (zpAELINE),Y    ; get next character
     cmp #$0D
-    beq QSTREG
+    beq QSTREG          ; 'Missing "' error if it's an EOL/CR
 
     .if version < 3
-        iny
-        sta STRACC,X
+        iny                 ; point to next source character
+        sta STRACC,X        ; store current character in string buffer
     .elseif version >= 3
-        sta STRACC,X
-        iny
+        sta STRACC,X        ; store character in string buffer
+        iny                 ; point to next source character
     .endif
 
-    inx
+    inx                     ; increment destination index
     cmp #'"'
-    bne QSTRL
+    bne QSTRL               ; get next character if current is not "
 
-    lda (zpAELINE),Y
+    lda (zpAELINE),Y        ; get the next character
     cmp #'"'
-    beq QSTRP
+    beq QSTRP               ; if it's another ", continue loop
+                            ; note that the first " has been put in the buffer
 
     .if version < 3
 QSTRE:
-        dex
-        stx zpCLEN
-        sty zpAECUR
-        lda #$00
+        dex                 ; one character less than "
+        stx zpCLEN          ; store as string length of STRACC
+        sty zpAECUR         ; update AE line cursor position
+        lda #$00            ; return type is a string
         rts
     .elseif version >= 3
-        bne QSTRE
+        bne QSTRE           ; set string length and new AE cursor position,
+                            ; exit with type is string, branch always
     .endif
 
 QSTREG:
-    jmp NSTNG
+    jmp NSTNG           ; 'Missing "' error
 
 ; ----------------------------------------------------------------------------
 
