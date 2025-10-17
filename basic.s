@@ -11976,71 +11976,73 @@ FNARGW:
 
 ; ----------------------------------------------------------------------------
 
-; Push a value onto the stack (address and type)
-; ----------------------------------------------
+; Push a value onto the stack (address, type, and value)
+; ------------------------------------------------------
 
 RETINF:
-    ldy zpIACC+2
+    ldy zpIACC+2            ; get the type of the variable
     .if version < 3
         cpy #$04
-        bne FNINFO
+        bne FNINFO          ; jump if it's not an integer
     .elseif version >= 3
         cpy #$05
-        bcs FNINFO
+        bcs FNINFO          ; jump if it's a float
     .endif
-    ldx #zpWORK
-    jsr ACCTOM
+    ldx #zpWORK         ; point to WORK
+    jsr ACCTOM          ; copy IACC to WORK     (address and type)
 
 FNINFO:
-    jsr VARIND
+    jsr VARIND      ; get the value of the variable
 
-    php
-    jsr PHTYPE
-    plp
-    beq FNSTRD
-    bmi FNSTRD
+    php             ; save flags since it contains the type of the variable
+    jsr PHTYPE      ; push value of the variable to the stack
+    plp             ; restore flags
 
-    ldx #zpWORK
-    jsr MTOACC
+    beq FNSTRD      ; skip WORK stuff if the variable was a string
+    bmi FNSTRD      ; or a floating point number
+
+    ldx #zpWORK     ; point to WORK
+    jsr MTOACC      ; copy WORK to IACC
 
 FNSTRD:
-    jmp PHACC
+    jmp PHACC       ; push IACC to the stack (address and type)
 
 VARIND:
-    ldy zpIACC+2
-    bmi FACSTR
-    beq VARONE
+    ldy zpIACC+2    ; check type of variable
+    bmi FACSTR      ; jump if it's a string
+    beq VARONE      ; jump if it's a single byte
 
     cpy #$05
-    beq VARFP
+    beq VARFP       ; jump if it's a floating point value
 
-    ldy #$03
-    lda (zpIACC),Y
-    sta zpIACC+3
+    ldy #$03        ; four bytes to copy to IACC, pointed to by IACC (3..0)
 
-    dey
-    lda (zpIACC),Y
-    sta zpIACC+2
+    lda (zpIACC),Y  ; get fourth byte
+    sta zpIACC+3    ; copy to top byte of IACC
 
     dey
-    lda (zpIACC),Y
-    tax
+    lda (zpIACC),Y  ; get third byte
+    sta zpIACC+2    ; copy just below it
 
     dey
-    lda (zpIACC),Y
-    sta zpIACC
-    stx zpIACC+1
+    lda (zpIACC),Y  ; get second byte
+    tax             ; save in X as to not mess up our pointer
 
-    lda #$40
+    dey
+    lda (zpIACC),Y  ; get first byte
+    sta zpIACC      ; save in LSB of IACC
+    stx zpIACC+1    ; save 2nd byte just above it
+
+    lda #$40        ; return type is integer
     rts
 
 VARONE:
-    lda (zpIACC),Y
-    jmp AYACC
+    lda (zpIACC),Y  ; get single byte
+    jmp AYACC       ; return in IACC, padded with zeros
 
 VARFP:
     dey
-    lda (zpIACC),Y
+    lda (zpIACC),Y  ; get the mantissa of a floating point number, LSB first
     sta zpFACCMD
 
     dey
@@ -12052,134 +12054,146 @@ VARFP:
     sta zpFACCMB
 
     dey
-    lda (zpIACC),Y
+    lda (zpIACC),Y  ; store MSB of mantissa as sign first
     sta zpFACCS
 
     dey
-    lda (zpIACC),Y
+    lda (zpIACC),Y  ; get the exponent
     sta zpFACCX
 
-    sty zpFACCMG
+    sty zpFACCMG    ; zero rounding byte and under/overflow byte
     sty zpFACCXH
+
     ora zpFACCS
     ora zpFACCMB
     ora zpFACCMC
     ora zpFACCMD
-    beq VARFPX
+    beq VARFPX      ; if mantissa is zero, don't insert true numeric bit
 
-    lda zpFACCS
-    ora #$80
+    lda zpFACCS     ; get sign byte
+    ora #$80        ; add the true numeric bit
 
 VARFPX:
-    sta zpFACCMA
-    lda #$FF
+    sta zpFACCMA    ; save as MSB of mantissa
+    lda #$FF        ; indicate result is floating point
     rts
 
 FACSTR:
     cpy #$80
-    beq FACSTT
+    beq FACSTT      ; jump if string is not dynamic (e.g. BUFFER)
 
     ldy #$03
-    lda (zpIACC),Y
-    sta zpCLEN
-    beq STRRTS
+    lda (zpIACC),Y  ; get string length
+    sta zpCLEN      ; and store
+    beq STRRTS      ; exit if the string is empty
 
-    ldy #$01
+    ldy #$01        ; transfer address of string to WORK
     lda (zpIACC),Y
     sta zpWORK+1
     dey
     lda (zpIACC),Y
     sta zpWORK
-    ldy zpCLEN
+
+    ldy zpCLEN      ; get string length as index
 
 MOVTOS:
     dey
-    lda (zpWORK),Y
-    sta STRACC,Y
-    tya
-    bne MOVTOS
+    lda (zpWORK),Y  ; copy string
+    sta STRACC,Y    ; to string buffer
+    tya             ; cheap check for zero
+    bne MOVTOS      ; loop for all characters
 
 STRRTS:
     rts
 
 FACSTT:
-    lda zpIACC+1
-    beq CHRF
+    lda zpIACC+1    ; check MSB
+    beq CHRF        ; if it's zero, treat address as ASCII code
+                    ; is this ever used?
 
     ldy #$00
 
 FACSTU:
-    lda (zpIACC),Y
-    sta STRACC,Y
+    lda (zpIACC),Y  ; copy string
+    sta STRACC,Y    ; to the string buffer
     eor #$0D
-    beq FACSTV
+    beq FACSTV      ; exit loop if CR/EOL, jump with A=0
 
     iny
-    bne FACSTU
+    bne FACSTU      ; or copy until buffer is full
 
-    tya
+    tya             ; set A=0
 
 FACSTV:
-    sty zpCLEN
+    sty zpCLEN      ; store string length
+                    ; A=0, indicate type is string
     rts
 
 ; ----------------------------------------------------------------------------
 
 ; =CHR$ numeric
 ; =============
+
 CHRD:
-    jsr INTFAC
+    jsr INTFAC      ; evaluate integer expression
 
 CHRF:
-    lda zpIACC
-    jmp SINSTR
+    lda zpIACC      ; load LSB of integer
+    jmp SINSTR      ; construct string with this character and exit, tail call
 
 ; ----------------------------------------------------------------------------
 
+; Find out at which line number the error occurred
+
 FNLINO:
-    ldy #$00
+    ldy #$00        ; set ERL to zero
     sty zpERL
     sty zpERL+1
-    ldx zpTXTP
+
+    ldx zpTXTP      ; set WORK pointer to PAGE
     stx zpWORK+1
-    sty zpWORK
+    sty zpWORK      ; LSB is zero
 
     ldx zpLINE+1
     cpx #>BUFFER
-    beq FNLINX
+    beq FNLINX      ; exit if LINE pointer points to BUFFER (immediate mode)
 
     ldx zpLINE
 
 FIND:
-    jsr GETWRK
+    jsr GETWRK      ; get character and increment WORK pointer
 
     cmp #$0D
-    bne CHKA
+    bne CHKA        ; jump if line has not finished yet (no CR/EOL)
 
     cpx zpWORK
     lda zpLINE+1
     sbc zpWORK+1
-    bcc FNLINX
+    bcc FNLINX      ; exit of LINE pointer is less than the start address of
+                    ; this line
 
-    jsr GETWRK
+    jsr GETWRK      ; get byte and increment WORK pointer
 
-    ora #$00
-    bmi FNLINX
+    ora #$00        ; set flags
+    bmi FNLINX      ; exit if byte indicates the end of the program
 
-    sta zpERL+1
-    jsr GETWRK
+    sta zpERL+1     ; store MSB of ERL
 
-    sta zpERL
-    jsr GETWRK
+    jsr GETWRK      ; get byte and increment WORK pointer
+
+    sta zpERL       ; store LSB of ERL
+
+    jsr GETWRK      ; get byte and increment WORK pointer
 
 CHKA:
     cpx zpWORK
     lda zpLINE+1
     sbc zpWORK+1
-    bcs FIND
+    bcs FIND        ; continue search if LINE pointer is greater than
+                    ; address of current line
 
 FNLINX:
-    rts
+    rts             ; returns with Y=0
 
 ; ----------------------------------------------------------------------------
 
@@ -12207,41 +12221,47 @@ BREK:
         bcs EXTERR              ; So generate default error
     .endif
 
-
 ; FAULT set up, now process BRK error
 ; -----------------------------------
-    jsr FNLINO
 
-    sty zpTRFLAG
-    lda (FAULT),Y
-    bne BREKA           ; If ERR<>0, skip past ON ERROR OFF
+    jsr FNLINO          ; find line number where error occurred
 
-    lda #<BASERR
-    sta zpERRORLH       ; ON ERROR OFF
+    sty zpTRFLAG        ; turn off trace (FNLINO returns with Y=0)
+
+    lda (FAULT),Y       ; get error number
+    bne BREKA           ; if ERR != 0, not fatal, skip past resetting default
+                        ; program
+
+    lda #<BASERR        ; set BASIC error message to its default
+    sta zpERRORLH
     lda #>BASERR
     sta zpERRORLH+1
 
 BREKA:
-    lda zpERRORLH
-    sta zpLINE          ; Point program point to ERROR program
+    lda zpERRORLH       ; set LINE to point to error program
+    sta zpLINE
     lda zpERRORLH+1
     sta zpLINE+1
-    jsr SETVAR          ; Clear DATA and stack
-    tax
-    stx zpCURSOR
+
+    jsr SETVAR          ; Clear DATA and stacks
+
+    tax                 ; A=X=0
+    stx zpCURSOR        ; zero the offset
 
     .ifdef MOS_BBC
         lda #$DA
-        jsr OSBYTE    ; Clear VDU queue
+        jsr OSBYTE      ; Clear VDU queue
 
         lda #$7E
-        jsr OSBYTE    ; Acknowlege any Escape state
+        jsr OSBYTE      ; Acknowlege any Escape state
     .endif
 
     ldx #$FF
-    stx zpBYTESM
-    txs               ; Clear system stack
-    jmp STMT          ; Jump to execution loop
+    stx zpBYTESM        ; set OPT to $ff
+
+    txs                 ; clear machine stack
+
+    jmp STMT            ; Jump to execution loop
 
     .ifdef MOS_ATOM
 EXTERR:
@@ -12263,9 +12283,11 @@ EXTERR:
 
 ; Default ERROR program
 ; ---------------------
-; REPORT IF ERL PRINT " at line ";ERL END ELSE PRINT END
+; REPORT:IF ERL PRINT " at line ";ERL:END ELSE PRINT:END
+; (the spaces are not encoded)
+
 BASERR:
-    dta tknREPORT
+    dta tknREPORT           ; here is where the message is printed (!)
     dta ':'
     dta tknIF
     dta tknERL
@@ -12290,6 +12312,7 @@ BASERR:
 
 ; SOUND numeric, numeric, numeric, numeric
 ; ========================================
+
 BEEP:
     jsr ASEXPR        ; Evaluate integer
 
