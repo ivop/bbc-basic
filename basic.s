@@ -5171,7 +5171,7 @@ ARRAY:
 
 ARLOP:
     jsr PHACC       ; save IACC on BASIC stack
-    jsr INEXPR      ; evaluate next array index
+    jsr INEXPR      ; evaluate next array index, ensure it's an integer
     inc zpAECUR
     cpx #','
     bne UNARRY      ; error if no ',' is present
@@ -7031,6 +7031,7 @@ FCONC:
 
 ; STR$ enters here to use general format, having set zpWORK to 0
 ; --------------------------------------------------------------
+
 FCONA:
     lda #$0A          ; Otherwise, default to ten digits
 
@@ -11248,70 +11249,71 @@ SINSTR:
 ; ========================
 
 LEFTD:
-    jsr EXPR
-    bne LEFTE
+    jsr EXPR        ; eveluate expression
+    bne LEFTE       ; 'Type mismatch' error if it's not a string
 
     cpx #','
-    bne MIDC
+    bne MIDC        ; 'Missing ,' error if the next character is not a comma
 
-    inc zpAECUR
+    inc zpAECUR     ; step past comma
 
-    jsr PHSTR
-    jsr BRA
-    jsr INTEGB
-    jsr POPSTR
+    jsr PHSTR       ; push the string to the stack
+    jsr BRA         ; evaluate next expression, and check closing bracket
+    jsr INTEGB      ; make sure it's an integer
+    jsr POPSTR      ; pop the string of the stack
 
-    lda zpIACC
+    lda zpIACC      ; check specified length against string length
     cmp zpCLEN
-    bcs LEFTX
+    bcs LEFTX       ; exit if length is too big
 
-    sta zpCLEN
+    sta zpCLEN      ; store numeric argument as new string length
 
 LEFTX:
-    lda #$00
+    lda #$00        ; return type is a string
     rts
 
 ; ----------------------------------------------------------------------------
 
 ; =RIGHT$(string$, numeric)
 ; =========================
+
 RIGHTD:
-    jsr EXPR
-    bne LEFTE
+    jsr EXPR        ; evaluate expression
+    bne LEFTE       ; 'Type mismatch' error if it's not a string
 
     cpx #','
-    bne MIDC
+    bne MIDC        ; 'Missing ,' error if the next character is not a comma
 
-    inc zpAECUR
+    inc zpAECUR     ; step past comma
 
-    jsr PHSTR
-    jsr BRA
-    jsr INTEGB
-    jsr POPSTR
+    jsr PHSTR       ; push the string to the stack
+    jsr BRA         ; evaluate next expression, and check closing bracket
+    jsr INTEGB      ; make sure it's an integer
+    jsr POPSTR      ; pop the string of the stack
 
-    lda zpCLEN
+    lda zpCLEN      ; subtract required length from the actual length
     sec
     sbc zpIACC
-    bcc RALL
-    beq RIGHTX
+    bcc RALL        ; requested length is too big, exit
+    beq RIGHTX      ; requested length is exactly the string length, exit
 
-    tax
-    lda zpIACC
+    tax             ; save difference in X as offset of the required string
+    lda zpIACC      ; set new string length
     sta zpCLEN
-    beq RIGHTX
+    beq RIGHTX      ; exit if required string length is zero
 
-    ldy #$00
+    ldy #$00        ; destination location is 0 (X is source location)
 
 RGHLOP:
-    lda STRACC,X
+    lda STRACC,X    ; copy string to beginning of string buffer
     sta STRACC,Y
     inx
     iny
-    dec zpIACC
-    bne RGHLOP
+    dec zpIACC      ; use LSB of IACC as counter
+    bne RGHLOP      ; loop until all characters are copied
 
 RALL:
-    lda #$00
+    lda #$00        ; return type is string
 
 RIGHTX:
     rts
@@ -11320,129 +11322,145 @@ RIGHTX:
 
 ; =INKEY$ numeric
 ; ===============
+
 INKED:
-    jsr INKEA
-    txa
+    jsr INKEA       ; call the generic INKEY routine
+    txa             ; save character in A
     cpy #$00
-    beq SINSTR
+    beq SINSTR      ; if zero, time limit was not reached, return character
 
 RNUL:
-    lda #$00
+    lda #$00        ; return empty string if no key was pressed
     sta zpCLEN
     rts
 
 LEFTE:
-    jmp LETM
+    jmp LETM        ; 'Type mismatch' error
 
 MIDC:
-    jmp COMERR
+    jmp COMERR      ; 'Missing ,' error
 
 ; ----------------------------------------------------------------------------
 
 ; =MID$(string$, numeric [, numeric] )
 ; ====================================
+
 MIDD:
-    jsr EXPR
-    bne LEFTE
+    jsr EXPR        ; evaluate expression
+    bne LEFTE       ; 'Type mismatch' error if it's not string
 
     cpx #','
-    bne MIDC
+    bne MIDC        ; 'Missing ,' error if next character is not a comma
 
-    jsr PHSTR
+    jsr PHSTR       ; push string to stack
 
-    inc zpAECUR
-    jsr INEXPR
+    inc zpAECUR     ; increment past comma
+    jsr INEXPR      ; evaluate integer expression (starting point)
 
     lda zpIACC
-    pha
-    lda #$FF
+    pha             ; save starting position on the machine stack
+
+    lda #$FF        ; set default length to $ff
     sta zpIACC
-    inc zpAECUR
+
+    inc zpAECUR     ; step past the next character
     cpx #')'
-    beq MIDTWO
+    beq MIDTWO      ; skip evaluating length if next character is a ')'
 
     cpx #','
-    bne MIDC
+    bne MIDC        ; 'Missing ,' error if next character is not a comma
 
-    jsr BRA
-    jsr INTEGB
+    jsr BRA         ; evaluate length expression, and check closing bracket
+    jsr INTEGB      ; make sure it's an integer
 
 MIDTWO:
-    jsr POPSTR
-    pla
-    tay
+    jsr POPSTR      ; pop string from stack
+
+    pla             ; retrieve starting position from machine stack
+    tay             ; and put it in Y  (length is in IACC)
+
     clc
-    beq MIDLB
+    beq MIDLB       ; jump if starting location is zero
 
     sbc zpCLEN
-    bcs RNUL
+    bcs RNUL        ; return empty string if start is past string length
 
-    dey
-    tya
+    dey             ; decrement Y to make it a proper offset
+    tya             ; and move back to A
 
 MIDLB:
-    sta zpIACC+2
-    tax
-    ldy #$00
-    lda zpCLEN
-    sec
-    sbc zpIACC+2
-    cmp zpIACC
-    bcs MIDLA
+    sta zpIACC+2    ; start offset in IACC+2
+    tax             ; and X
 
-    sta zpIACC
+    ldy #$00        ; destination offset in Y
+
+    lda zpCLEN      ; take string length
+    sec
+    sbc zpIACC+2    ; subtract offset
+    cmp zpIACC      ; compare to requested length
+    bcs MIDLA       ; if not too big, skip store
+
+    sta zpIACC      ; if too big, use the remaining length of the string as
+                    ; the requested length
 
 MIDLA:
     lda zpIACC
-    beq RNUL
+    beq RNUL        ; return empty string if length of substring is zero
 
 MIDLP:
-    lda STRACC,X
-    sta STRACC,Y
+    lda STRACC,X    ; copy string buffer from source offset
+    sta STRACC,Y    ; to destination offset
     iny
     inx
     cpy zpIACC
-    bne MIDLP
+    bne MIDLP       ; loop until all requested characters are copied
 
-    sty zpCLEN
-    lda #$00
+    sty zpCLEN      ; store new string length
+
+    lda #$00        ; return type is string
     rts
 
 ; ----------------------------------------------------------------------------
 
 ; =STR$ [~] numeric
 ; =================
-STRD:
-    jsr AESPAC        ; Skip spaces, and get next character
-    ldy #$FF          ; Y=$FF for decimal
-    cmp #'~'
-    beq STRDT
 
-    ldy #$00
-    dec zpAECUR       ; Y=$00 for hex, step past ~
+STRD:
+    jsr AESPAC        ; skip spaces, and get next character
+    ldy #$FF          ; Y=$FF for hexadecimal
+    cmp #'~'
+    beq STRDT         ; jump if hex string is requested
+
+    ldy #$00          ; Y=$00 for decimal
+    dec zpAECUR       ; step past ~
 
 STRDT:
     tya
-    pha               ; Save format
-    jsr FACTOR
-    beq STRE          ; Evaluate, error if not number
+    pha               ; Save format on stack
 
-    tay
-    pla
-    sta zpPRINTF      ; Get format back
-    lda VARL_AT+3
-    bne STRDM         ; Top byte of @%, STR$ uses @%
+    jsr FACTOR        ; evaluate the argument
+    beq STRE          ; 'Type mismatch' error if it's a string
 
-    sta zpWORK        ; Store 'General format'
-    jsr FCONA         ; Convert using general format
+    tay               ; save argument type in Y
+    pla               ; retrieve output format from stack
 
-    lda #$00
-    rts               ; Return string
+    sta zpPRINTF      ; and save in PRINTF
+
+    lda VARL_AT+3     ; MSB of @%
+    bne STRDM         ; if not zero, jump to convert using @% format
+
+    sta zpWORK        ; zero WORK
+
+    jsr FCONA         ; convert using general format
+
+    lda #$00          ; return type is string
+    rts
 
 STRDM:
     jsr FCON          ; Convert using @% format
-    lda #$00
-    rts               ; Return string
+
+    lda #$00          ; return type is string
+    rts
 
 STRE:
     jmp LETM          ; Jump to Type mismatch error
@@ -11451,58 +11469,61 @@ STRE:
 
 ; =STRING$(numeric, string$)
 ; ==========================
-STRND:
-    jsr INEXPR
-    jsr PHACC
-    jsr COMEAT
-    jsr BRA
-    bne STRE
 
-    jsr POPACC
-    ldy zpCLEN
-    beq STRNX
+STRND:
+    jsr INEXPR      ; evaluate expression as an integer
+    jsr PHACC       ; push IACC to the stack
+    jsr COMEAT      ; check for comma
+    jsr BRA         ; evaluate expression, and closing bracket
+    bne STRE        ; 'Type mismatch' error if it's not a string
+
+    jsr POPACC      ; pop number of repetitions back into IACC
+
+    ldy zpCLEN      ; get length in Y (also offset start of first repetition)
+    beq STRNX       ; exit if string length is zero
 
     lda zpIACC
-    beq STRNY
+    beq STRNY       ; return empty string if repetitions is zero
 
-    dec zpIACC
-    beq STRNX
+    dec zpIACC      ; decrement number of repetitions
+    beq STRNX       ; exit with one repetition of the string
 
 STRNL:
-    ldx #$00
+    ldx #$00        ; copy from beginning of string buffer
 
 STRNLP:
-    lda STRACC,X
-    sta STRACC,Y
+    lda STRACC,X    ; copy source
+    sta STRACC,Y    ; to destination in string buffer
     inx
     iny
-    beq STRNOV
+    beq STRNOV      ; 'String too long' error if destination offset overflows
 
     cpx zpCLEN
-    bcc STRNLP
+    bcc STRNLP      ; loop until original string length bytes have been copied
 
-    dec zpIACC
-    bne STRNL
+    dec zpIACC      ; decrement number of repetitions
+    bne STRNL       ; loop until it becomes zero
 
-    sty zpCLEN
+    sty zpCLEN      ; store destination offset as new string length
 
 STRNX:
-    lda #$00
+    lda #$00        ; return type is a string
     rts
 
 STRNY:
-    sta zpCLEN
+    sta zpCLEN      ; A is always zero here, return empty string, and
+                    ; return type in A indicates it's a string
     rts
 
 STRNOV:
-    jmp STROVR
+    jmp STROVR      ; 'String too long' error
 
 ; ----------------------------------------------------------------------------
 
 FNMISS:
-    pla
+    pla             ; pop MSB of LINE
     sta zpLINE+1
-    pla
+    pla             ; pop LSB of LINE
     sta zpLINE
 
     brk
@@ -11517,6 +11538,9 @@ FNMISS:
 
 ; Look through program for FN/PROC
 ; --------------------------------
+; On entry, zpWORK points to the name being sought
+; zpWORK+2 contains the length of the name being sought
+
 FNDEF:
     lda zpTXTP
     sta zpLINE+1       ; Start at PAGE
@@ -11545,67 +11569,70 @@ NEXLIN:
     clc
     adc zpLINE
     sta zpLINE         ; Point to next line
-    bcc FNFIND
+    bcc FNFIND         ; loop back to check the next line
 
     inc zpLINE+1
-    bcs FNFIND         ; Loop back to check next line
+    bcs FNFIND         ; loop back to check the next line
+
+    ; DEF token found
 
 DEFFND:
     iny
-    sty zpCURSOR
-    jsr SPACES
+    sty zpCURSOR        ; save offset of character after DEF
+    jsr SPACES          ; skip spaces and get the next character
 
-    tya
-    tax
+    tya                 ; offset of next character to A
+    tax                 ; and X
     clc
-    adc zpLINE
-    ldy zpLINE+1
+    adc zpLINE          ; add LINE pointer LSB
+    ldy zpLINE+1        ; put MSB in Y
     bcc FNFDIN
 
-    iny
+    iny                 ; increment MSB
     clc
 
 FNFDIN:
+    ; here carry is always clear
+    sbc #$00            ; subtract 1 of LINE pointer
+    sta zpWORK+5        ; and save in WORK+5/6
+    tya                 ; get MSB from Y
     sbc #$00
-    sta zpWORK+5
-    tya
-    sbc #$00
-    sta zpWORK+6
+    sta zpWORK+6        ; save MSB
 
-    ldy #$00
+    ldy #$00            ; index into zpWORK+5/6 and into name being sought
 
 FNFDLK:
     iny
     inx
     lda (zpWORK+5),Y
-    cmp (zpWORK),Y
-    bne NEXLIN
+    cmp (zpWORK),Y      ; compare name being sought
+    bne NEXLIN          ; skip to next line if it's not equal
 
     cpy zpWORK+2
-    bne FNFDLK
+    bne FNFDLK          ; loop until end of name being sought
 
     iny
-    lda (zpWORK+5),Y
-    jsr WORDCQ
-    bcs NEXLIN
+    lda (zpWORK+5),Y    ; get next character from the program text
+    jsr WORDCQ          ; check if it's alphanumeric
+    bcs NEXLIN          ; jump if name found is longer than being sought
 
-    txa
+    txa                 ; transfer offset of end of name to Y (via A)
     tay
-    jsr CLYADP
-    jsr LOOKFN
+    jsr CLYADP          ; update program pointer
+    jsr LOOKFN          ; create a catalogue entry for the PROC/FN
 
     ldx #$01
-    jsr CREAX
+    jsr CREAX           ; clear the byte after the name in the catalogue
 
     ldy #$00
-    lda zpLINE
+    lda zpLINE          ; store the address of the PROC/FN
     sta (zpFSA),Y
     iny
     lda zpLINE+1
     sta (zpFSA),Y
-    jsr FSAPY
+    jsr FSAPY           ; update VARTOP
 
-    jmp FNGO
+    jmp FNGO            ; join the PROC/FN code
 
 FNCALL:
     brk
@@ -11621,77 +11648,90 @@ FNCALL:
 
 ; =FNname [parameters]
 ; ====================
+
+; Below, there are two separate parameters areas.
+; The parameter area of the difinition will be called the defined parameter
+; area. The parameter area of the caller will be referred to as the
+; calling parameter area.
+
 FN:
-    lda #tknFN
+    lda #tknFN        ; indicate we were called as a function
 
 ; Call subroutine
 ; ---------------
 ; A=tknFN or tknPROC
-; zpLINE=>start of FN/PROC name
+; zpLINE => start of FN/PROC name
 ;
+
 FNBODY:
-    sta zpTYPE        ; Save PROC/FN token
-    tsx
+    sta zpTYPE        ; save call type
+
+    tsx               ; get machine stack pointer in X and A
     txa
     clc
-    adc zpAESTKP      ; Drop BASIC stack by size of 6502 stack
-    jsr HIDEC         ; Store new BASIC stack pointer, check for No Room
+    adc zpAESTKP      ; adjust BASIC stack pointer by size of 6502 stack
+    jsr HIDEC         ; store new BASIC stack pointer, check for No Room
 
     ldy #$00
     txa
-    sta (zpAESTKP),Y  ; Store 6502 Stack Pointer on BASIC stack
+    sta (zpAESTKP),Y  ; store machine Stack Pointer on BASIC stack
 
 FNPHLP:
     inx
     iny
     lda $0100,X
-    sta (zpAESTKP),Y  ; Copy 6502 stack onto BASIC stack
+    sta (zpAESTKP),Y  ; copy machine stack onto BASIC stack
     cpx #$FF
-    bne FNPHLP
+    bne FNPHLP        ; loop until top of machine stack
 
-    txs               ; Clear 6502 stack
+
+    txs               ; clear 6502 stack, X=$ff
     lda zpTYPE
-    pha               ; Push PROC/FN token
+    pha               ; push call type, $01ff will contain call type
+
     lda zpCURSOR
-    pha               ; Push line pointer offset
+    pha               ; push LINE pointer offset
     lda zpLINE
-    pha               ; Push zpLINE pointer
+    pha               ; push LINE pointer
     lda zpLINE+1
     pha
-    lda zpAECUR
-    tax
-    clc
+
+    lda zpAECUR       ; get AE line offset
+    tax               ; also in X
+    clc               ; add AE line pointer
     adc zpAELINE
-    ldy zpAELINE+1
+    ldy zpAELINE+1    ; get MSB in Y
     bcc FNNOIC
 
-    iny
+    iny               ; increment MSB
     clc
 
 FNNOIC:
-    sbc #$01
-    sta zpWORK
-    tya
-    sbc #$00
-    sta zpWORK+1       ; (zpWORK)=>PROC token
+    ; here, carry is always clear
+    sbc #$01           ; subtract 2
+    sta zpWORK         ; store as WORK pointer
+    tya                ; get MSB
+    sbc #$00           ; handle borrow
+    sta zpWORK+1       ; (zpWORK) => PROC/FN token
 
     ldy #$02
     jsr WORDLP         ; Check name is valid
 
-    cpy #$02
-    beq FNCALL         ; No valid characters, jump to 'Bad call' error
+    cpy #$02           ; if Y is still 2, name was omitted
+    beq FNCALL         ; in that case, jump to 'Bad call' error
 
     stx zpAECUR        ; Line pointer offset => after valid FN/PROC name
     dey
-    sty zpWORK+2
+    sty zpWORK+2       ; save the length of the name
 
-    jsr CREAFN
-    bne FNGOA         ; Look for FN/PROC name in heap, if found, jump to it
+    jsr CREAFN         ; find catalogue entry
+    bne FNGOA          ; if found, jump to it
 
-    jmp FNDEF         ; Not in heap, jump to look through program
+    jmp FNDEF          ; Not in catalogue, jump to look through program
 
 ; FN/PROC destination found
 ; -------------------------
+
 FNGOA:
     ldy #$00
     lda (zpIACC),Y
@@ -11702,164 +11742,179 @@ FNGOA:
 
 FNGO:
     lda #$00
-    pha
-    sta zpCURSOR        ; Push 'no parameters' (?)
-    jsr SPACES
-    cmp #'('
-    beq FNARGS
+    pha                 ; keep track of number of parameters
 
-    dec zpCURSOR
+    sta zpCURSOR        ; set LINE offset to zero
+
+    jsr SPACES          ; skip spaces, and get next character
+    cmp #'('
+    beq FNARGS          ; if equal to '(', jump to handle arguments
+
+    dec zpCURSOR        ; one position back
 
 DOFN:
-    lda zpAECUR
+    lda zpAECUR         ; save return location, AE cursor offset
     pha
-    lda zpAELINE
+    lda zpAELINE        ; and AE line pointer
     pha
     lda zpAELINE+1
     pha
 
-    jsr STMT            ; type now contains type
+    jsr STMT            ; execute the statements comprising the PROC/FN
 
-    pla
+    ; zpTYPE now contains return value type
+
+    pla                 ; retrieve AE line pointer from stack
     sta zpAELINE+1
     pla
     sta zpAELINE
-    pla
+    pla                 ; and its cursor offset
     sta zpAECUR
-    pla
-    beq DNARGS
+
+    pla                 ; pop number of parameters
+    beq DNARGS          ; skip if there were no parameters
 
     sta zpWORK+8
 
 GTARGS:
-    jsr POPWRK
-    jsr STORST
+    jsr POPWRK          ; pop the address and type of the parameter
+    jsr STORST          ; replace with its original value from the BASIC stack
 
     dec zpWORK+8
-    bne GTARGS
+    bne GTARGS          ; loop until all parameters have been dealt with
 
 DNARGS:
-    pla
+    pla                 ; restore LINE pointer
     sta zpLINE+1
     pla
     sta zpLINE
-    pla
+    pla                 ; and its cursor offset
     sta zpCURSOR
-    pla
+
+    pla                 ; drop call type
 
     ldy #$00
-    lda (zpAESTKP),Y
+    lda (zpAESTKP),Y    ; get old machine stack pointer
     tax
-    txs
+    txs                 ; restore
 
 FNPLLP:
     iny
     inx
     lda (zpAESTKP),Y
-    sta $0100,X       ; Copy stacked 6502 stack back onto 6502 stack
+    sta $0100,X         ; copy saved machine stack back onto machine stack
     cpx #$FF
     bne FNPLLP
 
     tya
     adc zpAESTKP
-    sta zpAESTKP      ; Adjust BASIC stack pointer
+    sta zpAESTKP        ; adjust BASIC stack pointer
     bcc FNPL
 
     inc zpAESTKP+1
 
 FNPL:
-    lda zpTYPE
+    lda zpTYPE          ; get return value type in A
     rts
 
+; Parse argument list
+
 FNARGS:
-    lda zpAECUR       ; parse arglist - first hpush AELINE
+    lda zpAECUR         ; push AE line cursor offset
     pha
-    lda zpAELINE
+    lda zpAELINE        ; push AE line pointer
     pha
     lda zpAELINE+1
     pha
 
-    jsr CRAELV
-    beq ARGMAT
+    jsr CRAELV          ; get name of the defined parameter
+    beq ARGMAT          ; 'Arguments' error if the name is invalid
 
-    lda zpAECUR
+    lda zpAECUR         ; update cursor to the comma or closing bracket
     sta zpCURSOR
 
-    pla                 ; hpull AELINE
+    pla                 ; pull AE line pointer
     sta zpAELINE+1
     pla
     sta zpAELINE
     pla
-    sta zpAECUR
-    pla
-    tax                 ; hpull args
+    sta zpAECUR         ; and its cursor offset
 
-    lda zpIACC+2        ; hpush lvalue
+    pla                 ; retrieve number of arguments
+    tax                 ; and hold in X
+
+    lda zpIACC+2        ; push lvalue type
     pha
-    lda zpIACC+1
+    lda zpIACC+1        ; push lvalue address
     pha
     lda zpIACC
     pha
 
-    inx                 ; args=args+1
+    inx                 ; increment number of arguments
     txa
-    pha                 ; hpush args
+    pha                 ; and push it to the stack
 
-    jsr RETINF
-    jsr SPACES
+    jsr RETINF          ; save the value, addres, and type of the
+                        ; defined parameter variable
+
+    jsr SPACES          ; skip spaces, and get next character
 
     cmp #','
-    beq FNARGS
+    beq FNARGS          ; deal with the next parameter is it's a comma
 
     cmp #')'
-    bne ARGMAT
+    bne ARGMAT          ; 'Arguments' error if there's no closing bracket
 
     lda #$00
-    pha                 ; hpush 0
-    jsr AESPAC
+    pha                 ; save the numner of calling parameters as zero
+
+    jsr AESPAC          ; get next caller character
 
     cmp #'('
-    bne ARGMAT
+    bne ARGMAT          ; 'Arguments' error if the first character is not '('
 
 FNARGP:
-    jsr EXPR
-    jsr PHTYPE          ; bpush val
+    jsr EXPR            ; evaluate an expression
+    jsr PHTYPE          ; push value to BASIC stack
 
-    lda zpTYPE
-    sta zpIACC+3
+    lda zpTYPE          ; get variable type
+    sta zpIACC+3        ; store in MSB of IACC
 
-    jsr PHACC           ; bpush type
+    jsr PHACC           ; push IACC to BASIC stack
 
-    pla                 ; hpull args, inc args, hpush args
+    pla                 ; pull number of arguments
     tax
-    inx
+    inx                 ; increment number of arguments
     txa
-    pha
+    pha                 ; push number of arguments
 
-    jsr AESPAC
+    jsr AESPAC          ; get next character from calling parameter area
 
     cmp #','
-    beq FNARGP
+    beq FNARGP          ; handle next parameter if character is a comma
 
     cmp #')'
-    bne ARGMAT
+    bne ARGMAT          ; 'Arguments' error if it's not a closing bracket
 
-    pla
-    pla
-    sta zpCOEFP
-    sta zpCOEFP+1
-    cpx zpCOEFP
-    beq FNARGZ
+    pla                 ; get number of calling parameters
+    pla                 ; get number of defined parameters
+    sta zpCOEFP         ; store in COEFP
+    sta zpCOEFP+1       ; and COEFP+1           (why? see FNARGW below)
+    cpx zpCOEFP         ; compare them
+    beq FNARGZ          ; jump if they match
+
+    ; 'Arguments' error
 
 ARGMAT:
-    ldx #$FB
+    ldx #$FB            ; setup stack pointer
     txs
-    pla
+
+    pla                 ; restore LINE pointer
     sta zpLINE+1
     pla
     sta zpLINE
 
-    brk
+    brk                 ; and trigger error
     dta $1F
     .if foldup == 1
         dta 'ARGUMENTS'
@@ -11869,57 +11924,61 @@ ARGMAT:
     brk
 
 FNARGZ:
-    jsr POPACC
+    jsr POPACC          ; pull type of the calling parameter from BASIC stack
 
-    pla
-    sta zpIACC
+    pla                 ; pull type and address of the defined parameter
+    sta zpIACC          ; from the machine stack into IACC
     pla
     sta zpIACC+1
     pla
-    sta zpIACC+2
+    sta zpIACC+2        ; defined parameter type
 
-    bmi FNARGY
+    bmi FNARGY          ; jump if parameter is a string
 
-    lda zpIACC+3
-    beq ARGMAT
+    lda zpIACC+3        ; calling parameter type is still in MSB
+    beq ARGMAT          ; 'Arguments' error if it's a string
 
-    sta zpTYPE
-    ldx #zpWORK
-    jsr ACCTOM
+    sta zpTYPE          ; save calling parameter type
 
-    lda zpTYPE
-    bpl FNARPO
+    ldx #zpWORK         ; pointer to WORK
+    jsr ACCTOM          ; copy IACC to WORK
 
-    jsr POPSET
-    jsr FLDA
+    lda zpTYPE          ; retrieve calling parameter type
+    bpl FNARPO          ; jump if it's an integer
 
-    jmp FNAROP
+    jsr POPSET          ; discard float from stack, leave ARGP pointing to it
+    jsr FLDA            ; load FACC from (ARGP)
+
+    jmp FNAROP          ; skip integer code, jump to common end
 
 FNARPO:
-    jsr POPACC
+    jsr POPACC          ; pop integer from stack into IACC
 
 FNAROP:
-    jsr STORF
-    jmp FNARGW
+    jsr STORF           ; assign the variable
+    jmp FNARGW          ; skip string code, jump to common end
 
 FNARGY:
-    lda zpIACC+3
-    bne ARGMAT
+    lda zpIACC+3        ; get calling parameter type
+    bne ARGMAT          ; 'Arguments' error if it is not string
 
-    jsr POPSTR
-    jsr STSTRE
+    jsr POPSTR          ; pop string of BASIC stack
+    jsr STSTRE          ; assign it
 
 FNARGW:
     dec zpCOEFP
-    bne FNARGZ
-    lda zpCOEFP+1
-    pha
-    jmp DOFN
+    bne FNARGZ          ; loop for all parameters
+
+    lda zpCOEFP+1       ; here we kept the unadjusted number of parameters
+    pha                 ; push it to the stack
+
+    jmp DOFN            ; jump to main PROC/FN code
 
 ; ----------------------------------------------------------------------------
 
-; Push a value onto the stack
-; ---------------------------
+; Push a value onto the stack (address and type)
+; ----------------------------------------------
+
 RETINF:
     ldy zpIACC+2
     .if version < 3
@@ -14305,6 +14364,7 @@ POPACI:
 
 ; Unstack an integer to zpWORK
 ; -----------------------------
+
 POPWRK:
     ldx #zpWORK
 
