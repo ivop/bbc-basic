@@ -12314,40 +12314,47 @@ BASERR:
 ; ========================================
 
 BEEP:
-    jsr ASEXPR        ; Evaluate integer
+    jsr ASEXPR        ; evaluate first expression
 
-    ldx #$03          ; Three more to evaluate
+    ldx #$03          ; three more to evaluate
 
 BEEPLP:
     .ifdef MOS_BBC
         lda zpIACC
         pha
         lda zpIACC+1
-        pha           ; Stack current 16-bit integer
+        pha           ; stack current 16-bit integer
     .endif
-    txa
+
+    txa               ; save our counter
     pha
+
     jsr INCMEX        ; Step past comma, evaluate next integer
 
     pla
-    tax
+    tax               ; restore our counter
+
     dex
     bne BEEPLP        ; Loop to stack this one
 
     .ifdef MOS_BBC
         jsr AEDONE    ; Check end of statement
+
         lda zpIACC
         sta zpWORK+6  ; Copy current 16-bit integer to end of control block
         lda zpIACC+1
         sta zpWORK+7
-        ldy #$07
-        ldx #$05      ; Prepare for OSWORD 7 and 6 more bytes
+
+        ldy #$07      ; Prepare for OSWORD 7
+        ldx #$05      ; and 6 more bytes
         bne ENVELL    ; Jump to pop to control block and call OSWORD
     .endif
 
     .ifdef MOS_ATOM
         beq EVELX     ; Check end of statement and return
     .endif
+
+; ----------------------------------------------------------------------------
 
 ; ENVELOPE a,b,c,d,e,f,g,h,i,j,k,l,m,n
 ; ====================================
@@ -12363,11 +12370,13 @@ ENVELP:
     .endif
 
     txa
-    pha
+    pha                ; save our counter
+
     jsr INCMEX         ; Step past comma, evaluate next integer
 
     pla
-    tax
+    tax                ; restore our counter
+
     dex
     bne ENVELP         ; Loop to stack this one
 
@@ -12376,11 +12385,12 @@ EVELX:
     .endif
 
     jsr AEDONE         ; Check end of statement
+
     .ifdef MOS_BBC
         lda zpIACC
         sta zpWORK+13  ; Copy current 8-bit integer to end of control block
-        ldx #$0C
-        ldy #$08       ; Prepare for 12 more bytes and OSWORD 8
+        ldx #$0C       ; Prepare for 12 more bytes
+        ldy #$08       ; and OSWORD 8
     .endif
 
 ENVELL:
@@ -12389,9 +12399,10 @@ ENVELL:
         sta zpWORK,X   ; Pop bytes into control block
         dex
         bpl ENVELL
+
         tya            ; Y=OSWORD number
         ldx #zpWORK
-        ldy #$00       ; YX=>control block
+        ldy #$00       ; YX => control block in zpWORK space
         jsr OSWORD
     .endif
 
@@ -12401,22 +12412,26 @@ ENVELL:
 
 ; WIDTH numeric
 ; =============
+
 WIDTH:
-    jsr ASEXPR
-    jsr AEDONE
+    jsr ASEXPR      ; evaluate width expression
+    jsr AEDONE      ; check for the end of the statement
 
     ldy zpIACC
-    dey
-    sty zpWIDTHV
-    jmp NXT
+    dey             ; decrement the value
+    sty zpWIDTHV    ; and save it as the current terminal width 
+
+    jmp NXT         ; jump to main loop
 
 ; ----------------------------------------------------------------------------
 
 STORER:
-    jmp LETM
+    jmp LETM          ; 'Type mismatch' error
 
 ; Store byte or word integer
 ; ==========================
+; Assign to numeric variable
+
 STEXPR:
     jsr EXPR          ; Evaluate expression
 
@@ -12429,8 +12444,8 @@ STORF:
     beq STORFP        ; Size=5, jump to store float
 
     lda zpTYPE
-    beq STORER        ; Type<>num, jump to error
-    bpl STORIN        ; Type=int, jump to store it
+    beq STORER        ; if type is string, jump to error
+    bpl STORIN        ; if type is integer, jump to store it
 
     jsr IFIX          ; Convert float to integer
 
@@ -12439,7 +12454,7 @@ STORIN:
     lda zpIACC
     sta (zpWORK),Y    ; Store byte 1
     lda zpWORK+2
-    beq STORDN        ; Exit if size=0, byte
+    beq STORDN        ; Exit if size=0, single byte
 
     lda zpIACC+1
     iny
@@ -12460,10 +12475,11 @@ STORDN:
 
 ; Store float
 ; ===========
+
 STORFP:
     lda zpTYPE
-    beq STORER        ; Type<>num, jump to error
-    bmi STORPF        ; Type=float, jump to store it
+    beq STORER        ; 'Type mismatch' error if it's a string
+    bmi STORPF        ; jump if it's a floating point value
 
     jsr IFLT          ; Convert integer to float
 
@@ -12478,34 +12494,39 @@ STORPF:
     sta zpFACCS       ; Unpack sign
 
     lda zpFACCMA
-    and #$7F          ; Unpack mantissa 1
+    and #$7F          ; Unpack mantissa A (MSB)
     ora zpFACCS
-    sta (zpWORK),Y    ; sign + mantissa 1
+    sta (zpWORK),Y    ; sign + mantissa A
 
     iny
     lda zpFACCMB
-    sta (zpWORK),Y    ; mantissa 2
+    sta (zpWORK),Y    ; mantissa B
 
     iny
     lda zpFACCMC
-    sta (zpWORK),Y    ; mantissa 3
+    sta (zpWORK),Y    ; mantissa C
 
     iny
     lda zpFACCMD
-    sta (zpWORK),Y    ; mantissa 4
+    sta (zpWORK),Y    ; mantissa D (LSB)
     rts
 
 ; ----------------------------------------------------------------------------
 
+; Print a token
+; =============
+; On entry, A contains a character or a token (value >127)
+
 TOKOUT:
-    sta zpWORK
+    sta zpWORK          ; store in WORK
     cmp #$80
-    bcc CHOUT
+    bcc CHOUT           ; output as character if it's not a token
 
     lda #<TOKENS
-    sta zpWORK+1        ; Point to token table
+    sta zpWORK+1        ; point WORK+1/2 to token table
     lda #>TOKENS
     sta zpWORK+2
+
     sty zpWORK+3        ; save Y
 
 FINTOK:
@@ -12513,33 +12534,34 @@ FINTOK:
 
 LOOTOK:
     iny
-    lda (zpWORK+1),Y
-    bpl LOOTOK
+    lda (zpWORK+1),Y    ; get character from TOKENS table
+    bpl LOOTOK          ; loop until it's the token
 
     cmp zpWORK
-    beq GOTTOK
+    beq GOTTOK          ; jump if it's the token we were looking for
 
-    iny
-    tya
+    iny                 ; skip flags, point to start of next token in ASCII
+
+    tya                 ; add to pointer
     sec
     adc zpWORK+1
     sta zpWORK+1
-    bcc FINTOK
+    bcc FINTOK          ; loop to check next token
 
     inc zpWORK+2
-    bcs FINTOK
+    bcs FINTOK          ; loop to check next token
 
 GOTTOK:
-    ldy #$00
+    ldy #$00            ; point back to first character of the keyword
 
 PRTTOK:
-    lda (zpWORK+1),Y
-    bmi ENDTOK
+    lda (zpWORK+1),Y    ; get character from keyword
+    bmi ENDTOK          ; exit if it's the token, marking the end of the word
 
-    jsr CHOUT
+    jsr CHOUT           ; print the character
 
     iny
-    bne PRTTOK
+    bne PRTTOK          ; continue printing
 
 ENDTOK:
     ldy zpWORK+3        ; restore Y
@@ -12547,271 +12569,305 @@ ENDTOK:
 
 ; ----------------------------------------------------------------------------
 
-; Print byte in A as %02x hexadecimal
+; Print byte in A as %02X hexadecimal
 
 HEXOUT:
-    pha
+    pha             ; save our byte
+    lsr             ; shift upper nibble to the bottom
     lsr
     lsr
     lsr
-    lsr
-    jsr DIG
-    pla
-    and #$0F
+    jsr DIG         ; print digit
+    pla             ; restore out byte
+    and #$0F        ; mask out lower nibble
+
 DIG:
     cmp #$0A
-    bcc DIGR
-    adc #$06
+    bcc DIGR        ; skip adding 7 if digit < 10
+
+    adc #$06        ; carry is set, add 7 for digits A-F
+
 DIGR:
-    adc #$30
+    adc #'0'        ; add ASCII offset
+
+; Print the ASCII character in A
+
 CHOUT:
     cmp #$0D
-    bne NCH
+    bne NCH         ; jump if it's not CR/EOL
 
     jsr OSWRCH
-    jmp BUFEND         ; Set COUNT to zero
+    jmp BUFEND      ; set COUNT to zero, and exit, tail call
+
+; Print A in hex followed by a space
 
 HEXSP:
     jsr HEXOUT
 
 LISTPT:
-    lda #' '            ; print a space
+    lda #' '        ; print a space
 
 NCH:
-    pha
+    pha             ; save character
+
     lda zpWIDTHV
     cmp zpTALLY
-    bcs NOCRLF
+    bcs NOCRLF      ; no new line if WIDTH > COUNT
 
-    jsr NLINE
+    jsr NLINE       ; move to a new line
 
 NOCRLF:
-    pla
-    inc zpTALLY
+    pla             ; restore character
+
+    inc zpTALLY     ; increment COUNT
+
     .if WRCHV != 0
-        jmp (WRCHV)     ; tail call
+        jmp (WRCHV)     ; print it, and exit, tail call
     .endif
     .if WRCHV == 0
-        jmp OSWRCH      ; tail call
+        jmp OSWRCH      ; print it, and exit, tail call
     .endif
 
 ; ----------------------------------------------------------------------------
 
+; Print the LISTO spaces
+; ======================
+; On entry, A contains the mask to hold against the LISTO byte
+; X is level of indentation so far
+
 LISTPS:
     and zpLISTOP
-    beq LISTPX
+    beq LISTPX          ; exit if the selected option is not selected
 
     txa
-    beq LISTPX
-    bmi LISTPT
+    beq LISTPX          ; exit if level of indentation is zero
+    bmi LISTPT          ; print a single space if it's negative
 
     .if version >= 3
-        asl
-        tax
+        asl             ; multiply by 2
+        tax             ; this saves one byte (instead of jsr CHOUT)
     .endif
 
 LISTPL:
-    jsr LISTPT
+    jsr LISTPT          ; print space
 
     .if version < 3
-        jsr CHOUT
+        jsr CHOUT       ; and another one
     .endif
 
     dex
-    bne LISTPL
+    bne LISTPL          ; loop for the required number of times
 
 LISTPX:
     rts
 
-LISTO:
-    inc zpCURSOR
+; ----------------------------------------------------------------------------
 
-    jsr AEEXPR
-    jsr FDONE
-    jsr INTEG
+; LISTO command routine
+; =====================
+
+LISTO:
+    inc zpCURSOR        ; skip past the O
+
+    jsr AEEXPR          ; evaluate expression
+    jsr FDONE           ; check for the end of the statement
+    jsr INTEG           ; ensure it's an integer
 
     lda zpIACC
-    sta zpLISTOP
-    jmp CLRSTK
+    sta zpLISTOP        ; store value as new LISTO value
+
+    jmp CLRSTK          ; back to main loop
+
+; ----------------------------------------------------------------------------
 
 ; LIST [linenum [,linenum]]
 ; =========================
+
 LIST:
     iny
-    lda (zpLINE),Y
-    cmp #'O'                ; listo command ?
-    beq LISTO
+    lda (zpLINE),Y      ; get character following the LIST token
+    cmp #'O'
+    beq LISTO           ; if it's an 'O', jump to the LISTO command
 
     lda #$00
-    sta zpWORK+4            ; FOR count
-    sta zpWORK+5            ; REPEAT count
+    sta zpWORK+4        ; indentation count of FOR loops
+    sta zpWORK+5        ; indentation count of REPEAT loops
 
-    jsr SINSTK
-    jsr SPTSTN
+    jsr SINSTK          ; put A (=0) in IACC, and zero rest of IACC
 
-    php
-    jsr PHACC
+    jsr SPTSTN          ; get line number after LIST
 
-    lda #$FF
+    php                 ; save flags that indicate whether it was found or not
+
+    jsr PHACC           ; save the number on the stack
+
+    lda #$FF            ; load default second line number 32767 ($7fff)
     sta zpIACC
     lda #$7F
     sta zpIACC+1
-    plp
 
-    bcc NONUML
+    plp                 ; get out flags back
 
-    jsr SPACES
+    bcc NONUML          ; skip next code if first line number was not found
+
+    jsr SPACES          ; skip spaces, and get next character
     cmp #','
-    beq GOTCX
+    beq GOTCX           ; jump if it's a comma
 
-    jsr POPACC
-    jsr PHACC
-    dec zpCURSOR
-    bpl GOTCFF
+    jsr POPACC          ; pull the first line number
+    jsr PHACC           ; and push it again
+                        ; this makes top of stack and IACC equal and it'll
+                        ; print only one line
+
+    dec zpCURSOR        ; decrement cursor to allow for not finding comma
+    bpl GOTCFF          ; jump forwards to do the listing
 
 NONUML:
-    jsr SPACES
+    jsr SPACES          ; skip spaces and get next character
     cmp #','
-    beq GOTCX
+    beq GOTCX           ; skip the comma if it's present
 
-    dec zpCURSOR
+    dec zpCURSOR        ; allow for not finding comma again
 
 GOTCX:
-    jsr SPTSTN
+    jsr SPTSTN          ; get line number
 
 GOTCFF:
-    lda zpIACC
+    lda zpIACC          ; save the line number somewhere safe (FACC mantissa)
     sta zpFACCMA
     lda zpIACC+1
     sta zpFACCMB
 
-    jsr DONE
-    jsr ENDER           ; finished command line (?)
-    jsr POPACC
-    jsr FNDLNO
+    jsr DONE            ; check for the end of the statement
+    jsr ENDER           ; check for 'Bad program'
+    jsr POPACC          ; pull initial line number from the stack
+    jsr FNDLNO          ; find the line number (return C=0 if not exist)
 
-    lda zpWORK+6
+    lda zpWORK+6        ; save address in LINE pointer
     sta zpLINE
     lda zpWORK+7
     sta zpLINE+1
-    bcc LIMTST
+    bcc LIMTST          ; skip printing if line number does not exist (C=0)
 
-    dey
-    bcs GETNUM
+    dey                 ; move back one character
+    bcs GETNUM          ; branch always
 
 ENDLN:
-    jsr NLINE
-    jsr CLYADP
+    jsr NLINE           ; move to a new line
+    jsr CLYADP          ; update LINE pointer and check 'Escape'
 
 GETNUM:
-    lda (zpLINE),Y
-    sta zpIACC+1
+    lda (zpLINE),Y      ; get the line number of the line
+    sta zpIACC+1        ; and save it in IACC
     iny
     lda (zpLINE),Y
     sta zpIACC
+
+    iny                 ; increment to offset of text
     iny
-    iny
-    sty zpCURSOR
+    sty zpCURSOR        ; and store as LINE pointer offset
 
 LIMTST:
-    lda zpIACC
+    lda zpIACC          ; subtract limiting line from current line
     clc
     sbc zpFACCMA
     lda zpIACC+1
     sbc zpFACCMB
-    bcc LISTLN
+    bcc LISTLN          ; print if we are below the limit
 
-    jmp CLRSTK
+    jmp CLRSTK          ; exit and join main loop
 
 LISTLN:
-    jsr NPRN
+    jsr NPRN            ; print the line number
 
     ldx #$FF
-    stx zpCOEFP
+    stx zpCOEFP         ; set quotes mode to $ff (0 means tokens not expanded)
+
     lda #$01
-    jsr LISTPS
+    jsr LISTPS          ; print a single space between line number and rest
 
     ldx zpWORK+4
     lda #$02
-    jsr LISTPS
+    jsr LISTPS          ; print FOR indentation spaces
 
     ldx zpWORK+5
     lda #$04
-    jsr LISTPS
+    jsr LISTPS          ; print REPEAT indentation spaces
 
 LPX:
-    ldy zpCURSOR
+    ldy zpCURSOR        ; get offset to next character of the text of the line
 
 LP:
-    lda (zpLINE),Y
+    lda (zpLINE),Y      ; get character/token
     cmp #$0D
-    beq ENDLN
+    beq ENDLN           ; jump if EOL/CR
 
     cmp #'"'
-    bne LPTOKS
+    bne LPTOKS          ; jump if not "
 
-    lda #$FF
+    lda #$FF            ; invert quote status
     eor zpCOEFP
     sta zpCOEFP
 
-    lda #'"'
+    lda #'"'            ; restore the quote symbol in A
+
 LPQUOT:
-    jsr CHOUT
+    jsr CHOUT           ; print character or token
 
     iny
-    bne LP
+    bne LP              ; loop back and get next character
 
 LPTOKS:
-    bit zpCOEFP
-    bpl LPQUOT
+    bit zpCOEFP         ; if quote mode is in effect
+    bpl LPQUOT          ; simply print the character
 
     cmp #tknCONST
-    bne LPSIMP
+    bne LPSIMP          ; jump if it's not a constant / line number token
 
-    jsr SPGETN
+    jsr SPGETN          ; decode the line number
 
-    sty zpCURSOR
+    sty zpCURSOR        ; save cursor position
     lda #$00
-    sta zpPRINTS
-    jsr POSITE
+    sta zpPRINTS        ; set field width to zero
+    jsr POSITE          ; print the line number
 
-    jmp LPX
+    jmp LPX             ; loop to next character / token
 
 LPSIMP:
     cmp #tknFOR
-    bne LPSIMQ
+    bne LPSIMQ          ; skip if not FOR token
 
-    inc zpWORK+4
+    inc zpWORK+4        ; increment FOR indentation
 
 LPSIMQ:
     cmp #tknNEXT
-    bne LPSIMR
+    bne LPSIMR          ; skip if not NEXT token
 
     ldx zpWORK+4
-    beq LPSIMR
+    beq LPSIMR          ; skip if FOR indentation already zero
 
-    dec zpWORK+4
+    dec zpWORK+4        ; decrement FOR indentation
 
 LPSIMR:
     cmp #tknREPEAT
-    bne LPSIMS
+    bne LPSIMS          ; skip if not REPEAT token
 
-    inc zpWORK+5
+    inc zpWORK+5        ; increment REPEAT indentation
 
 LPSIMS:
     cmp #tknUNTIL
-    bne LPSIMT
+    bne LPSIMT          ; skip if not UNTIL token
 
     ldx zpWORK+5
-    beq LPSIMT
+    beq LPSIMT          ; skip if REPEAT indentation already zero
 
-    dec zpWORK+5
+    dec zpWORK+5        ; decrement REPEAT indentation
 
 LPSIMT:
-    jsr TOKOUT
+    jsr TOKOUT          ; print the token
 
     iny
-    bne LP
+    bne LP              ; loop and get next character / token
 
 ; ----------------------------------------------------------------------------
 
@@ -12828,6 +12884,7 @@ NEXER:
 
 ; NEXT [variable [,...]]
 ; ======================
+
 NEXT:
     jsr AELV
 
