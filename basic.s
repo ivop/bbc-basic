@@ -12886,43 +12886,46 @@ NEXER:
 ; ======================
 
 NEXT:
-    jsr AELV
+    jsr AELV            ; get the name of the variable
 
-    bne STRIPA
+    bne STRIPA          ; jump if variable is valid and defined
 
-    ldx zpFORSTP
-    beq NEXER
-    bcs NOCHK
+    ldx zpFORSTP        ; get FOR stack pointer
+    beq NEXER           ; 'No FOR' error if the stack is empty
+    bcs NOCHK           ; jump if variable name is invalid
 
 NEXHOW:
-    jmp STDED
+    jmp STDED           ; 'Syntax error'
 
 STRIPA:
-    bcs NEXHOW
+    bcs NEXHOW          ; 'Syntax error' if the variable is a string
 
-    ldx zpFORSTP
-    beq NEXER
+    ldx zpFORSTP        ; get the FOR stack pointer
+    beq NEXER           ; 'No FOR' error if the stack is empty
+
+    ; compare the variable information block of the variable with the
+    ; variable information block stored on the FOR stack
 
 STRIP:
     lda zpIACC
     cmp FORINL-$f,X
-    bne NOTIT
+    bne NOTIT           ; jump if they are not equal
 
     lda zpIACC+1
     cmp FORINH-$f,X
-    bne NOTIT
+    bne NOTIT           ; jump if they are not equal
 
     lda zpIACC+2
     cmp FORINT-$f,X
-    beq NOCHK
+    beq NOCHK           ; jump if they are the same
 
 NOTIT:
-    txa
+    txa                 ; drop the top record on the FOR stack
     sec
     sbc #$0F
     tax
     stx zpFORSTP
-    bne STRIP
+    bne STRIP           ; continue if stack is not empty
 
     brk
     dta $21
@@ -12936,22 +12939,25 @@ NOTIT:
     brk
 
 NOCHK:
-    lda FORINL-$f,X
+    lda FORINL-$f,X     ; retrieve the address of the variable
     sta zpIACC
     lda FORINH-$f,X
     sta zpIACC+1
-    ldy FORINT-$f,X
+
+    ldy FORINT-$f,X     ; retrieve type of the variable
     cpy #$05
-    beq FNEXT
+    beq FNEXT           ; jump if the variable is floating point
+
+    ; variable is integer
 
     ldy #$00
-    lda (zpIACC),Y
-    adc FORSPL-$f,X
-    sta (zpIACC),Y
-    sta zpWORK
+    lda (zpIACC),Y      ; get LSB of the current value of the loop variable
+    adc FORSPL-$f,X     ; add step size
+    sta (zpIACC),Y      ; save the result
+    sta zpWORK          ; also in WORK
 
     iny
-    lda (zpIACC),Y
+    lda (zpIACC),Y      ; same for the rest of the 32-bit value
     adc FORSPM-$f,X
     sta (zpIACC),Y
     sta zpWORK+1
@@ -12965,100 +12971,108 @@ NOCHK:
     iny
     lda (zpIACC),Y
     adc FORSPH-$f,X
-    sta (zpIACC),Y
+    sta (zpIACC),Y      ; finally the MSB
+    tay                 ; not stored in WORK+3 but in Y
 
-    tay
-    lda zpWORK
+    lda zpWORK          ; subtract terminating value, start with LSB from WORK
     sec
     sbc FORLML-$f,X
-    sta zpWORK
-    lda zpWORK+1
+    sta zpWORK          ; and store in WORK
+
+    lda zpWORK+1        ; 2nd byte
     sbc FORLMM-$f,X
     sta zpWORK+1
 
-    lda zpWORK+2
+    lda zpWORK+2        ; 3rd byte
     sbc FORLMN-$f,X
     sta zpWORK+2
-    tya
+
+    tya                 ; 4th byte, MSB was stored in Y
     sbc FORLMH-$f,X
-    ora zpWORK
+    ora zpWORK          ; check for zero
     ora zpWORK+1
     ora zpWORK+2
-    beq NOTFIN
+    beq NOTFIN          ; jump if the result is zero
 
     tya
     eor FORSPH-$f,X
     eor FORLMH-$f,X
-    bpl FORDRN
-    bcs NOTFIN
-    bcc FINFOR
+    bpl FORDRN          ; jump if this is an upwards loop
+    bcs NOTFIN          ; carry out another iteration
+    bcc FINFOR          ; terminate loop
 
 FORDRN:
-    bcs FINFOR
+    bcs FINFOR          ; terminate if the variable is greater than limit
 
 NOTFIN:
-    ldy FORADL-$f,X
+    ldy FORADL-$f,X     ; set LINE pointer to address of the start of the loop
     lda FORADH-$f,X
     sty zpLINE
     sta zpLINE+1
-    jsr SECUR
 
-    jmp STMT
+    jsr SECUR           ; check the 'Escape' flag
+
+    jmp STMT            ; execute body of the loop, tail call
 
 FINFOR:
-    lda zpFORSTP
+    lda zpFORSTP        ; drop top record of the FOR stack
     sec
     sbc #$0F
     sta zpFORSTP
-    ldy zpAECUR
-    sty zpCURSOR
 
-    jsr SPACES
+    ldy zpAECUR
+    sty zpCURSOR        ; update LINE pointer offset
+
+    jsr SPACES          ; skip spaces, and get next character
 
     cmp #','
-    bne NXTFIN
+    bne NXTFIN          ; exit if it's not a comma
 
-    jmp NEXT
+    jmp NEXT            ; deal with next variable name
 
 FNEXT:
-    jsr VARFP
-    lda zpFORSTP
-    clc
+    jsr VARFP           ; get the current value of the loop variable in FACC
+
+    lda zpFORSTP        ; create pointer in ARGP that points to record
+    clc                 ; on top of the FOR stack
     adc #<(FORSPL-$f)
     sta zpARGP
     lda #>FORSPL
     sta zpARGP+1
 
-    jsr FADD
+    jsr FADD            ; add the step size to the variable
 
-    lda zpIACC
+    lda zpIACC          ; make WORK point to the value of the variable
     sta zpWORK
     lda zpIACC+1
     sta zpWORK+1
-    jsr STORPF
+
+    jsr STORPF          ; move FACC to the variable
 
     lda zpFORSTP
-    sta zpTYPE
-    clc
+    sta zpTYPE          ; save the FOR stack pointer
+
+    clc                 ; make ARGP point to terminating value in record
     adc #<(FORLML-$f)
     sta zpARGP
     lda #>FORLML
     sta zpARGP+1
-    jsr FCMP
 
-    beq NOTFIN
+    jsr FCMP            ; compare FACC with (ARGP)
+
+    beq NOTFIN          ; end the loop if they are equal
 
     lda FORSPM-$f,X
-    bmi FFORDR
-    bcs NOTFIN
-    bcc FINFOR
+    bmi FFORDR          ; jump if step is negative
+    bcs NOTFIN          ; continue loop if the variable is less than limit
+    bcc FINFOR          ; otherwise, terminate loop
 
 FFORDR:
-    bcc NOTFIN
-    bcs FINFOR
+    bcc NOTFIN          ; continue loop if the variable is greater than limit
+    bcs FINFOR          ; otherwise, terminate loop
 
 NXTFIN:
-    jmp SUNK
+    jmp SUNK            ; exit to main loop
 
 ; ----------------------------------------------------------------------------
 
@@ -13094,37 +13108,39 @@ FORTO:
 
 ; FOR numvar = numeric TO numeric [STEP numeric]
 ; ==============================================
+
 FOR:
-    jsr CRAELV
-    beq FORCV
-    bcs FORCV
+    jsr CRAELV      ; get the name of the FOR variable
+    beq FORCV       ; 'FOR variable' error if it's a string
+    bcs FORCV       ; or when it's invalid
 
-    jsr PHACC
-    jsr EQEAT
-    jsr STEXPR
+    jsr PHACC       ; save the type and address of the variable
+    jsr EQEAT       ; check for '='
+    jsr STEXPR      ; evaluate expression, starting value of the variable
 
-    ldy zpFORSTP
+    ldy zpFORSTP    ; check FOR stack pointer
     cpy #cFORTOP
-    bcs FORDP
+    bcs FORDP       ; 'Too many FORs' error, more than 10 loops are running
 
-    lda zpWORK
+    lda zpWORK      ; save address and type on the FOR stack
     sta FORINL,Y
     lda zpWORK+1
     sta FORINH,Y
-    lda zpWORK+2
+    lda zpWORK+2    ; type
     sta FORINT,Y
-    tax
-    jsr AESPAC
+    tax             ; save type in X
+
+    jsr AESPAC      ; skip spaces, and get next character
 
     cmp #tknTO
-    bne FORTO
+    bne FORTO       ; 'No TO' error if it's not TO token
 
     cpx #$05
-    beq FFOR
+    beq FFOR        ; jump if type of variable is floating point
 
-    jsr INEXPR
+    jsr INEXPR      ; evaluate upper limit of the loop and ensure it's integer
 
-    ldy zpFORSTP
+    ldy zpFORSTP    ; save terminating value on the FOR stack
     lda zpIACC
     sta FORLML,Y
     lda zpIACC+1
@@ -13135,19 +13151,21 @@ FOR:
     sta FORLMH,Y
 
     lda #$01
-    jsr SINSTK
-    jsr AESPAC
+    jsr SINSTK      ; set IACC to 1
+
+    jsr AESPAC      ; skip spaces, and get the next character
 
     cmp #tknSTEP
-    bne FORSTW
+    bne FORSTW      ; skip evaluating STEP size if it's not STEP token
 
-    jsr INEXPR
+    jsr INEXPR      ; evaluate step size, and ensure it's an integer
 
     ldy zpAECUR
 
 FORSTW:
     sty zpCURSOR
-    ldy zpFORSTP
+
+    ldy zpFORSTP    ; save STEP value on the FOR stack
     lda zpIACC
     sta FORSPL,Y
     lda zpIACC+1
@@ -13158,75 +13176,81 @@ FORSTW:
     sta FORSPH,Y
 
 FORN:
-    jsr FORR
+    jsr FORR        ; check for end of statement and move LINE pointer to
+                    ; the start of the next statement
+
     ldy zpFORSTP
-    lda zpLINE
+    lda zpLINE      ; save LINE pointer to FOR stack, start of loop body
     sta FORADL,Y
     lda zpLINE+1
     sta FORADH,Y
-    clc
-    tya
-    adc #$0F
-    sta zpFORSTP
 
-    jmp STMT
+    clc
+    tya             ; stack pointer to A
+    adc #$0F
+    sta zpFORSTP    ; adjust stack pointer to permanently stack the record
+
+    jmp STMT        ; exit, and start executing body of loop
 
 FFOR:
-    jsr EXPR
-    jsr FLOATI
+    jsr EXPR        ; evaluate terminating value of loop
+    jsr FLOATI      ; ensure it's floating point
 
-    lda zpFORSTP
+    lda zpFORSTP    ; make ARGP point to terminating value in record on stack
     clc
-    adc #<FORLML        ; -$f in later BASICs?
+    adc #<FORLML
     sta zpARGP
     lda #>FORLML
     sta zpARGP+1
 
-    jsr FSTA
-    jsr FONE
-    jsr AESPAC
+    jsr FSTA        ; store FACC in (ARGP)
+    jsr FONE        ; set FACC to 1.0
+    jsr AESPAC      ; skip spaces, and get next character
 
     cmp #tknSTEP
-    bne FFORST
+    bne FFORST      ; skip evaluating step size if it's not a STEP token
 
-    jsr EXPR
-    jsr FLOATI
+    jsr EXPR        ; evaluate expression
+    jsr FLOATI      ; ensure it's floating point
 
     ldy zpAECUR
 
 FFORST:
     sty zpCURSOR
-    lda zpFORSTP
+
+    lda zpFORSTP    ; make ARGP point to step size in record on stack
     clc
-    adc #<FORSPL        ; -$f in later BASICs?
+    adc #<FORSPL
     sta zpARGP
     lda #>FORSPL
     sta zpARGP+1
 
-    jsr FSTA
+    jsr FSTA        ; store FACC in record on the stack
 
-    jmp FORN
+    jmp FORN        ; jump to common FOR code, same as for integer variables
 
 ; ----------------------------------------------------------------------------
 
 ; GOSUB numeric
 ; =============
+
 GOSUB:
-    jsr GOFACT
+    jsr GOFACT      ; look for a line number after the GOSUB token
 
 ONGOSB:
-    jsr DONE
+    jsr DONE        ; check for the end of the statement
 
     ldy zpSUBSTP
     cpy #cSUBTOP
-    bcs GOSDP
+    bcs GOSDP       ; 'Too many GOSUBs' error if stack is full
 
-    lda zpLINE
+    lda zpLINE      ; save return address on GOSUB stack
     sta SUBADL,Y
     lda zpLINE+1
     sta SUBADH,Y
-    inc zpSUBSTP
-    bcc GODONE
+    inc zpSUBSTP    ; increment the stack pointer
+
+    bcc GODONE      ; carry is clear, branch always to GOTO code
 
 GOSDP:
     brk
@@ -13252,6 +13276,7 @@ RETNUN:
 
 ; RETURN
 ; ======
+
 RETURN:
     jsr DONE          ; Check for end of statement
     ldx zpSUBSTP
@@ -13260,8 +13285,8 @@ RETURN:
     dec zpSUBSTP      ; Decrement GOSUB stack
     ldy SUBADL-1,X    ; Get stacked line pointer
     lda SUBADH-1,X
-    sty zpLINE
-    sta zpLINE+1      ; Set line pointer
+    sty zpLINE        ; Set line pointer
+    sta zpLINE+1
 
     jmp NXT           ; Jump back to execution loop
 
@@ -13269,34 +13294,37 @@ RETURN:
 
 ; GOTO numeric
 ; ============
+
 GOTO:
-    jsr GOFACT
-    jsr DONE         ; Find destination line, check for end of statement
+    jsr GOFACT       ; get line number after GOTO token
+    jsr DONE         ; check for end of statement
 
 GODONE:
     lda zpTRFLAG
-    beq GONO
+    beq GONO         ; jump if TRACE is off
 
     jsr TRJOBA       ; If TRACE ON, print current line number
 
 GONO:
-    ldy zpWORK+6
-    lda zpWORK+7     ; Get destination line address
+    ldy zpWORK+6     ; Get destination line address
+    lda zpWORK+7
 
 JUMPAY:
-    sty zpLINE
-    sta zpLINE+1     ; Set line pointer
+    sty zpLINE       ; Set line pointer
+    sta zpLINE+1
+
     jmp STMT         ; Jump back to execution loop
 
 ; ----------------------------------------------------------------------------
 
 ; ON ERROR OFF
 ; ------------
+
 ONERGF:
     jsr DONE         ; Check end of statement
 
-    lda #<BASERR
-    sta zpERRORLH    ; ON ERROR OFF
+    lda #<BASERR     ; set default error program
+    sta zpERRORLH
     lda #>BASERR
     sta zpERRORLH+1
 
@@ -13306,22 +13334,23 @@ ONERGF:
 
 ; ON ERROR [OFF | program ]
 ; -------------------------
+
 ONERRG:
-    jsr SPACES
+    jsr SPACES          ; skip spaces and get next character
 
     cmp #tknOFF
-    beq ONERGF         ; ON ERROR OFF
+    beq ONERGF          ; jump if it's the OFF token
 
     ldy zpCURSOR
     dey
-    jsr CLYADP
+    jsr CLYADP          ; update program pointer
 
-    lda zpLINE
-    sta zpERRORLH          ; Point ON ERROR pointer to here
+    lda zpLINE          ; point error handler address to _here_
+    sta zpERRORLH
     lda zpLINE+1
     sta zpERRORLH+1
 
-    jmp REM         ; Skip past end of line
+    jmp REM             ; Skip past end of line, and return to main loop
 
 ONER:
     brk
@@ -13338,79 +13367,89 @@ ONER:
 
 ; ON [ERROR] [numeric]
 ; ====================
+
 ON:
-    jsr SPACES         ; Skip spaces and get next character
+    jsr SPACES          ; skip spaces, and get next character
+
     cmp #tknERROR
-    beq ONERRG         ; Jump with ON ERROR
+    beq ONERRG          ; if it's ERROR token, jump to ON ERROR routine
 
-    dec zpCURSOR
-    jsr AEEXPR
-    jsr INTEGB
+    dec zpCURSOR        ; decrement cursor position to allow not finding ERROR
 
-    ldy zpAECUR
-    iny
-    sty zpCURSOR
+    jsr AEEXPR          ; evaluate expression
+    jsr INTEGB          ; make sure it's an integer
+
+    ldy zpAECUR         ; get AE cursor offset
+    iny                 ; point after GOTO or GOSUB
+    sty zpCURSOR        ; and update LINE cursor offset
+
     cpx #tknGOTO
-    beq ONOK
+    beq ONOK            ; jump if next token is GOTO
 
     cpx #tknGOSUB
-    bne ONER
+    bne ONER            ; 'ON syntax' error if it's neither GOTO nor GOSUB
 
 ONOK:
     txa
-    pha               ; Save GOTO/GOSUB token
-    lda zpIACC+1
-    ora zpIACC+2      ; Get IACC
+    pha                 ; Save GOTO/GOSUB token
+
+    lda zpIACC+1        ; check all but the LSB of IACC
+    ora zpIACC+2
     ora zpIACC+3
-    bne ONRG          ; ON >255 - out of range, look for an ELSE
+    bne ONRG            ; ON > 255 - out of range, look for an ELSE
 
     ldx zpIACC
-    beq ONRG          ; ON zero - out of range, look for an ELSE
+    beq ONRG            ; ON zero - out of range, look for an ELSE
 
-    dex
-    beq ONGOT         ; Dec. counter, if zero use first destination
+    dex                 ; decrement index
+    beq ONGOT           ; if zero use first destination
 
-; IACC+1 and IACC+2 are 0
+; IACC+1..3 are 0
 
-    ldy zpCURSOR      ; Get line index
+    ldy zpCURSOR        ; get line offset into Y
+
 ONSRCH:
-    lda (zpLINE),Y
+    lda (zpLINE),Y      ; get next character
     iny
     cmp #$0D
-    beq ONRG         ; End of line - error
+    beq ONRG            ; End of line - error
 
     cmp #':'
-    beq ONRG         ; End of statement - error
+    beq ONRG            ; End of statement - error
 
     cmp #tknELSE
-    beq ONRG         ; ELSE - drop everything else to here
+    beq ONRG            ; ELSE - drop everything else to here
 
     cmp #','
-    bne ONSRCH       ; No comma, keep looking
+    bne ONSRCH          ; No comma, keep looking
 
     dex
-    bne ONSRCH       ; Comma found, loop until count decremented to zero
-    sty zpCURSOR     ; Store line index
+    bne ONSRCH          ; Comma found, loop until count decremented to zero
+
+    sty zpCURSOR        ; store LINE offset
 
 ONGOT:
-    jsr GOFACT         ; Read line number
+    jsr GOFACT          ; Read line number
 
-    pla                ; Get stacked token back
+    pla                 ; Get stacked token back
     cmp #tknGOSUB
-    beq ONGOS          ; Jump to do GOSUB
+    beq ONGOS           ; Jump to do GOSUB
 
-    jsr SECUR          ; Update line index and check Escape
+    jsr SECUR           ; Update LINE offset and check Escape
 
-    jmp GODONE         ; Jump to do GOTO
+    jmp GODONE          ; Jump to do GOTO
 
 ; Update line pointer so RETURN comes back to next statement
 ; ----------------------------------------------------------
+
+; Find the colon or CR at the end of the statement
+
 ONGOS:
     ldy zpCURSOR       ; Get line pointer
 
 ONSKIP:
-    lda (zpLINE),Y
-    iny                ; Get character from line
+    lda (zpLINE),Y     ; Get character from line
+    iny
     cmp #$0D
     beq SKIPED         ; End of line, RETURN to here
 
@@ -13418,25 +13457,26 @@ ONSKIP:
     bne ONSKIP         ; <colon>, return to here
 
 SKIPED:
-    dey
-    sty zpCURSOR       ; Update line index to RETURN point
+    dey                ; Update LINE offset to RETURN point
+    sty zpCURSOR
 
     jmp ONGOSB         ; Jump to do the GOSUB
 
 ; ON num out of range - check for an ELSE clause
 ; ----------------------------------------------
+
 ONRG:
-    ldy zpCURSOR      ; Get line index
-    pla               ; Drop GOTO/GOSUB token
+    ldy zpCURSOR      ; get line offset
+    pla               ; drop GOTO/GOSUB token
 
 ONELSE:
-    lda (zpLINE),Y
-    iny               ; Get character from line
+    lda (zpLINE),Y    ; get next character from line
+    iny
     cmp #tknELSE
-    beq ONELS         ; Found ELSE, jump to use it
+    beq ONELS         ; found ELSE, jump to use it
 
     cmp #$0D
-    bne ONELSE         ; Loop until end of line
+    bne ONELSE        ; loop until end of line
 
     brk
     dta $28
@@ -13449,29 +13489,29 @@ ONELSE:
     brk
 
 ONELS:
-    sty zpCURSOR
-    jmp THENLN         ; Store line index and jump to GOSUB
+    sty zpCURSOR        ; store LINE offset
+    jmp THENLN          ; jump to THEN code
 
 GOFACT:
-    jsr SPTSTN
-    bcs GOTGO          ; Embedded line number found
+    jsr SPTSTN          ; get line number
+    bcs GOTGO           ; jump if line number was found
 
-    jsr AEEXPR
-    jsr INTEGB         ; Evaluate expression, ensure integer
+    jsr AEEXPR          ; evaluate expression
+    jsr INTEGB          ; ensure it's an integer integer
 
-    lda zpAECUR
-    sta zpCURSOR       ; Line number low byte
-    lda zpIACC+1
+    lda zpAECUR         ; copy AE offset
+    sta zpCURSOR        ; to LINE offset
+
+    lda zpIACC+1        ; make sure line number does not exceed 32767
     and #$7F
-    sta zpIACC+1       ; Line number high byte
-                       ; Note - this makes goto $8000+10 the same as goto 10
-                       ; try 10 PRINT "BBC"   20 GOTO 32768+10
+    sta zpIACC+1        ; Note - this makes goto $8000+10 the same as goto 10
+                        ; try 10 PRINT "BBC"   20 GOTO 32768+10
 
 GOTGO:
-    jsr FNDLNO
-    bcs NOLINE
+    jsr FNDLNO          ; search line number
+    bcs NOLINE          ; 'No such line' error if it's not found
 
-    rts               ; Look for line, error if not found
+    rts
 
 NOLINE:
     brk
@@ -13486,230 +13526,268 @@ NOLINE:
 ; ----------------------------------------------------------------------------
 
 INPUHD:
-    jmp LETM
+    jmp LETM        ; 'Type mismatch' error
 
 INPUHE:
-    jmp STDED
+    jmp STDED       ; 'Syntax error' error
 
 INPUHX:
-    sty zpCURSOR
-    jmp DONEXT
+    sty zpCURSOR    ; store LINE cursor offset
+
+    jmp DONEXT      ; jump to main loop
 
 ; INPUT#channel, ...
 ; ------------------
+
 INPUTH:
     dec zpCURSOR
-    jsr AECHAN
+
+    jsr AECHAN      ; evaluate file handle expression
 
     lda zpAECUR
-    sta zpCURSOR
-    sty zpCOEFP
+    sta zpCURSOR    ; update LINE offset from AE offset
+
+    sty zpCOEFP     ; save the handle
 
 INPUHL:
-    jsr SPACES
+    jsr SPACES      ; skip spaces and get next character
+
     cmp #','
-    bne INPUHX
+    bne INPUHX      ; exit if it's not a comma
 
-    lda zpCOEFP
-    pha
-    jsr CRAELV
+    lda zpCOEFP     ; get file handle
+    pha             ; save on machine stack
 
-    beq INPUHE
+    jsr CRAELV      ; get the variable name
+
+    beq INPUHE      ; 'Syntax error' if it's invalid
 
     lda zpAECUR
-    sta zpCURSOR
-    pla
-    sta zpCOEFP
-    php
-    jsr PHACC
+    sta zpCURSOR    ; update LINE cursor from AE cursor
 
-    ldy zpCOEFP
-    jsr OSBGET
+    pla             ; retrieve file handle
+    sta zpCOEFP     ; and store it again
 
-    sta zpTYPE
-    plp
-    bcc INPUHN
+    php             ; save status
 
-    lda zpTYPE
-    bne INPUHD
+    jsr PHACC       ; push IACC to the stack (variable address and type)
 
-    jsr OSBGET
+    ldy zpCOEFP     ; get file handle
 
-    sta zpCLEN
-    tax
-    beq INPUHS
+    jsr OSBGET      ; call MOS, get byte indicating the type from media
+
+    sta zpTYPE      ; save the type
+
+    plp             ; restore status flags
+    bcc INPUHN      ; jump if variable is numeric
+
+    lda zpTYPE      ; get type of data on the media
+    bne INPUHD      ; 'Type mismatch' error if the quantity is not a string
+
+    jsr OSBGET      ; get byte from media (string length)
+
+    sta zpCLEN      ; store as string length
+
+    tax             ; length in X
+    beq INPUHS      ; exit if string length is zero
 
 INPUHT:
-    jsr OSBGET
+    jsr OSBGET      ; get byte from media
 
-    sta STRACC-1,X
+    sta STRACC-1,X  ; store in string buffer
+
     dex
-    bne INPUHT
+    bne INPUHT      ; loop for string length number of bytes
 
 INPUHS:
-    jsr STSTOR
-    jmp INPUHL
+    jsr STSTOR      ; assign the string
+
+    jmp INPUHL      ; go back for the next variable
 
 INPUHN:
-    lda zpTYPE
-    beq INPUHD
-    bmi INPUHF
+    lda zpTYPE      ; get type of data on the media
+    beq INPUHD      ; 'Type mismatch' if it's a string
+    bmi INPUHF      ; jump if it's a floating point
 
-    ldx #$03
+    ; it's an integer
+
+    ldx #$03        ; loop 3..0
 
 INPUHI:
-    jsr OSBGET
-    sta zpIACC,X
-    dex
-    bpl INPUHI
+    jsr OSBGET      ; get byte from media
 
-    bmi INPUHJ
+    sta zpIACC,X    ; store in IACC
+    dex
+    bpl INPUHI      ; loop for all four bytes
+
+    bmi INPUHJ      ; branch always, join the floating point code
 
 INPUHF:
-    ldx #$04
+    ldx #$04        ; loop 4..0
 
 INPUHR:
-    jsr OSBGET
+    jsr OSBGET      ; get byte from the media
 
-    sta FWSA,X
+    sta FWSA,X      ; store in Floating point WorkSpace area A
     dex
-    bpl INPUHR
+    bpl INPUHR      ; loop for all five bytes
 
-    jsr LDARGA
+    jsr LDARGA      ; unpack FWSA to FACC
 
 INPUHJ:
-    jsr STORE
-    jmp INPUHL
+    jsr STORE       ; assign to the variable
 
-INOUT:
-    pla
-    pla
-    jmp DONEXT
+    jmp INPUHL      ; jump back for the next variable name
 
 ; ----------------------------------------------------------------------------
 
+INOUT:
+    pla             ; fix stack
+    pla
+
+    jmp DONEXT      ; jump to main execution loop
+
 ; INPUT [LINE] [print items][variables]
 ; =====================================
+
 INPUT:
-    jsr SPACES         ; Get next non-space char
+    jsr SPACES      ; skip spaces, and get next character
+
     cmp #'#'
-    beq INPUTH         ; If '#' jump to do INPUT#
+    beq INPUTH      ; if '#' jump to do INPUT#
 
     cmp #tknLINE
-    beq INLIN          ; If 'LINE', skip next with CS
+    beq INLIN       ; if 'LINE', skip next with carry set
 
-    dec zpCURSOR
-    clc                ; Step back to non-LINE char, set CC
+    dec zpCURSOR    ; one step back
+    clc             ; clear carry
 
 INLIN:
     ror zpCOEFP
-    lsr zpCOEFP        ; bit7=0, bit6=notLINE/LINE
-    lda #$FF
+    lsr zpCOEFP     ; bit7 = 0, bit6 = not LINE / LINE flag, can now be
+                    ; tested with the overflow flag
+
+    lda #$FF        ; set other flag to $ff
     sta zpCOEFP+1
 
 INPLP:
-    jsr PRTSTN
-    bcs INPHP         ; Process ' " TAB SPC, jump if none found
+    jsr PRTSTN      ; Process ' " TAB SPC
+    bcs INPHP       ; jump if none found
 
 INPLO:
     jsr PRTSTN
-    bcc INPLO         ; Keep processing any print items
+    bcc INPLO       ; Keep processing any print items
 
     ldx #$FF
     stx zpCOEFP+1
-    clc
+    clc             ; clear carry to indicate an item was found, no '?' needed
 
 INPHP:
-    php
-    asl zpCOEFP
-    plp
-    ror zpCOEFP
+    php             ; save carry
+    asl zpCOEFP     ; clear bit 7
+    plp             ; restore carry
+    ror zpCOEFP     ; rotate into bit 7 of flag register
+
     cmp #','
-    beq INPLP         ; ',' - jump to do next item
+    beq INPLP       ; ',' - jump to do next item
 
     cmp #';'
-    beq INPLP         ; ';' - jump to do next item
+    beq INPLP       ; ';' - jump to do next item
 
-    dec zpCURSOR
-    lda zpCOEFP
+    dec zpCURSOR    ; not found comma, or semicolon
+
+    lda zpCOEFP     ; save flags on machine stack
     pha
     lda zpCOEFP+1
     pha
-    jsr CRAELV
-    beq INOUT
 
-    pla
+    jsr CRAELV      ; get the name of the variable
+    beq INOUT       ; exit if the variable is invalid
+
+    pla             ; restore flags
     sta zpCOEFP+1
     pla
     sta zpCOEFP
+
     lda zpAECUR
-    sta zpCURSOR
-    php
-    bit zpCOEFP
-    bvs INGET
+    sta zpCURSOR    ; update CURSOR position
+
+    php             ; save status of variable name
+
+    bit zpCOEFP     ; check flags
+    bvs INGET       ; jump if LINE option is used (bit 6)
 
     lda zpCOEFP+1
     cmp #$FF
-    bne INGOT
+    bne INGOT       ; jump if there are left-over characters from before
 
 INGET:
-    bit zpCOEFP
-    bpl INGETA
+    bit zpCOEFP     ; check flags
+    bpl INGETA      ; skip printing '?' if bit 7 is clear
 
     lda #'?'
-    jsr CHOUT
+    jsr CHOUT       ; print '?'
 
 INGETA:
-    jsr INLINE         ; Call MOS to input line, set COUNT=0
+    jsr INLINE      ; input string to string buffer
 
-    sty zpCLEN
-    asl zpCOEFP
+    sty zpCLEN      ; save the length of the string
+
+    asl zpCOEFP     ; clear bit 7 of flags
     clc
-    ror zpCOEFP
+    ror zpCOEFP     ; indicate that a prompt is not required for next variable
+
     bit zpCOEFP
-    bvs INGETB
+    bvs INGETB      ; jump if LINE mode bit is set
 
 INGOT:
-    sta zpAECUR
-    lda #<STRACC
+    sta zpAECUR     ; store AE cursor position
+
+    lda #<STRACC    ; point AELINE to string buffer
     sta zpAELINE
     lda #>STRACC
     sta zpAELINE+1
-    jsr DATAST
+
+    jsr DATAST      ; move string down to beginning of string buffer
 
 INTERM:
-    jsr AESPAC
+    jsr AESPAC      ; skip spaces and get next character
+
     cmp #','
-    beq INGETC
+    beq INGETC      ; jump if it's a comma
 
     cmp #$0D
-    bne INTERM
+    bne INTERM      ; loop if it's not CR/EOL
 
-    ldy #$FE
+    ldy #$FE        ; prime Y with $fe
+
 INGETC:
     iny
-    sty zpCOEFP+1
+    sty zpCOEFP+1   ; store "offset" of next character
 
 INGETB:
-    plp
-    bcs INPSTR
+    plp             ; retrieve the status of the variable name
+    bcs INPSTR      ; jump if it was a string
 
-    jsr PHACC
-    jsr VALSTR
-    jsr STORE
+    jsr PHACC       ; push IACC, save address and type of variable to stack
+    jsr VALSTR      ; convert string to a number
+    jsr STORE       ; assign to the variable
 
-    jmp INPLP
+    jmp INPLP       ; go back for next item
 
 INPSTR:
     lda #$00
-    sta zpTYPE
-    jsr STSTRE
-    jmp INPLP
+    sta zpTYPE      ; set type to string
+
+    jsr STSTRE      ; assign string to variable
+
+    jmp INPLP       ; go back for next item
 
 ; ----------------------------------------------------------------------------
 
 ; RESTORE [linenum]
 ; =================
+
 RESTORE:
     ldy #$00
     sty zpWORK+6          ; Set DATA pointer to PAGE
