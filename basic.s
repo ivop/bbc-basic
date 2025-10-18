@@ -3603,7 +3603,8 @@ NUMBJ:
         dta 'Failed at '
     .endif
 
-    iny                     ; opcode 0xc8 has bit 7 set
+    iny                     ; opcode 0xc8 has bit 7 set, end of string marker
+
     lda (zpLINE),Y          ; get line number that couldn't be found
     sta zpIACC+1            ; into IACC
     iny
@@ -13790,69 +13791,75 @@ INPSTR:
 
 RESTORE:
     ldy #$00
-    sty zpWORK+6          ; Set DATA pointer to PAGE
+    sty zpWORK+6    ; Set DATA pointer to PAGE
     ldy zpTXTP
     sty zpWORK+7
-    jsr SPACES
 
-    dec zpCURSOR
+    jsr SPACES      ; skip spaces, and get next character
+
+    dec zpCURSOR    ; step back
+
     cmp #':'
-    beq RESDON
+    beq RESDON      ; skip searching for line number if next character is ':'
 
     cmp #$0D
-    beq RESDON
+    beq RESDON      ; or CR/EOL
 
     cmp #tknELSE
-    beq RESDON
+    beq RESDON      ; or token ELSE
 
-    jsr GOFACT
+    jsr GOFACT      ; get line number, address will be in WORK+6/7
 
     ldy #$01
-    jsr CLYADW          ; 0 points to the hopeful DATA token
+    jsr CLYADW      ; add 1 to WORK+6/7 pointer, hopefully pointing to
+                    ; DATA token
 
 RESDON:
-    jsr DONE
+    jsr DONE        ; check for the end of the statement
 
-    lda zpWORK+6
+    lda zpWORK+6    ; copy to DATA pointer
     sta zpDATAP
     lda zpWORK+7
     sta zpDATAP+1
 
-    jmp NXT
+    jmp NXT         ; jump to main loop
 
 ; ----------------------------------------------------------------------------
 
 READS:
-    jsr SPACES
+    jsr SPACES      ; skip spaces, and get next character
+
     cmp #','
-    beq READ
-    jmp SUNK
+    beq READ        ; READ the next item if it's a comma
+
+    jmp SUNK        ; exit to main loop
 
 ; READ varname [,...]
 ; ===================
+
 READ:
-    jsr CRAELV
+    jsr CRAELV      ; get the address and type of the variable name
 
-    beq READS
-    bcs READST
+    beq READS       ; if the variable is invalid, go back and check for comma
+    bcs READST      ; jump if the variable is a string
 
-    jsr DATAIT
-    jsr PHACC
-    jsr STEXPR
+    jsr DATAIT      ; point to the next DATA item
+    jsr PHACC       ; push IACC, save address and type of variable
+    jsr STEXPR      ; assign the value to the variable
 
-    jmp READEN
+    jmp READEN      ; jump to common end of READ
 
 READST:
-    jsr DATAIT
-    jsr PHACC
-    jsr DATAST
+    jsr DATAIT      ; point to the next DATA item
+    jsr PHACC       ; push IACC, save address and type of variable
+    jsr DATAST      ; read string into string buffer
 
-    sta zpTYPE
+    sta zpTYPE      ; store zero to TYPE, indicating a string is in the buffer
 
-    jsr STSTOR
+    jsr STSTOR      ; assign the string to the variable
 
 READEN:
-    clc
+    clc             ; updata DATA pointer
     lda zpAECUR
     adc zpAELINE
     sta zpDATAP
@@ -13860,65 +13867,72 @@ READEN:
     adc #$00
     sta zpDATAP+1
 
-    jmp READS
+    jmp READS       ; go back and searcg for another variable name
+
+; Point to the next DATA item
+; on exit, AELINE points to the comma or DATA token before the next item.
 
 DATAIT:
     lda zpAECUR
-    sta zpCURSOR
-    lda zpDATAP
+    sta zpCURSOR    ; update LINE cursor
+
+    lda zpDATAP     ; copy DATAP to AELINE pointer
     sta zpAELINE
     lda zpDATAP+1
     sta zpAELINE+1
 
     ldy #$00
-    sty zpAECUR
-    jsr AESPAC
+    sty zpAECUR     ; reset AE cursor
+
+    jsr AESPAC      ; skip spaces, and get next character
 
     cmp #','
-    beq DATAOK
+    beq DATAOK      ; it's ok, we found a comma
 
     cmp #tknDATA
-    beq DATAOK
+    beq DATAOK      ; or a DATA token
 
     cmp #$0D
-    beq DATANX
+    beq DATANX      ; jump if CR/EOL was found
 
 DATALN:
-    jsr AESPAC
+    jsr AESPAC      ; skip spaces, and get the next character
 
     cmp #','
-    beq DATAOK
+    beq DATAOK      ; jump if it's a comma
 
     cmp #$0D
-    bne DATALN
+    bne DATALN      ; repeat until EOL/CR is found
+
+    ; CR was found
 
 DATANX:
     ldy zpAECUR
-    lda (zpAELINE),Y
-    bmi DATAOT
+    lda (zpAELINE),Y    ; get LSB of line number
+    bmi DATAOT          ; 'Out of DATA' error if end of program is encountered
 
+    iny                 ; skip
     iny
-    iny
-    lda (zpAELINE),Y
-    tax
+    lda (zpAELINE),Y    ; get length of the line
+    tax                 ; into X
 
 DATANS:
     iny
-    lda (zpAELINE),Y
+    lda (zpAELINE),Y    ; get next character
     cmp #' '
-    beq DATANS
+    beq DATANS          ; skip any spaces
 
     cmp #tknDATA
-    beq DATAOL
+    beq DATAOL          ; DATA token found, exit
 
-    txa
+    txa                 ; add length of line, go to the next line
     clc
     adc zpAELINE
     sta zpAELINE
-    bcc DATANX
+    bcc DATANX          ; keep searching for DATA
 
     inc zpAELINE+1
-    bcs DATANX
+    bcs DATANX          ; keep searching for DATA
 
 DATAOT:
     brk
@@ -13942,8 +13956,9 @@ NODOS:
     brk
 
 DATAOL:
-    iny
-    sty zpAECUR
+    iny             ; increment pointer to the token for the word DATA
+    sty zpAECUR     ; store as AE cursor offset
+
 DATAOK:
     rts
 
@@ -13951,28 +13966,30 @@ DATAOK:
 
 ; UNTIL numeric
 ; =============
+
 UNTIL:
-    jsr AEEXPR
-    jsr FDONE
-    jsr INTEG
+    jsr AEEXPR      ; evaluate condition for loop end
+    jsr FDONE       ; check for the end of the statement
+    jsr INTEG       ; ensure condition is an integer
 
     ldx zpDOSTKP
-    beq NODOS
+    beq NODOS       ; 'No REPEAT' error if REPEAT stack is empty
 
     lda zpIACC
     ora zpIACC+1
     ora zpIACC+2
     ora zpIACC+3
-    beq REDO
+    beq REDO        ; jump to repeat body if condition is zero
 
-    dec zpDOSTKP
-    jmp NXT
+    dec zpDOSTKP    ; otherwise, decrement REPEAT stack pointer
+
+    jmp NXT         ; jump to main loop
 
 REDO:
-    ldy DOADL-1,X
+    ldy DOADL-1,X   ; load YA with address from top of REPEAT stack
     lda DOADH-1,X
 
-    jmp JUMPAY
+    jmp JUMPAY      ; copy YA to LINE pointer, and go back to main loop
 
 ; ----------------------------------------------------------------------------
 
@@ -13992,40 +14009,45 @@ DODP:
 
 ; REPEAT
 ; ======
+
 REPEAT:
-    ldx zpDOSTKP
+    ldx zpDOSTKP    ; check REPEAT stack pointer
     cpx #cDOTOP
-    bcs DODP
+    bcs DODP        ; 'Too many REPEATs' error if stack is full
 
-    jsr CLYADP
+    jsr CLYADP      ; update LINE pointer to point after REPEAT token and
+                    ; check 'Escape' flag
 
-    lda zpLINE
+    lda zpLINE      ; save current address at the repeat stack, beging of body
     sta DOADL,X
     lda zpLINE+1
     sta DOADH,X
-    inc zpDOSTKP
 
-    jmp STMT
+    inc zpDOSTKP    ; increment stack pointer
+
+    jmp STMT        ; go back to main execution loop
 
 ; ----------------------------------------------------------------------------
 
 ; Input string to string buffer
 ; -----------------------------
+
 INLINE:
-    ldy #<STRACC
+    ldy #<STRACC    ; address of string buffer in YA
     lda #>STRACC
     bne BUFFA
 
 ; Print character, read input line
 ; --------------------------------
+
 BUFF:
-    jsr CHOUT         ; Print character
+    jsr CHOUT       ; Print character
     ldy #<BUFFER
     lda #>BUFFER
 
 BUFFA:
-    sty zpWORK        ; 0 for both STRACC and BUFFER, could save a load here
-    sta zpWORK+1      ; zpWORK=>input buffer
+    sty zpWORK      ; 0 for both STRACC and BUFFER, could save a load here
+    sta zpWORK+1    ; zpWORK points to input buffer
 
 ; Manually implement RDLINE (OSWORD 0)
 ; ------------------------------------
@@ -14087,142 +14109,165 @@ RDLINEX:
         sta zpWORK+3      ; Lowest acceptable character
         ldy #$FF
         sty zpWORK+4      ; Highest acceptable character
-        iny
-        ldx #zpWORK       ; XY=>control block at $0037
-        tya
+        iny               ; Y = 0
+        ldx #zpWORK       ; YX points to control block at zpWORK
+        tya               ; A = 0
         jsr OSWORD        ; Call OSWORD 0 to read line of text
         bcc BUFEND        ; CC, Escape not pressed, exit and set COUNT=0
     .endif
-    jmp DOBRK         ; Escape
+    jmp DOBRK         ; carry set, Escape pressed
 
 ; ----------------------------------------------------------------------------
 
+; Move to a new line
+
 NLINE:
     jsr OSNEWL
+
 BUFEND:
     lda #$00
     sta zpTALLY          ; Set COUNT to zero
     rts
 
+; ----------------------------------------------------------------------------
+
 ; Removes line whose number is in IACC
+; Exit with carry set if it does not exist
 
 REMOVE:
-    jsr FNDLNO
-    bcs REMOVX
+    jsr FNDLNO      ; search for the line
+    bcs REMOVX      ; exit if it does not exist
 
-    lda zpWORK+6    ; step WORK+6 back to line start
+    lda zpWORK+6    ; step WORK+6/7 back to line start
     sbc #$02
-    sta zpWORK
+    sta zpWORK      ; also store in WORK
     sta zpWORK+6
-    sta zpTOP
-    lda zpWORK+7
+    sta zpTOP       ; and TOP
+
+    lda zpWORK+7    ; handle all MSBs
     sbc #$00
     sta zpWORK+1
     sta zpTOP+1
     sta zpWORK+7
 
-    ldy #$03        ; get length
+    ldy #$03        ; get length of the line
     lda (zpWORK),Y
     clc
-    adc zpWORK
+    adc zpWORK      ; and add it to the WORK pointer
     sta zpWORK
     bcc MOVEA
 
     inc zpWORK+1
 
 MOVEA:
-    ldy #$00
+    ldy #$00        ; point to first character of the following line
 
 MOVEB:
-    lda (zpWORK),Y
-    sta (zpTOP),Y
+    lda (zpWORK),Y  ; get first character for next line
+    sta (zpTOP),Y   ; copy to current line
     cmp #$0D
-    beq MOVED
+    beq MOVED       ; stop provessing when CR is encountered
 
 MOVEC:
     iny
-    bne MOVEB
+    bne MOVEB       ; loop copying next line to current
+
+    ; increment MSBs if Y wraps to zero
 
     inc zpWORK+1
     inc zpTOP+1
-    bne MOVEB
+    bne MOVEB       ; keep copying
 
 MOVED:
-    iny
+    iny             ; increment past CR
     bne MOVEE
 
-    inc zpWORK+1
+    inc zpWORK+1    ; MSBs again if Y wraps
     inc zpTOP+1
 
 MOVEE:
-    lda (zpWORK),Y
+    lda (zpWORK),Y  ; copy MSB of line number of next line
     sta (zpTOP),Y
-    bmi MOVEF
+    bmi MOVEF       ; or exit if it indicates end of program
 
-    jsr MOVEG
-    jsr MOVEG
-    jmp MOVEC
+    jsr MOVEG       ; update pointers and copy LSB of line number
+    jsr MOVEG       ; update pointers and copy line length
+    jmp MOVEC       ; loop to continue the process
 
 MOVEF:
-    jsr CLYADT
-    clc
+    jsr CLYADT      ; update TOP
+    clc             ; clear carry means success
 
 REMOVX:
     rts
 
 MOVEG:
-    iny
+    iny             ; increment offset
     bne MOVEH
 
-    inc zpTOP+1
+    inc zpTOP+1     ; and MSBs if required
     inc zpWORK+1
 
 MOVEH:
-    lda (zpWORK),Y
+    lda (zpWORK),Y  ; copy a single byte
     sta (zpTOP),Y
     rts
 
 ; ----------------------------------------------------------------------------
 
+; Insert a line into the program
+; ==============================
+; On entry, IACC contains the line number, and Y must contain the offset
+; into the keyboard buffer of the first textual character of the line,
+; ignoring the line number.
+
 INSRT:
-    sty zpWORK+4
+    sty zpWORK+4        ; save the offset
     jsr REMOVE          ; find old line and remove it
 
+                        ; WORK+6/7 has been set to the location where the
+                        ; line was, or where it should go
+
     ldy #>BUFFER
-    sty zpWORK+5
+    sty zpWORK+5        ; set MSB of pointer in WORK+4/5
+
     ldy #$00
     lda #$0D
     cmp (zpWORK+4),Y
-    beq INSRTX
+    beq INSRTX          ; exit if first character is CR/EOL (only deletes line)
 
 LENGTH:
-    iny
+    iny                 ; increment offset relative to start of text
     cmp (zpWORK+4),Y
-    bne LENGTH
+    bne LENGTH          ; keep incrementing until CR is reached
 
     iny
     iny
-    iny
-    sty zpWORK+8
-    inc zpWORK+8
-    lda zpTOP
+    iny                 ; Y += 3, space for line number and line length
+
+    sty zpWORK+8        ; store
+    inc zpWORK+8        ; increment again (but not Y) to allow CR
+
+    lda zpTOP           ; make WORK+2/3 point to TOP
     sta zpWORK+2
     lda zpTOP+1
     sta zpWORK+3
-    jsr CLYADT
 
-    sta zpWORK
+    jsr CLYADT          ; update TOP with Y
+
+    sta zpWORK          ; get new value of TOP into WORK+0/1
     lda zpTOP+1
     sta zpWORK+1
+
     dey
-    lda zpHIMEM
+    lda zpHIMEM         ; compare new TOP with HIMEM
     cmp zpTOP
     lda zpHIMEM+1
     sbc zpTOP+1
-    bcs MOVEUP
+    bcs MOVEUP          ; jump if there's enough room
 
-    jsr ENDER
-    jsr SETFSA
+    jsr ENDER           ; check for 'Bad program'
+    jsr SETFSA          ; carry out a CLEAR operation
 
     brk
     dta 0
@@ -14237,52 +14282,51 @@ LENGTH:
 ; ----------------------------------------------------------------------------
 
 MOVEUP:
-    lda (zpWORK+2),Y
+    lda (zpWORK+2),Y    ; move the top byte up to make room
     sta (zpWORK),Y
-    tya
-    bne LOW
+    tya                 ; check Y for zero
+    bne LOW             ; jump if not
 
-    dec zpWORK+3
+    dec zpWORK+3        ; decrement MSBs of the pointers
     dec zpWORK+1
 
 LOW:
-    dey
-    tya
-    adc zpWORK+2
-    ldx zpWORK+3
+    dey                 ; decrement offset
+    tya                 ; add offset to pointer
+    adc zpWORK+2        ; LSB of addition in A
+    ldx zpWORK+3        ; MSB of addition in X
     bcc LOWW
 
-    inx
+    inx                 ; increment MSB in X when A generated carry
 
 LOWW:
-    cmp zpWORK+6
+    cmp zpWORK+6        ; compare with start address of the line
     txa
     sbc zpWORK+7
-    bcs MOVEUP
+    bcs MOVEUP          ; if enough bytes have not been moved, continue moving
 
     sec
     ldy #$01
-    lda zpIACC+1
+    lda zpIACC+1        ; copy line number
     sta (zpWORK+6),Y
-
     iny
     lda zpIACC
     sta (zpWORK+6),Y
 
     iny
-    lda zpWORK+8
+    lda zpWORK+8        ; copy line length
     sta (zpWORK+6),Y
 
-    jsr CLYADWP1
+    jsr CLYADWP1        ; add Y to WORK+6/7 pointer
 
-    ldy #$FF
+    ldy #$FF            ; initialize Y, taken first iny of loop into account
 
 INSLOP:
     iny
-    lda (zpWORK+4),Y
+    lda (zpWORK+4),Y    ; copy line from buffer to program
     sta (zpWORK+6),Y
     cmp #$0D
-    bne INSLOP
+    bne INSLOP          ; loop until CR is reached
 
 INSRTX:
     rts
@@ -14291,89 +14335,93 @@ INSRTX:
 
 ; RUN
 ; ===
+
 RUN:
-    jsr DONE
+    jsr DONE        ; check for the end of the statement
 
 RUNNER:
-    jsr SETFSA
+    jsr SETFSA      ; clear variable catalogue and various stacks
 
     lda zpTXTP
-    sta zpLINE+1          ; Point zpLINE to PAGE
+    sta zpLINE+1    ; Point zpLINE to PAGE
     stx zpLINE
 
-    jmp RUNTHG
+    jmp RUNTHG      ; execute from there onwards
 
 ; ----------------------------------------------------------------------------
 
-; Clear BASIC heap, stack and DATA pointer
-; ========================================
+; Clear variables and various stacks
+; ==================================
+
 SETFSA:
-    lda zpTOP
+    lda zpTOP       ; set LOMEM and VARTOP to TOP
     sta zpLOMEM
-    sta zpFSA          ; LOMEM=TOP, VAREND=TOP
+    sta zpFSA
     lda zpTOP+1
     sta zpLOMEM+1
     sta zpFSA+1
 
-    jsr SETVAR         ; Clear DATA and stack
+    jsr SETVAR      ; Clear DATA pointer and stacks
 
 SETVAL:
-    ldx #$80
+    ldx #$80        ; 128 bytes to be cleared
     lda #$00
 
 SETVRL:
-    sta VARPTR-1,X
+    sta VARPTR-1,X  ; Clear dynamic variables list
     dex
     bne SETVRL
 
-    rts               ; Clear dynamic variables list
+    rts
 
 ; ----------------------------------------------------------------------------
 
-; Clear DATA pointer and BASIC stack
-; ==================================
+; Clear DATA pointer and BASIC stacks
+
 SETVAR:
     lda zpTXTP
-    sta zpDATAP+1          ; DATA pointer hi=PAGE hi
+    sta zpDATAP+1       ; set DATA pointer MSB to PAGE
 
-    lda zpHIMEM
+    lda zpHIMEM         ; set Arithmetic Expression stack pointer to HIMEM
     sta zpAESTKP
     lda zpHIMEM+1
-    sta zpAESTKP+1         ; STACK=HIMEM
+    sta zpAESTKP+1
 
     lda #$00
-    sta zpDOSTKP
+    sta zpDOSTKP        ; Clear REPEAT, FOR, GOSUB stacks
     sta zpFORSTP
-    sta zpSUBSTP           ; Clear REPEAT, FOR, GOSUB stacks
-    sta zpDATAP
+    sta zpSUBSTP
+    sta zpDATAP         ; clear DATA pointer MSB
 
-    rts                    ; always return with A=0
+    rts                 ; always return with A=0
 
 ; ----------------------------------------------------------------------------
 
+; Push FACC onto the AE stack
+
 PHFACC:
-    lda zpAESTKP
+    lda zpAESTKP        ; lower the stack pointer five bytes
     sec
     sbc #$05
-    jsr HIDEC
+    jsr HIDEC           ; store new BASIC stack pointer, check for No Room
 
     ldy #$00
     lda zpFACCX
-    sta (zpAESTKP),Y
+    sta (zpAESTKP),Y    ; save the exponent
 
     iny
-    lda zpFACCS
+    lda zpFACCS         ; tidy up sign
     and #$80
     sta zpFACCS
 
-    lda zpFACCMA
+    lda zpFACCMA        ; combine MSB of mantissa with sign
     and #$7F
     ora zpFACCS
-    sta (zpAESTKP),Y
+    sta (zpAESTKP),Y    ; and save
 
     iny
     lda zpFACCMB
-    sta (zpAESTKP),Y
+    sta (zpAESTKP),Y    ; save rest of mantissa
 
     iny
     lda zpFACCMC
@@ -14382,6 +14430,7 @@ PHFACC:
     iny
     lda zpFACCMD
     sta (zpAESTKP),Y
+
     rts
 
 ; ----------------------------------------------------------------------------
@@ -14391,34 +14440,41 @@ PHFACC:
 POPSET:
     lda zpAESTKP
     clc
-    sta zpARGP
-    adc #$05
-    sta zpAESTKP
+    sta zpARGP          ; save current stack pointer in ARGP
+    adc #$05            ; add 5 to pop the floating point value
+    sta zpAESTKP        ; and save the new stack pointer
 
     lda zpAESTKP+1
-    sta zpARGP+1
+    sta zpARGP+1        ; save old MSB in ARGP+1
     adc #$00
-    sta zpAESTKP+1
+    sta zpAESTKP+1      ; store new MSB
+
     rts
 
 ; ----------------------------------------------------------------------------
 
+; Push integer, floating point or string to the AE stack
+; ======================================================
+; On entry, A contains the type
+; It pushes either IACC, FACC, or the string in STRACC to the AE stack
+
 PHTYPE:
-    beq PHSTR
-    bmi PHFACC
+    beq PHSTR           ; if type is zero, push string
+    bmi PHFACC          ; if bit 7 is set, push FACC
 
 ; Push Integer ACC to stack
 
 PHACC:
     lda zpAESTKP
     sec
-    sbc #$04
+    sbc #$04            ; subtract 4 from stack pointer to make room for int
 
-    jsr HIDEC
+    jsr HIDEC           ; store new BASIC stack pointer, check for No Room
 
-    ldy #$03
+    ldy #$03            ; bytes 3..0
+
     lda zpIACC+3
-    sta (zpAESTKP),Y
+    sta (zpAESTKP),Y    ; copy integer onto the stack
 
     dey
     lda zpIACC+2
@@ -14430,18 +14486,19 @@ PHACC:
 
     dey
     lda zpIACC
-    sta (zpAESTKP),Y
+    sta (zpAESTKP),Y    ; and finally the LSB
+
     rts
 
 ; ----------------------------------------------------------------------------
 
-; Stack the current string
-; ========================
+; Push string in string buffer to AE stack
+
 PHSTR:
     clc               ; extra -1
     lda zpAESTKP
-    sbc zpCLEN        ; stackbot=stackbot-length-1
-    jsr HIDEC         ; Check enough space
+    sbc zpCLEN        ; subtract string length + 1 from stack pointer
+    jsr HIDEC         ; store new BASIC stack pointer, check for No Room
 
     ldy zpCLEN
     beq PHSTRX        ; Zero length, just stack length
@@ -14455,12 +14512,13 @@ PHSTRL:
 PHSTRX:
     lda zpCLEN
     sta (zpAESTKP),Y  ; Copy string length
+
     rts
 
 ; ----------------------------------------------------------------------------
 
-; Unstack a string
-; ================
+; Pop string from AE to string buffer
+
 POPSTR:
     ldy #$00
     lda (zpAESTKP),Y    ; Get stacked string length
@@ -14483,17 +14541,18 @@ POPSTX:
 POPN:
     adc zpAESTKP
     sta zpAESTKP        ; Update stack pointer
-    bcc POPACI
+    bcc POPACI          ; silly to jump to rts that far away ;)
 
     inc zpAESTKP+1
+                        ; could just as well jump to here
     rts
 
 ; ----------------------------------------------------------------------------
 
-; Pop Integer ACC (zpIACC)
+; Pop integer from AE stack into Integer ACC (IACC)
 
 POPACC:
-    ldy #$03
+    ldy #$03            ; copy four bytes (3..0)
     lda (zpAESTKP),Y
     sta zpIACC+3
 
@@ -14515,13 +14574,15 @@ POPINC:
     adc #$04
     sta zpAESTKP
     bcc POPACI
+
     inc zpAESTKP+1
 
 POPACI:
     rts
 
-; Unstack an integer to zpWORK
-; -----------------------------
+; ----------------------------------------------------------------------------
+
+; Pop an integer to zpWORK
 
 POPWRK:
     ldx #zpWORK
@@ -14529,7 +14590,7 @@ POPWRK:
 ; Use X as Index, jsr here to override X (i.e. ldx #zpWORK+8, jsr POPX)
 
 POPX:
-    ldy #$03
+    ldy #$03            ; copy four bytes (3..0)
     lda (zpAESTKP),Y
     sta zp+3,X
 
@@ -14552,9 +14613,12 @@ POPX:
     bcc POPACI
 
     inc zpAESTKP+1
+
     rts
 
 ; ----------------------------------------------------------------------------
+
+; Store new AE stack pointer and check for 'No room'
 
 HIDEC:
     sta zpAESTKP
@@ -14565,19 +14629,24 @@ HIDEC:
 HIDECA:
     ldy zpAESTKP+1
     cpy zpFSA+1
-    bcc HIDECE
+    bcc HIDECE          ; jump to 'No room'
     bne HIDECX
 
     cmp zpFSA
-    bcc HIDECE
+    bcc HIDECE          ; jump to 'No room'
 
 HIDECX:
     rts
 
 HIDECE:
-    jmp ALLOCR
+    jmp ALLOCR          ; 'No room' error message
 
 ; ----------------------------------------------------------------------------
+
+; Copy IACC to somewhere on page zero
+; -----------------------------------
+; On entry, X contains the offset of the destination address relative to
+; the base of our zero page block of variables and pointers
 
 ACCTOM:
     lda zpIACC
@@ -14592,6 +14661,8 @@ ACCTOM:
 
 ; ----------------------------------------------------------------------------
 
+; Add Y to WORK+6/7
+
 CLYADW:
     clc
 
@@ -14604,37 +14675,45 @@ CLYADWP1:
     inc zpWORK+7
 
 CLYIDW:
-    ldy #$01
+    ldy #$01        ; always return 1 in Y
     rts
 
 ; ----------------------------------------------------------------------------
 
+; Load a new program
+; ==================
+; Notice that this routine ends with 'rts'
+; Parameter block is at WORK and onwards
+
 LOADER:
-    jsr OSTHIG
+    jsr OSTHIG          ; setup the parameter block, FILE.LOAD = PAGE
+
     tay
-    lda #$FF          ; FILE.LOAD=PAGE
+    lda #$FF
 
     .ifdef MOS_ATOM
-        sta F_EXEC+0
-        ldx #zpWORK   ; FILE.EXEC=$FF, load to specified address
+        sta F_EXEC+0    ; FILE.EXEC=$FF, load to specified address
+        ldx #zpWORK
         sec
         jsr OSLOAD
     .endif
 
     .ifdef MOS_BBC
-        sty F_EXEC+0
-        ldx #zpWORK   ; FILE.EXEC=0, load to specified address
+        sty F_EXEC+0    ; FILE.EXEC=0, load to specified address
+        ldx #zpWORK
         jsr OSFILE
     .endif
 
 ; Scan program to check consistancy and find TOP
 ; ----------------------------------------------
+
 ENDER:
     lda zpTXTP        ; TOP = PAGE
     sta zpTOP+1
     ldy #$00
     sty zpTOP
-    iny
+
+    iny               ; allow for first dey in loop below
 
 ; find new TOP
 
@@ -14646,7 +14725,7 @@ FNDTOP:
 
     iny               ; Step to line number/terminator
     lda (zpTOP),Y
-    bmi SETTOP        ; b7 set, end of program
+    bmi SETTOP        ; bit 7 set, end of program
 
     ldy #$03          ; Point to line length
     lda (zpTOP),Y
@@ -14654,41 +14733,45 @@ FNDTOP:
 
     clc
     jsr CLYADTP1      ; Update TOP to point to next line
+
     bne FNDTOP        ; Loop to check next line
 
 ; End of program found, set TOP
-; -----------------------------
+
 SETTOP:
-    iny
+    iny               ; step past end of program marker
     clc
 
 CLYADT:
     tya
 
 CLYADTP1:
-    adc zpTOP
-    sta zpTOP          ; TOP=TOP+A
+    adc zpTOP        ; add final offset to TOP
+    sta zpTOP        ; and store
     bcc ENDADT
 
-    inc zpTOP+1
+    inc zpTOP+1     ; adjust MSB in case of carry
 
 ENDADT:
-    ldy #$01
-    rts               ; Return Y=1, NE
+    ldy #$01        ; return with Y=1, Z=0
+    rts
 
 ; Report 'Bad program' and jump to immediate mode
-; -----------------------------------------------
+
 BADPRO:
-    jsr VSTRNG         ; Print inline text
-    dta 13
+    jsr VSTRNG              ; Print inline text
+    dta 13                  ; CR
     .if foldup == 1
         dta 'BAD PROGRAM'
     .else
         dta 'Bad program'
     .endif
-    dta 13
-    nop
-    jmp CLRSTK         ; Jump to immediate mode
+    dta 13                  ; CR
+
+    nop                     ; $ea, has bit 7 set, end of string marker
+                            ; the nop is executed
+
+    jmp CLRSTK              ; Jump to immediate mode
 
 ; ----------------------------------------------------------------------------
 
@@ -14764,6 +14847,7 @@ OSTHIF:
 
 ; Set FILE.LOAD to MEMHI.PAGE
 ; ---------------------------
+
 OSTHIG:
     jsr OSTHIF
     dey
@@ -15119,7 +15203,7 @@ VSTRLM:
 
 VSTRLP:
     jsr GETWK2
-    bpl VSTRLM        ; Update pointer, get character, loop if b7=0
+    bpl VSTRLM        ; Update pointer, get character, loop if bit 7=0
     jmp (zpWORK)      ; Jump back to program
 
 ; ----------------------------------------------------------------------------
