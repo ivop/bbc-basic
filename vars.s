@@ -142,3 +142,10 @@ BUFFER  = ws + $0700
 cFORTOP = $96       ; 10 frames
 cSUBTOP = $1a       ; 26 entries
 cDOTOP  = $14       ; 20 entries
+
+cTYPE_STRING = $00
+cTYPE_INT    = $40
+cTYPE_FLOAT  = $ff
+
+cSIZE_INT   = $04
+cSIZE_FLOAT = $05
