@@ -24,11 +24,6 @@
 
 ; ----------------------------------------------------------------------------
 
-; Important for future ports, ws MUST be page aligned, or a lot of things
-; will break (i.e. testing MSB for end of STRACC)
-
-; ----------------------------------------------------------------------------
-
     .if .def BUILD_BBC_BASIC2 || .def BUILD_BBC_BASIC3 || .def BUILD_BBC_BASIC310HI
         TARGET_BBC = 1
         MOS_BBC    = 1
@@ -187,6 +182,10 @@
 
     .else
         .error "No MOS API specified"
+    .endif
+
+    .if <workspace != 0
+        .error "workspace must be page aligned"
     .endif
 
 ; ----------------------------------------------------------------------------
