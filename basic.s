@@ -2826,7 +2826,7 @@ STORIY:
 
 PRINTH:
     dec zpCURSOR        ; correct cursor position
-    jsr AECHAN          ; find out file handle number
+    jsr AECHAN          ; find out file handle number, returns in Y and A
 
 PRINHL:
     tya                 ; file handle to A
@@ -13543,7 +13543,7 @@ INPUHX:
 INPUTH:
     dec zpCURSOR
 
-    jsr AECHAN      ; evaluate file handle expression
+    jsr AECHAN      ; evaluate file handle expression, returns in Y and A
 
     lda zpAECUR
     sta zpCURSOR    ; update LINE offset from AE offset
@@ -14777,6 +14777,7 @@ BADPRO:
 
 ; Point zpWORK to <cr>-terminated string in string buffer
 ; ------------------------------------------------------
+
 OSSTRG:
     lda #<STRACC
     sta zpWORK
@@ -14789,26 +14790,28 @@ OSSTRT:
     ldy zpCLEN
     lda #$0D
     sta STRACC,Y
+
     rts                 ; returns with A=$0d and Y=string length
 
 ; ----------------------------------------------------------------------------
 
 ; OSCLI string$ - Pass string to OSCLI to execute
 ; ===============================================
-OSCL:
-    jsr OSTHIF         ; $37/8=>cr-string
 
+OSCL:
+    jsr OSTHIF         ; evaluate string argument and add CR at the END
 
     .ifdef MOS_ATOM
-        jsr cmdStar1
-        jmp NXT     ; Call Atom OSCLI and return to execution loop
+        ; YA points to CR-terminated string
+        jsr cmdStar1    ; Call Atom OSCLI
+        jmp NXT         ; and return to execution loop
 
 
     ; Embedded star command
     ; ---------------------
 cmdStar:
-        stx zpWORK
-        sty zpWORK+1      ; $37/8=>cr-string
+        stx zpWORK      ; store pointer in WORK
+        sty zpWORK+1
 cmdStar1:
         ldy #$FF
 cmdStarLp1:
@@ -14835,25 +14838,30 @@ cmdStarLp2:
     .endif
 
 OSTHIE:
-    jmp LETM
-
-OSTHIF:
-    jsr AEEXPR
-    bne OSTHIE            ; Evaluate expression, error if not string
-    jsr OSSTRG
-    jmp FDONE             ; Convert to <cr>-string, check end of statement
+    jmp LETM            ; 'Type mismatch' error
 
 ; ----------------------------------------------------------------------------
 
-; Set FILE.LOAD to MEMHI.PAGE
-; ---------------------------
+; Evaluate string argument and add CR at the END
+
+OSTHIF:
+    jsr AEEXPR          ; evaluate expression
+    bne OSTHIE          ; error if not string
+    jsr OSSTRG          ; convert to CR terminated string
+    jmp FDONE           ; check end of statement, exit, tail call
+
+; ----------------------------------------------------------------------------
+
+; Set FILE.LOAD to PAGE
+; ---------------------
 
 OSTHIG:
-    jsr OSTHIF
+    jsr OSTHIF          ; evaluate string argument and add CR at the END
+
     dey
-    sty F_LOAD+0        ; LOAD.lo=$00
+    sty F_LOAD+0        ; LOAD.lo = $00
     lda zpTXTP
-    sta F_LOAD+1        ; LOAD.hi=PAGEhi
+    sta F_LOAD+1        ; LOAD.hi = PAGEhi
 
 GETMAC:
     .ifdef MOS_BBC
@@ -14889,6 +14897,7 @@ GETMAC:
 
 ;  SAVE string$
 ; =============
+
 SAVE:
     jsr ENDER               ; Check program, set TOP
 
@@ -14954,7 +14963,7 @@ SAVE:
         stx F_START+1     ; High byte of FILE.START=PAGE
     .endif
     tay
-    ldx #zpWORK
+    ldx #zpWORK           ; YX pointer
     .ifdef MOS_ATOM
         sec
         jsr OSSAVE
@@ -14968,14 +14977,16 @@ SAVE:
 
 ; LOAD string$
 ; ============
+
 LOAD:
-    jsr LOADER
-    jmp FSASET         ; Do LOAD, jump to immediate mode
+    jsr LOADER          ; load the new program
+    jmp FSASET          ; jump to immediate mode, warm start
 
 ; ----------------------------------------------------------------------------
 
 ; CHAIN string$
 ; =============
+
 CHAIN:
     jsr LOADER         ; Do LOAD
     jmp RUNNER         ; jump to execution loop
@@ -14984,16 +14995,20 @@ CHAIN:
 
 ; PTR#numeric=numeric
 ; ===================
-LPTR:
-    jsr AECHAN        ; Evaluate #handle
 
-    pha
-    jsr EQEXPR
-    jsr INTEG         ; Step past '=', evaluate integer
-    pla
+LPTR:
+    jsr AECHAN          ; Evaluate file handle, returns in Y and A
+
+    pha                 ; save it on the stack
+
+    jsr EQEXPR          ; check '=' sign, and evaluate expression
+    jsr INTEG           ; ensure the result is an integer
+
+    pla                 ; retrieve file handle
 
     tay
-    ldx #zpIACC
+    ldx #zpIACC         ; X points to new PTR value in IACC
+
     .ifdef MOS_ATOM
         jsr OSSTAR
     .endif
@@ -15001,28 +15016,34 @@ LPTR:
         lda #$01
         jsr OSARGS
     .endif
+
     jmp NXT         ; Jump to execution loop
 
 ; ----------------------------------------------------------------------------
 
 ; =EXT#numeric - Read file pointer via OSARGS
 ; ===========================================
+
 EXT:
     sec               ; Flag to do =EXT
 
 ; =PTR#numeric - Read file pointer via OSARGS
 ; ===========================================
+
 RPTR:
     lda #$00
     rol               ; A=0 or 1 for =PTR or =EXT
     .ifdef MOS_BBC
-        rol
+        rol           ; A=0 or 2 for =PTR or =EXT
     .endif
 
-    pha               ; Atom - A=0/1, BBC - A=0/2
-    jsr CHANN         ; Evaluate #handle
-    ldx #zpIACC       ; point to IACC
-    pla
+    pha               ; push command to stack, Atom - A=0/1, BBC - A=0/2
+
+    jsr CHANN         ; Evaluate file handle, returns in Y and A
+
+    ldx #zpIACC       ; point to IACC, where to receive PTR or EXT
+
+    pla               ; retrieve command from stack
 
     .ifdef MOS_ATOM
         jsr OSRDAR
@@ -15030,41 +15051,48 @@ RPTR:
     .ifdef MOS_BBC
         jsr OSARGS
     .endif
-    lda #$40
-    rts               ; Return integer
+
+    lda #$40          ; return type is an integer
+    rts
 
 ; ----------------------------------------------------------------------------
 
 ; BPUT#numeric, numeric
 ; =====================
-BPUT:
-    jsr AECHAN      ; Evaluate #handle
 
-    pha
-    jsr COMEAT
-    jsr EXPRDN
-    jsr INTEG
-    pla
+BPUT:
+    jsr AECHAN      ; Evaluate file handle, returns in Y and A
+
+    pha             ; save file handle
+
+    jsr COMEAT      ; skip the comma
+    jsr EXPRDN      ; evaluate expression and check for end of statement
+    jsr INTEG       ; ensure it's an integer
+
+    pla             ; restore file handle
 
     tay
-    lda zpIACC
+    lda zpIACC      ; low byte of IACC
+
     jsr OSBPUT
 
-    jmp NXT         ; Call OSBPUT, jump to execution loop
+    jmp NXT         ; jump to execution loop
 
 ; ----------------------------------------------------------------------------
 
 ; =BGET#numeric
 ; =============
+
 BGET:
-    jsr CHANN         ; Evaluate #handle
-    jsr OSBGET
+    jsr CHANN         ; Evaluate file handle, returns in Y and A
+    jsr OSBGET        ; Y is file handle, call OSBGET
     jmp SINSTK        ; Jump to return 8-bit integer
 
 ; ----------------------------------------------------------------------------
 
 ; OPENIN f$ - Call OSFIND to open file for input
 ; ==============================================
+
 OPENIN:
     .ifdef MOS_ATOM
         sec           ; SEC=OPENUP
@@ -15102,41 +15130,45 @@ OPENI:
     .endif
 F:
     .ifdef MOS_ATOM
-        php
+        php           ; save flags with action
     .endif
     .ifdef MOS_BBC
-        pha
+        pha           ; save action
     .endif
-    jsr FACTOR
-    bne OPENE          ; Evaluate, if not string, jump to error
+
+    jsr FACTOR        ; evaluate expression
+    bne OPENE         ; if not string, jump to error
 
     .ifdef MOS_ATOM
-        jsr OSSTRG     ; Terminate string with <cr>, point $37/8=>string
+        jsr OSSTRG    ; Terminate string with <cr>, point WORK to string
         ldx #zpWORK
-        plp            ; Point to string pointer, get action back
+        plp           ; get action flag back
     .endif
 
     .ifdef MOS_BBC
         jsr OSSTRT     ; Terminate string with <cr>
-        ldx #<STRACC
+        ldx #<STRACC   ; point YX to string buffer
         ldy #>STRACC
-        pla            ; Point to string buffer, get action back
+        pla            ; get action back
     .endif
 
-    jsr OSFIND         ; Pass to OSFIND, jump to return integer from A
-    jmp SINSTK
+    jsr OSFIND         ; Pass to OSFIND
+    jmp SINSTK         ; return integer from A, exit, tail call
 
 OPENE:
-    jmp LETM           ; Jump to 'Type mismatch' error
+    jmp LETM           ; 'Type mismatch' error
 
 ; ----------------------------------------------------------------------------
 
 ; CLOSE#numeric
 ; =============
+
 CLOSE:
-    jsr AECHAN
-    jsr AEDONE         ; Evaluate #handle, check end of statement
-    ldy zpIACC         ; Get handle from IACC
+    jsr AECHAN         ; evaluate file handle, returns in Y and A
+    jsr AEDONE         ; check end of statement, clobbers Y
+
+    ldy zpIACC         ; get handle from IACC, which should still be valid
+
     .ifdef MOS_ATOM
         jsr OSSHUT
     .endif
@@ -15144,12 +15176,15 @@ CLOSE:
         lda #$00
         jsr OSFIND
     .endif
+
     jmp NXT            ; Jump back to execution loop
 
 ; ----------------------------------------------------------------------------
 
 ; Copy LINE to AELINE, then get handle
 ; ====================================
+; Returns file handle in Y and A
+
 AECHAN:
     lda zpCURSOR
     sta zpAECUR        ; copy cursor/offset
@@ -15160,6 +15195,8 @@ AECHAN:
 
 ; Check for '#', evaluate channel
 ; ===============================
+; Returns file handle in Y and A
+
 CHANN:
     jsr AESPAC        ; Skip spaces, and get next character
     cmp #'#'          ; If not '#', jump to give error
@@ -15189,11 +15226,12 @@ CHANNE:
 
 ; Print inline text
 ; =================
+
 VSTRNG:
     pla
     sta zpWORK
     pla
-    sta zpWORK+1      ; Pop return address to zpWORK
+    sta zpWORK+1      ; Pop return address to WORK+0/1
 
     ldy #$00
     beq VSTRLP        ; Jump into loop
@@ -15202,28 +15240,30 @@ VSTRLM:
     jsr OSASCI        ; Print character
 
 VSTRLP:
-    jsr GETWK2
-    bpl VSTRLM        ; Update pointer, get character, loop if bit 7=0
+    jsr GETWK2        ; increment pointer and get next character
+    bpl VSTRLM        ; loop until bit 7 is set
+
     jmp (zpWORK)      ; Jump back to program
 
 ; ----------------------------------------------------------------------------
 
 ; REPORT
 ; ======
+
 REPORT:
-    jsr DONE
-    jsr NLINE         ; Check end of statement, print newline, clear COUNT
+    jsr DONE           ; check end of statement
+    jsr NLINE          ; print newline, clear COUNT
 
     ldy #$01
 
 REPLOP:
-    lda (FAULT),Y
-    beq REPORX        ; Get byte, exit if $00 terminator
+    lda (FAULT),Y     ; get byte from FAULT block
+    beq REPORX        ; exit if $00 terminator
 
-    jsr TOKOUT
+    jsr TOKOUT        ; print character or (expanded) token
 
     iny
-    bne REPLOP        ; Print character or token, loop for next
+    bne REPLOP        ; loop for next
 
 REPORX:
     jmp NXT           ; Jump to main execution loop
