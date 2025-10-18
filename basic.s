@@ -11,10 +11,10 @@
 ; BBC BASIC Copyright © 1982/1983 Acorn Computer and Sophie Wilson
 ;
 ; References used:
-;   Advanced BASIC ROM USer Guide
+;   Advanced BASIC ROM User Guide
 ;   AcornCmosBasic (https://github.com/stardot/AcornCmosBasic)
 ;   AcornDmosBasic (https://github.com/stardot/AcornDmosBasic)
-;   AcornBasic128 (github.com/stardot/AcornBasic128)
+;   AcornBasic128  (https://github.com/stardot/AcornBasic128)
 ;   BBC Micro Compendium
 ;
 ; ----------------------------------------------------------------------------
