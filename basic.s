@@ -956,7 +956,7 @@ LTLABL:
 MALABL:
         iny             ; Y was 0
         lda (zpLINE),Y
-        cpy zp4F
+        cpy zpNEWVAR
         bne LTLABL
 
 NOLABL:
