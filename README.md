@@ -1,6 +1,10 @@
 # BBC BASIC II and III
 
+This is a fully annotated disassembly of BBC BASIC II and III.
+
 Build with the [Mad-Assembler](https://github.com/tebe6502/Mad-Assembler).
+
+[Run BBC BASIC](https://github.com/ivop/run-bbc-basic/) on Linux!
 
 Currently, the following versions are supported:
 
