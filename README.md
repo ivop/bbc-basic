@@ -6,6 +6,8 @@ Build with the [Mad-Assembler](https://github.com/tebe6502/Mad-Assembler).
 
 [Run BBC BASIC](https://github.com/ivop/run-bbc-basic/) on Linux!
 
+Or on an [Atari XL/XE](https://github.com/ivop/atari-bbc-basic)!
+
 Currently, the following versions are supported:
 
 | | ROM | ref | Version | Load | MD5|
